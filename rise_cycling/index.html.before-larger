@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WQE2GEYFQW"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-WQE2GEYFQW');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISE Cycling - Start 4-Week Power-Ride Program - First Week Free</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Start your 4-Week Power-Ride Program with RISE Cycling. First week completely free - structured training, performance tracking, and community support.">
+    <meta name="keywords" content="rise cycling, jamel, cyberpunk cycling, zwift, spiritual growth, self-reliance, health optimization, consciousness expansion, iShareHow Labs, cycling community">
+    <meta name="author" content="iShareHow Labs LLC">
+    
+    <!-- Fonts: Sans-serif for clean, professional look (similar to Acquisition.com) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Acquisition.com-inspired Styles: Light theme, clean cards, bold CTAs -->
+    <style>
+        :root {
+            --ac-primary: #1a1a1a; /* Dark text */
+            --ac-secondary: #4a5568; /* Gray text */
+            --ac-accent: #3182ce; /* Blue for links/buttons */
+            --ac-light: #ffffff; /* White background */
+            --ac-gray: #f7fafc; /* Light gray bg */
+            --ac-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --ac-radius: 8px;
+            --ac-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--ac-light);
+            color: var(--ac-primary);
+            font-family: var(--ac-font);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            font-weight: 400;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Navigation: Simple top bar */
+        .nav {
+            background: var(--ac-light);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--ac-shadow);
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-brand {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--ac-primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            color: var(--ac-primary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 0.5rem 0;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--ac-accent);
+        }
+
+        /* Hero Section: Split layout with text left, image right */
+        .hero {
+            display: flex;
+            align-items: center;
+            padding: 6rem 0;
+            background: var(--ac-gray);
+            gap: 4rem;
+        }
+
+        .hero-content {
+            flex: 1;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--ac-primary);
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--ac-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .hero-image {
+            flex: 1;
+            text-align: center;
+        }
+
+        .hero-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--ac-radius);
+        }
+
+        /* Content Sections: Clean cards */
+        .section {
+            padding: 4rem 0;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--ac-primary);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: var(--ac-light);
+            border-radius: var(--ac-radius);
+            padding: 2rem;
+            box-shadow: var(--ac-shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--ac-primary);
+            margin-bottom: 1rem;
+        }
+
+        .card p {
+            color: var(--ac-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-item {
+            background: var(--ac-light);
+            padding: 1.5rem;
+            text-align: center;
+            border-radius: var(--ac-radius);
+            box-shadow: var(--ac-shadow);
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--ac-accent);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--ac-secondary);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* Equipment List */
+        .equipment-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 1rem 0;
+        }
+
+        .equipment-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--ac-secondary);
+        }
+
+        .equipment-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--ac-accent);
+            font-weight: 700;
+        }
+
+        /* CTA Button */
+        .cta-btn {
+            display: inline-block;
+            background: var(--ac-accent);
+            color: var(--ac-light);
+            padding: 0.8rem 2rem;
+            border-radius: var(--ac-radius);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .cta-btn:hover {
+            background: #2b6cb0;
+        }
+
+        /* Quote Block */
+        blockquote {
+            font-style: italic;
+            font-weight: 500;
+            background: var(--ac-gray);
+            border-left: 4px solid var(--ac-accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            color: var(--ac-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Responsive YouTube Embed */
+        .responsive-yt iframe {
+            width: 100%;
+            height: 400px;
+            border-radius: var(--ac-radius);
+            border: none;
+            box-shadow: var(--ac-shadow);
+        }
+
+        /* FAQ Style */
+        .faq-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .faq-question {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--ac-primary);
+            cursor: pointer;
+            padding: 1rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .faq-answer {
+            color: var(--ac-secondary);
+            padding-top: 1rem;
+            display: none; /* Hidden by default for accordion */
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--ac-gray);
+            padding: 2rem 0;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer p {
+            color: var(--ac-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero {
+                flex-direction: column;
+                text-align: center;
+                gap: 2rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .cards-grid, .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .responsive-yt iframe {
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-content">
+                <a href="/" class="nav-brand">RISE::CYCLING::MINISTRY</a>
+                <ul class="nav-links">
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#mission">Mission</a></li>
+                    <li><a href="#protocol">Protocol</a></li>
+                    <li><a href="#stats">Stats</a></li>
+                    <li><a href="#equipment">Equipment</a></li>
+                    <li><a href="#content">Content</a></li>
+                    <li><a href="#discord">Discord</a></li>
+                    <li><a href="#access">Access</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Start Your 4-Week Power-Ride Program - First Week FREE</h1>
+                <p>Transform your cycling performance with our structured 4-week program. Get professional training plans, performance tracking, and community support. Try your first week completely free.</p>
+                <a href="#content" class="cta-btn">Start Free Week Now</a>
+            </div>
+            <div class="hero-image">
+                <!-- Placeholder for hero image; replace with actual image URL -->
+                <img src="" alt="Hero Image: Rider in Motion">
+            </div>
+        </div>
+    </header>
+
+    <section class="benefits-section" style="background: var(--ac-light); padding: 4rem 0;">
+        <div class="container">
+            <div style="background: linear-gradient(135deg, #3182ce 0%, #2d3748 100%); color: white; border-radius: 12px; padding: 3rem; text-align: center; box-shadow: var(--ac-shadow);">
+                <h2 style="color: white; margin-bottom: 2rem; font-size: 2.5rem; font-weight: 700;">🚴‍♂️ Your 4-Week Power-Ride Program</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-top: 2rem;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px;">
+                        <h3 style="color: #90cdf4; margin-bottom: 1rem; font-size: 1.3rem;">Week 1: FREE Foundation</h3>
+                        <p>Base fitness assessment, proper form training, and initial power metrics - completely free</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px;">
+                        <h3 style="color: #90cdf4; margin-bottom: 1rem; font-size: 1.3rem;">Week 2-3: Power Building</h3>
+                        <p>Structured interval training, endurance building, and performance optimization techniques</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px;">
+                        <h3 style="color: #90cdf4; margin-bottom: 1rem; font-size: 1.3rem;">Week 4: Peak Performance</h3>
+                        <p>Advanced training protocols, race preparation, and long-term progression planning</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px;">
+                        <h3 style="color: #90cdf4; margin-bottom: 1rem; font-size: 1.3rem;">🎁 Bonus: Community Access</h3>
+                        <p>Private Discord community, weekly group rides, and ongoing coaching support</p>
+                    </div>
+                </div>
+                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,215,0,0.2); border-radius: 8px;">
+                    <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">🛡️ Risk-Free Guarantee</p>
+                    <p>Try the first week completely free. Continue only if you love the results. Cancel anytime, no questions asked.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="section">
+        <div class="container">
+            <h2>RISE::OVERVIEW</h2>
+            <p style="text-align: center; max-width: 800px; margin: 0 auto 2rem; font-size: 1.1rem; color: var(--ac-secondary);">
+                RISE::CYCLING::MINISTRY, administered by <strong style="color: var(--ac-accent);">iShareHow Labs LLC</strong>, integrates cybernetic enhancement with spiritual ascension through advanced cycling methodologies, wellness optimization, and consciousness expansion. Our <strong>Rise Cycling Team</strong> operates across digital and physical realms, competing on Zwift and in real-world race matrices.
+            </p>
+            <p style="text-align: center; max-width: 800px; margin: 0 auto; color: var(--ac-secondary);">
+                Core modules include: <strong>Qum (Rise) Above All</strong>, Bushcraft Adventures, Gut Health Optimization, Energy & Healing Frequencies, and Consciousness Rising above all.
+            </p>
+        </div>
+    </section>
+
+    <section id="mission" class="section">
+        <div class="container">
+            <h2>MISSION::RISE</h2>
+            <div style="max-width: 900px; margin: 0 auto; text-align: center;">
+                <blockquote>
+                    "The Rise Mission is a living path of ancestral wisdom, natural psychology, and spiritual autonomy to self-correct. We honor our race, creed, and genetic memory by walking in harmony with Universal Nature, cultivating self-reliance, and embodying the sacred energy of the Earth and Spirit."
+                </blockquote>
+                <p style="color: var(--ac-secondary); margin-top: 1rem;">Our <strong>Rise Cycling</strong> prioritizes Security, Cooperation, and CREED, helping disconnected from parasidic life and reconnect to their Ki through Reiki matrices, shadow work algorithms, and diverse perspective integration.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="protocol" class="section">
+        <div class="container">
+            <h2>CORE::RISE::PRINCIPLES</h2>
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Nature Grounding</h3>
+                    <p>We believe and love the Earth, connecting with its rhythms and energies to foster holistic well-being.</p>
+                </div>
+                <div class="card">
+                    <h3>Protect Your Gut</h3>
+                    <p>Independent food production and eating for energy generation. Focus on gut health through fermented foods, prebiotics, and nutrient-dense meals.</p>
+                </div>
+                <div class="card">
+                    <h3>Self-Correction Algorithm</h3>
+                    <p>Inner alchemy processing, shadow work subroutines, and conscious evolution protocols, Intuition enhancement, and transcendental awareness.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="stats" class="section">
+        <div class="container">
+            <h2>RIDER::STATISTICS</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value">284</span>
+                    <span class="stat-label">FTP (Xert)</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">69.5</span>
+                    <span class="stat-label">Weight (kg)</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">4.05</span>
+                    <span class="stat-label">W/kg Ratio</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="equipment" class="section">
+        <div class="container">
+            <h2>EQUIPMENT::MATRIX</h2>
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Primary Cycling Rig</h3>
+                    <ul class="equipment-list">
+                        <li><strong>2021 Checkpoint SL7</strong> (Zwift, MyWhoosh, TPV)</li>
+                        <li>SRAM Apex eXPLR 12-speed rear mech</li>
+                        <li>SRAM eAXIS Levers</li>
+                        <li>1x setup configuration</li>
+                        <li>Tacx Neo2T trainer interface</li>
+                        <li>DIY welded fork mount system</li>
+                        <li>Wahoo Power Pedals</li>
+                        <li>40t crankset with 11-44 cassette</li>
+                        <li><strong>Backup Systems:</strong> 2x 2024 Crux DSW (D'Aluisio Smart Weld) – Rebuilt from Canyon and Checkpoint SL7 post-crash</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Computing Matrix</h3>
+                    <ul class="equipment-list">
+                        <li>Mac Mini M4 (base model)</li>
+                        <li>Bot Webcam 4K</li>
+                        <li>Logi Wireless keyboard</li>
+                        <li>DELL 2K Screen</li>
+                        <li>LG 4K Screen</li>
+                        <li>Legacy backup screen</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Physical Setup</h3>
+                    <p>Custom welded infrastructure with scrap metal and prebuild stands. Includes side table for hydration/nutrition, front table for keyboard/device management, screen mount for computer integration, dock, and charging port distribution.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="content" class="section">
+        <div class="container">
+            <h2>FREE ADVANCED TRAINING & RESOURCES</h2>
+            <p style="text-align: center; margin-bottom: 2rem; font-size: 1.1rem; color: var(--ac-secondary);">
+                Access cycling consciousness content, health optimization protocols, and spiritual enhancement modules. Sports content optimized for 3-10 minute engagement windows (60.4% efficiency). Post-COVID fitness class engagement: 311% on-demand growth, 971% live session expansion.
+            </p>
+            <div class="cards-grid">
+                <div class="card" style="text-align: center;">
+                    <h3>Content Networks</h3>
+                    <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                        <a href="#" class="cta-btn" data-tab="youtube" style="background: var(--ac-accent); padding: 0.5rem 1rem; font-size: 0.9rem;">YouTube</a>
+                        <a href="#" class="cta-btn" data-tab="twitch" style="background: var(--ac-accent); padding: 0.5rem 1rem; font-size: 0.9rem;">Twitch</a>
+                        <a href="#" class="cta-btn" data-tab="patreon" style="background: var(--ac-accent); padding: 0.5rem 1rem; font-size: 0.9rem;">Patreon</a>
+                        <a href="#" class="cta-btn" data-tab="facebook" style="background: var(--ac-accent); padding: 0.5rem 1rem; font-size: 0.9rem;">Facebook</a>
+                        <a href="#" class="cta-btn" data-tab="isharehow" style="background: var(--ac-accent); padding: 0.5rem 1rem; font-size: 0.9rem;">iShareHow</a>
+                    </div>
+                    <div id="tab-content">
+                        <div id="tab-youtube">
+                            <div class="responsive-yt">
+                                <iframe src="https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjMK-xXIIwpWh15mLcXLWRnP" title="Rise playlist" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                            </div>
+                            <p style="margin-top: 1rem;"><a href="https://www.youtube.com/@RisewithJamel" target="_blank" style="color: var(--ac-accent);"> @RisewithJamel</a></p>
+                        </div>
+                        <div id="tab-twitch" style="display: none;">
+                            <div class="responsive-yt">
+                                <iframe src="https://player.twitch.tv/?channel=jameleliyah&parent=labs.isharehow.app" title="Twitch Stream" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                            <p style="margin-top: 1rem;"><a href="https://www.twitch.tv/jameleliyah" target="_blank" style="color: var(--ac-accent);">Twitch: jameleliyah</a></p>
+                        </div>
+                        <div id="tab-patreon" style="display: none; text-align: center;">
+                            <a href="https://www.patreon.com/cw/JamelEliYah" target="_blank" class="cta-btn">Join Our Patreon for Deeper Guidance</a>
+                        </div>
+                        <div id="tab-facebook" style="display: none; text-align: center;">
+                            <a href="https://www.facebook.com/JamelEliYah" target="_blank" class="cta-btn">Facebook: Jamel EliYah</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <h3>Gaming & Hashtags</h3>
+                    <p style="color: var(--ac-accent); margin-bottom: 1rem;">Gaming: <strong>Zwift</strong>, <strong>Just Chatting</strong></p>
+                    <p style="color: var(--ac-secondary);">Hashtags: #CyclingLife #BikeLife #RoadCycling #CyclingCommunity #CyclingMotivation #CyclingInspiration #RideOn #CyclingGoals #CyclingGear #BikePorn #CyclingStyle #BikeRide #Zwift #Twitch #SpiritualGrowth #SelfReliance #HealthOptimization #ConsciousnessTraining</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="discord" class="section">
+        <div class="container">
+            <h2>DISCORD::ACCESS</h2>
+            <div style="text-align: center; max-width: 600px; margin: 0 auto;">
+                <p style="font-size: 1.1rem; margin-bottom: 2rem; color: var(--ac-secondary);">
+                    Connect to our distributed network on X (<strong style="color: var(--ac-accent);">@Dir3ct0r_3L</strong>) the most up to date information on cycling, self-reliance, health optimization, and spiritual growth protocols.
+                </p>
+                <a href="https://labs.isharehow.app/discord" target="_blank" class="cta-btn">Join Our Discord Community</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="access" class="section">
+        <div class="container">
+            <h2>PROTOCOL::ACCESS</h2>
+            <div style="text-align: center;">
+                <p style="font-size: 1.2rem; margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto; color: var(--ac-secondary);">
+                    Master the rise using our content <strong>"execute 100 iterations"</strong> of watching our content of live training sessions on Twitch or through <strong>jameleliyah.tv</strong>
+                </p>
+                <a href="https://www.twitch.tv/jameleliyah" class="cta-btn" target="_blank">INITIATE::VIEWING</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p>RISE::CYCLING::MINISTRY © <span id="current-year">2025</span> | iShareHow Labs LLC | All rights reserved.</p>
+            <p>[SYSTEM::STATUS: OPERATIONAL] [VERSION: 2.0.1]</p>
+        </div>
+    </footer>
+
+    <script>
+        // Set current year
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        
+        // Tab functionality for content networks
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('[data-tab]');
+            const tabContents = document.querySelectorAll('#tab-content > div');
+            
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetTab = this.dataset.tab;
+                    
+                    tabButtons.forEach(b => b.style.background = 'var(--ac-accent)');
+                    this.style.background = '#2b6cb0';
+                    
+                    tabContents.forEach(tc => tc.style.display = 'none');
+                    document.getElementById('tab-' + targetTab).style.display = 'block';
+                });
+            });
+
+            // Smooth scrolling
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

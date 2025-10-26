@@ -1,0 +1,951 @@
+// UNIQUE_BUILD_TEST_2025_OCT_24_V3
+import { useState } from 'react';
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Avatar,
+  Container,
+  Stack,
+  Chip,
+  Button,
+  Tabs,
+  Tab,
+  useTheme,
+  useMediaQuery,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Badge,
+  InputBase,
+  Paper,
+} from '@mui/material';
+import {
+  Menu as MenuIcon,
+  Search as SearchIcon,
+  Notifications as NotificationsIcon,
+  Add as AddIcon,
+  Home as HomeIcon,
+  TrendingUp as TrendingIcon,
+  Bookmark as BookmarkIcon,
+  Article as ArticleIcon,
+} from '@mui/icons-material';
+import VentureCard from './components/VentureCard';
+import ContentCard from './components/ContentCard';
+
+// Your actual ventures data
+const ventures = [
+  {
+    id: 'msp',
+    title: 'Managed Security Provider',
+    subtitle: '24/7 SOC Monitoring & Threat Hunting',
+    description: 'Complete managed security service provider offering enterprise-grade cybersecurity consulting, SOC monitoring, and threat intelligence.',
+    image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=600&fit=crop',
+    category: 'Cybersecurity',
+    color: '#1e3a8a',
+    stats: { likes: 247, views: '12K', saves: 89 },
+    url: '/ventures/MSP/',
+    tags: ['Security', 'Enterprise', 'SOC'],
+  },
+  {
+    id: 'wellness',
+    title: 'Wellness Lab',
+    subtitle: '7-Day Personalized Health Plans',
+    description: 'AI-powered wellness tracker with personalized micro-habits plans, free habit tracker, and biometric insights for optimal health.',
+    image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=900&fit=crop',
+    category: 'Health',
+    color: '#15803d',
+    stats: { likes: 423, views: '28K', saves: 156 },
+    url: '/ventures/wellness/',
+    tags: ['Wellness', 'AI', 'Health'],
+  },
+  {
+    id: 'rise-cycling',
+    title: 'RISE Cycling',
+    subtitle: '4-Week Power-Ride Program',
+    description: 'Transform your cycling performance with structured training, performance tracking, and community support. First week completely free.',
+    image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&h=700&fit=crop',
+    category: 'Fitness',
+    color: '#c2410c',
+    stats: { likes: 312, views: '19K', saves: 78 },
+    url: '/ventures/rise_cycling/',
+    tags: ['Cycling', 'Fitness', 'Training'],
+  },
+  {
+    id: 'journey',
+    title: 'Journey Journal',
+    subtitle: 'Conscious Journaling & Growth',
+    description: 'Unlock personal growth through conscious journaling. Interactive mapping tool for tracking your consciousness journey and intentions.',
+    image: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=600&fit=crop',
+    category: 'Mindfulness',
+    color: '#7c3aed',
+    stats: { likes: 278, views: '15K', saves: 67 },
+    url: '/ventures/journey/',
+    tags: ['Journaling', 'Mindfulness', 'Growth'],
+  },
+  {
+    id: 'spiritual-festivals',
+    title: 'Spiritual Festivals 2024',
+    subtitle: 'Complete Festival Guidebook',
+    description: 'Download the complete 2024 Festival Guidebook with 50+ spiritual events, rituals, traditions, and bonus ritual pack.',
+    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=800&fit=crop',
+    category: 'Culture',
+    color: '#be185d',
+    stats: { likes: 345, views: '22K', saves: 123 },
+    url: '/ventures/spiritual_festivals/',
+    tags: ['Festivals', 'Spirituality', 'Events'],
+  },
+  {
+    id: 'pact',
+    title: 'PACT Contracts',
+    subtitle: 'Pre-Built Legal Templates',
+    description: 'Get pre-built contract templates with 5-minute setup. Community platform for creators and collaborators.',
+    image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=650&fit=crop',
+    category: 'Business',
+    color: '#0891b2',
+    stats: { likes: 198, views: '11K', saves: 41 },
+    url: '/ventures/PACT/',
+    tags: ['Contracts', 'Business', 'Legal'],
+  },
+  {
+    id: 'content',
+    title: 'Content Library',
+    subtitle: 'Creator Resources & Templates',
+    description: 'Curated venture content library with templates, guides, case studies for aspiring entrepreneurs and creators.',
+    image: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&h=700&fit=crop',
+    category: 'Resources',
+    color: '#ea580c',
+    stats: { likes: 156, views: '9K', saves: 34 },
+    url: '/ventures/content/',
+    tags: ['Content', 'Resources', 'Templates'],
+  },
+  {
+    id: 'discord',
+    title: 'Discord Community',
+    subtitle: '24/7 Support & Networking',
+    description: 'Join our growing Discord community for real-time support, networking, and exclusive content. Free access.',
+    image: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=800&h=600&fit=crop',
+    category: 'Community',
+    color: '#7c3aed',
+    stats: { likes: 267, views: '18K', saves: 89 },
+    url: '/ventures/discord/',
+    tags: ['Community', 'Discord', 'Support'],
+  },
+];
+
+// Content articles data
+const contentItems = [
+  {
+    id: 'welcome-ishare',
+    title: 'Welcome to iShare',
+    description: 'Learn the fundamentals of cyber and APT intelligence in our video series.',
+    channelName: 'iShareHow',
+    channelIcon: 'iS',
+    timestamp: '3 days ago',
+    category: 'Tech',
+    color: '#00d4ff',
+    stats: { likes: 89, comments: 12, shares: 8, saves: 23 },
+    mediaType: 'video' as const,
+    mediaUrl: 'https://www.youtube.com/embed/rQ2NkeJ6yPs',
+    externalUrl: 'https://www.youtube.com/watch?v=rQ2NkeJ6yPs',
+  },
+  {
+    id: 'cosmic-consciousness',
+    title: 'A Journey Through Cosmic Consciousness',
+    description: 'A Journey through Cosmic Consciousness provides a concept of the universe based on mystics\' experiences but expressed in analogies that we can all relate to.',
+    channelName: 'Consciousness Journey',
+    channelIcon: 'CJ',
+    timestamp: '5 days ago',
+    category: 'Consciousness',
+    color: '#7c3aed',
+    stats: { likes: 156, comments: 28, shares: 15, saves: 67 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PL5oPceUn7qyfn6ifad_U8ydnRMn0HXCO6',
+    externalUrl: 'https://www.youtube.com/playlist?list=PL5oPceUn7qyfn6ifad_U8ydnRMn0HXCO6',
+  },
+  {
+    id: 'ai-guide',
+    title: 'Want Access to Our AI Guide?',
+    description: 'Discover tips for better AI use techniques and methodologies.',
+    channelName: 'iShareHow Labs',
+    channelIcon: 'iL',
+    timestamp: '1 week ago',
+    category: 'Tech',
+    color: '#00d4ff',
+    stats: { likes: 234, comments: 45, shares: 32, saves: 89 },
+    mediaType: 'image' as const,
+    mediaUrl: '/content/Gemini_ai_guide.png',
+    externalUrl: 'https://labs.isharehow.app/join',
+  },
+  {
+    id: 'discord-channel',
+    title: 'Join our discord channel',
+    description: 'All you need to do is click the link to join the collective.',
+    channelName: 'iShareHow Labs',
+    channelIcon: 'iL',
+    timestamp: '1 week ago',
+    category: 'Tech',
+    color: '#00d4ff',
+    stats: { likes: 78, comments: 12, shares: 5, saves: 34 },
+    mediaType: 'image' as const,
+    mediaUrl: '/content/Gemini_Generated_Image_ry6hh5ry6hh5ry6h.png',
+    externalUrl: 'https://labs.isharehow.app/discord',
+  },
+  {
+    id: 'ishare-collective',
+    title: 'Join the iShare Collective',
+    description: 'All you need to do is click the link to join the collective.',
+    channelName: 'iShare Collective',
+    channelIcon: 'iC',
+    timestamp: '2 weeks ago',
+    category: 'Tech',
+    color: '#00d4ff',
+    stats: { likes: 123, comments: 18, shares: 12, saves: 56 },
+    mediaType: 'image' as const,
+    mediaUrl: '/content/Gemini_Generated_Image_ub6z7rub6z7rub6z.png',
+    externalUrl: 'https://labs.isharehow.app/join',
+  },
+  {
+    id: 'pact-foundation',
+    title: 'PACT Foundation',
+    description: 'Learn about what the PACT Foundation has for you.',
+    channelName: 'PACT Foundation',
+    channelIcon: 'PF',
+    timestamp: '2 weeks ago',
+    category: 'Tech',
+    color: '#00d4ff',
+    stats: { likes: 67, comments: 8, shares: 3, saves: 23 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLQ5BVpGud4m-xCRd_um_Vpq-_duzhBi77',
+    externalUrl: 'https://www.youtube.com/playlist?list=PLQ5BVpGud4m-xCRd_um_Vpq-_duzhBi77',
+  },
+  {
+    id: 'zwift-shorts',
+    title: 'Zwift Shorts',
+    description: 'Watch our funny talks while cycling on Zwift at Z2.',
+    channelName: 'Zwift Shorts',
+    channelIcon: 'ZS',
+    timestamp: '3 weeks ago',
+    category: 'Chatting',
+    color: '#ff6b6b',
+    stats: { likes: 45, comments: 6, shares: 2, saves: 12 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+    externalUrl: 'https://www.youtube.com/playlist?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+  },
+  {
+    id: 'rise-jamel',
+    title: 'Rise with Jamel',
+    description: 'Explore health and wellness tips with Jamel in this inspiring video.',
+    channelName: 'Rise with Jamel',
+    channelIcon: 'RJ',
+    timestamp: '3 weeks ago',
+    category: 'Health',
+    color: '#15803d',
+    stats: { likes: 89, comments: 15, shares: 8, saves: 34 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+    externalUrl: 'https://www.youtube.com/playlist?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+  },
+  {
+    id: 'consciousness-journey',
+    title: 'Journey Through Consciousness',
+    description: 'Watch our in-depth Journey Through Consciousness series.',
+    channelName: 'Consciousness Journey',
+    channelIcon: 'CJ',
+    timestamp: '1 month ago',
+    category: 'Consciousness',
+    color: '#7c3aed',
+    stats: { likes: 234, comments: 45, shares: 23, saves: 89 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PL5oPceUn7qyfn6ifad_U8ydnRMn0HXCO6',
+    externalUrl: 'https://www.youtube.com/@ConsciousnessJourney',
+  },
+  {
+    id: 'wellness-quiz',
+    title: 'Journey To Wellness',
+    description: 'Take our specific quiz and find out the remedy that you need to cleanse.',
+    channelName: 'Wellness Lab',
+    channelIcon: 'WL',
+    timestamp: '1 month ago',
+    category: 'Health',
+    color: '#15803d',
+    stats: { likes: 156, comments: 28, shares: 15, saves: 67 },
+    mediaType: 'image' as const,
+    mediaUrl: '/content/wellness_quiz.png',
+    externalUrl: 'https://labs.isharehow.app/wellness',
+  },
+  {
+    id: 'ai-comedy-baby',
+    title: 'AI Comedy: Baby',
+    description: 'Watch and laugh at our divine AI Comedy video series featuring baby-themed humor.',
+    channelName: 'AI Comedy',
+    channelIcon: 'AC',
+    timestamp: '1 month ago',
+    category: 'Comedy',
+    color: '#ff6b6b',
+    stats: { likes: 78, comments: 12, shares: 8, saves: 23 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+    externalUrl: 'https://www.youtube.com/playlist?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+  },
+  {
+    id: 'ai-comedy-bad',
+    title: 'AI Comedy: Bad',
+    description: 'Watch and laugh at our divine AI Comedy video series with quirky humor.',
+    channelName: 'AI Comedy',
+    channelIcon: 'AC',
+    timestamp: '1 month ago',
+    category: 'Comedy',
+    color: '#ff6b6b',
+    stats: { likes: 67, comments: 8, shares: 5, saves: 18 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+    externalUrl: 'https://www.youtube.com/playlist?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+  },
+  {
+    id: 'ai-comedy-aita',
+    title: 'AI Comedy: AITA',
+    description: 'Watch and laugh at our divine AI Comedy video series exploring AITA themes.',
+    channelName: 'AI Comedy',
+    channelIcon: 'AC',
+    timestamp: '1 month ago',
+    category: 'Comedy',
+    color: '#ff6b6b',
+    stats: { likes: 89, comments: 15, shares: 6, saves: 28 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+    externalUrl: 'https://www.youtube.com/playlist?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
+  },
+  {
+    id: 'ishare-consciousness',
+    title: 'iShare Consciousness',
+    description: 'Our Collective Consciousness playlist.',
+    channelName: 'iShare Collective',
+    channelIcon: 'iC',
+    timestamp: '2 months ago',
+    category: 'Consciousness',
+    color: '#7c3aed',
+    stats: { likes: 123, comments: 22, shares: 12, saves: 45 },
+    mediaType: 'iframe' as const,
+    mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PL5oPceUn7qyfn6ifad_U8ydnRMn0HXCO6',
+    externalUrl: 'https://www.youtube.com/playlist?list=PL5oPceUn7qyfn6ifad_U8ydnRMn0HXCO6',
+  },
+];
+
+function App() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [savedVentures, setSavedVentures] = useState<string[]>([]);
+  const [savedContent, setSavedContent] = useState<string[]>([]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+
+  const handleCategoryFilter = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  };
+
+  // Filter content based on current tab and filters
+  const getFilteredContent = () => {
+    let filtered = [...contentItems];
+
+    // Filter by tab
+    switch (currentTab) {
+      case 0: // For You - show all
+        break;
+      case 1: // Articles - show all content
+        break;
+      case 2: // Trending - sort by social engagement score
+        filtered = filtered.sort((a, b) => {
+          const scoreA = a.stats.likes + a.stats.saves + a.stats.comments + a.stats.shares;
+          const scoreB = b.stats.likes + b.stats.saves + b.stats.comments + b.stats.shares;
+          
+          console.log(`Sorting content: ${a.title} (${scoreA}) vs ${b.title} (${scoreB})`);
+          
+          return scoreB - scoreA; // Higher score first
+        });
+        break;
+      case 3: // Content - show all content
+        break;
+      case 4: // Saved - show saved content
+        filtered = filtered.filter(content => savedContent.includes(content.id));
+        break;
+    }
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(content => 
+        content.category.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(content =>
+        content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        content.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        content.channelName.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
+
+  // Filter ventures based on current tab and filters
+  const getFilteredVentures = () => {
+    let filtered = [...ventures];
+
+    // Filter by tab
+    switch (currentTab) {
+      case 0: // For You - show all
+        break;
+      case 1: // Articles - show content instead of ventures
+        return [];
+      case 2: // Trending - sort by social engagement score
+        filtered = filtered.sort((a, b) => {
+          // Calculate social engagement score: likes + saves + views (converted to number)
+          const getViewsNumber = (views: string) => {
+            if (views.includes('K')) return parseFloat(views.replace('K', '')) * 1000;
+            if (views.includes('M')) return parseFloat(views.replace('M', '')) * 1000000;
+            return parseInt(views) || 0;
+          };
+          
+          const scoreA = a.stats.likes + a.stats.saves + getViewsNumber(a.stats.views);
+          const scoreB = b.stats.likes + b.stats.saves + getViewsNumber(b.stats.views);
+          
+          console.log(`Sorting: ${a.title} (${scoreA}) vs ${b.title} (${scoreB})`);
+          
+          return scoreB - scoreA; // Higher score first
+        });
+        break;
+      case 3: // Content - show content instead of ventures
+        return [];
+      case 4: // Saved - show saved ventures
+        filtered = filtered.filter(venture => savedVentures.includes(venture.id));
+        break;
+    }
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(venture => 
+        venture.category.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(venture =>
+        venture.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        venture.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        venture.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    return filtered;
+  };
+
+  const filteredVentures = getFilteredVentures();
+  const filteredContent = getFilteredContent();
+  
+  // Debug logging
+  console.log(`Current tab: ${currentTab}, Filtered ventures count: ${filteredVentures.length}, Content count: ${filteredContent.length}`);
+  if (currentTab === 2) {
+    console.log('Trending ventures:', filteredVentures.map(v => `${v.title}: ${v.stats.likes + v.stats.saves + (v.stats.views.includes('K') ? parseFloat(v.stats.views.replace('K', '')) * 1000 : parseInt(v.stats.views))}`));
+  }
+  if (currentTab === 1 || currentTab === 3) {
+    console.log('Content items:', filteredContent.map(c => `${c.title}: ${c.stats.likes + c.stats.saves + c.stats.comments + c.stats.shares}`));
+  }
+
+  const drawer = (
+    <Box sx={{ width: 280, height: '100%', bgcolor: 'background.paper' }}>
+      <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
+          iShareHow Labs
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Venture Portfolio
+        </Typography>
+      </Box>
+      <List sx={{ px: 2, py: 2 }}>
+        <ListItemButton 
+          selected={currentTab === 0}
+          onClick={() => setCurrentTab(0)}
+          sx={{ borderRadius: 2, mb: 1 }}
+        >
+          <ListItemIcon><HomeIcon color={currentTab === 0 ? "primary" : "inherit"} /></ListItemIcon>
+          <ListItemText 
+            primary="For You" 
+            primaryTypographyProps={{ 
+              fontWeight: currentTab === 0 ? 600 : 400,
+              color: currentTab === 0 ? 'primary.main' : 'inherit'
+            }} 
+          />
+        </ListItemButton>
+        <ListItemButton 
+          selected={currentTab === 1}
+          onClick={() => setCurrentTab(1)}
+          sx={{ borderRadius: 2, mb: 1 }}
+        >
+          <ListItemIcon>
+            <Badge badgeContent={filteredContent.length} color="primary" max={99}>
+              <ArticleIcon color={currentTab === 1 ? "primary" : "inherit"} />
+            </Badge>
+          </ListItemIcon>
+          <ListItemText 
+            primary="Articles" 
+            primaryTypographyProps={{ 
+              fontWeight: currentTab === 1 ? 600 : 400,
+              color: currentTab === 1 ? 'primary.main' : 'inherit'
+            }} 
+          />
+        </ListItemButton>
+        <ListItemButton 
+          selected={currentTab === 2}
+          onClick={() => setCurrentTab(2)}
+          sx={{ borderRadius: 2, mb: 1 }}
+        >
+          <ListItemIcon><TrendingIcon color={currentTab === 2 ? "primary" : "inherit"} /></ListItemIcon>
+          <ListItemText 
+            primary="Trending" 
+            primaryTypographyProps={{ 
+              fontWeight: currentTab === 2 ? 600 : 400,
+              color: currentTab === 2 ? 'primary.main' : 'inherit'
+            }} 
+          />
+        </ListItemButton>
+        <ListItemButton 
+          selected={currentTab === 3}
+          onClick={() => setCurrentTab(3)}
+          sx={{ borderRadius: 2, mb: 1 }}
+        >
+          <ListItemIcon><BookmarkIcon color={currentTab === 3 ? "primary" : "inherit"} /></ListItemIcon>
+          <ListItemText 
+            primary="Content" 
+            primaryTypographyProps={{ 
+              fontWeight: currentTab === 3 ? 600 : 400,
+              color: currentTab === 3 ? 'primary.main' : 'inherit'
+            }} 
+          />
+        </ListItemButton>
+        <ListItemButton 
+          selected={currentTab === 4}
+          onClick={() => setCurrentTab(4)}
+          sx={{ borderRadius: 2, mb: 1 }}
+        >
+          <ListItemIcon><BookmarkIcon color={currentTab === 4 ? "primary" : "inherit"} /></ListItemIcon>
+          <ListItemText 
+            primary="Saved" 
+            primaryTypographyProps={{ 
+              fontWeight: currentTab === 4 ? 600 : 400,
+              color: currentTab === 4 ? 'primary.main' : 'inherit'
+            }} 
+          />
+        </ListItemButton>
+      </List>
+      <Divider sx={{ mx: 2 }} />
+      <Box sx={{ p: 2 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, px: 2 }}>
+          CATEGORIES
+        </Typography>
+        <Stack spacing={0.5} sx={{ mt: 1 }}>
+          <Button
+            onClick={() => handleCategoryFilter('all')}
+            variant={selectedCategory === 'all' ? 'contained' : 'text'}
+            sx={{
+              justifyContent: 'flex-start',
+              color: selectedCategory === 'all' ? 'white' : 'text.secondary',
+              textTransform: 'none',
+              fontWeight: selectedCategory === 'all' ? 600 : 500,
+              fontSize: '0.875rem',
+            }}
+          >
+            All Categories
+          </Button>
+          {['Cybersecurity', 'Health', 'Fitness', 'Mindfulness', 'Business', 'Community', 'Resources'].map((cat) => (
+            <Button
+              key={cat}
+              onClick={() => handleCategoryFilter(cat)}
+              variant={selectedCategory === cat ? 'contained' : 'text'}
+              sx={{
+                justifyContent: 'flex-start',
+                color: selectedCategory === cat ? 'white' : 'text.secondary',
+                textTransform: 'none',
+                fontWeight: selectedCategory === cat ? 600 : 500,
+                fontSize: '0.875rem',
+              }}
+            >
+              {cat}
+            </Button>
+          ))}
+        </Stack>
+      </Box>
+    </Box>
+  );
+
+  // MAIN STRUCTURE 
+  return (
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* App Bar */}
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Toolbar sx={{ minHeight: '64px !important', px: { xs: 1, sm: 2 } }}>
+          <IconButton
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { md: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 800,
+              background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              display: { xs: 'none', sm: 'block' },
+            }}
+          >
+            iShareHow Labs
+          </Typography>
+
+          {/* Search Bar */}
+          <Paper
+            elevation={0}
+            sx={{
+              ml: { xs: 1, sm: 4 },
+              flex: { xs: 1, sm: '0 1 400px', md: '0 1 500px', lg: '0 1 600px' },
+              maxWidth: { xs: 'calc(100vw - 120px)', sm: 'none' },
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: 'background.default',
+              px: 2,
+              py: 0.5,
+              borderRadius: 3,
+              minWidth: 0, // Allow shrinking
+            }}
+          >
+            <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+            <InputBase 
+              placeholder="Search ventures..." 
+              value={searchQuery}
+              onChange={handleSearchChange}
+              sx={{ 
+                flex: 1,
+                minWidth: 0, // Allow text to shrink
+                '& input': {
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                }
+              }} 
+            />
+          </Paper>
+
+          <Box sx={{ flexGrow: 1 }} />
+
+          <Stack direction="row" spacing={1} alignItems="center">
+            <IconButton sx={{ display: { xs: 'none', sm: 'flex' } }}>
+              <Badge badgeContent={3} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              sx={{
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                display: { xs: 'none', sm: 'flex' },
+              }}
+            >
+              Create
+            </Button>
+            <Avatar
+              sx={{
+                width: 36,
+                height: 36,
+                bgcolor: 'primary.main',
+                cursor: 'pointer',
+              }}
+            >
+              G
+            </Avatar>
+          </Stack>
+        </Toolbar>
+
+        {/* Tabs for mobile */}
+        {isMobile && (
+          <Tabs
+            value={currentTab}
+            onChange={(_, v) => setCurrentTab(v)}
+            variant="fullWidth"
+            sx={{ borderTop: 1, borderColor: 'divider' }}
+          >
+            <Tab label="For You" />
+            <Tab label="Articles" />
+            <Tab label="Trending" />
+            <Tab label="Content" />
+            <Tab label="Saved" />
+          </Tabs>
+        )}
+      </AppBar>
+
+      {/* Sidebar Drawer */}
+      <Drawer
+        variant={isMobile ? 'temporary' : 'permanent'}
+        open={isMobile ? mobileOpen : true}
+        onClose={handleDrawerToggle}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block' },
+          '& .MuiDrawer-paper': {
+            width: 280,
+            boxSizing: 'border-box',
+            border: 'none',
+            borderRight: 1,
+            borderColor: 'divider',
+          },
+        }}
+      >
+        <Toolbar />
+        {drawer}
+      </Drawer>
+
+      {/* Main Content */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: { md: `calc(100% - 280px)` },
+          ml: { md: '280px' },
+        }}
+      >
+        <Toolbar />
+        {isMobile && <Toolbar />}
+
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          {/* Hero Section */}
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Chip
+              label="🔥 8 Active Ventures"
+              color="primary"
+              sx={{ mb: 2, fontWeight: 600 }}
+            />
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 900,
+                mb: 2,
+                background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Explore Our Ventures
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+              Discover innovative solutions across cybersecurity, wellness, fitness, and more.
+              Click any card to explore the full application.
+            </Typography>
+          </Box>
+
+          {/* Debug Info */}
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Current Tab: {currentTab === 0 ? 'For You' : currentTab === 1 ? 'Articles' : currentTab === 2 ? 'Trending' : currentTab === 3 ? 'Content' : 'Saved'} | 
+              Ventures: {filteredVentures.length} | 
+              Content: {filteredContent.length} | 
+              {currentTab === 2 && 'Sorted by Social Engagement'}
+              {currentTab === 1 && 'Content Articles'}
+              {currentTab === 3 && 'Content Articles'}
+            </Typography>
+          </Box>
+
+          {/* Content Grid - Pinterest/Flipboard Style */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+                lg: 'repeat(4, 1fr)',
+              },
+              gap: 3,
+              mb: 6,
+            }}
+          >
+            {currentTab === 1 || currentTab === 3 ? (
+              // Articles/Content Tab - Show Content Cards
+              filteredContent.length > 0 ? (
+                filteredContent.map((content) => (
+                  <ContentCard 
+                    key={content.id} 
+                    content={content} 
+                    onSave={(contentId, isSaved) => {
+                      if (isSaved) {
+                        setSavedContent(prev => [...prev, contentId]);
+                      } else {
+                        setSavedContent(prev => prev.filter(id => id !== contentId));
+                      }
+                    }}
+                  />
+                ))
+              ) : (
+                <Box sx={{ 
+                  gridColumn: '1 / -1', 
+                  textAlign: 'center', 
+                  py: 8,
+                  color: 'text.secondary'
+                }}>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    No content found
+                  </Typography>
+                  <Typography variant="body2">
+                    Try adjusting your search or filters
+                  </Typography>
+                </Box>
+              )
+            ) : currentTab === 4 ? (
+              // Saved Tab - Show both saved ventures and content
+              <>
+                {filteredVentures.map((venture) => (
+                  <VentureCard 
+                    key={venture.id} 
+                    venture={venture} 
+                    onSave={(ventureId, isSaved) => {
+                      if (isSaved) {
+                        setSavedVentures(prev => [...prev, ventureId]);
+                      } else {
+                        setSavedVentures(prev => prev.filter(id => id !== ventureId));
+                      }
+                    }}
+                  />
+                ))}
+                {filteredContent.map((content) => (
+                  <ContentCard 
+                    key={content.id} 
+                    content={content} 
+                    onSave={(contentId, isSaved) => {
+                      if (isSaved) {
+                        setSavedContent(prev => [...prev, contentId]);
+                      } else {
+                        setSavedContent(prev => prev.filter(id => id !== contentId));
+                      }
+                    }}
+                  />
+                ))}
+                {filteredVentures.length === 0 && filteredContent.length === 0 && (
+                  <Box sx={{ 
+                    gridColumn: '1 / -1', 
+                    textAlign: 'center', 
+                    py: 8,
+                    color: 'text.secondary'
+                  }}>
+                    <Typography variant="h6" sx={{ mb: 1 }}>
+                      No saved items
+                    </Typography>
+                    <Typography variant="body2">
+                      Save ventures or content to see them here
+                    </Typography>
+                  </Box>
+                )}
+              </>
+            ) : (
+              // Other Tabs - Show Venture Cards
+              filteredVentures.length > 0 ? (
+                filteredVentures.map((venture, index) => (
+                  <VentureCard 
+                    key={venture.id} 
+                    venture={venture} 
+                    isTrending={currentTab === 2}
+                    trendingRank={currentTab === 2 ? index + 1 : undefined}
+                    onSave={(ventureId, isSaved) => {
+                      if (isSaved) {
+                        setSavedVentures(prev => [...prev, ventureId]);
+                      } else {
+                        setSavedVentures(prev => prev.filter(id => id !== ventureId));
+                      }
+                    }}
+                  />
+                ))
+              ) : (
+                <Box sx={{ 
+                  gridColumn: '1 / -1', 
+                  textAlign: 'center', 
+                  py: 8,
+                  color: 'text.secondary'
+                }}>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    No ventures found
+                  </Typography>
+                  <Typography variant="body2">
+                    Try adjusting your search or filters
+                  </Typography>
+                </Box>
+              )
+            )}
+          </Box>
+        </Container>
+
+        {/* Footer */}
+        <Box
+          sx={{
+            borderTop: 1,
+            borderColor: 'divider',
+            py: 4,
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Container maxWidth="xl">
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography variant="body2" color="text.secondary">
+                © {new Date().getFullYear()} iShareHow LABS LLC. All rights reserved.
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <Button size="small" sx={{ textTransform: 'none' }}>About</Button>
+                <Button size="small" sx={{ textTransform: 'none' }}>Contact</Button>
+                <Button size="small" sx={{ textTransform: 'none' }}>Privacy</Button>
+              </Stack>
+            </Stack>
+          </Container>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+export default App;
