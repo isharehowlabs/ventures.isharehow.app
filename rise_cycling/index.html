@@ -21,17 +21,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
     
     <!-- Acquisition.com-inspired Styles: Light theme, clean cards, bold CTAs -->
     <style>
-        :root {
-            --ac-primary: #212529; /* Dark text */
-            --ac-secondary: #6c757d; /* Gray text */
-            --ac-accent: #005f9e; /* Barracuda Blue */
-            --ac-light: #ffffff; /* White background */
-            --ac-gray: #f8f9fa; /* Light gray bg */
-            --ac-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --ac-radius: 4px; /* Reduced radius for a sharper look */
+                :root {
+            --ac-primary: #e0e0e0; /* Light text */
+            --ac-secondary: #a0a0a0; /* Gray text */
+            --ac-accent: #3498db; /* A calm, professional blue */
+            --ac-light: #121212; /* Dark background */
+            --ac-gray: #1e1e1e; /* Lighter dark background for cards/sections */
+            --ac-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            --ac-radius: 8px;
             --ac-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
         }
 
@@ -42,8 +43,8 @@
         }
 
         body {
-            background: var(--ac-light);
-            color: var(--ac-primary);
+            background: linear-gradient(135deg, #181a20 0%, #23263a 100%);
+            color: var(--ac-accent);
             font-family: var(--ac-font);
             line-height: 1.6;
             margin: 0;
@@ -60,13 +61,13 @@
 
         /* Navigation: Simple top bar */
         .nav {
-            background: var(--ac-light);
+            background: rgba(24,26,32,0.95);
             padding: 1rem 0;
             position: sticky;
             top: 0;
             z-index: 1000;
-            box-shadow: none;
-            border-bottom: 1px solid #dee2e6;
+            box-shadow: 0 2px 24px #00fff744;
+            border-bottom: 1px solid #23263a;
         }
 
         .nav-content {
@@ -77,10 +78,12 @@
         }
 
         .nav-brand {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--ac-primary);
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--ac-accent2);
+            text-shadow: 0 0 12px var(--ac-accent), 0 0 24px var(--ac-accent2);
             text-decoration: none;
+            letter-spacing: 2px;
         }
 
         .nav-links {
@@ -92,33 +95,32 @@
         }
 
         .nav-links a {
-            color: var(--ac-primary);
+            color: var(--ac-accent);
             text-decoration: none;
             font-size: 1rem;
-            font-weight: 500;
+            font-weight: 600;
             padding: 0.5rem 0;
-            transition: color 0.3s ease;
+            transition: color 0.3s, text-shadow 0.3s;
+            text-shadow: 0 0 8px var(--ac-accent2);
         }
-
         .nav-links a:hover {
-            color: var(--ac-accent);
+            color: var(--ac-accent2);
+            text-shadow: 0 0 16px var(--ac-accent);
         }
 
         .nav-cta {
-            background: var(--ac-accent);
-            color: var(--ac-light);
-            padding: 0.6rem 1.2rem;
+            background: linear-gradient(90deg, var(--ac-accent) 0%, var(--ac-accent2) 100%);
+            color: #181a20;
+            padding: 0.7rem 1.5rem;
             border-radius: var(--ac-radius);
             text-decoration: none;
-            font-weight: 600;
-            transition: background 0.3s ease;
+            font-weight: 700;
+            box-shadow: 0 0 12px var(--ac-accent2);
+            transition: background 0.3s, color 0.3s;
+            border: none;
         }
-
         .nav-cta:hover {
-            background: #004c8c;
-        }
-
-        .nav-links a:hover {
+            background: linear-gradient(90deg, var(--ac-accent2) 0%, var(--ac-accent) 100%);
             color: var(--ac-accent);
         }
 
@@ -186,18 +188,34 @@
         }
 
         .card {
-            background: var(--ac-light);
+            background: linear-gradient(120deg, #23263a 60%, #181a20 100%);
             padding: 2rem;
             text-align: center;
             border-radius: var(--ac-radius);
-            box-shadow: var(--ac-shadow);
-            border: 1px solid #dee2e6;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 0 24px #00fff7aa, 0 2px 4px -1px #ff00cc44;
+            border: 1px solid #00fff7;
+            transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+            color: var(--ac-accent);
+            position: relative;
+            overflow: hidden;
         }
-
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -40%; left: -40%;
+            width: 180%; height: 180%;
+            background: radial-gradient(circle, #ff00cc44 0%, #00fff744 100%);
+            opacity: 0.12;
+            z-index: 0;
+        }
+        .card h3, .card p, .card ul {
+            position: relative;
+            z-index: 1;
+        }
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.06);
+            transform: scale(1.04) translateY(-8px);
+            box-shadow: 0 0 48px #ff00ccaa, 0 0 24px #00fff7cc;
+            border-color: #ff00cc;
         }
 
         .card h3 {
@@ -267,22 +285,22 @@
         /* CTA Button */
         .cta-btn {
             display: inline-block;
-            background: var(--ac-accent);
-            color: var(--ac-light);
+            background: linear-gradient(90deg, var(--ac-accent) 0%, var(--ac-accent2) 100%);
+            color: #181a20;
             padding: 0.8rem 2rem;
             border-radius: var(--ac-radius);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 900;
             font-size: 1rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            transition: background 0.3s ease;
-            border: 1px solid var(--ac-accent);
+            box-shadow: 0 0 16px var(--ac-accent2);
+            border: none;
+            transition: background 0.3s, color 0.3s;
         }
-
         .cta-btn:hover {
-            background: #004c8c;
-            border-color: #004c8c;
+            background: linear-gradient(90deg, var(--ac-accent2) 0%, var(--ac-accent) 100%);
+            color: var(--ac-accent);
         }
 
         /* Quote Block */
@@ -328,10 +346,11 @@
 
         /* Footer */
         .footer {
-            background: #343a40;
-            color: var(--ac-light);
+            background: linear-gradient(90deg, #181a20 60%, #23263a 100%);
+            color: var(--ac-accent);
             padding: 4rem 0;
             text-align: left;
+            box-shadow: 0 0 32px #00fff7aa;
         }
 
         .footer-grid {
@@ -411,19 +430,19 @@
                     <li><a href="#mission">Mission</a></li>
                     <li><a href="#protocol">Protocol</a></li>
                     <li><a href="#content">Resources</a></li>
-                    <li><a href="#join" class="nav-cta">Join Now</a></li>
+                    <li><a href="https://www.youtube.com/@RisewithJamel?sub_confirmation=1" target="_blank" class="nav-cta">Join YouTube</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <section class="hero-section" style="background-color: var(--ac-gray); padding: 6rem 0; text-align: center;">
+    <section class="hero-section" style="background: linear-gradient(120deg, #00fff7 0%, #ff00cc 100%); padding: 6rem 0; text-align: center; box-shadow: 0 0 40px #00fff7aa;">
         <div class="container">
-            <h1 style="font-size: 3.5rem; font-weight: 700; margin-bottom: 1rem;">Your 4-Week Power-Ride Program</h1>
-            <p style="font-size: 1.25rem; color: var(--ac-secondary); max-width: 800px; margin: 0 auto 2rem;">
+            <h1 style="font-size: 3.5rem; font-weight: 900; margin-bottom: 1rem; color: #181a20; text-shadow: 0 0 24px #ff00cc, 0 0 48px #00fff7; letter-spacing: 2px;">Your 4-Week Power-Ride Program</h1>
+            <p style="font-size: 1.25rem; color: #181a20; max-width: 800px; margin: 0 auto 2rem; text-shadow: 0 0 8px #00fff7;">
                 Transform your cycling performance with our structured 4-week program. Get professional training plans, performance tracking, and community support. Try your first week completely free.
             </p>
-            <a href="#join" class="cta-btn" style="font-size: 1.2rem; padding: 1rem 2.5rem;">Start Your Free Week</a>
+            <a href="#join" class="cta-btn" style="font-size: 1.2rem; padding: 1rem 2.5rem; background: linear-gradient(90deg, #ff00cc 0%, #00fff7 100%); color: #181a20; box-shadow: 0 0 24px #ff00cc; border: none; font-weight: 900; text-transform: uppercase;">Start Your Free Week</a>
         </div>
     </section>
 
@@ -565,89 +584,26 @@
                     </div>
                 </div>
                 <div class="card" style="text-align: center;">
-                    <h3>Gaming & Hashtags</h3>
-                    <p style="color: var(--ac-accent); margin-bottom: 1rem;">Gaming: <strong>Zwift</strong>, <strong>Just Chatting</strong></p>
-                    <p style="color: var(--ac-secondary);">Hashtags: #CyclingLife #BikeLife #RoadCycling #CyclingCommunity #CyclingMotivation #CyclingInspiration #RideOn #CyclingGoals #CyclingGear #BikePorn #CyclingStyle #BikeRide #Zwift #Twitch #SpiritualGrowth #SelfReliance #HealthOptimization #ConsciousnessTraining</p>
+                    <div class="container">
+                        <h3>DISCORD::ACCESS</h3>
+                        <div style="text-align: center; max-width: 600px; margin: 0 auto;">
+                            <p style="font-size: 1.1rem; margin-bottom: 2rem; color: var(--ac-secondary);">
+                                Connect to our distributed network on X (<strong style="color: var(--ac-accent);">@Dir3ct0r_3L</strong>) the most up to date information on cycling, self-reliance, health optimization, and spiritual growth protocols.
+                            </p>
+                            <p style="color: #fff; margin-bottom: 1rem;">Channels: <strong>Zwift</strong>, <strong>Just Chatting</strong>, <strong>IRL</strong></p>
+                            <a href="https://labs.isharehow.app/discord" target="_blank" class="cta-btn" style="color: #fff;">Join Our Discord Community</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </section>
-
-    <section id="discord" class="section">
-        <div class="container">
-            <h2>DISCORD::ACCESS</h2>
-            <div style="text-align: center; max-width: 600px; margin: 0 auto;">
-                <p style="font-size: 1.1rem; margin-bottom: 2rem; color: var(--ac-secondary);">
-                    Connect to our distributed network on X (<strong style="color: var(--ac-accent);">@Dir3ct0r_3L</strong>) the most up to date information on cycling, self-reliance, health optimization, and spiritual growth protocols.
-                </p>
-                <a href="https://labs.isharehow.app/discord" target="_blank" class="cta-btn">Join Our Discord Community</a>
-            </div>
-        </div>
-    </section>
+  
 
     <section id="access" class="section">
         <div class="container">
-            <h2>LIVE::ACCESS</h2>
-            <div style="text-align: center;">
-                <p style="font-size: 1.2rem; margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto; color: var(--ac-secondary);">
-                    Master the rise using our content <strong>"execute 100 iterations"</strong> of watching our content of live training sessions on Twitch or through <strong>jameleliyah.tv</strong>
-                </p>
-                <a href="https://www.twitch.tv/jameleliyah" class="cta-btn" target="_blank">INITIATE::VIEWING</a>
-            </div>
-        </div>
-    </section>
-
-    <section id="join" class="section">
-        <div class="container" style="text-align: center;">
-            <h2>MEMBERSHIP::ACCESS</h2>
-            <p style="font-size: 1.1rem; margin-bottom: 2rem; color: var(--ac-secondary);">
-                Become a part of our community and gain access to exclusive content, resources, and support.
-            </p>
-            <a href="https://www.patreon.com/cw/JamelEliYah" target="_blank" class="cta-btn" style="font-size: 1.2rem; padding: 1rem 2.5rem; margin-top: 1.5rem;">Join Now Using Our Patreon Link</a>
-        </div>
-    </section>
-    
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <h4>Company</h4>
-                    <ul>
-                        <li><a href="#about">About Us</a></li>
-                        <li><a href="#mission">Our Mission</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Contact</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Resources</h4>
-                    <ul>
-                        <li><a href="#content">Blog</a></li>
-                        <li><a href="#">Case Studies</a></li>
-                        <li><a href="#">Events</a></li>
-                        <li><a href="#">Support</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Legal</h4>
-                    <ul>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Accessibility</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Connect</h4>
-                    <ul>
-                        <li><a href="https://www.youtube.com/@RisewithJamel" target="_blank">YouTube</a></li>
-                        <li><a href="https://www.twitch.tv/jameleliyah" target="_blank">Twitch</a></li>
-                        <li><a href="https://labs.isharehow.app/discord" target="_blank">Discord</a></li>
-                        <li><a href="https://www.patreon.com/cw/JamelEliYah" target="_blank">Patreon</a></li>
-                    </ul>
-                </div>
-            </div>
             <div class="footer-bottom">
-                <p>RISE CYCLING © <span id="current-year">2025</span> | iShareHow Labs LLC | All rights reserved.</p>
+                <p>RISE CYCLING © <span id="current-year">2025</span> | iShareHow Labs LLC | All rights reserved | https://www.twitch.tv/jameleliyah.</p>
+                <p style="color: var(--ac-secondary);">Hashtags: #CyclingLife #BikeLife #RoadCycling #CyclingCommunity #CyclingMotivation #CyclingInspiration #RideOn #CyclingGoals #CyclingGear #BikePorn #CyclingStyle #BikeRide #Zwift #Twitch #SpiritualGrowth #SelfReliance #HealthOptimization #ConsciousnessTraining</p>
             </div>
         </div>
     </footer>
