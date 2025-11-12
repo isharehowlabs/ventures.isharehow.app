@@ -1,12 +1,7 @@
-# Proxy API requests to backend server
-<IfModule mod_proxy.c>
-    ProxyPreserveHost On
-    ProxyPass /api http://localhost:3001/api
-    ProxyPassReverse /api http://localhost:3001/api
-</IfModule>
-
-# Fallback: If mod_proxy is not available, redirect to error page
-<IfModule !mod_proxy.c>
-    # You'll need to configure the backend URL in Next.js build instead
+# Rewrite API requests to PHP proxy
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} ^/api/products
+    RewriteRule ^api/products$ api/products.php [L]
 </IfModule>
 

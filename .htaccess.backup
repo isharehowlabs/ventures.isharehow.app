@@ -1,0 +1,10 @@
+# Proxy API requests to backend server using RewriteRule
+# Note: Requires mod_rewrite and mod_proxy to be enabled
+<IfModule mod_rewrite.c>
+    <IfModule mod_proxy.c>
+        RewriteEngine On
+        RewriteCond %{REQUEST_URI} ^/api/
+        RewriteRule ^api/(.*)$ http://localhost:3001/api/$1 [P,L]
+    </IfModule>
+</IfModule>
+
