@@ -5,7 +5,44 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppShell from '../components/AppShell';
 
 const STORE_DOMAIN = 'isharehow.myshopify.com';
-const API_BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? '').replace(/\/$/, '');
+
+// Get backend URL - supports environment variable or defaults
+const getBackendUrl = (): string => {
+  // Check for explicit environment variable (available at build time for static export)
+  const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '');
+  }
+  
+  // For client-side, check window location
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    
+    // In development, default to localhost:3001
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    
+    // In production, try different backend URL patterns
+    // Option 1: Backend proxied on same origin (most common for static sites)
+    // Option 2: Backend on subdomain (e.g., api.ventures.isharehow.app)
+    // Option 3: Backend on same domain, different port (if accessible)
+    
+    // Try same origin first (if backend is proxied via web server like nginx/apache)
+    // This is the most common setup for static sites
+    if (hostname.includes('ventures.isharehow.app')) {
+      // First try same origin (backend might be proxied)
+      // If that doesn't work, the error will be clear
+      return window.location.origin;
+    }
+    
+    // Fallback: try API subdomain for other domains
+    return `https://api.${hostname}`;
+  }
+  
+  // Fallback for SSR/build time
+  return '';
+};
 
 type ShopifyImage = {
   originalSrc: string;
@@ -32,6 +69,20 @@ type ShopifyPageInfo = {
   endCursor: string | null;
 };
 
+// Backend response format
+type BackendProduct = {
+  id: string;
+  title: string;
+  handle: string;
+  img: string;
+  price: string;
+};
+
+type BackendProductsResponse = {
+  products: BackendProduct[];
+  pageInfo: ShopifyPageInfo;
+};
+
 type ProductsResponse = {
   products: ShopifyProduct[];
   pageInfo: ShopifyPageInfo;
@@ -44,6 +95,34 @@ const currencyFormatter = (currencyCode: string) =>
     minimumFractionDigits: 2,
   });
 
+// Transform backend product format to frontend format
+const transformBackendProduct = (backendProduct: BackendProduct): ShopifyProduct => {
+  // Parse price string (e.g., "$10.00" or "N/A")
+  let priceAmount: string | undefined;
+  let currencyCode = 'USD';
+  
+  if (backendProduct.price && backendProduct.price !== 'N/A') {
+    // Remove $ and parse
+    const priceMatch = backendProduct.price.match(/\$?([\d.]+)/);
+    if (priceMatch) {
+      priceAmount = priceMatch[1];
+    }
+  }
+
+  return {
+    id: backendProduct.id,
+    title: backendProduct.title,
+    handle: backendProduct.handle,
+    images: backendProduct.img ? [{ originalSrc: backendProduct.img, altText: backendProduct.title }] : undefined,
+    priceRange: priceAmount ? {
+      minVariantPrice: {
+        amount: priceAmount,
+        currencyCode,
+      },
+    } : undefined,
+  };
+};
+
 const ProductsPage = () => {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [pageInfo, setPageInfo] = useState<ShopifyPageInfo>({
@@ -55,8 +134,9 @@ const ProductsPage = () => {
 
   const fetchProducts = useCallback(
     async (after: string | null = null) => {
-      if (!API_BASE_URL) {
-        setError('Backend URL is not configured.');
+      const backendUrl = getBackendUrl();
+      if (!backendUrl) {
+        setError('Backend URL is not configured. Please set NEXT_PUBLIC_BACKEND_URL environment variable or ensure backend server is running.');
         return;
       }
 
@@ -69,22 +149,32 @@ const ProductsPage = () => {
           params.append('after', after);
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/products?${params.toString()}`);
+        const response = await fetch(`${backendUrl}/api/products?${params.toString()}`);
         if (!response.ok) {
           throw new Error('Failed to fetch products.');
         }
 
-        const data: ProductsResponse = await response.json();
+        const backendData: BackendProductsResponse = await response.json();
+        
+        // Transform backend products to frontend format
+        const transformedProducts = backendData.products.map(transformBackendProduct);
 
         setProducts((prev) => {
           const existingIds = new Set(prev.map((product) => product.id));
-          const deduped = data.products.filter((product) => !existingIds.has(product.id));
+          const deduped = transformedProducts.filter((product) => !existingIds.has(product.id));
           return after ? [...prev, ...deduped] : deduped;
         });
-        setPageInfo(data.pageInfo);
+        setPageInfo(backendData.pageInfo);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unexpected error fetching products.';
+        let message = 'Failed to fetch products.';
+        if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+          message = `Cannot connect to backend server at ${backendUrl}. Please ensure the backend server is running and accessible.`;
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
         setError(message);
+        console.error('Products fetch error:', err);
+        console.error('Backend URL attempted:', backendUrl);
       } finally {
         setLoading(false);
       }

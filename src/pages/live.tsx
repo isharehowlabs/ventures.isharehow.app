@@ -409,73 +409,7 @@ function App() {
       </Box>
 
       <Box sx={{ mb: 6 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-          Featured Streams
-        </Typography>
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, 1fr)',
-              lg: 'repeat(3, 1fr)',
-            },
-            gap: 3,
-          }}
-        >
-          {twitchStreams.map((stream) => (
-            <Box
-              key={stream.id}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                bgcolor: 'background.paper',
-                borderRadius: 3,
-                border: 1,
-                borderColor: 'divider',
-                overflow: 'hidden',
-              }}
-            >
-              <Box
-                component="img"
-                src={stream.thumbnail}
-                alt={stream.title}
-                sx={{ width: '100%', height: 180, objectFit: 'cover' }}
-              />
-              <Box sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                    {stream.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {stream.stats.status}
-                  </Typography>
-                </Stack>
-                <Typography variant="body2" color="text.secondary">
-                  {stream.subtitle}
-                </Typography>
-                <Typography variant="body2">{stream.description}</Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
-                  {stream.tags.map((tag) => (
-                    <Box
-                      key={tag}
-                      sx={{
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: 2,
-                        bgcolor: 'background.default',
-                        fontSize: '0.75rem',
-                        color: 'text.secondary',
-                      }}
-                    >
-                      #{tag}
-                    </Box>
-                  ))}
-                </Stack>
-              </Box>
-            </Box>
-          ))}
-        </Box>
+        <TaskList />
       </Box>
     </AppShell>
   );
