@@ -30,87 +30,131 @@ const ContentLibraryView = dynamic(() => import('../components/ContentLibraryVie
   ),
 });
 
-// Your Twitch streaming content data
-const twitchStreams = [
-  {
-    id: 'main-channel',
-    title: 'Jamel EliYah Live',
-    subtitle: 'Main Channel Streaming',
-    description:
-      'Join live streams featuring wellness coaching, spiritual discussions, fitness training, and community Q&A sessions.',
-    thumbnail: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_jameleliyah-440x248.jpg',
-    category: 'Live Stream',
-    color: '#9146FF',
-    stats: { viewers: '1.2K', followers: '15K', status: 'Live' },
-    url: 'https://www.twitch.tv/jameleliyah',
-    tags: ['Wellness', 'Spirituality', 'Fitness'],
-  },
-  {
-    id: 'wellness-sessions',
-    title: 'Wellness Coaching',
-    subtitle: 'Health & Wellness Sessions',
-    description:
-      'Live wellness coaching sessions with personalized health plans, meditation guidance, and holistic healing practices.',
-    thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
-    category: 'Wellness',
-    color: '#15803d',
-    stats: { viewers: '856', followers: '8.2K', status: 'Scheduled' },
-    url: 'https://www.twitch.tv/jameleliyah',
-    tags: ['Wellness', 'Coaching', 'Health'],
-  },
-  {
-    id: 'spiritual-guidance',
-    title: 'Spiritual Discussions',
-    subtitle: 'Consciousness & Spirituality',
-    description:
-      'Deep spiritual discussions, consciousness exploration, and guided meditation sessions for personal growth.',
-    thumbnail: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop',
-    category: 'Spirituality',
-    color: '#be185d',
-    stats: { viewers: '1.8K', followers: '12K', status: 'Live' },
-    url: 'https://www.twitch.tv/jameleliyah',
-    tags: ['Spirituality', 'Meditation', 'Consciousness'],
-  },
-  {
-    id: 'fitness-training',
-    title: 'RISE Cycling Training',
-    subtitle: 'Live Fitness Sessions',
-    description:
-      'Interactive cycling training sessions with real-time coaching, performance tracking, and community motivation.',
-    thumbnail: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&h=600&fit=crop',
-    category: 'Fitness',
-    color: '#c2410c',
-    stats: { viewers: '2.1K', followers: '18K', status: 'Live' },
-    url: 'https://www.twitch.tv/jameleliyah',
-    tags: ['Fitness', 'Cycling', 'Training'],
-  },
-  {
-    id: 'community-qa',
-    title: 'Community Q&A',
-    subtitle: 'Live Q&A Sessions',
-    description:
-      'Interactive Q&A sessions where community members can ask questions about wellness, business, and personal development.',
-    thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop',
-    category: 'Community',
-    color: '#0891b2',
-    stats: { viewers: '945', followers: '9.5K', status: 'Scheduled' },
-    url: 'https://www.twitch.tv/jameleliyah',
-    tags: ['Q&A', 'Community', 'Support'],
-  },
-  {
-    id: 'meditation-sessions',
-    title: 'Guided Meditation',
-    subtitle: 'Peace & Mindfulness',
-    description:
-      'Live guided meditation sessions for stress relief, mindfulness practice, and spiritual connection.',
-    thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
-    category: 'Meditation',
-    color: '#7c3aed',
-    stats: { viewers: '1.5K', followers: '11K', status: 'Live' },
-    url: 'https://www.twitch.tv/jameleliyah',
-    tags: ['Meditation', 'Mindfulness', 'Peace'],
-  },
-];
+// Task List Feature
+
+interface Task {
+  id: number;
+  text: string;
+  completed: boolean;
+}
+
+function TaskList() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [input, setInput] = useState('');
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('live_task_list');
+    if (stored) setTasks(JSON.parse(stored));
+  }, []);
+
+  // Save to localStorage on change
+  useEffect(() => {
+    localStorage.setItem('live_task_list', JSON.stringify(tasks));
+  }, [tasks]);
+
+  const handleAddTask = () => {
+    if (!input.trim()) return;
+    setTasks(prev => [
+      ...prev,
+      { id: Date.now(), text: input.trim(), completed: false }
+    ]);
+    setInput('');
+  };
+
+  const handleToggle = (id: number) => {
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === id ? { ...t, completed: !t.completed } : t
+      )
+    );
+  };
+
+  const handleDelete = (id: number) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+  };
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+      <Typography variant="h6" gutterBottom>Session Tasks</Typography>
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <input
+          value={input}
+          type="text"
+          placeholder="Add new task..."
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') handleAddTask();
+          }}
+          style={{
+            flex: 1,
+            border: '1px solid #ccc',
+            borderRadius: 4,
+            padding: '6px 10px'
+          }}
+        />
+        <Button
+          variant="contained"
+          size="small"
+          onClick={handleAddTask}
+          disabled={!input.trim()}
+        >
+          Add
+        </Button>
+      </Stack>
+      <Box>
+        {tasks.length === 0 && (
+          <Typography variant="body2" color="text.secondary">No tasks yet. Add one!</Typography>
+        )}
+        <Stack spacing={1}>
+          {tasks.map(task => (
+            <Box
+              key={task.id}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                px: 1,
+                py: 0.5,
+                bgcolor: task.completed ? 'action.selected' : undefined,
+                borderRadius: 1,
+                textDecoration: task.completed ? 'line-through' : undefined,
+                opacity: task.completed ? 0.6 : 1,
+                transition: 'background 0.2s'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={task.completed}
+                onChange={() => handleToggle(task.id)}
+                style={{ marginRight: 8 }}
+              />
+              <Typography
+                variant="body1"
+                sx={{
+                  flex: 1,
+                  fontSize: 15,
+                  color: task.completed ? 'text.secondary' : 'text.primary'
+                }}
+              >
+                {task.text}
+              </Typography>
+              <Button
+                variant="text"
+                color="error"
+                size="small"
+                onClick={() => handleDelete(task.id)}
+                sx={{ minWidth: 0 }}
+              >
+                ✕
+              </Button>
+            </Box>
+          ))}
+        </Stack>
+      </Box>
+    </Paper>
+  );
+}
+
 
 function App() {
   const theme = useTheme();
