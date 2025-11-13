@@ -54,20 +54,30 @@ function JournalPage() {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
-          throw new Error(errorData.message || `Server error: ${response.status}`);
+          const errorMsg = errorData.error || errorData.message || `Server error: ${response.status}`;
+          const errorDetails = errorData.details ? ` (${errorData.details})` : '';
+          throw new Error(`${errorMsg}${errorDetails}`);
         } else {
-          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          const text = await response.text();
+          throw new Error(`Server error: ${response.status} ${response.statusText}${text ? ` - ${text.substring(0, 100)}` : ''}`);
         }
       }
 
       const data = await response.json();
+      
+      if (!data.text || typeof data.text !== 'string') {
+        throw new Error('Invalid response format from server');
+      }
+      
       const botMessage: Message = { role: 'model', text: data.text };
       setMessages((prevMessages) => [...prevMessages, botMessage]);
 
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err?.message || 'An unexpected error occurred';
+      console.error('Error sending message:', err);
+      setError(errorMessage);
       // Optionally add the error as a system message in the chat
-      setMessages((prevMessages) => [...prevMessages, { role: 'model', text: `Sorry, I encountered an error: ${err.message}` }]);
+      setMessages((prevMessages) => [...prevMessages, { role: 'model', text: `Sorry, I encountered an error: ${errorMessage}` }]);
     } finally {
       setIsLoading(false);
     }

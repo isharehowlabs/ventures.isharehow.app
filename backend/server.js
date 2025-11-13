@@ -8,6 +8,7 @@ dotenv.config();
 
 console.log('SHOPIFY_STORE_URL:', process.env.SHOPIFY_STORE_URL);
 console.log('SHOPIFY_ACCESS_TOKEN:', process.env.SHOPIFY_ACCESS_TOKEN ? '***' + process.env.SHOPIFY_ACCESS_TOKEN.slice(-4) : 'undefined');
+console.log('GOOGLE_AI_API_KEY:', process.env.GOOGLE_AI_API_KEY ? '***' + process.env.GOOGLE_AI_API_KEY.slice(-4) : 'undefined');
 
 const app = express();
 app.use(cors());
@@ -154,42 +155,67 @@ app.get('/api/best-sellers', async (req, res) => {
 
 // Gemini chat endpoint
 app.post('/api/gemini-chat', async (req, res) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
+  console.log('Received POST /api/gemini-chat request');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
 
   try {
     const { messages } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error('Invalid messages:', messages);
       return res.status(400).json({ message: 'Invalid or empty messages array' });
     }
 
     if (!process.env.GOOGLE_AI_API_KEY) {
+      console.error('GOOGLE_AI_API_KEY is not configured');
       return res.status(500).json({ message: 'Google AI API key not configured' });
     }
 
+    console.log(`Processing ${messages.length} messages`);
+    
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Convert messages to Gemini chat history format (all except the last message)
-    const history = messages.slice(0, -1).map((msg) => ({
-      role: msg.role === 'model' ? 'model' : 'user',
-      parts: [{ text: msg.text }],
-    }));
+    const history = messages.slice(0, -1).map((msg) => {
+      if (!msg.text || typeof msg.text !== 'string') {
+        throw new Error(`Invalid message format: ${JSON.stringify(msg)}`);
+      }
+      return {
+        role: msg.role === 'model' ? 'model' : 'user',
+        parts: [{ text: msg.text }],
+      };
+    });
+
+    console.log(`Chat history length: ${history.length}`);
 
     const chat = model.startChat({ history });
 
     // Send the last message (which should be the user's latest message)
     const lastMessage = messages[messages.length - 1];
+    
+    if (!lastMessage || !lastMessage.text || typeof lastMessage.text !== 'string') {
+      throw new Error(`Invalid last message format: ${JSON.stringify(lastMessage)}`);
+    }
+
+    console.log('Sending message to Gemini:', lastMessage.text.substring(0, 50) + '...');
+    
     const result = await chat.sendMessage(lastMessage.text);
     const response = await result.response;
     const text = response.text();
 
+    console.log('Received response from Gemini, length:', text.length);
     res.status(200).json({ text });
   } catch (error) {
     console.error('Error in Gemini API:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    console.error('Error stack:', error.stack);
+    const errorMessage = error?.message || 'Unknown error occurred';
+    const errorDetails = error?.toString() || 'No error details available';
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+    });
   }
 });
 
