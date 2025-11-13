@@ -13,46 +13,9 @@ import {
 } from '@mui/material';
 
 import AppShell from '../components/AppShell';
+import { getBackendUrl } from '../utils/backendUrl';
 
 const STORE_DOMAIN = 'isharehow.myshopify.com';
-
-// Get backend URL - supports environment variable or defaults
-const getBackendUrl = (): string => {
-  // Check for explicit environment variable (available at build time for static export)
-  const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  if (envUrl) {
-    return envUrl.replace(/\/$/, '');
-  }
-  
-  // For client-side, check window location
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    
-    // In development, default to localhost:3001
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001';
-    }
-    
-    // In production, try different backend URL patterns
-    // Option 1: Backend proxied on same origin (most common for static sites)
-    // Option 2: Backend on subdomain (e.g., api.ventures.isharehow.app)
-    // Option 3: Backend on same domain, different port (if accessible)
-    
-    // Try same origin first (if backend is proxied via web server like nginx/apache)
-    // This is the most common setup for static sites
-    if (hostname.includes('ventures.isharehow.app')) {
-      // First try same origin (backend might be proxied)
-      // If that doesn't work, the error will be clear
-      return window.location.origin;
-    }
-    
-    // Fallback: try API subdomain for other domains
-    return `https://api.${hostname}`;
-  }
-  
-  // Fallback for SSR/build time
-  return '';
-};
 
 type ShopifyImage = {
   originalSrc: string;

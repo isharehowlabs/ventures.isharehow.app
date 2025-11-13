@@ -6,6 +6,7 @@ import {
   Psychology as PsychologyIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
+import { getBackendUrl } from '../utils/backendUrl';
 
 interface Message {
   role: 'user' | 'model';
@@ -38,8 +39,8 @@ function JournalPage() {
     setError(null);
 
     try {
-      // This endpoint is now served by the Next.js server.
-      const response = await fetch('/api/gemini-chat', {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/gemini-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
