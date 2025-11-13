@@ -49,8 +49,14 @@ function JournalPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'An error occurred');
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Server error: ${response.status}`);
+        } else {
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
       }
 
       const data = await response.json();

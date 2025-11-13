@@ -64,7 +64,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
     <Box sx={{ width: 280, height: '100%', bgcolor: 'background.paper' }}>
       <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
         <Typography variant="caption" color="text.secondary">
-          iShareHow Navigation
+          Ventures Navigation
         </Typography>
       </Box>
       <List sx={{ px: 2, py: 2 }}>
@@ -112,9 +112,27 @@ const AppShell = ({ active, children }: AppShellProps) => {
         }}
       >
         <Toolbar sx={{ minHeight: '64px !important', px: { xs: 1, sm: 2 } }}>
-          <IconButton edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { md: 'none' } }}>
-            <MenuIcon />
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <IconButton 
+              edge="start" 
+              onClick={handleDrawerToggle} 
+              sx={{ display: { md: 'none' }, mr: 1 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography
+              variant="body2"
+              sx={{
+                display: { md: 'none' },
+                fontWeight: 600,
+                color: 'text.primary',
+                cursor: 'pointer',
+              }}
+              onClick={handleDrawerToggle}
+            >
+              Menu
+            </Typography>
+          </Box>
 
           <Typography
             variant="h6"

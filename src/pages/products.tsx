@@ -1,6 +1,16 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+  Button,
+  Stack,
+  useTheme,
+} from '@mui/material';
 
 import AppShell from '../components/AppShell';
 
@@ -192,6 +202,8 @@ const ProductsPage = () => {
     }
   };
 
+  const theme = useTheme();
+
   const productCards = useMemo(
     () =>
       products.map((product) => {
@@ -203,30 +215,69 @@ const ProductsPage = () => {
             : null;
 
         return (
-          <article key={product.id} className="product-card">
-            {featuredImage?.originalSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Decorative image
-              <img src={featuredImage.originalSrc} alt={featuredImage.altText ?? product.title} />
-            ) : null}
-            <div className="product-info">
-              <h3>{product.title}</h3>
-              {formattedPrice ? <p className="product-price">{formattedPrice}</p> : null}
-              {product.description ? (
-                <p className="product-description">{product.description}</p>
-              ) : null}
-              <Link
+          <Card
+            key={product.id}
+            sx={{
+              minWidth: 280,
+              maxWidth: 280,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: 3,
+              border: 1,
+              borderColor: 'divider',
+              overflow: 'hidden',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: theme.shadows[8],
+              },
+            }}
+          >
+            {featuredImage?.originalSrc && (
+              <CardMedia
+                component="img"
+                height="200"
+                image={featuredImage.originalSrc}
+                alt={featuredImage.altText ?? product.title}
+                sx={{ objectFit: 'cover' }}
+              />
+            )}
+            <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+              <Typography variant="h6" component="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                {product.title}
+              </Typography>
+              {formattedPrice && (
+                <Typography variant="h6" color="primary" sx={{ fontWeight: 700, mb: 1 }}>
+                  {formattedPrice}
+                </Typography>
+              )}
+              {product.description && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2, flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                >
+                  {product.description}
+                </Typography>
+              )}
+              <Button
+                component={Link}
                 href={`https://${STORE_DOMAIN}/products/${product.handle}`}
                 target="_blank"
                 rel="noreferrer"
-                className="product-link"
+                variant="outlined"
+                color="primary"
+                size="small"
+                sx={{ mt: 'auto', textTransform: 'none', fontWeight: 600 }}
               >
                 View on Shopify
-              </Link>
-            </div>
-          </article>
+              </Button>
+            </CardContent>
+          </Card>
         );
       }),
-    [products]
+    [products, theme]
   );
 
   return (
@@ -240,35 +291,86 @@ const ProductsPage = () => {
       </Head>
 
       <AppShell active="products">
-        <main className="products-page">
-          <header>
-            <h1>Shop Products</h1>
-            <p>Browse curated products from the IShareHow Ventures storefront.</p>
-          </header>
+        <Box sx={{ width: '100%' }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h3" component="h1" sx={{ fontWeight: 800, mb: 2 }}>
+              Shop Products
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Browse curated products from the IShareHow Ventures storefront.
+            </Typography>
+          </Box>
 
           {error ? (
-            <div role="alert" className="alert error">
-              <p>{error}</p>
-              <button type="button" onClick={() => fetchProducts()}>
+            <Box
+              role="alert"
+              sx={{
+                p: 3,
+                mb: 3,
+                bgcolor: 'error.light',
+                color: 'error.contrastText',
+                borderRadius: 2,
+              }}
+            >
+              <Typography sx={{ mb: 2 }}>{error}</Typography>
+              <Button variant="contained" color="error" onClick={() => fetchProducts()}>
                 Retry
-              </button>
-            </div>
+              </Button>
+            </Box>
           ) : null}
 
-          <section className="grid">{productCards}</section>
+          <Box
+            sx={{
+              width: '100%',
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              pb: 2,
+              '&::-webkit-scrollbar': {
+                height: 8,
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'divider',
+                borderRadius: 4,
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: 'primary.main',
+                borderRadius: 4,
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+              },
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={3}
+              sx={{
+                width: 'max-content',
+                minWidth: { xs: 'calc(100vw - 64px)', sm: 'calc(280px * 4 + 24px * 3)' },
+                px: { xs: 2, sm: 0 },
+              }}
+            >
+              {productCards}
+            </Stack>
+          </Box>
 
-          <footer className="actions">
-            {loading ? <p>Loading...</p> : null}
-            {!loading && pageInfo.hasNextPage ? (
-              <button type="button" onClick={handleLoadMore} className="load-more">
+          <Box sx={{ mt: 4, textAlign: 'center' }}>
+            {loading && <Typography>Loading...</Typography>}
+            {!loading && pageInfo.hasNextPage && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleLoadMore}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
                 Load More
-              </button>
-            ) : null}
-            {!loading && !pageInfo.hasNextPage && products.length > 0 ? (
-              <p>All products loaded.</p>
-            ) : null}
-          </footer>
-        </main>
+              </Button>
+            )}
+            {!loading && !pageInfo.hasNextPage && products.length > 0 && (
+              <Typography color="text.secondary">All products loaded.</Typography>
+            )}
+          </Box>
+        </Box>
       </AppShell>
     </>
   );
