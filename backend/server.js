@@ -286,4 +286,71 @@ app.post('/api/gemini-chat', async (req, res) => {
   }
 });
 
+// Twitch followers endpoint
+app.get('/api/twitch/followers', async (req, res) => {
+  try {
+    const twitchClientId = process.env.TWITCH_CLIENT_ID;
+    const twitchAccessToken = process.env.TWITCH_ACCESS_TOKEN;
+    const twitchUsername = process.env.TWITCH_USERNAME || 'jameleliyah';
+    const followerGoal = parseInt(process.env.TWITCH_FOLLOWER_GOAL || '2500', 10);
+
+    if (!twitchClientId || !twitchAccessToken) {
+      // Return default values if Twitch credentials not configured
+      return res.json({
+        followers: 1247,
+        goal: followerGoal,
+        message: 'Twitch credentials not configured, using default values'
+      });
+    }
+
+    // First, get the user ID from username
+    const userResponse = await fetch(`https://api.twitch.tv/helix/users?login=${twitchUsername}`, {
+      headers: {
+        'Client-ID': twitchClientId,
+        'Authorization': `Bearer ${twitchAccessToken}`,
+      },
+    });
+
+    if (!userResponse.ok) {
+      throw new Error(`Twitch API error: ${userResponse.status}`);
+    }
+
+    const userData = await userResponse.json();
+    
+    if (!userData.data || userData.data.length === 0) {
+      throw new Error('Twitch user not found');
+    }
+
+    const userId = userData.data[0].id;
+
+    // Get follower count
+    const followersResponse = await fetch(`https://api.twitch.tv/helix/users/follows?to_id=${userId}&first=1`, {
+      headers: {
+        'Client-ID': twitchClientId,
+        'Authorization': `Bearer ${twitchAccessToken}`,
+      },
+    });
+
+    if (!followersResponse.ok) {
+      throw new Error(`Twitch API error: ${followersResponse.status}`);
+    }
+
+    const followersData = await followersResponse.json();
+    const followers = followersData.total || 0;
+
+    res.json({
+      followers,
+      goal: followerGoal,
+    });
+  } catch (error) {
+    console.error('Error fetching Twitch followers:', error);
+    // Return default values on error
+    res.json({
+      followers: 1247,
+      goal: parseInt(process.env.TWITCH_FOLLOWER_GOAL || '2500', 10),
+      error: error.message,
+    });
+  }
+});
+
 app.listen(process.env.PORT || 3001, () => console.log(`Backend running on port ${process.env.PORT || 3001}`));

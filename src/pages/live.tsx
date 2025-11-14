@@ -12,6 +12,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import AppShell from '../components/AppShell';
+import { getBackendUrl } from '../utils/backendUrl';
 
 declare global {
   interface Window {
@@ -161,6 +162,9 @@ function App() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(true);
+  const [currentFollowers, setCurrentFollowers] = useState<number | null>(null);
+  const [followerGoal, setFollowerGoal] = useState<number>(2500);
+  const [isLoadingFollowers, setIsLoadingFollowers] = useState(true);
   const twitchPlayerRef = useRef<any | null>(null);
   const twitchPlayer = useRef<any | null>(null);
 
@@ -187,6 +191,58 @@ function App() {
       twitchPlayer.current?.pause();
     }
   }, [videoOpen]);
+
+  // Fetch follower count
+  useEffect(() => {
+    const fetchFollowers = async () => {
+      try {
+        setIsLoadingFollowers(true);
+        // Try backend endpoint first, fallback to Twitch API
+        const backendUrl = getBackendUrl();
+        
+        try {
+          const response = await fetch(`${backendUrl}/api/twitch/followers`);
+          if (response.ok) {
+            const data = await response.json();
+            setCurrentFollowers(data.followers || 0);
+            if (data.goal) setFollowerGoal(data.goal);
+            return;
+          }
+        } catch (err) {
+          console.log('Backend endpoint not available, trying direct Twitch API');
+        }
+
+        // Fallback: Direct Twitch API call (requires client-side API key or backend proxy)
+        // For now, using a mock/placeholder - you can replace with actual Twitch API call
+        // Note: Twitch API requires authentication, so this should ideally go through your backend
+        const response = await fetch(`https://api.twitch.tv/helix/users/follows?to_id=${encodeURIComponent('jameleliyah')}`, {
+          headers: {
+            'Client-ID': process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID || '',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TWITCH_ACCESS_TOKEN || ''}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentFollowers(data.total || 0);
+        } else {
+          // Fallback to default if API fails
+          setCurrentFollowers(1247);
+        }
+      } catch (error) {
+        console.error('Error fetching followers:', error);
+        // Fallback to default value
+        setCurrentFollowers(1247);
+      } finally {
+        setIsLoadingFollowers(false);
+      }
+    };
+
+    fetchFollowers();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchFollowers, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Effect to initialize Twitch Player
   useEffect(() => {
@@ -271,37 +327,50 @@ function App() {
                       Main Channel Streaming
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 200 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        Follower Goal
+                      </Typography>
+                      {isLoadingFollowers ? (
+                        <Skeleton variant="text" width={80} height={20} />
+                      ) : (
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          <span style={{ color: '#9146FF' }}>
+                            {currentFollowers?.toLocaleString() || '0'}
+                          </span>{' '}
+                          / {followerGoal.toLocaleString()}
+                        </Typography>
+                      )}
+                    </Box>
                     <Box
                       sx={{
-                        bgcolor: '#ff0000',
-                        color: 'white',
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: 2,
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5,
+                        width: '100%',
+                        height: 8,
+                        bgcolor: 'action.hover',
+                        borderRadius: 4,
+                        overflow: 'hidden',
                       }}
                     >
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          bgcolor: 'white',
-                          borderRadius: '50%',
-                          animation: 'pulse 2s infinite',
-                        }}
-                      />
-                      Live
+                      {isLoadingFollowers ? (
+                        <Skeleton variant="rectangular" width="100%" height="100%" />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: `${Math.min(((currentFollowers || 0) / followerGoal) * 100, 100)}%`,
+                            height: '100%',
+                            bgcolor: '#9146FF',
+                            borderRadius: 4,
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      )}
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      👁️ 1.2K viewers
-                    </Typography>
+                    {!isLoadingFollowers && (
+                      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right' }}>
+                        {Math.round(((currentFollowers || 0) / followerGoal) * 100)}% complete
+                      </Typography>
+                    )}
                   </Box>
                 </Stack>
               </Box>

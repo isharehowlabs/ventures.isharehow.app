@@ -232,7 +232,18 @@ function JournalPage() {
                 maxRows={4}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Share your thoughts, ask questions, or explore ideas..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isLoading && input.trim()) {
+                      const form = e.currentTarget.closest('form');
+                      if (form) {
+                        form.requestSubmit();
+                      }
+                    }
+                  }
+                }}
+                placeholder="Share your thoughts, ask questions, or explore ideas... (Press Enter to send, Shift+Enter for new line)"
                 variant="outlined"
                 disabled={isLoading}
                 sx={{
