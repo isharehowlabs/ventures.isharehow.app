@@ -164,6 +164,8 @@ function App() {
   const [videoOpen, setVideoOpen] = useState(true);
   const [currentFollowers, setCurrentFollowers] = useState<number | null>(null);
   const [followerGoal, setFollowerGoal] = useState<number>(2500);
+  const [currentViewers, setCurrentViewers] = useState<number | null>(null);
+  const [viewerGoal, setViewerGoal] = useState<number>(5000);
   const [isLoadingFollowers, setIsLoadingFollowers] = useState(true);
   const twitchPlayerRef = useRef<any | null>(null);
   const twitchPlayer = useRef<any | null>(null);
@@ -201,11 +203,13 @@ function App() {
         const backendUrl = getBackendUrl();
         
         try {
-          const response = await fetch(`${backendUrl}/api/twitch/followers`);
+          const response = await fetch(`${backendUrl}/api/twitch/goals`);
           if (response.ok) {
             const data = await response.json();
             setCurrentFollowers(data.followers || 0);
-            if (data.goal) setFollowerGoal(data.goal);
+            if (data.followerGoal) setFollowerGoal(data.followerGoal);
+            setCurrentViewers(data.viewers || 0);
+            if (data.viewerGoal) setViewerGoal(data.viewerGoal);
             return;
           }
         } catch (err) {
@@ -327,51 +331,101 @@ function App() {
                       Main Channel Streaming
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 200 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        Follower Goal
-                      </Typography>
-                      {isLoadingFollowers ? (
-                        <Skeleton variant="text" width={80} height={20} />
-                      ) : (
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                          <span style={{ color: '#9146FF' }}>
-                            {currentFollowers?.toLocaleString() || '0'}
-                          </span>{' '}
-                          / {followerGoal.toLocaleString()}
+                  <Stack direction="row" spacing={3} sx={{ flexWrap: 'wrap', gap: 2 }}>
+                    {/* Follower Goal */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 180 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                          Follower Goal
+                        </Typography>
+                        {isLoadingFollowers ? (
+                          <Skeleton variant="text" width={80} height={20} />
+                        ) : (
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                            <span style={{ color: '#9146FF' }}>
+                              {currentFollowers?.toLocaleString() || '0'}
+                            </span>{' '}
+                            / {followerGoal.toLocaleString()}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 8,
+                          bgcolor: 'action.hover',
+                          borderRadius: 4,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {isLoadingFollowers ? (
+                          <Skeleton variant="rectangular" width="100%" height="100%" />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: `${Math.min(((currentFollowers || 0) / followerGoal) * 100, 100)}%`,
+                              height: '100%',
+                              bgcolor: '#9146FF',
+                              borderRadius: 4,
+                              transition: 'width 0.3s ease',
+                            }}
+                          />
+                        )}
+                      </Box>
+                      {!isLoadingFollowers && (
+                        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right' }}>
+                          {Math.round(((currentFollowers || 0) / followerGoal) * 100)}% complete
                         </Typography>
                       )}
                     </Box>
-                    <Box
-                      sx={{
-                        width: '100%',
-                        height: 8,
-                        bgcolor: 'action.hover',
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {isLoadingFollowers ? (
-                        <Skeleton variant="rectangular" width="100%" height="100%" />
-                      ) : (
-                        <Box
-                          sx={{
-                            width: `${Math.min(((currentFollowers || 0) / followerGoal) * 100, 100)}%`,
-                            height: '100%',
-                            bgcolor: '#9146FF',
-                            borderRadius: 4,
-                            transition: 'width 0.3s ease',
-                          }}
-                        />
+
+                    {/* Viewer Goal */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 180 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                          Viewer Goal
+                        </Typography>
+                        {isLoadingFollowers ? (
+                          <Skeleton variant="text" width={80} height={20} />
+                        ) : (
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                            <span style={{ color: '#4ecdc4' }}>
+                              {currentViewers?.toLocaleString() || '0'}
+                            </span>{' '}
+                            / {viewerGoal.toLocaleString()}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 8,
+                          bgcolor: 'action.hover',
+                          borderRadius: 4,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {isLoadingFollowers ? (
+                          <Skeleton variant="rectangular" width="100%" height="100%" />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: `${Math.min(((currentViewers || 0) / viewerGoal) * 100, 100)}%`,
+                              height: '100%',
+                              bgcolor: '#4ecdc4',
+                              borderRadius: 4,
+                              transition: 'width 0.3s ease',
+                            }}
+                          />
+                        )}
+                      </Box>
+                      {!isLoadingFollowers && (
+                        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right' }}>
+                          {Math.round(((currentViewers || 0) / viewerGoal) * 100)}% complete
+                        </Typography>
                       )}
                     </Box>
-                    {!isLoadingFollowers && (
-                      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right' }}>
-                        {Math.round(((currentFollowers || 0) / followerGoal) * 100)}% complete
-                      </Typography>
-                    )}
-                  </Box>
+                  </Stack>
                 </Stack>
               </Box>
 

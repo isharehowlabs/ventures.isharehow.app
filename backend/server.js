@@ -286,19 +286,22 @@ app.post('/api/gemini-chat', async (req, res) => {
   }
 });
 
-// Twitch followers endpoint
-app.get('/api/twitch/followers', async (req, res) => {
+// Twitch goals endpoint (followers and viewers)
+app.get('/api/twitch/goals', async (req, res) => {
   try {
     const twitchClientId = process.env.TWITCH_CLIENT_ID;
     const twitchAccessToken = process.env.TWITCH_ACCESS_TOKEN;
     const twitchUsername = process.env.TWITCH_USERNAME || 'jameleliyah';
     const followerGoal = parseInt(process.env.TWITCH_FOLLOWER_GOAL || '2500', 10);
+    const viewerGoal = parseInt(process.env.TWITCH_VIEWER_GOAL || '5000', 10);
 
     if (!twitchClientId || !twitchAccessToken) {
       // Return default values if Twitch credentials not configured
       return res.json({
         followers: 1247,
-        goal: followerGoal,
+        followerGoal: followerGoal,
+        viewers: 1200,
+        viewerGoal: viewerGoal,
         message: 'Twitch credentials not configured, using default values'
       });
     }
@@ -331,25 +334,95 @@ app.get('/api/twitch/followers', async (req, res) => {
       },
     });
 
-    if (!followersResponse.ok) {
-      throw new Error(`Twitch API error: ${followersResponse.status}`);
+    let followers = 1247; // Default fallback
+    if (followersResponse.ok) {
+      const followersData = await followersResponse.json();
+      followers = followersData.total || 1247;
     }
 
-    const followersData = await followersResponse.json();
-    const followers = followersData.total || 0;
+    // Get stream info for current viewer count
+    const streamResponse = await fetch(`https://api.twitch.tv/helix/streams?user_id=${userId}`, {
+      headers: {
+        'Client-ID': twitchClientId,
+        'Authorization': `Bearer ${twitchAccessToken}`,
+      },
+    });
+
+    let viewers = 1200; // Default fallback
+    if (streamResponse.ok) {
+      const streamData = await streamResponse.json();
+      if (streamData.data && streamData.data.length > 0) {
+        viewers = streamData.data[0].viewer_count || 1200;
+      }
+    }
 
     res.json({
       followers,
-      goal: followerGoal,
+      followerGoal: followerGoal,
+      viewers,
+      viewerGoal: viewerGoal,
     });
   } catch (error) {
-    console.error('Error fetching Twitch followers:', error);
+    console.error('Error fetching Twitch goals:', error);
     // Return default values on error
     res.json({
       followers: 1247,
-      goal: parseInt(process.env.TWITCH_FOLLOWER_GOAL || '2500', 10),
+      followerGoal: parseInt(process.env.TWITCH_FOLLOWER_GOAL || '2500', 10),
+      viewers: 1200,
+      viewerGoal: parseInt(process.env.TWITCH_VIEWER_GOAL || '5000', 10),
       error: error.message,
     });
+  }
+});
+
+// Legacy endpoint for backwards compatibility
+app.get('/api/twitch/followers', async (req, res) => {
+  try {
+    const twitchClientId = process.env.TWITCH_CLIENT_ID;
+    const twitchAccessToken = process.env.TWITCH_ACCESS_TOKEN;
+    const twitchUsername = process.env.TWITCH_USERNAME || 'jameleliyah';
+    const followerGoal = parseInt(process.env.TWITCH_FOLLOWER_GOAL || '2500', 10);
+
+    if (!twitchClientId || !twitchAccessToken) {
+      return res.json({
+        followers: 1247,
+        goal: followerGoal,
+      });
+    }
+
+    const userResponse = await fetch(`https://api.twitch.tv/helix/users?login=${twitchUsername}`, {
+      headers: {
+        'Client-ID': twitchClientId,
+        'Authorization': `Bearer ${twitchAccessToken}`,
+      },
+    });
+
+    if (!userResponse.ok) {
+      return res.json({ followers: 1247, goal: followerGoal });
+    }
+
+    const userData = await userResponse.json();
+    if (!userData.data || userData.data.length === 0) {
+      return res.json({ followers: 1247, goal: followerGoal });
+    }
+
+    const userId = userData.data[0].id;
+    const followersResponse = await fetch(`https://api.twitch.tv/helix/users/follows?to_id=${userId}&first=1`, {
+      headers: {
+        'Client-ID': twitchClientId,
+        'Authorization': `Bearer ${twitchAccessToken}`,
+      },
+    });
+
+    let followers = 1247;
+    if (followersResponse.ok) {
+      const followersData = await followersResponse.json();
+      followers = followersData.total || 1247;
+    }
+
+    res.json({ followers, goal: followerGoal });
+  } catch (error) {
+    res.json({ followers: 1247, goal: 2500 });
   }
 });
 
