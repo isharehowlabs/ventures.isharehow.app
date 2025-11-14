@@ -14,6 +14,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    hasGoogleAIKey: !!process.env.GOOGLE_AI_API_KEY,
+    hasShopifyConfig: !!(process.env.SHOPIFY_STORE_URL && process.env.SHOPIFY_ACCESS_TOKEN)
+  });
+});
+
 const client = new GraphQLClient(process.env.SHOPIFY_STORE_URL, {
   headers: {
     'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
@@ -174,8 +184,7 @@ app.post('/api/gemini-chat', async (req, res) => {
     console.log(`Processing ${messages.length} messages`);
     
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
+    
     // Convert messages to Gemini chat history format (all except the last message)
     const history = messages.slice(0, -1).map((msg) => {
       if (!msg.text || typeof msg.text !== 'string') {
@@ -189,6 +198,7 @@ app.post('/api/gemini-chat', async (req, res) => {
 
     console.log(`Chat history length: ${history.length}`);
 
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const chat = model.startChat({ history });
 
     // Send the last message (which should be the user's latest message)

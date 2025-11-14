@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Invalid or empty messages array' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     // Convert messages to Gemini chat history format (all except the last message)
     const history = messages.slice(0, -1).map((msg: any) => ({
