@@ -1,6 +1,6 @@
 // Get backend URL - supports environment variable or defaults
 // For Render.com backends, set NEXT_PUBLIC_BACKEND_URL environment variable
-// Default Render.com backend: https://ventures-isharehow-app.onrender.com
+// Default Render.com backend: https://api.ventures.isharehow.app
 export const getBackendUrl = (): string => {
   // Check for explicit environment variable (available at build time for static export)
   // This is the recommended way for Render.com backends
@@ -20,7 +20,7 @@ export const getBackendUrl = (): string => {
     
     // Production: Use Render.com backend for ventures.isharehow.app
     if (hostname.includes('ventures.isharehow.app')) {
-      return 'https://ventures-isharehow-app.onrender.com';
+      return 'https://api.ventures.isharehow.app';
     }
     
     // Fallback: try API subdomain for other domains

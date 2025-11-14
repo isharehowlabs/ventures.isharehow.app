@@ -98,11 +98,30 @@ const QUERY = `
 // Updated endpoint to support pagination for "Show More" button
 app.get('/api/products', async (req, res) => {
   try {
+    // Check if Shopify credentials are configured
+    if (!process.env.SHOPIFY_STORE_URL || !process.env.SHOPIFY_ACCESS_TOKEN) {
+      console.error('Shopify credentials not configured');
+      return res.status(500).json({ 
+        error: 'Shopify credentials not configured',
+        message: 'SHOPIFY_STORE_URL and SHOPIFY_ACCESS_TOKEN must be set'
+      });
+    }
+
     const first = parseInt(req.query.first, 10) || 8;
     const after = req.query.after || null;
     console.log(`Fetching products... first: ${first}, after: ${after}`);
+    
     const variables = { first, after };
+    console.log('Making GraphQL request to Shopify...');
+    
     const data = await client.request(PRODUCTS_QUERY, variables);
+    console.log('Received data from Shopify, processing products...');
+    
+    if (!data || !data.products || !data.products.edges) {
+      console.error('Invalid data structure from Shopify:', data);
+      return res.status(500).json({ error: 'Invalid response from Shopify API' });
+    }
+    
     const products = data.products.edges.map(edge => {
       const mediaImages = edge.node.media.edges.filter(edge => edge.node.image);
       return {
@@ -113,13 +132,24 @@ app.get('/api/products', async (req, res) => {
         price: edge.node.variants.edges[0]?.node.price ? `$${edge.node.variants.edges[0].node.price}` : 'N/A'
       };
     });
+    
+    console.log(`Successfully processed ${products.length} products`);
     res.json({
       products,
       pageInfo: data.products.pageInfo
     });
   } catch (error) {
     console.error('Error fetching products:', error);
-    res.status(500).json({ error: 'Failed to fetch products' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data || error.response
+    });
+    res.status(500).json({ 
+      error: 'Failed to fetch products',
+      message: error.message || 'Unknown error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -198,7 +228,7 @@ app.post('/api/gemini-chat', async (req, res) => {
 
     console.log(`Chat history length: ${history.length}`);
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Replace with the correct, available model
     const chat = model.startChat({ history });
 
     // Send the last message (which should be the user's latest message)
