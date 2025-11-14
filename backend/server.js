@@ -228,9 +228,6 @@ app.post('/api/gemini-chat', async (req, res) => {
 
     console.log(`Chat history length: ${history.length}`);
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Replace with the correct, available model
-    const chat = model.startChat({ history });
-
     // Send the last message (which should be the user's latest message)
     const lastMessage = messages[messages.length - 1];
     
@@ -238,11 +235,41 @@ app.post('/api/gemini-chat', async (req, res) => {
       throw new Error(`Invalid last message format: ${JSON.stringify(lastMessage)}`);
     }
 
-    console.log('Sending message to Gemini:', lastMessage.text.substring(0, 50) + '...');
-    
-    const result = await chat.sendMessage(lastMessage.text);
-    const response = await result.response;
-    const text = response.text();
+    // Try different model names - gemini-pro is the most stable
+    const modelNames = ['gemini-2.0-pro', 'gemini-2.0-flash'];
+    let text = null;
+    let lastError = null;
+
+    for (const modelName of modelNames) {
+      try {
+        console.log(`Attempting to use model: ${modelName}`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const chat = model.startChat({ history });
+        
+        console.log('Sending message to Gemini:', lastMessage.text.substring(0, 50) + '...');
+        const result = await chat.sendMessage(lastMessage.text);
+        const response = await result.response;
+        text = response.text();
+        
+        console.log(`Successfully used model: ${modelName}`);
+        break; // Success, exit loop
+      } catch (err) {
+        console.warn(`Model ${modelName} failed:`, err.message);
+        lastError = err;
+        
+        // If it's a model not found error (404), try next model
+        if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
+          continue; // Try next model
+        } else {
+          // For other errors, don't retry
+          throw err;
+        }
+      }
+    }
+
+    if (!text) {
+      throw new Error(`All model attempts failed. Last error: ${lastError?.message || 'Unknown error'}. Please check your Google AI API key and available models.`);
+    }
 
     console.log('Received response from Gemini, length:', text.length);
     res.status(200).json({ text });
