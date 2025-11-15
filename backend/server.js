@@ -47,13 +47,15 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true, // Allow saving uninitialized sessions for OAuth state
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production', // Must be true for sameSite: 'none'
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined, // Allow subdomain sharing
     },
+    name: 'ventures.sid', // Custom session name to avoid conflicts
   })
 );
 

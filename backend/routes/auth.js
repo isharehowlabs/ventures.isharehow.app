@@ -26,15 +26,24 @@ router.get('/patreon', (req, res) => {
   const state = Math.random().toString(36).substring(7);
   req.session.oauthState = state;
   
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: PATREON_CLIENT_ID,
-    redirect_uri: PATREON_REDIRECT_URI,
-    scope: 'identity identity[email]',
-    state: state,
-  });
+  // Save session before redirecting to ensure cookie is set
+  req.session.save((err) => {
+    if (err) {
+      console.error('Session save error before OAuth redirect:', err);
+      const frontendUrl = getFrontendUrl();
+      return res.redirect(`${frontendUrl}/?auth=error&message=session_init_failed`);
+    }
+    
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: PATREON_CLIENT_ID,
+      redirect_uri: PATREON_REDIRECT_URI,
+      scope: 'identity identity[email]',
+      state: state,
+    });
 
-  res.redirect(`${PATREON_AUTH_URL}?${params.toString()}`);
+    res.redirect(`${PATREON_AUTH_URL}?${params.toString()}`);
+  });
 });
 
 // Patreon OAuth callback
@@ -42,8 +51,21 @@ router.get('/patreon/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
 
+    // Debug logging
+    console.log('OAuth callback received:', {
+      hasCode: !!code,
+      hasState: !!state,
+      sessionState: req.session.oauthState,
+      stateMatch: state === req.session.oauthState,
+    });
+
     // Verify state
-    if (state !== req.session.oauthState) {
+    if (!state || !req.session.oauthState || state !== req.session.oauthState) {
+      console.error('State mismatch:', {
+        received: state,
+        expected: req.session.oauthState,
+        hasSession: !!req.session,
+      });
       const frontendUrl = getFrontendUrl();
       return res.redirect(`${frontendUrl}/?auth=error&message=invalid_state`);
     }
