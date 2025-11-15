@@ -41,8 +41,19 @@ export default function FigmaPanel() {
   }, []);
 
   const handleFileSelect = async (fileId: string) => {
+    // Validate file ID before making requests
+    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+      console.error('Invalid file ID provided:', fileId);
+      return;
+    }
+    
     setSelectedFile(fileId);
-    await Promise.all([fetchComponents(fileId), fetchTokens(fileId)]);
+    try {
+      await Promise.all([fetchComponents(fileId), fetchTokens(fileId)]);
+    } catch (err) {
+      // Error is already handled by the hook and will be displayed
+      console.error('Error fetching file data:', err);
+    }
   };
 
   const handleRefresh = () => {

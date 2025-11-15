@@ -118,6 +118,12 @@ router.get('/files', async (req, res) => {
 router.get('/file/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate file ID
+    if (!id || id.trim() === '' || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Invalid file ID: file ID is required and cannot be empty' });
+    }
+
     if (!FIGMA_ACCESS_TOKEN) {
       return res.status(500).json({ error: 'Figma access token not configured' });
     }
@@ -144,6 +150,12 @@ router.get('/file/:id', async (req, res) => {
 router.get('/file/:id/components', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate file ID
+    if (!id || id.trim() === '' || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Invalid file ID: file ID is required and cannot be empty' });
+    }
+
     if (!FIGMA_ACCESS_TOKEN) {
       return res.status(500).json({ error: 'Figma access token not configured' });
     }
@@ -185,6 +197,12 @@ router.get('/file/:id/components', async (req, res) => {
 router.get('/file/:id/tokens', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate file ID
+    if (!id || id.trim() === '' || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Invalid file ID: file ID is required and cannot be empty' });
+    }
+
     if (!FIGMA_ACCESS_TOKEN) {
       return res.status(500).json({ error: 'Figma access token not configured' });
     }

@@ -55,6 +55,11 @@ export function useFigma() {
   };
 
   const fetchFile = async (fileId: string) => {
+    // Validate file ID before making request
+    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+      throw new Error('Invalid file ID: file ID is required');
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -78,6 +83,11 @@ export function useFigma() {
   };
 
   const fetchComponents = async (fileId: string) => {
+    // Validate file ID before making request
+    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+      throw new Error('Invalid file ID: file ID is required');
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -102,6 +112,11 @@ export function useFigma() {
   };
 
   const fetchTokens = async (fileId: string) => {
+    // Validate file ID before making request
+    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+      throw new Error('Invalid file ID: file ID is required');
+    }
+
     try {
       setIsLoading(true);
       setError(null);
