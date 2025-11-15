@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import session from 'express-session';
 import passport from 'passport';
+import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { GraphQLClient } from 'graphql-request';
@@ -42,22 +43,29 @@ const io = new Server(httpServer, {
   },
 });
 
+// Cookie parser - must be before session middleware
+app.use(cookieParser());
+
 // Session configuration
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-    resave: true, // Changed to true to ensure session is saved on every request
+    resave: true, // Save session even if not modified
     saveUninitialized: true, // Allow saving uninitialized sessions for OAuth state
     rolling: true, // Reset expiration on every request
     cookie: {
       secure: process.env.NODE_ENV === 'production', // Must be true for sameSite: 'none'
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (increased from 24 hours)
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined, // Allow subdomain sharing
       path: '/', // Ensure cookie is available for all paths
     },
     name: 'ventures.sid', // Custom session name to avoid conflicts
+    // Add session validation
+    genid: (req) => {
+      return require('crypto').randomBytes(16).toString('hex');
+    },
   })
 );
 
