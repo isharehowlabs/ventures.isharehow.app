@@ -4,6 +4,7 @@ import express from 'express';
 import session from 'express-session';
 import passport from 'passport';
 import cookieParser from 'cookie-parser';
+import crypto from 'crypto';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { GraphQLClient } from 'graphql-request';
@@ -63,8 +64,8 @@ app.use(
     },
     name: 'ventures.sid', // Custom session name to avoid conflicts
     // Add session validation
-    genid: (req) => {
-      return require('crypto').randomBytes(16).toString('hex');
+    genid: () => {
+      return crypto.randomBytes(16).toString('hex');
     },
   })
 );
@@ -552,8 +553,28 @@ io.on('connection', (socket) => {
 // Make io available to routes for emitting events
 app.set('io', io);
 
+// Error handling middleware (must be last)
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  console.error('Stack:', err.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'An error occurred',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  });
+});
+
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
   console.log(`Socket.io server ready`);
+});
+
+// Handle uncaught errors
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
