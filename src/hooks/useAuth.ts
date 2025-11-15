@@ -7,6 +7,9 @@ interface User {
   email?: string;
   avatar?: string;
   patreonId?: string;
+  isPaidMember?: boolean;
+  membershipTier?: string;
+  membershipAmount?: number;
 }
 
 interface AuthState {

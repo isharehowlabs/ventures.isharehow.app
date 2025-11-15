@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Box, Button, Typography, CircularProgress } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
 
 interface PatreonAuthProps {
@@ -8,8 +8,30 @@ interface PatreonAuthProps {
 
 export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
   const { isAuthenticated, isLoading, login, user } = useAuth();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check for error messages in URL
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const authError = urlParams.get('auth');
+      const message = urlParams.get('message');
+      
+      if (authError === 'error') {
+        if (message === 'not_paid_member') {
+          setErrorMessage('You need to be an active paid member to access the dashboard.');
+        } else if (message === 'invalid_state') {
+          setErrorMessage('Authentication failed. Please try again.');
+        } else if (message) {
+          setErrorMessage('Authentication error. Please try again.');
+        }
+        
+        // Clean up URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+
     if (isAuthenticated && user && onSuccess) {
       onSuccess();
     }
@@ -44,6 +66,13 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         Access the cowork dashboard by signing in with your Patreon account
       </Typography>
+      
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
+          {errorMessage}
+        </Alert>
+      )}
+      
       <Button
         variant="contained"
         size="large"
@@ -59,6 +88,10 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
       >
         Sign in with Patreon
       </Button>
+      
+      <Typography variant="caption" display="block" sx={{ mt: 2, color: 'text.secondary' }}>
+        Note: You must be an active paid member to access the dashboard
+      </Typography>
     </Box>
   );
 }

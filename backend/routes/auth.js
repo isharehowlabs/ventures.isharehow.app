@@ -66,7 +66,7 @@ router.get('/patreon', (req, res) => {
       response_type: 'code',
       client_id: PATREON_CLIENT_ID,
       redirect_uri: PATREON_REDIRECT_URI,
-      scope: 'identity identity[email]',
+      scope: 'identity identity[email] identity.memberships', // Added memberships scope
       state: state,
     });
 
@@ -131,8 +131,8 @@ router.get('/patreon/callback', async (req, res) => {
     const tokenData = await tokenResponse.json();
     const { access_token, refresh_token } = tokenData;
 
-    // Get user info from Patreon API
-    const userResponse = await fetch(`${PATREON_API_URL}/identity`, {
+    // Get user info and memberships from Patreon API
+    const userResponse = await fetch(`${PATREON_API_URL}/identity?include=memberships&fields[member]=patron_status,currently_entitled_amount_cents`, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
@@ -146,6 +146,25 @@ router.get('/patreon/callback', async (req, res) => {
     const userData = await userResponse.json();
     const patreonUser = userData.data;
 
+    // Check membership status
+    let isPaidMember = false;
+    let membershipTier = null;
+    let membershipAmount = 0;
+
+    if (userData.included) {
+      // Find active memberships
+      const memberships = userData.included.filter(item => item.type === 'member');
+      const activeMembership = memberships.find(member => 
+        member.attributes?.patron_status === 'active_patron'
+      );
+
+      if (activeMembership) {
+        isPaidMember = true;
+        membershipTier = activeMembership.attributes?.patron_status;
+        membershipAmount = activeMembership.attributes?.currently_entitled_amount_cents || 0;
+      }
+    }
+
     // Store user in session directly (not using Passport's req.login)
     req.session.user = {
       id: patreonUser.id,
@@ -153,6 +172,9 @@ router.get('/patreon/callback', async (req, res) => {
       name: patreonUser.attributes?.full_name || patreonUser.attributes?.vanity || 'Patreon User',
       email: patreonUser.attributes?.email,
       avatar: patreonUser.attributes?.image_url,
+      isPaidMember: isPaidMember,
+      membershipTier: membershipTier,
+      membershipAmount: membershipAmount,
     };
     
     // Store tokens separately (not in session for security)
@@ -171,7 +193,14 @@ router.get('/patreon/callback', async (req, res) => {
         sessionID: req.sessionID,
         userId: req.session.user.id,
         userName: req.session.user.name,
+        isPaidMember: req.session.user.isPaidMember,
       });
+
+      // Check if user is a paid member
+      if (!isPaidMember) {
+        const frontendUrl = getFrontendUrl();
+        return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
+      }
       
       const frontendUrl = getFrontendUrl();
       res.redirect(`${frontendUrl}/live?auth=success`);
