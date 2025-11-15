@@ -271,7 +271,9 @@ router.get('/me', async (req, res) => {
           req.sessionID = sessionCookie;
           
           if (req.session && req.session.user) {
-            req.session.touch();
+            // Update session expiration by modifying it (touch equivalent)
+            req.session.cookie.expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            req.session.save();
             return res.json(req.session.user);
           } else {
             return res.status(401).json({ 
@@ -291,8 +293,11 @@ router.get('/me', async (req, res) => {
 
   // Check if session exists and has user
   if (req.session && req.session.user) {
-    // Touch session to update expiration
-    req.session.touch();
+    // Update session expiration (rolling: true in config handles this, but we'll update cookie.expires too)
+    if (req.session.cookie) {
+      req.session.cookie.expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    }
+    req.session.save();
     res.json(req.session.user);
   } else {
     // More detailed error response
