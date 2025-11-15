@@ -56,26 +56,38 @@ export function useFigma() {
 
   const fetchFile = async (fileId: string) => {
     // Validate file ID before making request
-    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
-      throw new Error('Invalid file ID: file ID is required');
+    if (!fileId || typeof fileId !== 'string' || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+      const error = new Error('Invalid file ID: file ID is required and must be a valid string');
+      setError(error.message);
+      throw error;
     }
 
+    const validFileId = fileId.trim();
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/figma/file/${fileId}`, {
+      const response = await fetch(`${backendUrl}/api/figma/file/${validFileId}`, {
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Figma file');
+        const errorText = await response.text().catch(() => '');
+        let errorMessage = `Failed to fetch Figma file (${response.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       return data.file;
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err?.message || 'Failed to fetch Figma file';
+      setError(errorMessage);
       throw err;
     } finally {
       setIsLoading(false);
@@ -84,27 +96,39 @@ export function useFigma() {
 
   const fetchComponents = async (fileId: string) => {
     // Validate file ID before making request
-    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
-      throw new Error('Invalid file ID: file ID is required');
+    if (!fileId || typeof fileId !== 'string' || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+      const error = new Error('Invalid file ID: file ID is required and must be a valid string');
+      setError(error.message);
+      throw error;
     }
 
+    const validFileId = fileId.trim();
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/figma/file/${fileId}/components`, {
+      const response = await fetch(`${backendUrl}/api/figma/file/${validFileId}/components`, {
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Figma components');
+        const errorText = await response.text().catch(() => '');
+        let errorMessage = `Failed to fetch Figma components (${response.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       setComponents(data.components || []);
       return data.components;
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err?.message || 'Failed to fetch Figma components';
+      setError(errorMessage);
       throw err;
     } finally {
       setIsLoading(false);
@@ -113,27 +137,39 @@ export function useFigma() {
 
   const fetchTokens = async (fileId: string) => {
     // Validate file ID before making request
-    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
-      throw new Error('Invalid file ID: file ID is required');
+    if (!fileId || typeof fileId !== 'string' || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+      const error = new Error('Invalid file ID: file ID is required and must be a valid string');
+      setError(error.message);
+      throw error;
     }
 
+    const validFileId = fileId.trim();
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/figma/file/${fileId}/tokens`, {
+      const response = await fetch(`${backendUrl}/api/figma/file/${validFileId}/tokens`, {
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Figma tokens');
+        const errorText = await response.text().catch(() => '');
+        let errorMessage = `Failed to fetch Figma tokens (${response.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       setTokens(data.tokens || []);
       return data.tokens;
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err?.message || 'Failed to fetch Figma tokens';
+      setError(errorMessage);
       throw err;
     } finally {
       setIsLoading(false);

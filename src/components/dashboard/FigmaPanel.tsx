@@ -37,28 +37,57 @@ export default function FigmaPanel() {
   const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
-    fetchFiles();
-  }, []);
+    const loadFiles = async () => {
+      try {
+        await fetchFiles();
+      } catch (err) {
+        // Error is handled by the hook's error state
+        console.error('Error loading files:', err);
+      }
+    };
+    loadFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // fetchFiles is stable from the hook, no need to include in deps
 
   const handleFileSelect = async (fileId: string) => {
     // Validate file ID before making requests
-    if (!fileId || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
+    if (!fileId || typeof fileId !== 'string' || fileId.trim() === '' || fileId === 'undefined' || fileId === 'null') {
       console.error('Invalid file ID provided:', fileId);
       return;
     }
     
-    setSelectedFile(fileId);
+    const validFileId = fileId.trim();
+    setSelectedFile(validFileId);
+    
     try {
-      await Promise.all([fetchComponents(fileId), fetchTokens(fileId)]);
+      await Promise.all([
+        fetchComponents(validFileId).catch((err) => {
+          console.error('Error fetching components:', err);
+          // Re-throw to be caught by outer catch
+          throw err;
+        }),
+        fetchTokens(validFileId).catch((err) => {
+          console.error('Error fetching tokens:', err);
+          // Re-throw to be caught by outer catch
+          throw err;
+        })
+      ]);
     } catch (err) {
       // Error is already handled by the hook and will be displayed
       console.error('Error fetching file data:', err);
+      // Optionally clear selection on error
+      // setSelectedFile(null);
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setSelectedFile(null);
-    fetchFiles();
+    try {
+      await fetchFiles();
+    } catch (err) {
+      // Error is handled by the hook's error state
+      console.error('Error refreshing files:', err);
+    }
   };
 
   return (
@@ -102,16 +131,22 @@ export default function FigmaPanel() {
               </Paper>
             ) : (
               <List dense>
-                {files.map((file) => (
-                  <ListItem
-                    key={file.id}
-                    button
-                    selected={selectedFile === file.id}
-                    onClick={() => handleFileSelect(file.id)}
-                  >
-                    <ListItemText primary={file.name} />
-                  </ListItem>
-                ))}
+                {files
+                  .filter((file) => file?.id && typeof file.id === 'string' && file.id.trim() !== '')
+                  .map((file) => (
+                    <ListItem
+                      key={file.id}
+                      button
+                      selected={selectedFile === file.id}
+                      onClick={() => {
+                        if (file?.id) {
+                          handleFileSelect(file.id);
+                        }
+                      }}
+                    >
+                      <ListItemText primary={file.name || 'Unnamed file'} />
+                    </ListItem>
+                  ))}
               </List>
             )}
           </Box>
