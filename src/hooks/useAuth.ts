@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getBackendUrl } from '../utils/backendUrl';
 
 interface User {
@@ -24,11 +24,7 @@ export function useAuth() {
     error: null,
   });
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/api/auth/me`, {
@@ -59,7 +55,25 @@ export function useAuth() {
         error: error.message,
       });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+    
+    // Check for auth success parameter in URL and refresh auth
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('auth') === 'success') {
+        // Small delay to ensure session cookie is set
+        setTimeout(() => {
+          checkAuth();
+          // Clean up URL parameter
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, '', newUrl);
+        }, 500); // Increased delay to ensure cookie is available
+      }
+    }
+  }, [checkAuth]);
 
   const login = () => {
     const backendUrl = getBackendUrl();
