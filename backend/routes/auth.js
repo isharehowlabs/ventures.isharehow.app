@@ -165,68 +165,58 @@ router.get('/patreon/callback', async (req, res) => {
       }
     }
 
-    // Regenerate session to prevent session fixation attacks
-    // This creates a new session ID after authentication
-    req.session.regenerate((err) => {
+    // Store user in the existing session (no regeneration to avoid session ID mismatch)
+    req.session.user = {
+      id: patreonUser.id,
+      patreonId: patreonUser.id,
+      name: patreonUser.attributes?.full_name || patreonUser.attributes?.vanity || 'Patreon User',
+      email: patreonUser.attributes?.email,
+      avatar: patreonUser.attributes?.image_url,
+      isPaidMember: isPaidMember,
+      membershipTier: membershipTier,
+      membershipAmount: membershipAmount,
+    };
+    
+    // Store tokens separately (not in session for security)
+    req.session.accessToken = access_token;
+    req.session.refreshToken = refresh_token;
+
+    // Save session and ensure cookie is set
+    req.session.save((err) => {
       if (err) {
-        console.error('Session regeneration error:', err);
+        console.error('Session save error:', err);
         const frontendUrl = getFrontendUrl();
         return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
       }
-
-      // Store user in the new session
-      req.session.user = {
-        id: patreonUser.id,
-        patreonId: patreonUser.id,
-        name: patreonUser.attributes?.full_name || patreonUser.attributes?.vanity || 'Patreon User',
-        email: patreonUser.attributes?.email,
-        avatar: patreonUser.attributes?.image_url,
-        isPaidMember: isPaidMember,
-        membershipTier: membershipTier,
-        membershipAmount: membershipAmount,
-      };
       
-      // Store tokens separately (not in session for security)
-      req.session.accessToken = access_token;
-      req.session.refreshToken = refresh_token;
-
-      // Save session and ensure cookie is set
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          const frontendUrl = getFrontendUrl();
-          return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
-        }
-        
-        // Log successful session creation
-        console.log('Session saved successfully:', {
-          sessionID: req.sessionID,
-          userId: req.session.user.id,
-          userName: req.session.user.name,
-          isPaidMember: req.session.user.isPaidMember,
-          hasUser: !!req.session.user,
-          sessionKeys: Object.keys(req.session),
-        });
-
-        // Check if user is a paid member
-        if (!isPaidMember) {
-          const frontendUrl = getFrontendUrl();
-          return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
-        }
-        
-        // Set cookie explicitly to ensure it's sent (matching session config)
-        res.cookie('ventures.sid', req.sessionID, {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-          domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined,
-          path: '/',
-        });
-        
-        const frontendUrl = getFrontendUrl();
-        res.redirect(`${frontendUrl}/live?auth=success`);
+      // Log successful session creation
+      console.log('Session saved successfully:', {
+        sessionID: req.sessionID,
+        userId: req.session.user.id,
+        userName: req.session.user.name,
+        isPaidMember: req.session.user.isPaidMember,
+        hasUser: !!req.session.user,
+        sessionKeys: Object.keys(req.session),
       });
+
+      // Check if user is a paid member
+      if (!isPaidMember) {
+        const frontendUrl = getFrontendUrl();
+        return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
+      }
+      
+      // Set cookie explicitly to ensure it matches the session ID
+      res.cookie('ventures.sid', req.sessionID, {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined,
+        path: '/',
+      });
+      
+      const frontendUrl = getFrontendUrl();
+      res.redirect(`${frontendUrl}/live?auth=success`);
     });
   } catch (error) {
     console.error('Patreon OAuth error:', error);
@@ -236,9 +226,10 @@ router.get('/patreon/callback', async (req, res) => {
 });
 
 // Get current user
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   // Debug logging
   const sessionCookie = req.cookies?.['ventures.sid'] || req.headers.cookie?.match(/ventures\.sid=([^;]+)/)?.[1];
+  
   console.log('Auth check - /me endpoint:', {
     hasSession: !!req.session,
     sessionID: req.sessionID,
@@ -250,12 +241,52 @@ router.get('/me', (req, res) => {
     allCookies: req.cookies,
   });
 
-  // Validate session ID matches cookie
+  // If session ID doesn't match cookie, try to reload session
   if (sessionCookie && req.sessionID !== sessionCookie) {
-    console.warn('Session ID mismatch:', {
-      sessionID: req.sessionID,
+    console.warn('Session ID mismatch - attempting to reload session:', {
+      currentSessionID: req.sessionID,
       cookieSessionID: sessionCookie,
     });
+    
+    // Try to reload the session using the cookie's session ID
+    // This happens when session was regenerated but cookie wasn't updated
+    try {
+      // Force session reload by destroying current and creating new with cookie ID
+      const store = req.sessionStore;
+      if (store && typeof store.get === 'function') {
+        store.get(sessionCookie, (err, session) => {
+          if (err || !session) {
+            console.error('Failed to load session from store:', err);
+            return res.status(401).json({ 
+              error: 'Not authenticated',
+              message: 'Session not found in store.',
+              hasSession: !!req.session,
+              sessionID: req.sessionID,
+              cookieSessionID: sessionCookie,
+            });
+          }
+          
+          // Restore session data
+          req.session = session;
+          req.sessionID = sessionCookie;
+          
+          if (req.session && req.session.user) {
+            req.session.touch();
+            return res.json(req.session.user);
+          } else {
+            return res.status(401).json({ 
+              error: 'Not authenticated',
+              message: 'No user data in session.',
+              hasSession: !!req.session,
+              sessionID: req.sessionID,
+            });
+          }
+        });
+        return; // Exit early, response will be sent in callback
+      }
+    } catch (error) {
+      console.error('Error reloading session:', error);
+    }
   }
 
   // Check if session exists and has user
