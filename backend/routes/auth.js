@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -9,6 +10,20 @@ const PATREON_REDIRECT_URI = process.env.PATREON_REDIRECT_URI || 'http://localho
 const PATREON_AUTH_URL = 'https://www.patreon.com/oauth2/authorize';
 const PATREON_TOKEN_URL = 'https://www.patreon.com/api/oauth2/token';
 const PATREON_API_URL = 'https://www.patreon.com/api/oauth2/v2';
+
+// Temporary store for OAuth states (in-memory, cleared after 10 minutes)
+const oauthStates = new Map();
+const STATE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
+// Clean up expired states periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [state, data] of oauthStates.entries()) {
+    if (now - data.createdAt > STATE_TIMEOUT) {
+      oauthStates.delete(state);
+    }
+  }
+}, 5 * 60 * 1000); // Clean up every 5 minutes
 
 // Get frontend URL for redirects
 const getFrontendUrl = () => {
@@ -23,13 +38,26 @@ const getFrontendUrl = () => {
 
 // Initiate Patreon OAuth
 router.get('/patreon', (req, res) => {
-  const state = Math.random().toString(36).substring(7);
+  const state = crypto.randomBytes(16).toString('hex');
+  
+  // Store state in both session (for fallback) and in-memory store (primary)
   req.session.oauthState = state;
+  oauthStates.set(state, {
+    createdAt: Date.now(),
+    sessionId: req.sessionID,
+  });
+  
+  console.log('OAuth initiated:', {
+    state,
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+  });
   
   // Save session before redirecting to ensure cookie is set
   req.session.save((err) => {
     if (err) {
       console.error('Session save error before OAuth redirect:', err);
+      oauthStates.delete(state); // Clean up
       const frontendUrl = getFrontendUrl();
       return res.redirect(`${frontendUrl}/?auth=error&message=session_init_failed`);
     }
@@ -56,18 +84,28 @@ router.get('/patreon/callback', async (req, res) => {
       hasCode: !!code,
       hasState: !!state,
       sessionState: req.session.oauthState,
-      stateMatch: state === req.session.oauthState,
+      sessionId: req.sessionID,
+      storedState: oauthStates.has(state),
     });
 
-    // Verify state
-    if (!state || !req.session.oauthState || state !== req.session.oauthState) {
+    // Verify state - check both in-memory store and session (fallback)
+    const storedState = oauthStates.get(state);
+    const sessionState = req.session.oauthState;
+    
+    if (!state || (!storedState && state !== sessionState)) {
       console.error('State mismatch:', {
         received: state,
-        expected: req.session.oauthState,
+        inMemoryStore: !!storedState,
+        sessionState: sessionState,
         hasSession: !!req.session,
       });
       const frontendUrl = getFrontendUrl();
       return res.redirect(`${frontendUrl}/?auth=error&message=invalid_state`);
+    }
+
+    // Clean up the state from memory store
+    if (storedState) {
+      oauthStates.delete(state);
     }
 
     // Exchange code for access token
