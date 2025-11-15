@@ -10,7 +10,10 @@ import {
   Tabs,
   Tab,
   Chip,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { useFigma } from '../../hooks/useFigma';
 
 interface TabPanelProps {
@@ -42,10 +45,20 @@ export default function FigmaPanel() {
     await Promise.all([fetchComponents(fileId), fetchTokens(fileId)]);
   };
 
+  const handleRefresh = () => {
+    setSelectedFile(null);
+    fetchFiles();
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Figma Designs</Typography>
+        <Tooltip title="Refresh">
+          <IconButton onClick={handleRefresh} disabled={isLoading} size="small">
+            <RefreshIcon />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       <Box sx={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
@@ -59,8 +72,22 @@ export default function FigmaPanel() {
                 <CircularProgress size={24} />
               </Box>
             ) : error ? (
-              <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
-                <Typography variant="body2">{error}</Typography>
+              <Paper sx={{ p: 2, bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  {error.includes('401') || error.includes('Authentication') 
+                    ? 'Authentication required. Click refresh to retry.'
+                    : error}
+                </Typography>
+                {error.includes('401') || error.includes('Authentication') && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    The Figma integration requires authentication. Make sure you're logged in.
+                  </Typography>
+                )}
+                <Box sx={{ mt: 1 }}>
+                  <IconButton onClick={handleRefresh} disabled={isLoading} size="small" sx={{ color: 'inherit' }}>
+                    <RefreshIcon fontSize="small" />
+                  </IconButton>
+                </Box>
               </Paper>
             ) : (
               <List dense>

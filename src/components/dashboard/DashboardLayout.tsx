@@ -4,6 +4,8 @@ import StreamingPanel from './StreamingPanel';
 import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
 import CodeHandoffPanel from './CodeHandoffPanel';
+import AIJournalPanel from './AIJournalPanel';
+import Web3Panel from './Web3Panel';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -56,6 +58,8 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
           <Tab label="Designs" />
           <Tab label="Documents" />
           <Tab label="Code Handoff" />
+          <Tab label="AI Journal" />
+          <Tab label="Web3 Hub" />
         </Tabs>
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
           <TabPanel value={activeTab} index={0}>
@@ -69,6 +73,12 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
           </TabPanel>
           <TabPanel value={activeTab} index={3}>
             <CodeHandoffPanel />
+          </TabPanel>
+          <TabPanel value={activeTab} index={4}>
+            <AIJournalPanel />
+          </TabPanel>
+          <TabPanel value={activeTab} index={5}>
+            <Web3Panel />
           </TabPanel>
         </Box>
       </Box>
@@ -91,6 +101,8 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
         <Tab label="Designs" />
         <Tab label="Documents" />
         <Tab label="Code Handoff" />
+        <Tab label="AI Journal" />
+        <Tab label="Web3 Hub" />
       </Tabs>
       <Box 
         sx={{ 
@@ -129,6 +141,12 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
             </TabPanel>
             <TabPanel value={activeTab} index={3}>
               <CodeHandoffPanel />
+            </TabPanel>
+            <TabPanel value={activeTab} index={4}>
+              <AIJournalPanel />
+            </TabPanel>
+            <TabPanel value={activeTab} index={5}>
+              <Web3Panel />
             </TabPanel>
           </Box>
           {/* Session Tasks on the left side with work tabs */}

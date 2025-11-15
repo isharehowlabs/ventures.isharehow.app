@@ -1,5 +1,4 @@
-import AppShell from '../components/AppShell';
-
+// src/components/dashboard/Web3Panel.tsx
 import type { FC } from 'react';
 
 import {
@@ -275,9 +274,9 @@ const ResourceCard: FC<{ resource: ResourceItem }> = ({ resource }) => (
   </Card>
 );
 
-function Web3Page() {
+export default function Web3Panel() {
   return (
-    <AppShell active="web3">
+    <Box sx={{ height: '100%', overflow: 'auto', p: { xs: 2, sm: 3 } }}>
       <Stack spacing={5}>
         <Box>
           <Chip
@@ -287,7 +286,7 @@ function Web3Page() {
             sx={{ fontWeight: 700, mb: 2, alignSelf: 'flex-start' }}
           />
           <Typography
-            variant="h3"
+            variant="h4"
             sx={{
               fontWeight: 900,
               mb: 2,
@@ -398,8 +397,7 @@ function Web3Page() {
           </Stack>
         </Card>
       </Stack>
-    </AppShell>
+    </Box>
   );
 }
 
-export default Web3Page;

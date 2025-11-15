@@ -22,13 +22,11 @@ import {
   Menu as MenuIcon,
   Home as HomeIcon,
   Article as ArticleIcon,
-  Psychology as PsychologyIcon,
   LiveTv as LiveTvIcon,
   ShoppingBag as ShoppingBagIcon,
-  Hub as HubIcon,
 } from '@mui/icons-material';
 
-type NavKey = 'ventures' | 'content' | 'journal' | 'live' | 'products' | 'web3';
+type NavKey = 'ventures' | 'content' | 'live' | 'products';
 
 interface NavigationItem {
   key: NavKey;
@@ -41,9 +39,7 @@ const navigationItems: NavigationItem[] = [
   { key: 'ventures', label: 'Venture Directory', href: '/', icon: HomeIcon },
   { key: 'content', label: 'Content Library', href: '/content', icon: ArticleIcon },
   { key: 'products', label: 'Product Catalog', href: '/products', icon: ShoppingBagIcon },
-  { key: 'web3', label: 'Web3 Hub', href: '/web3', icon: HubIcon },
-  { key: 'journal', label: 'AI Journal', href: '/journal', icon: PsychologyIcon },
-  { key: 'live', label: 'Live Streaming', href: '/live', icon: LiveTvIcon },
+  { key: 'live', label: 'Co-Work Dashboard', href: '/live', icon: LiveTvIcon },
 ];
 
 interface AppShellProps {

@@ -14,8 +14,10 @@ import {
   DialogActions,
   Chip,
   CircularProgress,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Link as LinkIcon, Code as CodeIcon } from '@mui/icons-material';
+import { Link as LinkIcon, Code as CodeIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useMCP } from '../../hooks/useMCP';
 
 export default function CodeHandoffPanel() {
@@ -52,18 +54,30 @@ export default function CodeHandoffPanel() {
     }
   };
 
+  const handleRefresh = () => {
+    fetchCodeLinks();
+    fetchTokens();
+  };
+
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Code Handoff</Typography>
-        <Button
-          variant="contained"
-          startIcon={<LinkIcon />}
-          onClick={() => setOpen(true)}
-          size="small"
-        >
-          Link Component
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Refresh">
+            <IconButton onClick={handleRefresh} disabled={isLoading} size="small">
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            startIcon={<LinkIcon />}
+            onClick={() => setOpen(true)}
+            size="small"
+          >
+            Link Component
+          </Button>
+        </Box>
       </Box>
 
       {error && (

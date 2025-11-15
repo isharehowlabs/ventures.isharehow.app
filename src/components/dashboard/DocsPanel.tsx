@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -14,16 +14,21 @@ import {
   CircularProgress,
   Paper,
   IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Add as AddIcon, Description as DescriptionIcon } from '@mui/icons-material';
+import { Add as AddIcon, Description as DescriptionIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useGoogleDocs } from '../../hooks/useGoogleDocs';
 
 export default function DocsPanel() {
-  const { docs, isLoading, error, createDoc, getDoc } = useGoogleDocs();
+  const { docs, isLoading, error, createDoc, getDoc, fetchDocs } = useGoogleDocs();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
+
+  const handleRefresh = () => {
+    fetchDocs();
+  };
 
   const handleCreate = async () => {
     try {
@@ -49,19 +54,31 @@ export default function DocsPanel() {
     <Box sx={{ p: 2, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Google Docs</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpen(true)}
-          size="small"
-        >
-          New Doc
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Refresh">
+            <IconButton onClick={handleRefresh} disabled={isLoading} size="small">
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpen(true)}
+            size="small"
+          >
+            New Doc
+          </Button>
+        </Box>
       </Box>
 
       {error && (
         <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
-          <Typography variant="body2">{error}</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body2">{error}</Typography>
+            <IconButton onClick={handleRefresh} disabled={isLoading} size="small" sx={{ color: 'inherit', ml: 1 }}>
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Paper>
       )}
 

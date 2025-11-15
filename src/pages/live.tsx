@@ -262,7 +262,7 @@ function LiveDashboard() {
             WebkitTextFillColor: 'transparent',
           }}
         >
-          Cowork Dashboard
+          Co-Work Dashboard
         </Typography>
         <Typography 
           variant="body1" 

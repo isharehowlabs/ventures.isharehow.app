@@ -1,0 +1,6 @@
+[dotenv@17.2.3] injecting env (3) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+SHOPIFY_STORE_URL: https://isharehow.myshopify.com/admin/api/2024-10/graphql.json
+SHOPIFY_ACCESS_TOKEN: ***d459
+GOOGLE_AI_API_KEY: undefined
+Backend running on port 3001
+Socket.io server ready

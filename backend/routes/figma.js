@@ -2,19 +2,14 @@ import express from 'express';
 
 const router = express.Router();
 
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  next();
-};
+// Note: Figma API calls use server-side Figma token, so authentication is optional
+// Authentication can be added back if needed for tracking usage
 
 const FIGMA_ACCESS_TOKEN = process.env.FIGMA_ACCESS_TOKEN;
 const FIGMA_API_URL = 'https://api.figma.com/v1';
 
 // List Figma files
-router.get('/files', requireAuth, async (req, res) => {
+router.get('/files', async (req, res) => {
   try {
     if (!FIGMA_ACCESS_TOKEN) {
       return res.status(500).json({ error: 'Figma access token not configured' });
@@ -44,7 +39,7 @@ router.get('/files', requireAuth, async (req, res) => {
 });
 
 // Get file details
-router.get('/file/:id', requireAuth, async (req, res) => {
+router.get('/file/:id', async (req, res) => {
   try {
     const { id } = req.params;
     if (!FIGMA_ACCESS_TOKEN) {
@@ -70,7 +65,7 @@ router.get('/file/:id', requireAuth, async (req, res) => {
 });
 
 // Get design components
-router.get('/file/:id/components', requireAuth, async (req, res) => {
+router.get('/file/:id/components', async (req, res) => {
   try {
     const { id } = req.params;
     if (!FIGMA_ACCESS_TOKEN) {
@@ -97,7 +92,7 @@ router.get('/file/:id/components', requireAuth, async (req, res) => {
 });
 
 // Get design tokens
-router.get('/file/:id/tokens', requireAuth, async (req, res) => {
+router.get('/file/:id/tokens', async (req, res) => {
   try {
     const { id } = req.params;
     if (!FIGMA_ACCESS_TOKEN) {

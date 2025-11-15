@@ -37,7 +37,11 @@ export function useFigma() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch Figma files');
+        if (response.status === 401) {
+          throw new Error('401: Authentication required');
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch Figma files (${response.status})`);
       }
 
       const data = await response.json();
