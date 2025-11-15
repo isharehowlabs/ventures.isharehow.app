@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import {
   Box,
   Typography,
@@ -12,6 +11,9 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import AppShell from '../components/AppShell';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
+import DashboardLayout from '../components/dashboard/DashboardLayout';
+import StreamingPanel from '../components/dashboard/StreamingPanel';
 import { getBackendUrl } from '../utils/backendUrl';
 
 declare global {
@@ -20,19 +22,7 @@ declare global {
   }
 }
 
-const ContentLibraryView = dynamic(() => import('../components/ContentLibraryView'), {
-  ssr: false,
-  loading: () => (
-    <Stack spacing={2}>
-      <Skeleton variant="rounded" height={48} />
-      <Skeleton variant="rounded" height={32} />
-      <Skeleton variant="rounded" height={320} />
-    </Stack>
-  ),
-});
-
 // Task List Feature
-
 interface Task {
   id: number;
   text: string;
@@ -43,13 +33,11 @@ function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState('');
 
-  // Load from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('live_task_list');
     if (stored) setTasks(JSON.parse(stored));
   }, []);
 
-  // Save to localStorage on change
   useEffect(() => {
     localStorage.setItem('live_task_list', JSON.stringify(tasks));
   }, [tasks]);
@@ -156,8 +144,7 @@ function TaskList() {
   );
 }
 
-
-function App() {
+function LiveDashboard() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -199,7 +186,6 @@ function App() {
     const fetchFollowers = async () => {
       try {
         setIsLoadingFollowers(true);
-        // Try backend endpoint first, fallback to Twitch API
         const backendUrl = getBackendUrl();
         
         try {
@@ -216,34 +202,19 @@ function App() {
           console.log('Backend endpoint not available, trying direct Twitch API');
         }
 
-        // Fallback: Direct Twitch API call (requires client-side API key or backend proxy)
-        // For now, using a mock/placeholder - you can replace with actual Twitch API call
-        // Note: Twitch API requires authentication, so this should ideally go through your backend
-        const response = await fetch(`https://api.twitch.tv/helix/users/follows?to_id=${encodeURIComponent('jameleliyah')}`, {
-          headers: {
-            'Client-ID': process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID || '',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TWITCH_ACCESS_TOKEN || ''}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setCurrentFollowers(data.total || 0);
-        } else {
-          // Fallback to default if API fails
-          setCurrentFollowers(1247);
-        }
+        // Fallback to default values
+        setCurrentFollowers(1247);
+        setCurrentViewers(1200);
       } catch (error) {
         console.error('Error fetching followers:', error);
-        // Fallback to default value
         setCurrentFollowers(1247);
+        setCurrentViewers(1200);
       } finally {
         setIsLoadingFollowers(false);
       }
     };
 
     fetchFollowers();
-    // Refresh every 5 minutes
     const interval = setInterval(fetchFollowers, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -269,7 +240,9 @@ function App() {
     };
 
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
 
@@ -287,22 +260,14 @@ function App() {
             WebkitTextFillColor: 'transparent',
           }}
         >
-          Live Streaming
+          Cowork Dashboard
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-          Join live streams for wellness coaching, spiritual guidance, fitness training, and community interaction.
+          Your hub for streaming, design collaboration, document management, and code handoff.
         </Typography>
       </Box>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 2fr) minmax(320px, 1fr)' },
-          gap: 3,
-          alignItems: 'start',
-          mb: 6,
-        }}
-      >
+      <DashboardLayout>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Collapse in={videoOpen} unmountOnExit>
             <Box
@@ -435,106 +400,20 @@ function App() {
             </Box>
           </Collapse>
 
-          <Paper
-            elevation={3}
-            sx={{
-              borderRadius: 3,
-              border: 1,
-              borderColor: 'divider',
-              p: { xs: 2, sm: 3 },
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-            }}
-          >
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {libraryOpen ? 'Content Library' : 'Browse Content'}
-              </Typography>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={libraryOpen ? handleToggleLibrary : handleToggleVideo}
-              >
-                {videoOpen ? 'Browse' : 'Watch Live'}
-              </Button>
-            </Stack>
-
-            <Typography variant="body2" color="text.secondary">
-              Explore the full content library or return to the live stream.
-            </Typography>
-
-            <Collapse in={libraryOpen} unmountOnExit>
-              <Box
-                sx={{
-                  mt: 2,
-                  overflowY: 'auto',
-                  maxHeight: 'calc(100vh - 200px)',
-                  pr: 1,
-                }}
-              >
-                <ContentLibraryView showHero={false} />
-              </Box>
-            </Collapse>
-          </Paper>
-        </Box>
-
-        <Box
-          sx={{
-            position: { md: 'sticky' },
-            top: { md: 32 },
-            alignSelf: { md: 'start' },
-            maxHeight: { md: 'calc(100vh - 96px)' },
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              bgcolor: 'background.paper',
-              borderRadius: 3,
-              border: 1,
-              borderColor: 'divider',
-              overflow: 'hidden',
-              flexGrow: 1,
-            }}
-          >
-            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Live Chat
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                1,247 viewers
-              </Typography>
-            </Box>
-
-            <Box sx={{ flexGrow: 1, position: 'relative', minHeight: { xs: 420, md: 840 } }}>
-              <iframe
-                src="https://www.twitch.tv/embed/jameleliyah/chat?darkpopout&parent=ventures.isharehow.app"
-                height="100%"
-                width="100%"
-                frameBorder="0"
-                scrolling="no"
-                style={{
-                  border: 'none',
-                  borderRadius: 0,
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                }}
-              />
-            </Box>
+          <Box sx={{ mb: 6 }}>
+            <TaskList />
           </Box>
         </Box>
-      </Box>
-
-      <Box sx={{ mb: 6 }}>
-        <TaskList />
-      </Box>
+      </DashboardLayout>
     </AppShell>
+  );
+}
+
+function App() {
+  return (
+    <ProtectedRoute>
+      <LiveDashboard />
+    </ProtectedRoute>
   );
 }
 

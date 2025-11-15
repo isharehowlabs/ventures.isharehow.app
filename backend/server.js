@@ -2,8 +2,16 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
+import session from 'express-session';
+import passport from 'passport';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import { GraphQLClient } from 'graphql-request';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import authRoutes from './routes/auth.js';
+import docsRoutes from './routes/docs.js';
+import figmaRoutes from './routes/figma.js';
+import mcpRoutes from './routes/mcp.js';
 dotenv.config();
 
 console.log('SHOPIFY_STORE_URL:', process.env.SHOPIFY_STORE_URL);
@@ -11,8 +19,48 @@ console.log('SHOPIFY_ACCESS_TOKEN:', process.env.SHOPIFY_ACCESS_TOKEN ? '***' + 
 console.log('GOOGLE_AI_API_KEY:', process.env.GOOGLE_AI_API_KEY ? '***' + process.env.GOOGLE_AI_API_KEY.slice(-4) : 'undefined');
 
 const app = express();
-app.use(cors());
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true,
+  },
+});
+
+// Session configuration
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
+
+// Passport initialization
+app.use(passport.initialize());
+app.use(passport.session());
+
+// CORS and JSON parsing
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true,
+  })
+);
 app.use(express.json());
+
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
+// API routes
+app.use('/api/docs', docsRoutes);
+app.use('/api/figma', figmaRoutes);
+app.use('/api/mcp', mcpRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -426,4 +474,31 @@ app.get('/api/twitch/followers', async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT || 3001, () => console.log(`Backend running on port ${process.env.PORT || 3001}`));
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+
+  // Join room for design token updates
+  socket.on('join:design-tokens', () => {
+    socket.join('design-tokens');
+  });
+
+  // Join room for document collaboration
+  socket.on('join:document', (docId) => {
+    socket.join(`document:${docId}`);
+    console.log(`Client ${socket.id} joined document:${docId} room`);
+  });
+});
+
+// Make io available to routes for emitting events
+app.set('io', io);
+
+const PORT = process.env.PORT || 3001;
+httpServer.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`);
+  console.log(`Socket.io server ready`);
+});
