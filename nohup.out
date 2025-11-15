@@ -1,4 +1,4 @@
-[dotenv@17.2.3] injecting env (3) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (3) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
 SHOPIFY_STORE_URL: https://isharehow.myshopify.com/admin/api/2024-10/graphql.json
 SHOPIFY_ACCESS_TOKEN: ***d459
 GOOGLE_AI_API_KEY: undefined
