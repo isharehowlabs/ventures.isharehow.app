@@ -10,6 +10,17 @@ const PATREON_AUTH_URL = 'https://www.patreon.com/oauth2/authorize';
 const PATREON_TOKEN_URL = 'https://www.patreon.com/api/oauth2/token';
 const PATREON_API_URL = 'https://www.patreon.com/api/oauth2/v2';
 
+// Get frontend URL for redirects
+const getFrontendUrl = () => {
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL.split(',')[0].trim();
+  }
+  // Default to production frontend
+  return process.env.NODE_ENV === 'production' 
+    ? 'https://ventures.isharehow.app'
+    : 'http://localhost:3000';
+};
+
 // Initiate Patreon OAuth
 router.get('/patreon', (req, res) => {
   const state = Math.random().toString(36).substring(7);
@@ -33,7 +44,8 @@ router.get('/patreon/callback', async (req, res) => {
 
     // Verify state
     if (state !== req.session.oauthState) {
-      return res.redirect('/?auth=error&message=invalid_state');
+      const frontendUrl = getFrontendUrl();
+      return res.redirect(`${frontendUrl}/?auth=error&message=invalid_state`);
     }
 
     // Exchange code for access token
@@ -52,7 +64,8 @@ router.get('/patreon/callback', async (req, res) => {
     });
 
     if (!tokenResponse.ok) {
-      return res.redirect('/?auth=error&message=token_exchange_failed');
+      const frontendUrl = getFrontendUrl();
+      return res.redirect(`${frontendUrl}/?auth=error&message=token_exchange_failed`);
     }
 
     const tokenData = await tokenResponse.json();
@@ -66,7 +79,8 @@ router.get('/patreon/callback', async (req, res) => {
     });
 
     if (!userResponse.ok) {
-      return res.redirect('/?auth=error&message=user_fetch_failed');
+      const frontendUrl = getFrontendUrl();
+      return res.redirect(`${frontendUrl}/?auth=error&message=user_fetch_failed`);
     }
 
     const userData = await userResponse.json();
@@ -88,13 +102,16 @@ router.get('/patreon/callback', async (req, res) => {
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
-        return res.redirect('/?auth=error&message=session_failed');
+        const frontendUrl = getFrontendUrl();
+        return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
       }
-      res.redirect('/live?auth=success');
+      const frontendUrl = getFrontendUrl();
+      res.redirect(`${frontendUrl}/live?auth=success`);
     });
   } catch (error) {
     console.error('Patreon OAuth error:', error);
-    res.redirect('/?auth=error&message=server_error');
+    const frontendUrl = getFrontendUrl();
+    res.redirect(`${frontendUrl}/?auth=error&message=server_error`);
   }
 });
 
