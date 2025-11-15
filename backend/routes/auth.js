@@ -165,6 +165,14 @@ router.get('/patreon/callback', async (req, res) => {
         const frontendUrl = getFrontendUrl();
         return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
       }
+      
+      // Log successful session creation
+      console.log('Session saved successfully:', {
+        sessionID: req.sessionID,
+        userId: req.session.user.id,
+        userName: req.session.user.name,
+      });
+      
       const frontendUrl = getFrontendUrl();
       res.redirect(`${frontendUrl}/live?auth=success`);
     });
@@ -177,10 +185,31 @@ router.get('/patreon/callback', async (req, res) => {
 
 // Get current user
 router.get('/me', (req, res) => {
-  if (req.session.user) {
+  // Debug logging
+  console.log('Auth check - /me endpoint:', {
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
+    hasUser: !!req.session.user,
+    cookieHeader: req.headers.cookie,
+    userAgent: req.headers['user-agent'],
+  });
+
+  // Check if session exists and has user
+  if (req.session && req.session.user) {
     res.json(req.session.user);
   } else {
-    res.status(401).json({ error: 'Not authenticated' });
+    // More detailed error response
+    console.warn('Unauthorized access attempt:', {
+      sessionID: req.sessionID,
+      hasSession: !!req.session,
+      sessionKeys: req.session ? Object.keys(req.session) : [],
+    });
+    res.status(401).json({ 
+      error: 'Not authenticated',
+      message: 'No valid session found. Please log in again.',
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+    });
   }
 });
 

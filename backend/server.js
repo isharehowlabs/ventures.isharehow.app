@@ -46,14 +46,16 @@ const io = new Server(httpServer, {
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-    resave: false,
+    resave: true, // Changed to true to ensure session is saved on every request
     saveUninitialized: true, // Allow saving uninitialized sessions for OAuth state
+    rolling: true, // Reset expiration on every request
     cookie: {
       secure: process.env.NODE_ENV === 'production', // Must be true for sameSite: 'none'
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined, // Allow subdomain sharing
+      path: '/', // Ensure cookie is available for all paths
     },
     name: 'ventures.sid', // Custom session name to avoid conflicts
   })
@@ -80,6 +82,23 @@ app.use(
   })
 );
 app.use(express.json());
+
+// Debug middleware for session/cookie issues (development only)
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/auth')) {
+      console.log('Request details:', {
+        path: req.path,
+        method: req.method,
+        hasCookie: !!req.headers.cookie,
+        cookieHeader: req.headers.cookie,
+        sessionID: req.sessionID,
+        hasSession: !!req.session,
+      });
+    }
+    next();
+  });
+}
 
 // Authentication routes
 app.use('/api/auth', authRoutes);

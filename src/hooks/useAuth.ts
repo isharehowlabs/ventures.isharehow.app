@@ -29,6 +29,9 @@ export function useAuth() {
       const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/api/auth/me`, {
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -40,14 +43,22 @@ export function useAuth() {
           error: null,
         });
       } else {
+        // Log error details for debugging
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('Auth check failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
         setAuthState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: null,
+          error: errorData.message || 'Authentication failed',
         });
       }
     } catch (error: any) {
+      console.error('Auth check error:', error);
       setAuthState({
         user: null,
         isAuthenticated: false,
