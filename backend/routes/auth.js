@@ -1,5 +1,4 @@
 import express from 'express';
-import passport from 'passport';
 
 const router = express.Router();
 
@@ -10,15 +9,6 @@ const PATREON_REDIRECT_URI = process.env.PATREON_REDIRECT_URI || 'http://localho
 const PATREON_AUTH_URL = 'https://www.patreon.com/oauth2/authorize';
 const PATREON_TOKEN_URL = 'https://www.patreon.com/api/oauth2/token';
 const PATREON_API_URL = 'https://www.patreon.com/api/oauth2/v2';
-
-// Serialize user for session
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
 
 // Initiate Patreon OAuth
 router.get('/patreon', (req, res) => {
@@ -82,19 +72,22 @@ router.get('/patreon/callback', async (req, res) => {
     const userData = await userResponse.json();
     const patreonUser = userData.data;
 
-    // Store user in session
-    const user = {
+    // Store user in session directly (not using Passport's req.login)
+    req.session.user = {
       id: patreonUser.id,
       patreonId: patreonUser.id,
       name: patreonUser.attributes?.full_name || patreonUser.attributes?.vanity || 'Patreon User',
       email: patreonUser.attributes?.email,
       avatar: patreonUser.attributes?.image_url,
-      accessToken: access_token,
-      refreshToken: refresh_token,
     };
+    
+    // Store tokens separately (not in session for security)
+    req.session.accessToken = access_token;
+    req.session.refreshToken = refresh_token;
 
-    req.login(user, (err) => {
+    req.session.save((err) => {
       if (err) {
+        console.error('Session save error:', err);
         return res.redirect('/?auth=error&message=session_failed');
       }
       res.redirect('/live?auth=success');
@@ -107,9 +100,8 @@ router.get('/patreon/callback', async (req, res) => {
 
 // Get current user
 router.get('/me', (req, res) => {
-  if (req.user) {
-    const { accessToken, refreshToken, ...user } = req.user;
-    res.json(user);
+  if (req.session.user) {
+    res.json(req.session.user);
   } else {
     res.status(401).json({ error: 'Not authenticated' });
   }
@@ -117,7 +109,7 @@ router.get('/me', (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
-  req.logout((err) => {
+  req.session.destroy((err) => {
     if (err) {
       return res.status(500).json({ error: 'Logout failed' });
     }
