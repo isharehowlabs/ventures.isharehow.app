@@ -1,10 +1,9 @@
 import { ReactNode, useState } from 'react';
-import { Box, Tabs, Tab, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Tabs, Tab, useTheme, useMediaQuery, Paper, Typography } from '@mui/material';
 import StreamingPanel from './StreamingPanel';
 import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
 import CodeHandoffPanel from './CodeHandoffPanel';
-import LiveUpdates from '../mcp/LiveUpdates';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -31,9 +30,10 @@ function TabPanel(props: TabPanelProps) {
 
 interface DashboardLayoutProps {
   children?: ReactNode;
+  taskList?: ReactNode;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, taskList }: DashboardLayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [activeTab, setActiveTab] = useState(0);
@@ -76,39 +76,112 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Tabs
         value={activeTab}
         onChange={handleTabChange}
-        sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 48 }}
+        sx={{ 
+          borderBottom: 1, 
+          borderColor: 'divider', 
+          minHeight: 48,
+          flexShrink: 0,
+        }}
       >
         <Tab label="Streaming" />
         <Tab label="Designs" />
         <Tab label="Documents" />
         <Tab label="Code Handoff" />
       </Tabs>
-      <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-        <Box sx={{ overflow: 'auto', height: '100%' }}>
-          <TabPanel value={activeTab} index={0}>
-            <StreamingPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={1}>
-            <FigmaPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={2}>
-            <DocsPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={3}>
-            <CodeHandoffPanel />
-          </TabPanel>
+      <Box 
+        sx={{ 
+          flexGrow: 1, 
+          overflow: 'hidden', 
+          display: 'grid', 
+          gridTemplateColumns: { 
+            xs: '1fr', 
+            sm: '1fr', 
+            md: '68% 32%' 
+          }, 
+          gap: { xs: 1, sm: 2 },
+          minHeight: 0,
+        }}
+      >
+        <Box 
+          sx={{ 
+            overflow: 'auto', 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: { xs: 1, sm: 2 }, 
+            p: { xs: 1, sm: 2 },
+            minHeight: 0,
+          }}
+        >
+          <Box sx={{ flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
+            <TabPanel value={activeTab} index={0}>
+              <StreamingPanel />
+            </TabPanel>
+            <TabPanel value={activeTab} index={1}>
+              <FigmaPanel />
+            </TabPanel>
+            <TabPanel value={activeTab} index={2}>
+              <DocsPanel />
+            </TabPanel>
+            <TabPanel value={activeTab} index={3}>
+              <CodeHandoffPanel />
+            </TabPanel>
+          </Box>
+          {/* Session Tasks on the left side with work tabs */}
+          {taskList}
         </Box>
-        <Box sx={{ p: 2, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {children || (
-            <Box sx={{ textAlign: 'center', mt: 4 }}>
-              <p>Select a tab to view content</p>
+        <Box 
+          sx={{ 
+            p: { xs: 1, sm: 2 }, 
+            height: '100%', 
+            overflow: 'hidden', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: { xs: 1, sm: 2 },
+            minHeight: 0,
+          }}
+        >
+          {children}
+          {/* Chat on the right side - always visible */}
+          <Paper 
+            sx={{ 
+              p: { xs: 1, sm: 2 }, 
+              flexGrow: 1, 
+              minHeight: { xs: 300, sm: 400 },
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            <Typography variant="h6" gutterBottom sx={{ flexShrink: 0 }}>
+              Chat
+            </Typography>
+            <Box 
+              sx={{ 
+                flexGrow: 1,
+                minHeight: 0,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <iframe
+                src="https://www.twitch.tv/embed/jameleliyah/chat?darkpopout&parent=ventures.isharehow.app"
+                style={{
+                  border: 'none',
+                  borderRadius: 8,
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
             </Box>
-          )}
-          <LiveUpdates />
+          </Paper>
         </Box>
       </Box>
     </Box>

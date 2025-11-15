@@ -37,36 +37,32 @@ export default function StreamingPanel() {
   }, []);
 
   return (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
+    <Box 
+      sx={{ 
+        p: { xs: 1, sm: 2 }, 
+        height: '100%', 
+        overflow: 'auto', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: { xs: 1, sm: 2 },
+        minHeight: 0,
+      }}
+    >
+      <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+        <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
           Live Stream
         </Typography>
-        <Box sx={{ aspectRatio: '16/9', position: 'relative', bgcolor: '#000', borderRadius: 2, overflow: 'hidden' }}>
+        <Box 
+          sx={{ 
+            aspectRatio: '16/9', 
+            position: 'relative', 
+            bgcolor: '#000', 
+            borderRadius: 2, 
+            overflow: 'hidden',
+            width: '100%',
+          }}
+        >
           <Box id="twitch-player-streaming" ref={twitchPlayerRef} sx={{ width: '100%', height: '100%' }} />
-        </Box>
-      </Paper>
-
-      <Paper sx={{ p: 2, flexGrow: 1, minHeight: 400 }}>
-        <Typography variant="h6" gutterBottom>
-          Chat
-        </Typography>
-        <Box sx={{ height: '100%', minHeight: 400, position: 'relative' }}>
-          <iframe
-            ref={twitchChatRef}
-            src="https://www.twitch.tv/embed/jameleliyah/chat?darkpopout&parent=ventures.isharehow.app"
-            height="100%"
-            width="100%"
-            frameBorder="0"
-            scrolling="no"
-            style={{
-              border: 'none',
-              borderRadius: 8,
-              position: 'absolute',
-              top: 0,
-              left: 0,
-            }}
-          />
         </Box>
       </Paper>
     </Box>

@@ -14,6 +14,7 @@ import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import StreamingPanel from '../components/dashboard/StreamingPanel';
+import LiveUpdates from '../components/mcp/LiveUpdates';
 import { getBackendUrl } from '../utils/backendUrl';
 
 declare global {
@@ -248,12 +249,13 @@ function LiveDashboard() {
 
   return (
     <AppShell active="live">
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
+      <Box sx={{ mb: { xs: 2, sm: 4 }, textAlign: 'center', px: { xs: 1, sm: 2 } }}>
         <Typography
           variant="h3"
           sx={{
             fontWeight: 900,
-            mb: 2,
+            mb: { xs: 1, sm: 2 },
+            fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' },
             background: 'linear-gradient(45deg, #9146FF, #ff6b6b, #4ecdc4)',
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
@@ -262,148 +264,27 @@ function LiveDashboard() {
         >
           Cowork Dashboard
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+        <Typography 
+          variant="body1" 
+          color="text.secondary" 
+          sx={{ 
+            maxWidth: 600, 
+            mx: 'auto', 
+            mb: { xs: 2, sm: 3 },
+            px: { xs: 1, sm: 0 },
+            fontSize: { xs: '0.875rem', sm: '1rem' },
+          }}
+        >
           Your hub for streaming, design collaboration, document management, and code handoff.
         </Typography>
+        
+        {/* Live Updates under the title */}
+        <Box sx={{ maxWidth: 1200, mx: 'auto', mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 0 } }}>
+          <LiveUpdates />
+        </Box>
       </Box>
 
-      <DashboardLayout>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Collapse in={videoOpen} unmountOnExit>
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                bgcolor: 'background.paper',
-                borderRadius: 3,
-                border: 1,
-                borderColor: 'divider',
-                overflow: 'hidden',
-              }}
-            >
-              <Box sx={{ p: { xs: 2, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  alignItems={{ xs: 'flex-start', sm: 'center' }}
-                  justifyContent="space-between"
-                >
-                  <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 700, mb: { xs: 1, sm: 0 } }}>
-                      Jamel EliYah Live
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Main Channel Streaming
-                    </Typography>
-                  </Box>
-                  <Stack direction="row" spacing={3} sx={{ flexWrap: 'wrap', gap: 2 }}>
-                    {/* Follower Goal */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 180 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                          Follower Goal
-                        </Typography>
-                        {isLoadingFollowers ? (
-                          <Skeleton variant="text" width={80} height={20} />
-                        ) : (
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                            <span style={{ color: '#9146FF' }}>
-                              {currentFollowers?.toLocaleString() || '0'}
-                            </span>{' '}
-                            / {followerGoal.toLocaleString()}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Box
-                        sx={{
-                          width: '100%',
-                          height: 8,
-                          bgcolor: 'action.hover',
-                          borderRadius: 4,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {isLoadingFollowers ? (
-                          <Skeleton variant="rectangular" width="100%" height="100%" />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: `${Math.min(((currentFollowers || 0) / followerGoal) * 100, 100)}%`,
-                              height: '100%',
-                              bgcolor: '#9146FF',
-                              borderRadius: 4,
-                              transition: 'width 0.3s ease',
-                            }}
-                          />
-                        )}
-                      </Box>
-                      {!isLoadingFollowers && (
-                        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right' }}>
-                          {Math.round(((currentFollowers || 0) / followerGoal) * 100)}% complete
-                        </Typography>
-                      )}
-                    </Box>
-
-                    {/* Viewer Goal */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 180 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                          Viewer Goal
-                        </Typography>
-                        {isLoadingFollowers ? (
-                          <Skeleton variant="text" width={80} height={20} />
-                        ) : (
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                            <span style={{ color: '#4ecdc4' }}>
-                              {currentViewers?.toLocaleString() || '0'}
-                            </span>{' '}
-                            / {viewerGoal.toLocaleString()}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Box
-                        sx={{
-                          width: '100%',
-                          height: 8,
-                          bgcolor: 'action.hover',
-                          borderRadius: 4,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {isLoadingFollowers ? (
-                          <Skeleton variant="rectangular" width="100%" height="100%" />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: `${Math.min(((currentViewers || 0) / viewerGoal) * 100, 100)}%`,
-                              height: '100%',
-                              bgcolor: '#4ecdc4',
-                              borderRadius: 4,
-                              transition: 'width 0.3s ease',
-                            }}
-                          />
-                        )}
-                      </Box>
-                      {!isLoadingFollowers && (
-                        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right' }}>
-                          {Math.round(((currentViewers || 0) / viewerGoal) * 100)}% complete
-                        </Typography>
-                      )}
-                    </Box>
-                  </Stack>
-                </Stack>
-              </Box>
-
-              <Box sx={{ aspectRatio: '16/9', flexGrow: 1, position: 'relative', bgcolor: '#000' }}>
-                <Box id="twitch-player" ref={twitchPlayerRef} sx={{ width: '100%', height: '100%' }} />
-              </Box>
-            </Box>
-          </Collapse>
-
-          <Box sx={{ mb: 6 }}>
-            <TaskList />
-          </Box>
-        </Box>
+      <DashboardLayout taskList={<TaskList />}>
       </DashboardLayout>
     </AppShell>
   );
