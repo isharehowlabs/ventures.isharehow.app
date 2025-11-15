@@ -20,9 +20,32 @@ console.log('GOOGLE_AI_API_KEY:', process.env.GOOGLE_AI_API_KEY ? '***' + proces
 
 const app = express();
 const httpServer = createServer(app);
+
+// Determine allowed origins for CORS
+const getAllowedOrigins = () => {
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL.split(',').map(url => url.trim());
+  }
+  // Default origins for development and production
+  return [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://ventures.isharehow.app',
+  ];
+};
+
+const allowedOrigins = getAllowedOrigins();
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   },
 });
@@ -37,6 +60,7 @@ app.use(
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     },
   })
 );
@@ -48,8 +72,17 @@ app.use(passport.session());
 // CORS and JSON parsing
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 app.use(express.json());
