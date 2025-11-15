@@ -251,7 +251,7 @@ router.get('/me', async (req, res) => {
     // Try to reload the session using the cookie's session ID
     // This happens when session was regenerated but cookie wasn't updated
     try {
-      // Force session reload by destroying current and creating new with cookie ID
+      // Try to reload session from store using the cookie's session ID
       const store = req.sessionStore;
       if (store && typeof store.get === 'function') {
         store.get(sessionCookie, (err, session) => {
@@ -266,21 +266,20 @@ router.get('/me', async (req, res) => {
             });
           }
           
-          // Restore session data
-          req.session = session;
-          req.sessionID = sessionCookie;
-          
-          if (req.session && req.session.user) {
-            // Update session expiration by modifying it (touch equivalent)
-            req.session.cookie.expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-            req.session.save();
-            return res.json(req.session.user);
+          // Check if loaded session has user data
+          if (session && session.user) {
+            // Update the current session with the loaded session data
+            Object.assign(req.session, session);
+            req.sessionID = sessionCookie;
+            
+            // Just return the user - don't try to save, the session middleware handles it
+            return res.json(session.user);
           } else {
             return res.status(401).json({ 
               error: 'Not authenticated',
               message: 'No user data in session.',
-              hasSession: !!req.session,
-              sessionID: req.sessionID,
+              hasSession: !!session,
+              sessionID: sessionCookie,
             });
           }
         });
@@ -293,11 +292,8 @@ router.get('/me', async (req, res) => {
 
   // Check if session exists and has user
   if (req.session && req.session.user) {
-    // Update session expiration (rolling: true in config handles this, but we'll update cookie.expires too)
-    if (req.session.cookie) {
-      req.session.cookie.expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    }
-    req.session.save();
+    // Session expiration is automatically updated by rolling: true in session config
+    // Just return the user data - express-session will handle saving
     res.json(req.session.user);
   } else {
     // More detailed error response
