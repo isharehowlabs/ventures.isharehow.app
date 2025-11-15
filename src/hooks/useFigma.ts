@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getBackendUrl } from '../utils/backendUrl';
+import { getBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
 
 export interface FigmaFile {
   id: string;
@@ -32,17 +32,9 @@ export function useFigma() {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/figma/files`, {
-        credentials: 'include',
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/files`, {
+        method: 'GET',
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('401: Authentication required');
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch Figma files (${response.status})`);
-      }
 
       const data = await response.json();
       setFiles(data.projects || []);
@@ -67,21 +59,9 @@ export function useFigma() {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/figma/file/${validFileId}`, {
-        credentials: 'include',
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/file/${validFileId}`, {
+        method: 'GET',
       });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        let errorMessage = `Failed to fetch Figma file (${response.status})`;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch (e) {
-          if (errorText) errorMessage = errorText;
-        }
-        throw new Error(errorMessage);
-      }
 
       const data = await response.json();
       return data.file;
@@ -107,21 +87,9 @@ export function useFigma() {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/figma/file/${validFileId}/components`, {
-        credentials: 'include',
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/file/${validFileId}/components`, {
+        method: 'GET',
       });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        let errorMessage = `Failed to fetch Figma components (${response.status})`;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch (e) {
-          if (errorText) errorMessage = errorText;
-        }
-        throw new Error(errorMessage);
-      }
 
       const data = await response.json();
       setComponents(data.components || []);
@@ -148,21 +116,9 @@ export function useFigma() {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/figma/file/${validFileId}/tokens`, {
-        credentials: 'include',
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/file/${validFileId}/tokens`, {
+        method: 'GET',
       });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        let errorMessage = `Failed to fetch Figma tokens (${response.status})`;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch (e) {
-          if (errorText) errorMessage = errorText;
-        }
-        throw new Error(errorMessage);
-      }
 
       const data = await response.json();
       setTokens(data.tokens || []);

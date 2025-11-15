@@ -15,10 +15,6 @@ import figmaRoutes from './routes/figma.js';
 import mcpRoutes from './routes/mcp.js';
 dotenv.config();
 
-console.log('SHOPIFY_STORE_URL:', process.env.SHOPIFY_STORE_URL);
-console.log('SHOPIFY_ACCESS_TOKEN:', process.env.SHOPIFY_ACCESS_TOKEN ? '***' + process.env.SHOPIFY_ACCESS_TOKEN.slice(-4) : 'undefined');
-console.log('GOOGLE_AI_API_KEY:', process.env.GOOGLE_AI_API_KEY ? '***' + process.env.GOOGLE_AI_API_KEY.slice(-4) : 'undefined');
-
 const app = express();
 const httpServer = createServer(app);
 
@@ -32,10 +28,19 @@ const getAllowedOrigins = () => {
     'http://localhost:3000',
     'http://localhost:3001',
     'https://ventures.isharehow.app',
+    'https://isharehowdash.firebaseapp.com',
   ];
 };
 
 const allowedOrigins = getAllowedOrigins();
+
+// Log configuration
+console.log('SHOPIFY_STORE_URL:', process.env.SHOPIFY_STORE_URL);
+console.log('SHOPIFY_ACCESS_TOKEN:', process.env.SHOPIFY_ACCESS_TOKEN ? '***' + process.env.SHOPIFY_ACCESS_TOKEN.slice(-4) : 'undefined');
+console.log('GOOGLE_AI_API_KEY:', process.env.GOOGLE_AI_API_KEY ? '***' + process.env.GOOGLE_AI_API_KEY.slice(-4) : 'undefined');
+console.log('GOOGLE_REDIRECT_URI:', process.env.GOOGLE_REDIRECT_URI || 'undefined');
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '***' + process.env.GOOGLE_CLIENT_ID.slice(-4) : 'undefined');
+console.log('Allowed CORS origins:', allowedOrigins);
 
 const io = new Server(httpServer, {
   cors: {
@@ -82,12 +87,13 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        console.warn(`CORS blocked request from origin: ${origin}. Allowed origins:`, allowedOrigins);
+        callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
     exposedHeaders: ['Set-Cookie'],
   })
 );

@@ -17,11 +17,19 @@ const requireAuth = (req, res, next) => {
 };
 
 // Initialize Google OAuth2 client
+// Note: GOOGLE_REDIRECT_URI should be configured in environment variables
+// For Firebase app (isharehowdash.firebaseapp.com), use: https://isharehowdash.firebaseapp.com/api/auth/google/callback
+// For ventures.isharehow.app, use: https://ventures.isharehow.app/api/auth/google/callback
 const getOAuth2Client = (user) => {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  if (!redirectUri) {
+    console.warn('GOOGLE_REDIRECT_URI is not configured. Google OAuth may not work correctly.');
+  }
+  
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
+    redirectUri
   );
 
   if (user.googleAccessToken && user.googleRefreshToken) {

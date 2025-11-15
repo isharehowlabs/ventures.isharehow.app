@@ -23,11 +23,53 @@ export const getBackendUrl = (): string => {
       return 'https://api.ventures.isharehow.app';
     }
     
+    // Firebase app: Use Render.com backend
+    if (hostname.includes('isharehowdash.firebaseapp.com') || hostname.includes('isharehowdash.web.app')) {
+      return 'https://api.ventures.isharehow.app';
+    }
+    
     // Fallback: try API subdomain for other domains
     return `https://api.${hostname}`;
   }
   
   // Fallback for SSR/build time
   return '';
+};
+
+// Helper function for robust fetch with error handling
+export const fetchWithErrorHandling = async (
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> => {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Request failed with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch (e) {
+        const errorText = await response.text().catch(() => '');
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response;
+  } catch (error: any) {
+    // Handle network errors
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Network error: Unable to connect to the server. Please check your internet connection.');
+    }
+    throw error;
+  }
 };
 

@@ -1,6 +1,14 @@
-[dotenv@17.2.3] injecting env (3) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (3) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
 SHOPIFY_STORE_URL: https://isharehow.myshopify.com/admin/api/2024-10/graphql.json
 SHOPIFY_ACCESS_TOKEN: ***d459
 GOOGLE_AI_API_KEY: undefined
+GOOGLE_REDIRECT_URI: undefined
+GOOGLE_CLIENT_ID: undefined
+Allowed CORS origins: [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://ventures.isharehow.app',
+  'https://isharehowdash.firebaseapp.com'
+]
 Backend running on port 3001
 Socket.io server ready
