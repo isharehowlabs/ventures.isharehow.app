@@ -181,6 +181,7 @@ router.get('/patreon/callback', async (req, res) => {
     req.session.accessToken = access_token;
     req.session.refreshToken = refresh_token;
 
+    // Save session and ensure cookie is set
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
@@ -194,6 +195,7 @@ router.get('/patreon/callback', async (req, res) => {
         userId: req.session.user.id,
         userName: req.session.user.name,
         isPaidMember: req.session.user.isPaidMember,
+        cookieHeader: req.headers.cookie,
       });
 
       // Check if user is a paid member
@@ -201,6 +203,16 @@ router.get('/patreon/callback', async (req, res) => {
         const frontendUrl = getFrontendUrl();
         return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
       }
+      
+      // Set cookie explicitly to ensure it's sent (matching session config)
+      res.cookie('ventures.sid', req.sessionID, {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined,
+        path: '/',
+      });
       
       const frontendUrl = getFrontendUrl();
       res.redirect(`${frontendUrl}/live?auth=success`);

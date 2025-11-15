@@ -31,10 +31,12 @@ export function useAuth() {
     try {
       const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/api/auth/me`, {
-        credentials: 'include',
+        method: 'GET',
+        credentials: 'include', // Important: include cookies
         headers: {
           'Content-Type': 'application/json',
         },
+        mode: 'cors', // Ensure CORS mode
       });
 
       if (response.ok) {
@@ -78,13 +80,19 @@ export function useAuth() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('auth') === 'success') {
-        // Small delay to ensure session cookie is set
+        // Multiple attempts to check auth as session cookie becomes available
+        const attempts = [500, 1000, 2000];
+        attempts.forEach((delay) => {
+          setTimeout(() => {
+            checkAuth();
+          }, delay);
+        });
+        
+        // Clean up URL parameter after last attempt
         setTimeout(() => {
-          checkAuth();
-          // Clean up URL parameter
           const newUrl = window.location.pathname;
           window.history.replaceState({}, '', newUrl);
-        }, 500); // Increased delay to ensure cookie is available
+        }, 2500);
       }
     }
   }, [checkAuth]);

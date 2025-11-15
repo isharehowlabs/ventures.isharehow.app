@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Box, CircularProgress, Typography, Button } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
 import PatreonAuth from './PatreonAuth';
@@ -9,8 +9,25 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const [checkingAuth, setCheckingAuth] = useState(false);
 
-  if (isLoading) {
+  // If we have auth=success in URL, give extra time for session to be available
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('auth') === 'success' && isLoading) {
+        setCheckingAuth(true);
+        // Wait a bit longer for session cookie to be available
+        const timer = setTimeout(() => {
+          setCheckingAuth(false);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isLoading]);
+
+  // Show loading while checking auth or if explicitly checking after redirect
+  if (isLoading || checkingAuth) {
     return (
       <Box
         sx={{
