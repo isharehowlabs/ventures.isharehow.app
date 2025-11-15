@@ -118,7 +118,7 @@ router.get('/file/:id/tokens', requireAuth, async (req, res) => {
     
     // Extract design tokens from styles
     const styles = data.styles || {};
-    const tokens = Object.values(styles).map((style: any) => ({
+    const tokens = Object.values(styles).map((style) => ({
       id: style.key,
       name: style.name,
       description: style.description,
