@@ -11,7 +11,7 @@ import { GraphQLClient } from 'graphql-request';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import authRoutes from './routes/auth.js';
 import figmaRoutes from './routes/figma.js';
-import resourcesRoutes from './routes/resources.js';
+import tasksRoutes from './routes/tasks.js';
 import mcpRoutes from './routes/mcp.js';
 dotenv.config();
 
@@ -121,7 +121,7 @@ app.use('/api/auth', authRoutes);
 
 // API routes
 app.use('/api/figma', figmaRoutes);
-app.use('/api/resources', resourcesRoutes);
+app.use('/api/tasks', tasksRoutes);
 app.use('/api/mcp', mcpRoutes);
 
 // Health check endpoint

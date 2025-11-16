@@ -1,53 +1,55 @@
 import { useState, useEffect } from 'react';
 import { getBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
 
-export interface ExternalResource {
+export interface Task {
   id: string;
   title: string;
-  url: string;
+  description: string;
+  hyperlinks: string[];
+  status: 'pending' | 'in-progress' | 'completed';
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Generic hook for per-user external resources (replaces Google Docs usage)
-export function useExternalResources() {
-  const [resources, setResources] = useState<ExternalResource[]>([]);
+// Hook for team tasks
+export function useTasks() {
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchResources = async () => {
+  const fetchTasks = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetchWithErrorHandling(`${backendUrl}/api/resources`, {
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks`, {
         method: 'GET',
       });
 
       const data = await response.json();
-      setResources(data.resources || []);
+      setTasks(data.tasks || []);
     } catch (err: any) {
-      const message = err?.message || 'Failed to fetch documents';
+      const message = err?.message || 'Failed to fetch tasks';
       setError(message);
-      console.error('Error fetching docs:', err);
+      console.error('Error fetching tasks:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const createResource = async (title: string, url: string) => {
+  const createTask = async (title: string, description: string, hyperlinks: string[], status: string) => {
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetchWithErrorHandling(`${backendUrl}/api/resources`, {
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks`, {
         method: 'POST',
-        body: JSON.stringify({ title, url }),
+        body: JSON.stringify({ title, description, hyperlinks, status }),
       });
 
       const data = await response.json();
-      await fetchResources(); // Refresh list
-      return data.resource;
+      await fetchTasks(); // Refresh list
+      return data.task;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -56,19 +58,19 @@ export function useExternalResources() {
     }
   };
 
-  const updateResource = async (id: string, updates: Partial<Pick<ExternalResource, 'title' | 'url'>>) => {
+  const updateTask = async (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'hyperlinks' | 'status'>>) => {
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetchWithErrorHandling(`${backendUrl}/api/resources/${id}`, {
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
 
       const data = await response.json();
-      await fetchResources();
-      return data.resource;
+      await fetchTasks();
+      return data.task;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -77,15 +79,15 @@ export function useExternalResources() {
     }
   };
 
-  const deleteResource = async (id: string) => {
+  const deleteTask = async (id: string) => {
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      await fetchWithErrorHandling(`${backendUrl}/api/resources/${id}`, {
+      await fetchWithErrorHandling(`${backendUrl}/api/tasks/${id}`, {
         method: 'DELETE',
       });
-      await fetchResources();
+      await fetchTasks();
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -95,17 +97,17 @@ export function useExternalResources() {
   };
 
   useEffect(() => {
-    fetchResources();
+    fetchTasks();
   }, []);
 
   return {
-    resources,
+    tasks,
     isLoading,
     error,
-    fetchResources,
-    createResource,
-    updateResource,
-    deleteResource,
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
   };
 }
 

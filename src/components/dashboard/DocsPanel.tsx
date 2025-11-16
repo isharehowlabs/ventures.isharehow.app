@@ -15,97 +15,118 @@ import {
   Paper,
   IconButton,
   Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Link as LinkIcon,
   Refresh as RefreshIcon,
   OpenInNew as OpenInNewIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  CheckCircle as CheckCircleIcon,
+  RadioButtonUnchecked as PendingIcon,
+  PlayCircle as InProgressIcon,
 } from '@mui/icons-material';
-import { useExternalResources } from '../../hooks/useGoogleDocs';
+import { useTasks, Task } from '../../hooks/useTasks';
 
 export default function DocsPanel() {
   const {
-    resources,
+    tasks,
     isLoading,
     error,
-    fetchResources,
-    createResource,
-    updateResource,
-    deleteResource,
-  } = useExternalResources();
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+  } = useTasks();
 
   const [open, setOpen] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
-  const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [hyperlinks, setHyperlinks] = useState('');
+  const [status, setStatus] = useState<'pending' | 'in-progress' | 'completed'>('pending');
 
   const handleRefresh = () => {
-    fetchResources();
+    fetchTasks();
   };
 
   const handleOpenCreate = () => {
     setEditMode('create');
     setCurrentId(null);
     setTitle('');
-    setUrl('');
+    setDescription('');
+    setHyperlinks('');
+    setStatus('pending');
     setOpen(true);
   };
 
-  const handleOpenEdit = (resource: { id: string; title: string; url: string }) => {
+  const handleOpenEdit = (task: Task) => {
     setEditMode('edit');
-    setCurrentId(resource.id);
-    setTitle(resource.title);
-    setUrl(resource.url);
+    setCurrentId(task.id);
+    setTitle(task.title);
+    setDescription(task.description);
+    setHyperlinks(task.hyperlinks.join(', '));
+    setStatus(task.status);
     setOpen(true);
   };
 
   const handleSave = async () => {
     try {
-      if (!title.trim() || !url.trim()) return;
+      if (!title.trim()) return;
+
+      const hyperlinksArray = hyperlinks.split(',').map(h => h.trim()).filter(h => h);
 
       if (editMode === 'create') {
-        await createResource(title.trim(), url.trim());
+        await createTask(title.trim(), description.trim(), hyperlinksArray, status);
       } else if (currentId) {
-        await updateResource(currentId, {
+        await updateTask(currentId, {
           title: title.trim(),
-          url: url.trim(),
+          description: description.trim(),
+          hyperlinks: hyperlinksArray,
+          status,
         });
       }
 
       setOpen(false);
       setCurrentId(null);
       setTitle('');
-      setUrl('');
+      setDescription('');
+      setHyperlinks('');
+      setStatus('pending');
     } catch (err) {
-      console.error('Error saving resource:', err);
+      console.error('Error saving task:', err);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteResource(id);
+      await deleteTask(id);
     } catch (err) {
-      console.error('Error deleting resource:', err);
+      console.error('Error deleting task:', err);
     }
   };
 
-  const isValidUrl = (value: string) => {
-    try {
-      const u = new URL(value);
-      return !!u.protocol && !!u.host;
-    } catch {
-      return false;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircleIcon color="success" />;
+      case 'in-progress':
+        return <InProgressIcon color="warning" />;
+      default:
+        return <PendingIcon color="disabled" />;
     }
   };
 
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">External Resources</Typography>
+        <Typography variant="h6">Team Tasks</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Refresh">
             <IconButton onClick={handleRefresh} disabled={isLoading} size="small">
@@ -118,7 +139,7 @@ export default function DocsPanel() {
             onClick={handleOpenCreate}
             size="small"
           >
-            Add Resource
+            Add Task
           </Button>
         </Box>
       </Box>
@@ -134,15 +155,15 @@ export default function DocsPanel() {
         </Paper>
       )}
 
-      {isLoading && !resources.length ? (
+      {isLoading && !tasks.length ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
       ) : (
         <List>
-          {resources.map((resource) => (
+          {tasks.map((task) => (
             <ListItem
-              key={resource.id}
+              key={task.id}
               sx={{
                 border: 1,
                 borderColor: 'divider',
@@ -152,39 +173,60 @@ export default function DocsPanel() {
               }}
               secondaryAction={
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <Tooltip title="Open">
-                    <IconButton
-                      edge="end"
-                      size="small"
-                      onClick={() => window.open(resource.url, '_blank', 'noopener,noreferrer')}
-                    >
-                      <OpenInNewIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  {task.hyperlinks.map((link, idx) => (
+                    <Tooltip key={idx} title={`Open ${link}`}>
+                      <IconButton
+                        size="small"
+                        onClick={() => window.open(link, '_blank', 'noopener,noreferrer')}
+                      >
+                        <OpenInNewIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  ))}
                   <Tooltip title="Edit">
-                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(resource)}>
+                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(task)}>
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete">
-                    <IconButton edge="end" size="small" onClick={() => handleDelete(resource.id)}>
+                    <IconButton edge="end" size="small" onClick={() => handleDelete(task.id)}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 </Box>
               }
             >
-              <LinkIcon sx={{ mr: 2, color: 'text.secondary' }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                {getStatusIcon(task.status)}
+              </Box>
               <ListItemText
-                primary={resource.title}
-                secondary={resource.url}
+                primary={task.title}
+                secondary={
+                  <Box>
+                    {task.description && <Typography variant="body2">{task.description}</Typography>}
+                    {task.hyperlinks.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        {task.hyperlinks.map((link, idx) => (
+                          <Chip
+                            key={idx}
+                            label={link}
+                            size="small"
+                            variant="outlined"
+                            sx={{ mr: 0.5, mb: 0.5 }}
+                            onClick={() => window.open(link, '_blank', 'noopener,noreferrer')}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                }
               />
             </ListItem>
           ))}
-          {!resources.length && !isLoading && !error && (
+          {!tasks.length && !isLoading && !error && (
             <Box sx={{ p: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                No resources yet. Add links to project briefs, specs, and external docs here.
+                No tasks yet. Add tasks and hyperlinks for the team to work on.
               </Typography>
             </Box>
           )}
@@ -192,7 +234,7 @@ export default function DocsPanel() {
       )}
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editMode === 'create' ? 'Add Resource' : 'Edit Resource'}</DialogTitle>
+        <DialogTitle>{editMode === 'create' ? 'Add Task' : 'Edit Task'}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -206,22 +248,44 @@ export default function DocsPanel() {
           />
           <TextField
             margin="dense"
-            label="URL"
+            label="Description"
             fullWidth
             variant="outlined"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/doc"
-            error={!!url && !isValidUrl(url)}
-            helperText={url && !isValidUrl(url) ? 'Enter a valid URL (including http/https)' : ' '}
+            multiline
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            sx={{ mb: 2 }}
           />
+          <TextField
+            margin="dense"
+            label="Hyperlinks (comma-separated)"
+            fullWidth
+            variant="outlined"
+            value={hyperlinks}
+            onChange={(e) => setHyperlinks(e.target.value)}
+            placeholder="https://example.com, https://another.com"
+            sx={{ mb: 2 }}
+          />
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={status}
+              label="Status"
+              onChange={(e) => setStatus(e.target.value as 'pending' | 'in-progress' | 'completed')}
+            >
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="in-progress">In Progress</MenuItem>
+              <MenuItem value="completed">Completed</MenuItem>
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
           <Button
             onClick={handleSave}
             variant="contained"
-            disabled={!title.trim() || !url.trim() || !isValidUrl(url) || isLoading}
+            disabled={!title.trim() || isLoading}
           >
             {editMode === 'create' ? 'Add' : 'Save'}
           </Button>
