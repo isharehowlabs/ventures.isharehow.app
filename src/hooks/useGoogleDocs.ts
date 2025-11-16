@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getBackendUrl } from '../utils/backendUrl';
+import { getBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
 
 export interface GoogleDoc {
   id: string;
@@ -18,18 +18,15 @@ export function useGoogleDocs() {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/docs`, {
-        credentials: 'include',
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/docs`, {
+        method: 'GET',
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch documents');
-      }
 
       const data = await response.json();
       setDocs(data.documents || []);
     } catch (err: any) {
-      setError(err.message);
+      const message = err?.message || 'Failed to fetch documents';
+      setError(message);
       console.error('Error fetching docs:', err);
     } finally {
       setIsLoading(false);
@@ -41,18 +38,10 @@ export function useGoogleDocs() {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/docs`, {
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/docs`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ title, content }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create document');
-      }
 
       const data = await response.json();
       await fetchDocs(); // Refresh list
@@ -70,13 +59,9 @@ export function useGoogleDocs() {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/docs/${id}`, {
-        credentials: 'include',
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/docs/${id}`, {
+        method: 'GET',
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch document');
-      }
 
       const data = await response.json();
       return data.document;
