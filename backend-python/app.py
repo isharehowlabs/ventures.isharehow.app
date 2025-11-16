@@ -4,6 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -39,7 +43,12 @@ class Task(db.Model):
 
 # Create tables
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        print("Tables will be created when database is available")
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
