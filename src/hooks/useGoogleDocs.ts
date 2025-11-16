@@ -1,29 +1,31 @@
 import { useState, useEffect } from 'react';
 import { getBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
 
-export interface GoogleDoc {
+export interface ExternalResource {
   id: string;
-  name: string;
-  modifiedTime?: string;
-  createdTime?: string;
+  title: string;
+  url: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export function useGoogleDocs() {
-  const [docs, setDocs] = useState<GoogleDoc[]>([]);
+// Generic hook for per-user external resources (replaces Google Docs usage)
+export function useExternalResources() {
+  const [resources, setResources] = useState<ExternalResource[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDocs = async () => {
+  const fetchResources = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetchWithErrorHandling(`${backendUrl}/api/docs`, {
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/resources`, {
         method: 'GET',
       });
 
       const data = await response.json();
-      setDocs(data.documents || []);
+      setResources(data.resources || []);
     } catch (err: any) {
       const message = err?.message || 'Failed to fetch documents';
       setError(message);
@@ -33,19 +35,19 @@ export function useGoogleDocs() {
     }
   };
 
-  const createDoc = async (title: string, content?: string) => {
+  const createResource = async (title: string, url: string) => {
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetchWithErrorHandling(`${backendUrl}/api/docs`, {
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/resources`, {
         method: 'POST',
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, url }),
       });
 
       const data = await response.json();
-      await fetchDocs(); // Refresh list
-      return data.document;
+      await fetchResources(); // Refresh list
+      return data.resource;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -54,17 +56,36 @@ export function useGoogleDocs() {
     }
   };
 
-  const getDoc = async (id: string) => {
+  const updateResource = async (id: string, updates: Partial<Pick<ExternalResource, 'title' | 'url'>>) => {
     try {
       setIsLoading(true);
       setError(null);
       const backendUrl = getBackendUrl();
-      const response = await fetchWithErrorHandling(`${backendUrl}/api/docs/${id}`, {
-        method: 'GET',
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/resources/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
       });
 
       const data = await response.json();
-      return data.document;
+      await fetchResources();
+      return data.resource;
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteResource = async (id: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const backendUrl = getBackendUrl();
+      await fetchWithErrorHandling(`${backendUrl}/api/resources/${id}`, {
+        method: 'DELETE',
+      });
+      await fetchResources();
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -74,16 +95,17 @@ export function useGoogleDocs() {
   };
 
   useEffect(() => {
-    fetchDocs();
+    fetchResources();
   }, []);
 
   return {
-    docs,
+    resources,
     isLoading,
     error,
-    fetchDocs,
-    createDoc,
-    getDoc,
+    fetchResources,
+    createResource,
+    updateResource,
+    deleteResource,
   };
 }
 

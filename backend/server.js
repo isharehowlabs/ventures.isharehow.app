@@ -12,6 +12,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import authRoutes from './routes/auth.js';
 import docsRoutes from './routes/docs.js';
 import figmaRoutes from './routes/figma.js';
+import resourcesRoutes from './routes/resources.js';
 import mcpRoutes from './routes/mcp.js';
 dotenv.config();
 
@@ -122,6 +123,7 @@ app.use('/api/auth', authRoutes);
 // API routes
 app.use('/api/docs', docsRoutes);
 app.use('/api/figma', figmaRoutes);
+app.use('/api/resources', resourcesRoutes);
 app.use('/api/mcp', mcpRoutes);
 
 // Health check endpoint
