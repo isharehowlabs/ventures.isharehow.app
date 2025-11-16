@@ -73,8 +73,17 @@ export default function DocsPanel() {
 
       {error && (
         <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="body2">{error}</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+            <Box>
+              <Typography variant="body2">
+                {error}
+              </Typography>
+              {error.toLowerCase().includes('google authentication required') && (
+                <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                  Your Google connection may have expired. Click the re-auth button in the Labs app to reconnect.
+                </Typography>
+              )}
+            </Box>
             <IconButton onClick={handleRefresh} disabled={isLoading} size="small" sx={{ color: 'inherit', ml: 1 }}>
               <RefreshIcon fontSize="small" />
             </IconButton>

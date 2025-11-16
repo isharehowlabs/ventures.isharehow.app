@@ -60,7 +60,26 @@ router.get('/', requireAuth, async (req, res) => {
     res.json({ documents: response.data.files || [] });
   } catch (error) {
     console.error('Error listing documents:', error);
-    res.status(500).json({ error: 'Failed to list documents', message: error.message });
+
+    // If Google auth has expired or been revoked, surface a clear 401 to the frontend
+    const status = error?.code || error?.response?.status;
+    const message = error?.message || '';
+    const authRelated =
+      status === 401 ||
+      status === 403 ||
+      message.includes('invalid_grant') ||
+      message.includes('unauthorized_client') ||
+      message.includes('invalid_token');
+
+    if (authRelated) {
+      return res.status(401).json({
+        error: 'Google authentication required',
+        code: 'google_auth_required',
+        message: 'Your Google connection has expired or been revoked. Please reconnect your account.',
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to list documents', message });
   }
 });
 
@@ -78,7 +97,25 @@ router.get('/:id', requireAuth, async (req, res) => {
     res.json({ document: document.data });
   } catch (error) {
     console.error('Error fetching document:', error);
-    res.status(500).json({ error: 'Failed to fetch document', message: error.message });
+
+    const status = error?.code || error?.response?.status;
+    const message = error?.message || '';
+    const authRelated =
+      status === 401 ||
+      status === 403 ||
+      message.includes('invalid_grant') ||
+      message.includes('unauthorized_client') ||
+      message.includes('invalid_token');
+
+    if (authRelated) {
+      return res.status(401).json({
+        error: 'Google authentication required',
+        code: 'google_auth_required',
+        message: 'Your Google connection has expired or been revoked. Please reconnect your account.',
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to fetch document', message });
   }
 });
 
@@ -125,7 +162,25 @@ router.post('/', requireAuth, async (req, res) => {
     res.json({ document: document.data });
   } catch (error) {
     console.error('Error creating document:', error);
-    res.status(500).json({ error: 'Failed to create document', message: error.message });
+
+    const status = error?.code || error?.response?.status;
+    const message = error?.message || '';
+    const authRelated =
+      status === 401 ||
+      status === 403 ||
+      message.includes('invalid_grant') ||
+      message.includes('unauthorized_client') ||
+      message.includes('invalid_token');
+
+    if (authRelated) {
+      return res.status(401).json({
+        error: 'Google authentication required',
+        code: 'google_auth_required',
+        message: 'Your Google connection has expired or been revoked. Please reconnect your account.',
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to create document', message });
   }
 });
 
