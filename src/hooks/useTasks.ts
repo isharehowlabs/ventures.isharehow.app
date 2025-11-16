@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
+import { io, Socket } from 'socket.io-client';
 
 export interface Task {
   id: string;
@@ -11,11 +12,12 @@ export interface Task {
   updatedAt?: string;
 }
 
-// Hook for team tasks
+// Hook for team tasks with real-time updates
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const fetchTasks = async () => {
     try {
@@ -48,7 +50,7 @@ export function useTasks() {
       });
 
       const data = await response.json();
-      await fetchTasks(); // Refresh list
+      // Real-time update will be handled by socket
       return data.task;
     } catch (err: any) {
       setError(err.message);
@@ -69,7 +71,7 @@ export function useTasks() {
       });
 
       const data = await response.json();
-      await fetchTasks();
+      // Real-time update will be handled by socket
       return data.task;
     } catch (err: any) {
       setError(err.message);
@@ -87,7 +89,7 @@ export function useTasks() {
       await fetchWithErrorHandling(`${backendUrl}/api/tasks/${id}`, {
         method: 'DELETE',
       });
-      await fetchTasks();
+      // Real-time update will be handled by socket
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -98,6 +100,27 @@ export function useTasks() {
 
   useEffect(() => {
     fetchTasks();
+
+    // Initialize Socket.IO connection
+    const backendUrl = getBackendUrl();
+    const socketInstance = io(backendUrl);
+    setSocket(socketInstance);
+
+    socketInstance.on('task_created', (newTask: Task) => {
+      setTasks(prev => [...prev, newTask]);
+    });
+
+    socketInstance.on('task_updated', (updatedTask: Task) => {
+      setTasks(prev => prev.map(task => task.id === updatedTask.id ? updatedTask : task));
+    });
+
+    socketInstance.on('task_deleted', (data: { id: string }) => {
+      setTasks(prev => prev.filter(task => task.id !== data.id));
+    });
+
+    return () => {
+      socketInstance.disconnect();
+    };
   }, []);
 
   return {

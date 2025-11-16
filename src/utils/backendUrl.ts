@@ -13,9 +13,9 @@ export const getBackendUrl = (): string => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     
-    // In development, default to localhost:3001
+    // In development, default to localhost:5000 (Python Flask)
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001';
+      return 'http://localhost:5000';
     }
     
     // Production: Use Render.com backend for ventures.isharehow.app
