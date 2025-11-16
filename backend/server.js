@@ -121,7 +121,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 
 // API routes
-app.use('/api/docs', docsRoutes);
+// Google Docs API is no longer used; docsRoutes intentionally not mounted
 app.use('/api/figma', figmaRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/mcp', mcpRoutes);
