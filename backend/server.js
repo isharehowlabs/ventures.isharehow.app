@@ -10,7 +10,6 @@ import { Server } from 'socket.io';
 import { GraphQLClient } from 'graphql-request';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import authRoutes from './routes/auth.js';
-import docsRoutes from './routes/docs.js';
 import figmaRoutes from './routes/figma.js';
 import resourcesRoutes from './routes/resources.js';
 import mcpRoutes from './routes/mcp.js';
@@ -121,7 +120,6 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 
 // API routes
-// Google Docs API is no longer used; docsRoutes intentionally not mounted
 app.use('/api/figma', figmaRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/mcp', mcpRoutes);
