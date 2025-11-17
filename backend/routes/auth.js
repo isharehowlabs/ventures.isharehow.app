@@ -181,42 +181,65 @@ router.get('/patreon/callback', async (req, res) => {
     req.session.accessToken = access_token;
     req.session.refreshToken = refresh_token;
 
-    // Save session and ensure cookie is set
-    req.session.save((err) => {
+    // Regenerate session to ensure clean session with matching cookie
+    req.session.regenerate((err) => {
       if (err) {
-        console.error('Session save error:', err);
+        console.error('Session regeneration error:', err);
         const frontendUrl = getFrontendUrl();
         return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
       }
-      
-      // Log successful session creation
-      console.log('Session saved successfully:', {
-        sessionID: req.sessionID,
-        userId: req.session.user.id,
-        userName: req.session.user.name,
-        isPaidMember: req.session.user.isPaidMember,
-        hasUser: !!req.session.user,
-        sessionKeys: Object.keys(req.session),
-      });
 
-      // Check if user is a paid member
-      if (!isPaidMember) {
+      // Restore user data in the new session
+      req.session.user = {
+        id: patreonUser.id,
+        patreonId: patreonUser.id,
+        name: patreonUser.attributes?.full_name || patreonUser.attributes?.vanity || 'Patreon User',
+        email: patreonUser.attributes?.email,
+        avatar: patreonUser.attributes?.image_url,
+        isPaidMember: isPaidMember,
+        membershipTier: membershipTier,
+        membershipAmount: membershipAmount,
+      };
+      req.session.accessToken = access_token;
+      req.session.refreshToken = refresh_token;
+
+      // Save the new session
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          const frontendUrl = getFrontendUrl();
+          return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
+        }
+        
+        // Log successful session creation
+        console.log('Session saved successfully:', {
+          sessionID: req.sessionID,
+          userId: req.session.user.id,
+          userName: req.session.user.name,
+          isPaidMember: req.session.user.isPaidMember,
+          hasUser: !!req.session.user,
+          sessionKeys: Object.keys(req.session),
+        });
+
+        // Check if user is a paid member
+        if (!isPaidMember) {
+          const frontendUrl = getFrontendUrl();
+          return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
+        }
+        
+        // Set cookie explicitly to ensure it matches the session ID
+        res.cookie('ventures.sid', req.sessionID, {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined,
+          path: '/',
+        });
+        
         const frontendUrl = getFrontendUrl();
-        return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
-      }
-      
-      // Set cookie explicitly to ensure it matches the session ID
-      res.cookie('ventures.sid', req.sessionID, {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        domain: process.env.NODE_ENV === 'production' ? '.isharehow.app' : undefined,
-        path: '/',
+        res.redirect(`${frontendUrl}/live?auth=success`);
       });
-      
-      const frontendUrl = getFrontendUrl();
-      res.redirect(`${frontendUrl}/live?auth=success`);
     });
   } catch (error) {
     console.error('Patreon OAuth error:', error);
