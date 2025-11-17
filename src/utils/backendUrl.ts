@@ -9,6 +9,12 @@ export const getBackendUrl = (): string => {
     return envUrl.replace(/\/$/, '');
   }
   
+  // For this project, always use Render backend since localhost backend is not used
+  // The backend is deployed on Render at https://api.ventures.isharehow.app
+  return 'https://api.ventures.isharehow.app';
+  
+  // Legacy logic (commented out since we always use Render now)
+  /*
   // For client-side, check window location
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
@@ -34,6 +40,7 @@ export const getBackendUrl = (): string => {
   
   // Fallback for SSR/build time
   return '';
+  */
 };
 
 // Helper function for robust fetch with error handling

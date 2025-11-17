@@ -8,9 +8,10 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const [checkingAuth, setCheckingAuth] = useState(false);
   const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
+  const [showLogoutOption, setShowLogoutOption] = useState(false);
 
   // If we have auth=success in URL, give extra time for session to be available
   useEffect(() => {
@@ -38,8 +39,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         }
       }, 15000);
       setRefreshTimer(timer);
+      
+      // Show logout option after 5 seconds
+      const logoutTimer = setTimeout(() => {
+        setShowLogoutOption(true);
+      }, 5000);
+      
       return () => {
         if (timer) clearTimeout(timer);
+        clearTimeout(logoutTimer);
         setRefreshTimer(null);
       };
     } else {
@@ -48,6 +56,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         clearTimeout(refreshTimer);
         setRefreshTimer(null);
       }
+      setShowLogoutOption(false);
+    }
+  }, [isLoading, checkingAuth, refreshTimer]);
     }
   }, [isLoading, checkingAuth, refreshTimer]);
 
@@ -67,6 +78,23 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
           Verifying authentication...
         </Typography>
+        {showLogoutOption && (
+          <Box sx={{ mt: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Taking longer than expected?
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                logout();
+                window.location.reload();
+              }}
+            >
+              Clear Session & Retry
+            </Button>
+          </Box>
+        )}
       </Box>
     );
   }
