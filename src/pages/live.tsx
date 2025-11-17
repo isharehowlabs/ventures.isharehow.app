@@ -4,6 +4,9 @@ import {
   Typography,
   useTheme,
   useMediaQuery,
+  Paper,
+  Stack,
+  Button,
 } from '@mui/material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';

@@ -13,7 +13,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
   const [showLogoutOption, setShowLogoutOption] = useState(false);
   const [authFailureCount, setAuthFailureCount] = useState(0);
-  const [showLogoutOption, setShowLogoutOption] = useState(false);
 
   // If we have auth=success in URL, give extra time for session to be available
   useEffect(() => {
@@ -50,8 +49,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       setShowLogoutOption(false);
     }
   }, [authFailureCount, isLoading, checkingAuth]);
-    }
-  }, [isLoading, checkingAuth, refreshTimer]);
 
   // Show loading while checking auth or if explicitly checking after redirect
   if (isLoading || checkingAuth) {
