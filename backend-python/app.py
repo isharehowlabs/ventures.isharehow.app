@@ -455,18 +455,27 @@ if __name__ == '__main__':
 
 @app.route('/api/auth/patreon/login')
 def patreon_login():
-    client_id = os.environ['PATREON_CLIENT_ID']
-    redirect_uri = os.environ['PATREON_REDIRECT_URI']
-    scope = 'identity identity[email] identity.memberships'
-    state = 'random_state_string'  # TODO: generate and validate this for security
-    auth_url = (
-        f"https://www.patreon.com/oauth2/authorize"
-        f"?response_type=code&client_id={client_id}"
-        f"&redirect_uri={redirect_uri}"
-        f"&scope={scope}"
-        f"&state={state}"
-    )
-    return redirect(auth_url)
+    try:
+        client_id = os.environ.get('PATREON_CLIENT_ID')
+        redirect_uri = os.environ.get('PATREON_REDIRECT_URI')
+        
+        if not client_id or not redirect_uri:
+            print("Patreon OAuth error: Missing PATREON_CLIENT_ID or PATREON_REDIRECT_URI")
+            return jsonify({'error': 'OAuth not configured'}), 500
+        
+        scope = 'identity identity[email] identity.memberships'
+        state = 'random_state_string'  # TODO: generate and validate this for security
+        auth_url = (
+            f"https://www.patreon.com/oauth2/authorize"
+            f"?response_type=code&client_id={client_id}"
+            f"&redirect_uri={redirect_uri}"
+            f"&scope={scope}"
+            f"&state={state}"
+        )
+        return redirect(auth_url)
+    except Exception as e:
+        print(f"Patreon OAuth login error: {e}")
+        return jsonify({'error': 'Failed to initiate OAuth'}), 500
 
 @app.route('/api/auth/patreon/callback')
 def patreon_callback():
@@ -475,21 +484,41 @@ def patreon_callback():
     if not code:
         return redirect('/?auth=error&message=missing_code')
 
+    # Check for required environment variables
+    try:
+        client_id = os.environ.get('PATREON_CLIENT_ID')
+        client_secret = os.environ.get('PATREON_CLIENT_SECRET')
+        redirect_uri = os.environ.get('PATREON_REDIRECT_URI')
+        
+        if not client_id or not client_secret or not redirect_uri:
+            print("Patreon OAuth error: Missing environment variables")
+            return redirect('/?auth=error&message=missing_config')
+    except KeyError as e:
+        print(f"Patreon OAuth error: Missing environment variable: {e}")
+        return redirect('/?auth=error&message=missing_config')
+
     token_url = "https://www.patreon.com/api/oauth2/token"
     data = {
         "code": code,
         "grant_type": "authorization_code",
-        "client_id": os.environ['PATREON_CLIENT_ID'],
-        "client_secret": os.environ['PATREON_CLIENT_SECRET'],
-        "redirect_uri": os.environ['PATREON_REDIRECT_URI'],
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri,
     }
+    
     try:
+        # Exchange code for access token
         token_res = requests.post(token_url, data=data, timeout=10)
         token_res.raise_for_status()
-        access_token = token_res.json().get('access_token')
+        token_data = token_res.json()
+        access_token = token_data.get('access_token')
+        
         if not access_token:
-            raise Exception("No access token in response")
+            error_msg = token_data.get('error', 'Unknown error')
+            print(f"Patreon OAuth error: No access token. Response: {token_data}")
+            return redirect('/?auth=error&message=token_error')
 
+        # Fetch user identity
         user_res = requests.get(
             "https://www.patreon.com/api/oauth2/v2/identity",
             headers={"Authorization": f"Bearer {access_token}"},
@@ -497,8 +526,27 @@ def patreon_callback():
         )
         user_res.raise_for_status()
         user_data = user_res.json()
+        
         # TODO: Do something with user_data (e.g., create session, user record, etc.)
+        # For now, just redirect to success
         return redirect('/?auth=success')
+        
+    except requests.exceptions.HTTPError as e:
+        error_detail = "Unknown error"
+        try:
+            error_detail = e.response.json() if e.response else str(e)
+        except:
+            error_detail = str(e)
+        print(f"Patreon OAuth HTTP error: {e} - {error_detail}")
+        return redirect('/?auth=error&message=api_error')
+    except requests.exceptions.Timeout:
+        print("Patreon OAuth error: Request timeout")
+        return redirect('/?auth=error&message=timeout')
+    except requests.exceptions.RequestException as e:
+        print(f"Patreon OAuth network error: {e}")
+        return redirect('/?auth=error&message=network_error')
     except Exception as e:
-        print("Patreon OAuth error:", e)
+        print(f"Patreon OAuth error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return redirect('/?auth=error&message=user_fetch_failed')

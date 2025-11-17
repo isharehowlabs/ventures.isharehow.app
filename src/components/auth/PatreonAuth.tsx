@@ -20,9 +20,25 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
       if (authError === 'error') {
         if (message === 'not_paid_member') {
           setErrorMessage('You need to be an active paid member to access the dashboard.');
+        } else if (message === 'missing_code') {
+          setErrorMessage('Authentication code missing. Please try again.');
+        } else if (message === 'missing_config') {
+          setErrorMessage('Authentication service not properly configured. Please contact support.');
+        } else if (message === 'token_error') {
+          setErrorMessage('Failed to obtain access token. Please try again.');
+        } else if (message === 'api_error') {
+          setErrorMessage('Patreon API error. Please try again later.');
+        } else if (message === 'timeout') {
+          setErrorMessage('Request timed out. Please check your connection and try again.');
+        } else if (message === 'network_error') {
+          setErrorMessage('Network error. Please check your connection and try again.');
+        } else if (message === 'user_fetch_failed') {
+          setErrorMessage('Failed to fetch user information. Please try again.');
         } else if (message === 'invalid_state') {
           setErrorMessage('Authentication failed. Please try again.');
         } else if (message) {
+          setErrorMessage(`Authentication error: ${message}. Please try again.`);
+        } else {
           setErrorMessage('Authentication error. Please try again.');
         }
         
