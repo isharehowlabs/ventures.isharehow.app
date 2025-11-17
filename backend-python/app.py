@@ -1,3 +1,59 @@
+from flask import Flask, request, jsonify, redirect, session, url_for
+from flask_socketio import SocketIO, emit
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+from datetime import datetime, timedelta
+import os
+import uuid
+import json
+from dotenv import load_dotenv
+import requests
+
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
+CORS(app)
+
+# Task model
+class Task(db.Model):
+    id = db.Column(db.String(36), primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    hyperlinks = db.Column(db.Text)  # JSON string of array
+    status = db.Column(db.String(20), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
+            'status': self.status,
+            'createdAt': self.created_at.isoformat(),
+            'updatedAt': self.updated_at.isoformat()
+        }
+
+# Create tables
+with app.app_context():
+    try:
+        db.create_all()
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        print("Tables will be created when database is available")
+
+# Shopify configuration
 SHOPIFY_STORE_URL = os.environ.get('SHOPIFY_STORE_URL')
 SHOPIFY_ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN')
 SHOPIFY_API_VERSION = '2024-10'
@@ -132,8 +188,7 @@ def api_best_sellers():
                         product_map[key]['totalSold'] += item['node']['quantity']
         best_sellers = sorted(product_map.values(), key=lambda x: x['totalSold'], reverse=True)[:10]
         return jsonify({'bestSellers': best_sellers, 'totalOrders': len(orders)})
-import uuid
-import json
+
 # --- MCPServer Singleton (in-memory, like JS) ---
 class MCPServer:
     def __init__(self):
@@ -339,59 +394,6 @@ def auth_me():
 def auth_logout():
     session.clear()
     return jsonify({'message': 'Logged out successfully'})
-from flask import Flask, request, jsonify, redirect, session, url_for
-from flask_socketio import SocketIO, emit
-from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
-from datetime import datetime
-import os
-from dotenv import load_dotenv
-
-import requests
-
-# Load environment variables
-load_dotenv()
-
-app = Flask(__name__)
-
-# Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
-CORS(app)
-
-# Task model
-class Task(db.Model):
-    id = db.Column(db.String(36), primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    hyperlinks = db.Column(db.Text)  # JSON string of array
-    status = db.Column(db.String(20), default='pending')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    def to_dict(self):
-        import json
-        return {
-            'id': self.id,
-            'title': self.title,
-            'description': self.description,
-            'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
-            'status': self.status,
-            'createdAt': self.created_at.isoformat(),
-            'updatedAt': self.updated_at.isoformat()
-        }
-
-# Create tables
-with app.app_context():
-    try:
-        db.create_all()
-        print("Database tables created successfully")
-    except Exception as e:
-        print(f"Database connection failed: {e}")
-        print("Tables will be created when database is available")
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
@@ -401,8 +403,6 @@ def get_tasks():
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
     data = request.get_json()
-    import json
-    import uuid
     task = Task(
         id=str(uuid.uuid4()),
         title=data['title'],
@@ -419,7 +419,6 @@ def create_task():
 def update_task(task_id):
     task = Task.query.get_or_404(task_id)
     data = request.get_json()
-    import json
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)
     task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
