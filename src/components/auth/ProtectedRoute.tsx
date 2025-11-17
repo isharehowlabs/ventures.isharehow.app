@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [checkingAuth, setCheckingAuth] = useState(false);
+  const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
 
   // If we have auth=success in URL, give extra time for session to be available
   useEffect(() => {
@@ -26,18 +27,46 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
   }, [isLoading]);
 
+  // Set up refresh timer if stuck loading
+  useEffect(() => {
+    if (isLoading || checkingAuth) {
+      // If stuck loading for 15 seconds, refresh the page
+      const timer = setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          console.warn('Authentication check stuck, refreshing page...');
+          window.location.reload();
+        }
+      }, 15000);
+      setRefreshTimer(timer);
+      return () => {
+        if (timer) clearTimeout(timer);
+        setRefreshTimer(null);
+      };
+    } else {
+      // Clear timer if no longer loading
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        setRefreshTimer(null);
+      }
+    }
+  }, [isLoading, checkingAuth, refreshTimer]);
+
   // Show loading while checking auth or if explicitly checking after redirect
   if (isLoading || checkingAuth) {
     return (
       <Box
         sx={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '50vh',
         }}
       >
         <CircularProgress />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Verifying authentication...
+        </Typography>
       </Box>
     );
   }
