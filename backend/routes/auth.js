@@ -261,6 +261,8 @@ router.get('/me', async (req, res) => {
     message: 'No valid session found. Please log in again.',
     hasSession: !!req.session,
     sessionID: req.sessionID,
+  });
+});
 
 // Logout
 router.post('/logout', (req, res) => {
