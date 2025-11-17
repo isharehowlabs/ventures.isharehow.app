@@ -129,7 +129,7 @@ export default function DocsPanel() {
         <Typography variant="h6">Team Tasks</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Refresh">
-            <IconButton onClick={handleRefresh} disabled={isLoading} size="small">
+            <IconButton onClick={handleRefresh} disabled={isLoading || error?.includes('Authentication required')} size="small">
               <RefreshIcon />
             </IconButton>
           </Tooltip>
@@ -137,6 +137,7 @@ export default function DocsPanel() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenCreate}
+            disabled={isLoading || error?.includes('Authentication required')}
             size="small"
           >
             Add Task
@@ -145,9 +146,13 @@ export default function DocsPanel() {
       </Box>
 
       {error && (
-        <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
+        <Paper sx={{ p: 2, bgcolor: error.includes('Authentication required') ? 'warning.light' : 'error.light', color: error.includes('Authentication required') ? 'warning.contrastText' : 'error.contrastText' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2">{error}</Typography>
+            <Typography variant="body2">
+              {error.includes('Authentication required') 
+                ? 'Please log in to access team tasks and collaborate with your team.' 
+                : error}
+            </Typography>
             <IconButton onClick={handleRefresh} disabled={isLoading} size="small" sx={{ color: 'inherit', ml: 1 }}>
               <RefreshIcon fontSize="small" />
             </IconButton>
@@ -184,12 +189,12 @@ export default function DocsPanel() {
                     </Tooltip>
                   ))}
                   <Tooltip title="Edit">
-                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(task)}>
+                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(task)} disabled={!!error?.includes('Authentication required')}>
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete">
-                    <IconButton edge="end" size="small" onClick={() => handleDelete(task.id)}>
+                    <IconButton edge="end" size="small" onClick={() => handleDelete(task.id)} disabled={!!error?.includes('Authentication required')}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
@@ -285,7 +290,7 @@ export default function DocsPanel() {
           <Button
             onClick={handleSave}
             variant="contained"
-            disabled={!title.trim() || isLoading}
+            disabled={!title.trim() || isLoading || error?.includes('Authentication required')}
           >
             {editMode === 'create' ? 'Add' : 'Save'}
           </Button>

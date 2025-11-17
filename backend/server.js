@@ -68,10 +68,6 @@ app.use(
       path: '/', // Ensure cookie is available for all paths
     },
     name: 'ventures.sid', // Custom session name to avoid conflicts
-    // Add session validation
-    genid: () => {
-      return crypto.randomBytes(16).toString('hex');
-    },
   })
 );
 
