@@ -30,20 +30,24 @@ export function useAuth() {
   const checkAuth = useCallback(async () => {
     try {
       const backendUrl = getBackendUrl();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-      const response = await fetch(`${backendUrl}/api/auth/me`, {
-        method: 'GET',
-        credentials: 'include', // Important: include cookies
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        mode: 'cors', // Ensure CORS mode
-        signal: controller.signal,
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000);
       });
 
-      clearTimeout(timeoutId);
+      // Race the fetch against the timeout
+      const response = await Promise.race([
+        fetch(`${backendUrl}/api/auth/me`, {
+          method: 'GET',
+          credentials: 'include', // Important: include cookies
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors', // Ensure CORS mode
+        }),
+        timeoutPromise
+      ]);
 
       if (response.ok) {
         const user = await response.json();
@@ -70,7 +74,7 @@ export function useAuth() {
       }
     } catch (error: any) {
       console.error('Auth check error:', error);
-      const isTimeout = error.name === 'AbortError';
+      const isTimeout = error.message === 'Request timeout';
       setAuthState({
         user: null,
         isAuthenticated: false,

@@ -226,6 +226,7 @@ router.get('/patreon/callback', async (req, res) => {
 });
 
 // Get current user
+// Get current user
 router.get('/me', async (req, res) => {
   // Debug logging
   const sessionCookie = req.cookies?.['ventures.sid'] || req.headers.cookie?.match(/ventures\.sid=([^;]+)/)?.[1];
@@ -241,95 +242,25 @@ router.get('/me', async (req, res) => {
     allCookies: req.cookies,
   });
 
-  // First, check if current session has user data - if yes, use it regardless of ID mismatch
+  // Check if session has user data
   if (req.session && req.session.user) {
-    // Session expiration is automatically updated by rolling: true in session config
-    // Just return the user data - express-session will handle saving
     return res.json(req.session.user);
   }
 
-  // If current session doesn't have user data but cookie has a different session ID, try to reload
-  if (sessionCookie && req.sessionID !== sessionCookie) {
-    console.warn('Session ID mismatch - attempting to reload session:', {
-      currentSessionID: req.sessionID,
-      cookieSessionID: sessionCookie,
-      currentSessionHasUser: !!(req.session && req.session.user),
-    });
-    
-    // Try to reload the session using the cookie's session ID
-    try {
-      const store = req.sessionStore;
-      if (store && typeof store.get === 'function') {
-        store.get(sessionCookie, (err, session) => {
-          if (err) {
-            console.error('Error loading session from store:', err);
-            // Fall through to 401 response below
-            return res.status(401).json({ 
-              error: 'Not authenticated',
-              message: 'Failed to load session from store.',
-              hasSession: !!req.session,
-              sessionID: req.sessionID,
-              cookieSessionID: sessionCookie,
-            });
-          }
-          
-          if (!session) {
-            console.warn('Session not found in store for ID:', sessionCookie);
-            // Fall through to 401 response below
-            return res.status(401).json({ 
-              error: 'Not authenticated',
-              message: 'Session not found in store.',
-              hasSession: !!req.session,
-              sessionID: req.sessionID,
-              cookieSessionID: sessionCookie,
-            });
-          }
-          
-          // Check if loaded session has user data
-          if (session && session.user) {
-            // Update the current session with the loaded session data
-            Object.assign(req.session, session);
-            req.sessionID = sessionCookie;
-            
-            // Just return the user - express-session middleware will handle saving
-            return res.json(session.user);
-          } else {
-            return res.status(401).json({ 
-              error: 'Not authenticated',
-              message: 'No user data in loaded session.',
-              hasSession: !!session,
-              sessionID: sessionCookie,
-            });
-          }
-        });
-        return; // Exit early, response will be sent in callback
-      } else {
-        console.warn('Session store not available or does not support get()');
-      }
-    } catch (error) {
-      console.error('Error reloading session:', error);
-    }
-  }
-
   // No valid session found
-  if (!req.session || !req.session.user) {
-    // More detailed error response
-    console.warn('Unauthorized access attempt:', {
-      sessionID: req.sessionID,
-      cookieSessionID: sessionCookie,
-      hasSession: !!req.session,
-      sessionKeys: req.session ? Object.keys(req.session) : [],
-      cookiePresent: !!req.headers.cookie,
-    });
-    res.status(401).json({ 
-      error: 'Not authenticated',
-      message: 'No valid session found. Please log in again.',
-      hasSession: !!req.session,
-      sessionID: req.sessionID,
-      cookieSessionID: sessionCookie,
-    });
-  }
-});
+  console.warn('Unauthorized access attempt:', {
+    sessionID: req.sessionID,
+    cookieSessionID: sessionCookie,
+    hasSession: !!req.session,
+    sessionKeys: req.session ? Object.keys(req.session) : [],
+    cookiePresent: !!req.headers.cookie,
+  });
+  
+  res.status(401).json({ 
+    error: 'Not authenticated',
+    message: 'No valid session found. Please log in again.',
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
 
 // Logout
 router.post('/logout', (req, res) => {
