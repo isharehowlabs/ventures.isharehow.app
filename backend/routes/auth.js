@@ -132,7 +132,7 @@ router.get('/patreon/callback', async (req, res) => {
     const { access_token, refresh_token } = tokenData;
 
     // Get user info and memberships from Patreon API
-    const userResponse = await fetch(`${PATREON_API_URL}/identity?include=memberships,tiers&fields[member]=patron_status,currently_entitled_amount_cents,lifetime_support_cents&fields[tier]=title,amount_cents`, {
+    const userResponse = await fetch(`${PATREON_API_URL}/identity?include=memberships,tiers&fields[member]=patron_status,currently_entitled_amount_cents,lifetime_support_cents`, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
@@ -175,6 +175,12 @@ router.get('/patreon/callback', async (req, res) => {
       }
     }
 
+    // Check if user is a paid member
+    if (!isPaidMember) {
+      const frontendUrl = getFrontendUrl();
+      return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
+    }
+
     // Store user in the existing session (no regeneration to avoid session ID mismatch)
     req.session.user = {
       id: patreonUser.id,
@@ -192,32 +198,13 @@ router.get('/patreon/callback', async (req, res) => {
     req.session.accessToken = access_token;
     req.session.refreshToken = refresh_token;
 
-    // Regenerate session to ensure clean session with matching cookie
-    req.session.regenerate((err) => {
+    // Save the session
+    req.session.save((err) => {
       if (err) {
-        console.error('Session regeneration error:', err);
+        console.error('Session save error:', err);
         const frontendUrl = getFrontendUrl();
         return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
       }
-
-      // Restore user data in the new session
-      req.session.user = {
-        id: patreonUser.id,
-        patreonId: patreonUser.id,
-        name: patreonUser.attributes?.full_name || patreonUser.attributes?.vanity || 'Patreon User',
-        email: patreonUser.attributes?.email,
-        avatar: patreonUser.attributes?.image_url,
-        isPaidMember: isPaidMember,
-        membershipTier: membershipTier,
-        membershipAmount: membershipAmount,
-        lifetimeSupportAmount: lifetimeSupportAmount,
-      };
-      req.session.accessToken = access_token;
-      req.session.refreshToken = refresh_token;
-
-      // Save the new session
-      req.session.save((err) => {
-        if (err) {
           console.error('Session save error:', err);
           const frontendUrl = getFrontendUrl();
           return res.redirect(`${frontendUrl}/?auth=error&message=session_failed`);
@@ -233,12 +220,6 @@ router.get('/patreon/callback', async (req, res) => {
           sessionKeys: Object.keys(req.session),
         });
 
-        // Check if user is a paid member
-        if (!isPaidMember) {
-          const frontendUrl = getFrontendUrl();
-          return res.redirect(`${frontendUrl}/?auth=error&message=not_paid_member`);
-        }
-        
         // Set cookie explicitly to ensure it matches the session ID
         res.cookie('ventures.sid', req.sessionID, {
           secure: process.env.NODE_ENV === 'production',
