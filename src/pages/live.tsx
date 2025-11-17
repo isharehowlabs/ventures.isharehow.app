@@ -2,11 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
-  Stack,
-  Paper,
-  Button,
-  Skeleton,
-  Collapse,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
@@ -45,10 +40,6 @@ function TaskList() {
 
   const handleAddTask = () => {
     if (!input.trim()) return;
-    setTasks(prev => [
-      ...prev,
-      { id: Date.now(), text: input.trim(), completed: false }
-    ]);
     setInput('');
   };
 

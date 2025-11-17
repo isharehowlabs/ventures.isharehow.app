@@ -187,7 +187,6 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
               }}
             >
               <iframe
-                src="https://www.twitch.tv/embed/jameleliyah/chat?darkpopout&parent=ventures.isharehow.app"
                 style={{
                   border: 'none',
                   borderRadius: 8,

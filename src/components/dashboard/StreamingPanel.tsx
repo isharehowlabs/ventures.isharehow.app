@@ -18,15 +18,6 @@ export default function StreamingPanel() {
     document.body.appendChild(script);
 
     script.onload = () => {
-      if (window.Twitch && twitchPlayerRef.current) {
-        const player = new window.Twitch.Player(twitchPlayerRef.current, {
-          channel: 'jameleliyah',
-          width: '100%',
-          height: '100%',
-          parent: ['ventures.isharehow.app', 'localhost'],
-          autoplay: false,
-        });
-      }
     };
 
     return () => {
