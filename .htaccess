@@ -1,6 +1,11 @@
 # Rewrite API requests to PHP proxy
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    
+    # Redirect /live to /labs
+    RewriteRule ^live/?$ /labs/ [R=301,L]
+    
+    # Rewrite API requests
     RewriteCond %{REQUEST_URI} ^/api/products
     RewriteRule ^api/products$ api/products.php [L]
 </IfModule>
