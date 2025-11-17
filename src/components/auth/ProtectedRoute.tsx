@@ -8,9 +8,11 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const { isAuthenticated, isLoading, user, logout, error } = useAuth();
   const [checkingAuth, setCheckingAuth] = useState(false);
   const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
+  const [showLogoutOption, setShowLogoutOption] = useState(false);
+  const [authFailureCount, setAuthFailureCount] = useState(0);
   const [showLogoutOption, setShowLogoutOption] = useState(false);
 
   // If we have auth=success in URL, give extra time for session to be available
@@ -28,37 +30,26 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
   }, [isLoading]);
 
-  // Set up refresh timer if stuck loading
+  // Track authentication failures
   useEffect(() => {
-    if (isLoading || checkingAuth) {
-      // If stuck loading for 15 seconds, refresh the page
+    if (!isLoading && !isAuthenticated && error) {
+      setAuthFailureCount(prev => prev + 1);
+    } else if (isAuthenticated) {
+      setAuthFailureCount(0);
+    }
+  }, [isLoading, isAuthenticated, error]);
+
+  // Show logout option after 3 authentication failures or after 3 seconds
+  useEffect(() => {
+    if (authFailureCount >= 3 || (isLoading && !checkingAuth)) {
       const timer = setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          console.warn('Authentication check stuck, refreshing page...');
-          window.location.reload();
-        }
-      }, 15000);
-      setRefreshTimer(timer);
-      
-      // Show logout option after 5 seconds
-      const logoutTimer = setTimeout(() => {
         setShowLogoutOption(true);
-      }, 5000);
-      
-      return () => {
-        if (timer) clearTimeout(timer);
-        clearTimeout(logoutTimer);
-        setRefreshTimer(null);
-      };
+      }, authFailureCount >= 3 ? 0 : 3000);
+      return () => clearTimeout(timer);
     } else {
-      // Clear timer if no longer loading
-      if (refreshTimer) {
-        clearTimeout(refreshTimer);
-        setRefreshTimer(null);
-      }
       setShowLogoutOption(false);
     }
-  }, [isLoading, checkingAuth, refreshTimer]);
+  }, [authFailureCount, isLoading, checkingAuth]);
     }
   }, [isLoading, checkingAuth, refreshTimer]);
 
@@ -81,7 +72,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         {showLogoutOption && (
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Taking longer than expected?
+              Having trouble? Clear your session and try again.
             </Typography>
             <Button
               variant="outlined"
@@ -100,7 +91,39 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    return <PatreonAuth />;
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '50vh',
+          p: 4,
+          textAlign: 'center',
+        }}
+      >
+        {authFailureCount > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+              Authentication failed. Please try clearing your session.
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                logout();
+                window.location.reload();
+              }}
+              sx={{ mr: 1 }}
+            >
+              Clear Session
+            </Button>
+          </Box>
+        )}
+        <PatreonAuth />
+      </Box>
+    );
   }
 
   // Check if user is a paid member
