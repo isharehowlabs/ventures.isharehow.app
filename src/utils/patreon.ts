@@ -6,6 +6,10 @@ export interface PatreonUser {
   email?: string;
   avatar?: string;
   patreonId: string;
+  isPaidMember?: boolean;
+  membershipTier?: string;
+  membershipAmount?: number;
+  lifetimeSupportAmount?: number;
 }
 
 export const patreonAuth = {

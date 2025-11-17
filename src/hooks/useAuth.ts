@@ -10,6 +10,7 @@ interface User {
   isPaidMember?: boolean;
   membershipTier?: string;
   membershipAmount?: number;
+  lifetimeSupportAmount?: number;
 }
 
 interface AuthState {

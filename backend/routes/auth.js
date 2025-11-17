@@ -132,7 +132,7 @@ router.get('/patreon/callback', async (req, res) => {
     const { access_token, refresh_token } = tokenData;
 
     // Get user info and memberships from Patreon API
-    const userResponse = await fetch(`${PATREON_API_URL}/identity?include=memberships&fields[member]=patron_status,currently_entitled_amount_cents`, {
+    const userResponse = await fetch(`${PATREON_API_URL}/identity?include=memberships,tiers&fields[member]=patron_status,currently_entitled_amount_cents,lifetime_support_cents&fields[tier]=title,amount_cents`, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
@@ -150,6 +150,7 @@ router.get('/patreon/callback', async (req, res) => {
     let isPaidMember = false;
     let membershipTier = null;
     let membershipAmount = 0;
+    let lifetimeSupportAmount = 0;
 
     if (userData.included) {
       // Find active memberships
@@ -160,8 +161,17 @@ router.get('/patreon/callback', async (req, res) => {
 
       if (activeMembership) {
         isPaidMember = true;
-        membershipTier = activeMembership.attributes?.patron_status;
         membershipAmount = activeMembership.attributes?.currently_entitled_amount_cents || 0;
+        lifetimeSupportAmount = activeMembership.attributes?.lifetime_support_cents || 0;
+
+        // Get tier info
+        const tierRelationship = activeMembership.relationships?.tier?.data;
+        if (tierRelationship) {
+          const tier = userData.included.find(item => item.type === 'tier' && item.id === tierRelationship.id);
+          if (tier) {
+            membershipTier = tier.attributes?.title || `$${tier.attributes?.amount_cents / 100}`;
+          }
+        }
       }
     }
 
@@ -175,6 +185,7 @@ router.get('/patreon/callback', async (req, res) => {
       isPaidMember: isPaidMember,
       membershipTier: membershipTier,
       membershipAmount: membershipAmount,
+      lifetimeSupportAmount: lifetimeSupportAmount,
     };
     
     // Store tokens separately (not in session for security)
@@ -199,6 +210,7 @@ router.get('/patreon/callback', async (req, res) => {
         isPaidMember: isPaidMember,
         membershipTier: membershipTier,
         membershipAmount: membershipAmount,
+        lifetimeSupportAmount: lifetimeSupportAmount,
       };
       req.session.accessToken = access_token;
       req.session.refreshToken = refresh_token;
