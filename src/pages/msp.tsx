@@ -9,16 +9,11 @@ import {
   Paper,
   Stack,
   Avatar,
-  Chip,
-  Container,
-  Divider,
 } from '@mui/material';
 import {
   Security as SecurityIcon,
   CloudQueue as CloudIcon,
   MonitorHeart as MonitorIcon,
-  Storage as StorageIcon,
-  NetworkCheck as NetworkIcon,
   SupportAgent as SupportIcon,
   CheckCircle as CheckCircleIcon,
   TrendingUp as TrendingUpIcon,
@@ -238,9 +233,9 @@ const MspPage = () => {
                 fontSize: { xs: '1rem', md: '1.25rem' },
               }}
             >
-              <Typography component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>
                 iShareHow Labs LLC
-              </Typography>{' '}
+              </Box>{' '}
               provides forward-thinking Managed Service Provider (MSP) solutions designed for modern businesses. We specialize in integrating robust IT infrastructure, cybersecurity, and cloud services to create a seamless and secure operational environment.
             </Typography>
             <Paper
