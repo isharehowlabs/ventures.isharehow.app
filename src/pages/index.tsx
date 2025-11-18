@@ -144,7 +144,7 @@ const ventures = [
     title: 'DivineAmusement YouTube Channel',
     subtitle: 'DivineAmusement YouTube Channel',
     description: 'DivineAmusement YouTube Channel',
-    image: 'https://yt3.ggpht.com/s2hQQ2x05TS0ZTiGsSXaZN89hBHkfB5PE1JWaSzHOw68ndtRKZj_OKpfSl3xvZBkG4VU0QKI=s108-c-k-c0x00ffffff-no-rj',
+    image: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&h=600&fit=crop',
     category: 'Entertainment',
     color: '#FF6B6B',
     stats: { likes: 187, views: '10K', saves: 52 },
