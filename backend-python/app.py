@@ -459,7 +459,9 @@ def handle_disconnect():
     print('Client disconnected')
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    # Allow Werkzeug for development/production (or use gunicorn for true production)
+    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
 
 
 # --- Patreon OAuth2 Integration ---

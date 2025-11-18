@@ -1,14 +1,14 @@
-[dotenv@17.2.3] injecting env (3) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
-SHOPIFY_STORE_URL: https://isharehow.myshopify.com/admin/api/2024-10/graphql.json
-SHOPIFY_ACCESS_TOKEN: ***d459
-GOOGLE_AI_API_KEY: undefined
-GOOGLE_REDIRECT_URI: undefined
-GOOGLE_CLIENT_ID: undefined
-Allowed CORS origins: [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://ventures.isharehow.app',
-  'https://isharehowdash.firebaseapp.com'
-]
-Backend running on port 3001
-Socket.io server ready
+Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+Database connection failed: (psycopg2.OperationalError) could not translate host name "dpg-d4cn4uodl3ps73bjhg6g-a" to address: Name or service not known
+
+(Background on this error at: https://sqlalche.me/e/14/e3q8)
+Tables will be created when database is available
+ * Serving Flask app 'app' (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+ * Running on all addresses.
+   WARNING: This is a development server. Do not use it in a production deployment.
+ * Running on http://184.94.212.248:3001/ (Press CTRL+C to quit)
+127.0.0.1 - - [18/Nov/2025 01:48:17] "[31m[1mGET /api/auth/me HTTP/1.1[0m" 401 -
