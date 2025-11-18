@@ -438,16 +438,32 @@ def figma_file_tokens(id):
     ]
     return jsonify({'tokens': tokens})
 # Global error handler for unhandled exceptions (500 errors)
+@app.errorhandler(404)
+def handle_404_error(e):
+    """Handle 404 errors and return JSON error response"""
+    # Only return JSON for API routes
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Not found',
+            'message': f'The requested endpoint {request.path} was not found.'
+        }), 404
+    # Return default Flask 404 for non-API routes
+    return e
+
 @app.errorhandler(500)
 def handle_500_error(e):
     """Handle 500 errors and return JSON error response"""
     print(f"500 error occurred: {e}")
     import traceback
     traceback.print_exc()
-    return jsonify({
-        'error': 'Internal server error',
-        'message': 'An unexpected error occurred. Please check server logs for details.'
-    }), 500
+    # Always return JSON for API routes
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Internal server error',
+            'message': 'An unexpected error occurred. Please check server logs for details.'
+        }), 500
+    # Return default Flask 500 for non-API routes
+    return e
 
 # Handle unhandled exceptions that aren't HTTP exceptions
 @app.errorhandler(Exception)

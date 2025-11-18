@@ -271,12 +271,29 @@ export default function LiveUpdates() {
         setAdminDialogOpen(false);
         // The update will be received via Socket.IO event
       } else {
-        const error = await response.json();
-        alert(`Failed to post update: ${error.error || 'Unknown error'}`);
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Unknown error';
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const error = await response.json();
+            errorMessage = error.error || error.message || `Server error: ${response.status}`;
+          } catch (e) {
+            errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          }
+        } else {
+          // Response is HTML (error page)
+          const text = await response.text();
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          console.error('Non-JSON error response:', text.substring(0, 200));
+        }
+        
+        alert(`Failed to post update: ${errorMessage}`);
       }
     } catch (err: any) {
       console.error('Error posting admin update:', err);
-      alert(`Failed to post update: ${err.message}`);
+      alert(`Failed to post update: ${err.message || 'Network error'}`);
     } finally {
       setIsPosting(false);
     }
