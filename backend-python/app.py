@@ -34,6 +34,12 @@ CORS(app,
      supports_credentials=True,
      allow_headers=['Content-Type', 'Authorization'])
 
+# Frontend URL helper - for redirects to frontend domain
+def get_frontend_url():
+    """Get the frontend URL from environment or default to production"""
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
+    return frontend_url.rstrip('/')
+
 # Task model
 class Task(db.Model):
     id = db.Column(db.String(36), primary_key=True)
@@ -500,7 +506,7 @@ def patreon_callback():
     code = request.args.get('code')
     state = request.args.get('state')
     if not code:
-        return redirect('/?auth=error&message=missing_code')
+        return redirect(f'{get_frontend_url()}/?auth=error&message=missing_code')
 
     # Check for required environment variables
     try:
@@ -510,10 +516,10 @@ def patreon_callback():
         
         if not client_id or not client_secret or not redirect_uri:
             print("Patreon OAuth error: Missing environment variables")
-            return redirect('/?auth=error&message=missing_config')
+            return redirect(f'{get_frontend_url()}/?auth=error&message=missing_config')
     except KeyError as e:
         print(f"Patreon OAuth error: Missing environment variable: {e}")
-        return redirect('/?auth=error&message=missing_config')
+        return redirect(f'{get_frontend_url()}/?auth=error&message=missing_config')
 
     token_url = "https://www.patreon.com/api/oauth2/token"
     data = {
@@ -534,7 +540,7 @@ def patreon_callback():
         if not access_token:
             error_msg = token_data.get('error', 'Unknown error')
             print(f"Patreon OAuth error: No access token. Response: {token_data}")
-            return redirect('/?auth=error&message=token_error')
+            return redirect(f'{get_frontend_url()}/?auth=error&message=token_error')
 
         # Fetch user identity with memberships
         user_res = requests.get(
@@ -550,7 +556,7 @@ def patreon_callback():
         # Parse user data from Patreon API response
         if 'data' not in user_data:
             print(f"Error: No 'data' field in Patreon response: {user_data}")
-            return redirect('/?auth=error&message=invalid_response')
+            return redirect(f'{get_frontend_url()}/?auth=error&message=invalid_response')
         
         data = user_data.get('data', {})
         attributes = data.get('attributes', {})
@@ -560,7 +566,7 @@ def patreon_callback():
         user_id = data.get('id', '')
         if not user_id:
             print(f"Error: No user ID in Patreon response: {data}")
-            return redirect('/?auth=error&message=no_user_id')
+            return redirect(f'{get_frontend_url()}/?auth=error&message=no_user_id')
         
         user_name = attributes.get('full_name') or attributes.get('first_name') or 'Patreon User'
         user_email = attributes.get('email', '')
@@ -618,7 +624,7 @@ def patreon_callback():
         print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
         
         # Redirect to labs page with auth success (trailing slash for Next.js static export)
-        return redirect('/labs/?auth=success')
+        return redirect(f'{get_frontend_url()}/labs/?auth=success')
         
     except requests.exceptions.HTTPError as e:
         error_detail = "Unknown error"
@@ -627,13 +633,13 @@ def patreon_callback():
         except:
             error_detail = str(e)
         print(f"Patreon OAuth HTTP error: {e} - {error_detail}")
-        return redirect('/?auth=error&message=api_error')
+        return redirect(f'{get_frontend_url()}/?auth=error&message=api_error')
     except requests.exceptions.Timeout:
         print("Patreon OAuth error: Request timeout")
-        return redirect('/?auth=error&message=timeout')
+        return redirect(f'{get_frontend_url()}/?auth=error&message=timeout')
     except requests.exceptions.RequestException as e:
         print(f"Patreon OAuth network error: {e}")
-        return redirect('/?auth=error&message=network_error')
+        return redirect(f'{get_frontend_url()}/?auth=error&message=network_error')
     except Exception as e:
         print(f"Patreon OAuth error: {type(e).__name__}: {e}")
         import traceback
@@ -641,4 +647,4 @@ def patreon_callback():
         error_message = str(e)
         # Make error message URL-safe
         error_message = error_message.replace(' ', '_').replace(':', '').replace('\n', '')[:50]
-        return redirect(f'/?auth=error&message=user_fetch_failed&detail={error_message}')
+        return redirect(f'{get_frontend_url()}/?auth=error&message=user_fetch_failed&detail={error_message}')
