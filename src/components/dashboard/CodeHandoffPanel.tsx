@@ -16,33 +16,79 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Divider,
 } from '@mui/material';
 import { Link as LinkIcon, Code as CodeIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useMCP } from '../../hooks/useMCP';
+import { useFigma } from '../../hooks/useFigma';
 
 export default function CodeHandoffPanel() {
   const { links, tokens, isLoading, error, linkComponentToCode, fetchCodeLinks, fetchTokens, generateCode } = useMCP();
+  const { files, components, fetchFiles, fetchComponents } = useFigma();
   const [open, setOpen] = useState(false);
+  const [selectedFileId, setSelectedFileId] = useState<string>('');
   const [figmaComponentId, setFigmaComponentId] = useState('');
+  const [selectedComponent, setSelectedComponent] = useState<any>(null);
   const [codeFilePath, setCodeFilePath] = useState('');
   const [codeComponentName, setCodeComponentName] = useState('');
   const [selectedLink, setSelectedLink] = useState<any>(null);
+  const [loadingComponents, setLoadingComponents] = useState(false);
 
   useEffect(() => {
     fetchCodeLinks();
     fetchTokens();
+    fetchFiles();
   }, []);
+
+  useEffect(() => {
+    if (selectedFileId) {
+      setLoadingComponents(true);
+      fetchComponents(selectedFileId)
+        .catch((err) => {
+          console.error('Error fetching components:', err);
+        })
+        .finally(() => {
+          setLoadingComponents(false);
+        });
+    }
+  }, [selectedFileId]);
 
   const handleLink = async () => {
     try {
-      await linkComponentToCode(figmaComponentId, codeFilePath, codeComponentName);
+      await linkComponentToCode(figmaComponentId, codeFilePath, codeComponentName, selectedFileId);
       setOpen(false);
       setFigmaComponentId('');
+      setSelectedFileId('');
+      setSelectedComponent(null);
       setCodeFilePath('');
       setCodeComponentName('');
+      await fetchCodeLinks();
     } catch (err) {
       console.error('Error linking:', err);
     }
+  };
+
+  const handleComponentSelect = (component: any) => {
+    setSelectedComponent(component);
+    setFigmaComponentId(component.key);
+    // Auto-fill component name if not already set
+    if (!codeComponentName) {
+      setCodeComponentName(component.name || '');
+    }
+  };
+
+  const handleOpenDialog = () => {
+    setOpen(true);
+    // Reset state when opening
+    setSelectedFileId('');
+    setFigmaComponentId('');
+    setSelectedComponent(null);
+    setCodeFilePath('');
+    setCodeComponentName('');
   };
 
   const handleGenerateCode = async (componentId: string) => {
@@ -72,7 +118,7 @@ export default function CodeHandoffPanel() {
           <Button
             variant="contained"
             startIcon={<LinkIcon />}
-            onClick={() => setOpen(true)}
+            onClick={handleOpenDialog}
             size="small"
           >
             Link Component
@@ -161,45 +207,131 @@ export default function CodeHandoffPanel() {
         </Paper>
       )}
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Link Figma Component to Code</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Figma Component ID"
-            fullWidth
-            variant="outlined"
-            value={figmaComponentId}
-            onChange={(e) => setFigmaComponentId(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Code File Path"
-            fullWidth
-            variant="outlined"
-            value={codeFilePath}
-            onChange={(e) => setCodeFilePath(e.target.value)}
-            placeholder="src/components/Button.tsx"
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Component Name"
-            fullWidth
-            variant="outlined"
-            value={codeComponentName}
-            onChange={(e) => setCodeComponentName(e.target.value)}
-            placeholder="Button"
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            {/* File Selection */}
+            <FormControl fullWidth>
+              <InputLabel>Select Figma File</InputLabel>
+              <Select
+                value={selectedFileId}
+                label="Select Figma File"
+                onChange={(e) => setSelectedFileId(e.target.value)}
+                disabled={isLoading || loadingComponents}
+              >
+                {files.map((file) => (
+                  <MenuItem key={file.id} value={file.id}>
+                    {file.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Component Selection */}
+            {selectedFileId && (
+              <>
+                <Divider />
+                <Typography variant="subtitle2" color="text.secondary">
+                  Available Components ({components.length})
+                </Typography>
+                {loadingComponents ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : components.length > 0 ? (
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      maxHeight: 200,
+                      overflow: 'auto',
+                      p: 1,
+                    }}
+                  >
+                    <List dense>
+                      {components.map((component) => {
+                        const isLinked = links.some((link) => link.componentId === component.key);
+                        return (
+                          <ListItem
+                            key={component.key}
+                            button
+                            selected={selectedComponent?.key === component.key}
+                            onClick={() => handleComponentSelect(component)}
+                            sx={{
+                              bgcolor: selectedComponent?.key === component.key ? 'action.selected' : undefined,
+                              borderRadius: 1,
+                              mb: 0.5,
+                            }}
+                          >
+                            <ListItemText
+                              primary={component.name}
+                              secondary={component.description || `ID: ${component.key}`}
+                            />
+                            {isLinked && (
+                              <Chip
+                                label="Linked"
+                                size="small"
+                                color="success"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </Paper>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+                    No components found in this file
+                  </Typography>
+                )}
+              </>
+            )}
+
+            {/* Manual Component ID (fallback) */}
+            <Divider />
+            <TextField
+              margin="dense"
+              label="Figma Component ID (or select from list above)"
+              fullWidth
+              variant="outlined"
+              value={figmaComponentId}
+              onChange={(e) => setFigmaComponentId(e.target.value)}
+              placeholder="Component key from Figma"
+              helperText={selectedComponent ? `Selected: ${selectedComponent.name}` : 'Select a component above or enter manually'}
+            />
+
+            {/* Code File Path */}
+            <TextField
+              margin="dense"
+              label="Code File Path"
+              fullWidth
+              variant="outlined"
+              value={codeFilePath}
+              onChange={(e) => setCodeFilePath(e.target.value)}
+              placeholder="src/components/Button.tsx"
+              required
+            />
+
+            {/* Component Name */}
+            <TextField
+              margin="dense"
+              label="Component Name"
+              fullWidth
+              variant="outlined"
+              value={codeComponentName}
+              onChange={(e) => setCodeComponentName(e.target.value)}
+              placeholder="Button"
+              required
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
           <Button
             onClick={handleLink}
             variant="contained"
-            disabled={!figmaComponentId || !codeFilePath || !codeComponentName || isLoading}
+            disabled={!figmaComponentId || !codeFilePath || !codeComponentName || isLoading || loadingComponents}
           >
             Link
           </Button>
