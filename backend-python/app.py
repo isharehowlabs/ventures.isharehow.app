@@ -29,6 +29,7 @@ db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configure CORS to allow credentials (cookies)
+# Note: flask-cors handles all CORS headers automatically, don't add them manually
 CORS(app, 
      origins=['http://localhost:5000', 'https://ventures.isharehow.app'],
      supports_credentials=True,
@@ -404,12 +405,8 @@ def figma_file_tokens(id):
 def auth_me():
     user = session.get('user')
     if user:
-        response = jsonify(user)
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
-    response = jsonify({'error': 'Not authenticated', 'message': 'No valid session found. Please log in again.'})
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response, 401
+        return jsonify(user)
+    return jsonify({'error': 'Not authenticated', 'message': 'No valid session found. Please log in again.'}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def auth_logout():
