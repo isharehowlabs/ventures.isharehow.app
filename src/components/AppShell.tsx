@@ -24,9 +24,10 @@ import {
   Article as ArticleIcon,
   LiveTv as LiveTvIcon,
   ShoppingBag as ShoppingBagIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 
-type NavKey = 'ventures' | 'content' | 'labs' | 'products';
+type NavKey = 'ventures' | 'content' | 'labs' | 'products' | 'rise';
 
 interface NavigationItem {
   key: NavKey;
@@ -40,6 +41,7 @@ const navigationItems: NavigationItem[] = [
   { key: 'content', label: 'Content Library', href: '/content', icon: ArticleIcon },
   { key: 'products', label: 'Product Catalog', href: '/products', icon: ShoppingBagIcon },
   { key: 'labs', label: 'Co-Work Dashboard', href: '/labs', icon: LiveTvIcon },
+  { key: 'rise', label: 'RISE Dashboard', href: '/rise', icon: TrendingUpIcon },
 ];
 
 interface AppShellProps {

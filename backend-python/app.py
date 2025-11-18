@@ -454,6 +454,7 @@ if __name__ == '__main__':
 # PATREON_REDIRECT_URI=https://yourdomain.com/api/auth/patreon/callback
 
 @app.route('/api/auth/patreon/login')
+@app.route('/api/auth/patreon')  # Alias for cleaner frontend calls
 def patreon_login():
     try:
         client_id = os.environ.get('PATREON_CLIENT_ID')
