@@ -453,12 +453,15 @@ def handle_404_error(e):
 @app.errorhandler(405)
 def handle_405_error(e):
     """Handle 405 Method Not Allowed errors and return JSON error response"""
+    print(f"405 error handler triggered for {request.path} with method {request.method}")
     # Only return JSON for API routes
     if request.path.startswith('/api/'):
-        return jsonify({
+        response = jsonify({
             'error': 'Method not allowed',
-            'message': f'The method {request.method} is not allowed for {request.path}.'
-        }), 405
+            'message': f'The method {request.method} is not allowed for {request.path}. Allowed methods: {e.valid_methods if hasattr(e, "valid_methods") else "Unknown"}'
+        })
+        response.status_code = 405
+        return response
     # Return default Flask 405 for non-API routes
     return e
 
@@ -481,10 +484,26 @@ def handle_500_error(e):
 @app.errorhandler(Exception)
 def handle_general_exception(e):
     """Handle unhandled exceptions and return JSON error response"""
-    from werkzeug.exceptions import HTTPException
+    from werkzeug.exceptions import HTTPException, MethodNotAllowed
     
-    # Let Flask handle HTTP exceptions (404, 403, etc.)
+    # Handle HTTP exceptions for API routes
     if isinstance(e, HTTPException):
+        if request.path.startswith('/api/'):
+            # Special handling for 405 Method Not Allowed
+            if isinstance(e, MethodNotAllowed) or e.code == 405:
+                print(f"MethodNotAllowed caught in general handler: {request.method} for {request.path}")
+                return jsonify({
+                    'error': 'method_not_allowed',
+                    'message': f'The method {request.method} is not allowed for {request.path}.',
+                    'code': 405,
+                    'allowed_methods': getattr(e, 'valid_methods', [])
+                }), 405
+            # Convert other HTTP exceptions to JSON for API routes
+            return jsonify({
+                'error': e.name.lower().replace(' ', '_'),
+                'message': e.description or str(e),
+                'code': e.code
+            }), e.code
         return e
     
     print(f"Unhandled exception: {e}")
@@ -631,9 +650,12 @@ def delete_task(task_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
-@app.route('/api/admin/update', methods=['POST', 'OPTIONS'])
+@app.route('/api/admin/update', methods=['POST', 'OPTIONS', 'GET'])
 def admin_update():
     """Post an admin update that will be broadcast to all connected clients"""
+    # Debug: Log the request
+    print(f"Admin update endpoint hit: method={request.method}, path={request.path}")
+    
     # Handle CORS preflight
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -642,6 +664,14 @@ def admin_update():
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
+    
+    # Allow GET for testing
+    if request.method == 'GET':
+        return jsonify({
+            'message': 'Admin update endpoint is working',
+            'methods': ['POST', 'OPTIONS'],
+            'path': request.path
+        })
     
     try:
         # Check if user is authenticated
