@@ -442,17 +442,44 @@ def get_tasks():
 def create_task():
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request', 'message': 'Request body is required'}), 400
+        
+        # Validate required fields
+        if not data.get('title') or not data['title'].strip():
+            return jsonify({'error': 'Validation error', 'message': 'Title is required'}), 400
+        
+        # Create task
         task = Task(
             id=str(uuid.uuid4()),
-            title=data['title'],
-            description=data.get('description', ''),
+            title=data['title'].strip(),
+            description=data.get('description', '') or '',
             hyperlinks=json.dumps(data.get('hyperlinks', [])),
             status=data.get('status', 'pending')
         )
-        db.session.add(task)
-        db.session.commit()
+        
+        try:
+            db.session.add(task)
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            print(f"Database error creating task: {db_error}")
+            import traceback
+            traceback.print_exc()
+            # Check if it's a connection error
+            error_str = str(db_error).lower()
+            if 'connection' in error_str or 'database' in error_str or 'operational' in error_str:
+                return jsonify({
+                    'error': 'Database unavailable', 
+                    'message': 'Database connection failed. Please check your database configuration.'
+                }), 503
+            raise db_error
+        
         socketio.emit('task_created', task.to_dict())
         return jsonify({'task': task.to_dict()}), 201
+    except KeyError as e:
+        print(f"Missing required field: {e}")
+        return jsonify({'error': 'Validation error', 'message': f'Missing required field: {str(e)}'}), 400
     except Exception as e:
         print(f"Error creating task: {e}")
         import traceback
