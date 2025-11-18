@@ -543,14 +543,24 @@ def patreon_callback():
         user_res.raise_for_status()
         user_data = user_res.json()
         
+        print(f"Patreon API response: {json.dumps(user_data, indent=2)}")
+        
         # Parse user data from Patreon API response
+        if 'data' not in user_data:
+            print(f"Error: No 'data' field in Patreon response: {user_data}")
+            return redirect('/?auth=error&message=invalid_response')
+        
         data = user_data.get('data', {})
         attributes = data.get('attributes', {})
         relationships = data.get('relationships', {})
         
-        # Extract user info
+        # Extract user info with fallbacks
         user_id = data.get('id', '')
-        user_name = attributes.get('full_name') or attributes.get('first_name', '')
+        if not user_id:
+            print(f"Error: No user ID in Patreon response: {data}")
+            return redirect('/?auth=error&message=no_user_id')
+        
+        user_name = attributes.get('full_name') or attributes.get('first_name') or 'Patreon User'
         user_email = attributes.get('email', '')
         user_avatar = attributes.get('image_url', '')
         
@@ -585,7 +595,7 @@ def patreon_callback():
                         break
         
         # Store user data in session
-        session['user'] = {
+        user_session_data = {
             'id': user_id,
             'name': user_name,
             'email': user_email,
@@ -595,6 +605,15 @@ def patreon_callback():
             'membershipTier': membership_tier,
             'membershipAmount': membership_amount,
         }
+        
+        print(f"Storing user in session: {user_session_data}")
+        session['user'] = user_session_data
+        
+        # Make sure session is saved
+        session.permanent = True
+        
+        # Debug: Print session info
+        print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
         
         # Redirect to labs page with auth success
         return redirect('/labs?auth=success')
@@ -617,4 +636,7 @@ def patreon_callback():
         print(f"Patreon OAuth error: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
-        return redirect('/?auth=error&message=user_fetch_failed')
+        error_message = str(e)
+        # Make error message URL-safe
+        error_message = error_message.replace(' ', '_').replace(':', '').replace('\n', '')[:50]
+        return redirect(f'/?auth=error&message=user_fetch_failed&detail={error_message}')
