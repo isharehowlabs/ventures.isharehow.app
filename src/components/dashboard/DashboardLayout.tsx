@@ -3,7 +3,6 @@ import { Box, Tabs, Tab, useTheme, useMediaQuery, Paper, Typography } from '@mui
 import StreamingPanel from './StreamingPanel';
 import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
-import CodeHandoffPanel from './CodeHandoffPanel';
 import AIJournalPanel from './AIJournalPanel';
 import Web3Panel from './Web3Panel';
 
@@ -55,9 +54,8 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="Streaming" />
-          <Tab label="Designs" />
+          <Tab label="Designs & Code" />
           <Tab label="Documents" />
-          <Tab label="Code Handoff" />
           <Tab label="AI Journal" />
           <Tab label="Web3 Hub" />
         </Tabs>
@@ -72,12 +70,9 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
             <DocsPanel />
           </TabPanel>
           <TabPanel value={activeTab} index={3}>
-            <CodeHandoffPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={4}>
             <AIJournalPanel />
           </TabPanel>
-          <TabPanel value={activeTab} index={5}>
+          <TabPanel value={activeTab} index={4}>
             <Web3Panel />
           </TabPanel>
         </Box>
@@ -98,9 +93,8 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
         }}
       >
         <Tab label="Streaming" />
-        <Tab label="Designs" />
+        <Tab label="Designs & Code" />
         <Tab label="Documents" />
-        <Tab label="Code Handoff" />
         <Tab label="AI Journal" />
         <Tab label="Web3 Hub" />
       </Tabs>
@@ -140,12 +134,9 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
               <DocsPanel />
             </TabPanel>
             <TabPanel value={activeTab} index={3}>
-              <CodeHandoffPanel />
-            </TabPanel>
-            <TabPanel value={activeTab} index={4}>
               <AIJournalPanel />
             </TabPanel>
-            <TabPanel value={activeTab} index={5}>
+            <TabPanel value={activeTab} index={4}>
               <Web3Panel />
             </TabPanel>
           </Box>
