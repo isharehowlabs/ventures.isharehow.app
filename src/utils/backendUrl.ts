@@ -56,13 +56,24 @@ export const fetchWithErrorHandling = async (
   options: RequestInit = {}
 ): Promise<Response> => {
   try {
+    // Only add Content-Type for requests that have a body (POST, PUT, PATCH)
+    const hasBody = options.body !== undefined && options.body !== null;
+    const method = (options.method || 'GET').toUpperCase();
+    const needsContentType = hasBody && ['POST', 'PUT', 'PATCH'].includes(method);
+    
+    const headers: HeadersInit = {
+      ...options.headers,
+    };
+    
+    // Only add Content-Type for requests with body
+    if (needsContentType && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+    
     const response = await fetch(url, {
       ...options,
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
