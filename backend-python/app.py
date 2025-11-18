@@ -413,6 +413,46 @@ def figma_file_tokens(id):
         for style in styles.values()
     ]
     return jsonify({'tokens': tokens})
+# Global error handler for unhandled exceptions (500 errors)
+@app.errorhandler(500)
+def handle_500_error(e):
+    """Handle 500 errors and return JSON error response"""
+    print(f"500 error occurred: {e}")
+    import traceback
+    traceback.print_exc()
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'An unexpected error occurred. Please check server logs for details.'
+    }), 500
+
+# Handle unhandled exceptions that aren't HTTP exceptions
+@app.errorhandler(Exception)
+def handle_general_exception(e):
+    """Handle unhandled exceptions and return JSON error response"""
+    from werkzeug.exceptions import HTTPException
+    
+    # Let Flask handle HTTP exceptions (404, 403, etc.)
+    if isinstance(e, HTTPException):
+        return e
+    
+    print(f"Unhandled exception: {e}")
+    import traceback
+    traceback.print_exc()
+    
+    # If it's a database error, return 503
+    error_str = str(e).lower()
+    if 'connection' in error_str or 'database' in error_str or 'operational' in error_str:
+        return jsonify({
+            'error': 'Database unavailable',
+            'message': 'Database connection failed. Please check your database configuration.'
+        }), 503
+    
+    # Otherwise return 500 with error details
+    return jsonify({
+        'error': 'Internal server error',
+        'message': str(e)
+    }), 500
+
 # --- Auth Endpoints (session-based) ---
 @app.route('/api/auth/me', methods=['GET'])
 def auth_me():
