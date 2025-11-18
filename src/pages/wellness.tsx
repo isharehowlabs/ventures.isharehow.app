@@ -1,5 +1,6 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, FormEvent } from 'react';
 import Head from 'next/head';
+import DOMPurify from 'dompurify';
 import {
   AppBar,
   Toolbar,
@@ -66,57 +67,6 @@ const WellnessPage = () => {
     }
     setQuizResult(resultMessage);
   };
-
-  useEffect(() => {
-    const scriptURL = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
-    const ShopifyBuy = (window as any).ShopifyBuy;
-
-    const loadScript = () => {
-      const script = document.createElement('script');
-      script.async = true;
-      script.src = scriptURL;
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(script);
-      script.onload = ShopifyBuyInit;
-    };
-
-    const ShopifyBuyInit = () => {
-      const ShopifyBuy = (window as any).ShopifyBuy;
-      if (ShopifyBuy) {
-        const client = ShopifyBuy.buildClient({
-          domain: 'isharehow.myshopify.com',
-          storefrontAccessToken: 'dc79ce7c1d3c946b2badeb44db899665',
-        });
-        ShopifyBuy.UI.onReady(client).then((ui: any) => {
-          const productOptions = {
-            product: {
-              styles: {
-                product: { '@media (min-width: 601px)': { 'max-width': '100%', 'margin-left': '0', 'margin-bottom': '50px' } },
-                button: { 'background-color': '#28a745', ':hover': { 'background-color': '#218838' } }
-              },
-              text: { button: 'Add to Cart' }
-            },
-            cart: { styles: { button: { 'background-color': '#28a745', ':hover': { 'background-color': '#218838' } } } }
-          };
-
-          // Product IDs are placeholders as in the original HTML
-          ui.createComponent('product', { id: 'YOUR_PRODUCT_ID_1', node: document.getElementById('product-1'), moneyFormat: '${{amount}}', options: productOptions });
-          ui.createComponent('product', { id: 'YOUR_PRODUCT_ID_2', node: document.getElementById('product-2'), moneyFormat: '${{amount}}', options: productOptions });
-          ui.createComponent('product', { id: 'YOUR_PRODUCT_ID_3', node: document.getElementById('product-3'), moneyFormat: '${{amount}}', options: productOptions });
-          ui.createComponent('product', { id: 'YOUR_PRODUCT_ID_4', node: document.getElementById('product-4'), moneyFormat: '${{amount}}', options: productOptions });
-        });
-      }
-    };
-
-    if (ShopifyBuy) {
-      if (ShopifyBuy.UI) {
-        ShopifyBuyInit();
-      } else {
-        loadScript();
-      }
-    } else {
-      loadScript();
-    }
-  }, []);
 
   return (
     <>
@@ -267,7 +217,16 @@ const WellnessPage = () => {
             {quizResult && (
               <Box id="quiz-result" sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
                 <Typography variant="h5">Results</Typography>
-                <Typography dangerouslySetInnerHTML={{ __html: String(quizResult) }} />
+                <Typography 
+                  dangerouslySetInnerHTML={{ 
+                    __html: typeof window !== 'undefined' 
+                      ? DOMPurify.sanitize(String(quizResult), { 
+                          ALLOWED_TAGS: ['strong', 'br', 'a'],
+                          ALLOWED_ATTR: ['href']
+                        })
+                      : String(quizResult).replace(/<[^>]*>/g, '')
+                  }} 
+                />
               </Box>
             )}
           </Container>
@@ -285,7 +244,6 @@ const WellnessPage = () => {
                       <Typography className="product-icon" gutterBottom>{p.icon}</Typography>
                       <Typography variant="h5" component="h5">{p.title}</Typography>
                       <Typography paragraph>{p.desc}</Typography>
-                      <div id={`product-${i + 1}`}></div>
                     </CardContent>
                   </Card>
                 </Grid>

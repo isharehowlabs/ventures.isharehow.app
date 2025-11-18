@@ -30,8 +30,13 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configure CORS to allow credentials (cookies)
 # Note: flask-cors handles all CORS headers automatically, don't add them manually
+allowed_origins = ['https://ventures.isharehow.app']
+if os.environ.get('FLASK_ENV') != 'production':
+    allowed_origins.append('http://localhost:5000')
+    allowed_origins.append('http://localhost:3000')
+
 CORS(app, 
-     origins=['http://localhost:5000', 'https://ventures.isharehow.app'],
+     origins=allowed_origins,
      supports_credentials=True,
      allow_headers=['Content-Type', 'Authorization'])
 

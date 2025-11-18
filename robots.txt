@@ -1,2 +1,13 @@
 User-agent: *
-Disallow:
+Allow: /
+
+# Disallow internal/private paths
+Disallow: /api/
+Disallow: /backend-python/
+Disallow: /_next/
+Disallow: /node_modules/
+Disallow: /out/
+Disallow: /.git/
+
+# Sitemap location
+Sitemap: https://ventures.isharehow.app/sitemap.xml
