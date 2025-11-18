@@ -25,6 +25,17 @@ import {
   Lightbulb as LightbulbIcon,
   Group as GroupIcon,
   Edit as EditIcon,
+  LocalFlorist as LocalFloristIcon,
+  DirectionsBike as DirectionsBikeIcon,
+  Quiz as QuizIcon,
+  ShoppingCart as ShoppingCartIcon,
+  VideoLibrary as VideoLibraryIcon,
+  Spa as SpaIcon,
+  Park as ParkIcon,
+  Restaurant as RestaurantIcon,
+  SelfImprovement as SelfImprovementIcon,
+  OpenInNew as OpenInNewIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 
@@ -66,6 +77,25 @@ interface TrainingGoal {
   deadline?: string;
 }
 
+interface WellnessProduct {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
+interface CyclingStat {
+  label: string;
+  value: string | number;
+  unit: string;
+}
+
+interface RISEPrinciple {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+}
+
 // Sample data - in production, this would come from an API
 const initialStats: Stat[] = [
   { name: 'Physical', value: 65, max: 100, color: '#ff6b6b', icon: <FitnessCenterIcon /> },
@@ -97,6 +127,46 @@ const initialGoals: TrainingGoal[] = [
   { id: '2', title: 'Improve Physical Fitness', description: 'Reach 75 in Physical stat', progress: 65, target: 75, category: 'Physical' },
   { id: '3', title: 'Build Network', description: 'Connect with 50 professionals', progress: 32, target: 50, category: 'Social' },
   { id: '4', title: 'Learn New Skill', description: 'Master a new technical skill', progress: 40, target: 100, category: 'Professional' },
+];
+
+// Wellness Lab Data
+const wellnessProducts: WellnessProduct[] = [
+  { id: '1', icon: '🌿', title: 'Detox Herbal Blend', description: 'Cleanse your body with our powerful blend of herbs designed to support lymphatic and digestive health.' },
+  { id: '2', icon: '⚡', title: 'Energizing Tonic', description: 'Boost vitality and balance with our advanced herbal tonic, crafted to enhance energy flow.' },
+  { id: '3', icon: '💧', title: 'Nervous System Support', description: 'Calm and restore your nervous system with our soothing herbal formula, inspired by holistic traditions.' },
+  { id: '4', icon: '👁️', title: 'Immune Defense Capsules', description: 'Strengthen your body\'s natural defenses with our advanced herbal capsules for holistic immunity.' },
+];
+
+const microHabitsFeatures = [
+  { icon: '📋', title: 'Personalized Plan', description: 'Custom micro-habits based on your goals, schedule, and lifestyle preferences' },
+  { icon: '📱', title: 'Free Digital Tracker', description: 'Beautiful habit tracking app with reminders, progress charts, and streak counters' },
+  { icon: '🎓', title: 'Daily Guidance', description: 'Step-by-step instructions, tips, and science-backed insights for each day' },
+  { icon: '🌟', title: 'Lifetime Access', description: 'Keep your plan forever, plus access to our growing library of bonus habits' },
+];
+
+// RISE Cycling Data
+const cyclingStats: CyclingStat[] = [
+  { label: 'FTP (Xert)', value: 284, unit: 'W' },
+  { label: 'Weight', value: 69.5, unit: 'kg' },
+  { label: 'W/kg Ratio', value: 4.05, unit: 'W/kg' },
+];
+
+const risePrinciples: RISEPrinciple[] = [
+  {
+    title: 'Nature Grounding',
+    description: 'We believe and love the Earth, connecting with its rhythms and energies to foster holistic well-being.',
+    icon: <ParkIcon />,
+  },
+  {
+    title: 'Protect Your Gut',
+    description: 'Independent food production and eating for energy generation. Focus on gut health through fermented foods, prebiotics, and nutrient-dense meals.',
+    icon: <RestaurantIcon />,
+  },
+  {
+    title: 'Self-Correction Algorithm',
+    description: 'Inner alchemy processing, shadow work subroutines, and conscious evolution protocols, Intuition enhancement, and transcendental awareness.',
+    icon: <SelfImprovementIcon />,
+  },
 ];
 
 function StatCard({ stat }: { stat: Stat }) {
@@ -286,6 +356,66 @@ function GoalCard({ goal }: { goal: TrainingGoal }) {
   );
 }
 
+function WellnessProductCard({ product }: { product: WellnessProduct }) {
+  return (
+    <Card variant="outlined" sx={{ height: '100%', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-4px)' } }}>
+      <CardContent>
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          <Box sx={{ fontSize: '2.5rem' }}>{product.icon}</Box>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+              {product.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {product.description}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CyclingStatCard({ stat }: { stat: CyclingStat }) {
+  return (
+    <Card sx={{ textAlign: 'center', height: '100%' }}>
+      <CardContent>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          {stat.label}
+        </Typography>
+        <Typography variant="h4" fontWeight={700} color="primary">
+          {stat.value}
+          <Typography component="span" variant="h6" color="text.secondary" sx={{ ml: 0.5 }}>
+            {stat.unit}
+          </Typography>
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RISEPrincipleCard({ principle }: { principle: RISEPrinciple }) {
+  return (
+    <Card variant="outlined" sx={{ height: '100%' }}>
+      <CardContent>
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+            {principle.icon}
+          </Avatar>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+              {principle.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {principle.description}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
 function RiseDashboard() {
   const theme = useTheme();
   const [stats, setStats] = useState<Stat[]>(initialStats);
@@ -457,6 +587,291 @@ function RiseDashboard() {
             </Card>
           </Grid>
         </Grid>
+
+        {/* Wellness Lab Panel */}
+        <Box sx={{ mt: 4, mb: 4 }}>
+          <Card>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                <Typography variant="h5" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SpaIcon color="primary" />
+                  Wellness Lab
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  href="https://ventures.isharehow.app/wellness/"
+                  target="_blank"
+                  endIcon={<OpenInNewIcon />}
+                >
+                  Visit Wellness Lab
+                </Button>
+              </Stack>
+
+              {/* 7-Day Micro-Habits Plan */}
+              <Box sx={{ mb: 4 }}>
+                <Paper
+                  elevation={2}
+                  sx={{
+                    p: 3,
+                    mb: 3,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <CheckCircleIcon sx={{ fontSize: 40 }} />
+                    <Box>
+                      <Typography variant="h6" fontWeight={700}>
+                        7-Day Micro-Habits Plan + Free Digital Tracker
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        Science-proven small changes that create massive results
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Grid container spacing={2} sx={{ mt: 2 }}>
+                    {microHabitsFeatures.map((feature, index) => (
+                      <Grid item xs={12} sm={6} md={3} key={index}>
+                        <Box sx={{ bgcolor: 'rgba(255,255,255,0.1)', p: 2, borderRadius: 2, height: '100%' }}>
+                          <Typography variant="h4" sx={{ mb: 1 }}>{feature.icon}</Typography>
+                          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                            {feature.title}
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                            {feature.description}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{ mt: 3, bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
+                    href="https://www.patreon.com/cw/JamelEliYah"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Join Patreon for Free Ebook
+                  </Button>
+                </Paper>
+              </Box>
+
+              {/* Body System Cleanse Quiz */}
+              <Box sx={{ mb: 4 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                  <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <QuizIcon color="primary" />
+                    Body System Cleanse Quiz
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    href="https://ventures.isharehow.app/wellness/#quiz"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Take Quiz
+                  </Button>
+                </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Answer questions to identify which body system may need cleansing: Digestive, Urinary, Lymphatic, Respiratory, or Integumentary.
+                </Typography>
+              </Box>
+
+              {/* Healing Products */}
+              <Box>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ShoppingCartIcon color="primary" />
+                  Our Healing Products
+                </Typography>
+                <Grid container spacing={2}>
+                  {wellnessProducts.map((product) => (
+                    <Grid item xs={12} sm={6} md={3} key={product.id}>
+                      <WellnessProductCard product={product} />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+
+              {/* Educational Resources */}
+              <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VideoLibraryIcon color="primary" />
+                  Educational Resources
+                </Typography>
+                <Stack direction="row" spacing={2} flexWrap="wrap">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.youtube.com/@RisewithJamel"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    YouTube - Rise with Jamel
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.patreon.com/cw/JamelEliYah"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Patreon - Jamel EliYah
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.facebook.com/JamelEliYah"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Facebook - Jamel EliYah
+                  </Button>
+                </Stack>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* RISE Cycling Panel */}
+        <Box sx={{ mb: 4 }}>
+          <Card>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                <Typography variant="h5" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <DirectionsBikeIcon color="primary" />
+                  RISE Cycling
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  href="https://ventures.isharehow.app/rise_cycling/"
+                  target="_blank"
+                  endIcon={<OpenInNewIcon />}
+                >
+                  Visit RISE Cycling
+                </Button>
+              </Stack>
+
+              {/* 4-Week Power-Ride Program */}
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 3,
+                  mb: 4,
+                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  color: 'white',
+                }}
+              >
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                  <DirectionsBikeIcon sx={{ fontSize: 40 }} />
+                  <Box>
+                    <Typography variant="h6" fontWeight={700}>
+                      4-Week Power-Ride Program
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Transform your cycling performance with structured training plans, performance tracking, and community support. Try your first week completely free.
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Button
+                  variant="contained"
+                  sx={{ mt: 2, bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
+                  href="https://ventures.isharehow.app/rise_cycling/"
+                  target="_blank"
+                  endIcon={<OpenInNewIcon />}
+                >
+                  Get Started
+                </Button>
+              </Paper>
+
+              {/* Rider Statistics */}
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+                  Rider Statistics
+                </Typography>
+                <Grid container spacing={2}>
+                  {cyclingStats.map((stat, index) => (
+                    <Grid item xs={12} sm={4} key={index}>
+                      <CyclingStatCard stat={stat} />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+
+              {/* Core RISE Principles */}
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+                  Core RISE Principles
+                </Typography>
+                <Grid container spacing={2}>
+                  {risePrinciples.map((principle, index) => (
+                    <Grid item xs={12} md={4} key={index}>
+                      <RISEPrincipleCard principle={principle} />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+
+              {/* Training & Resources */}
+              <Box sx={{ pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VideoLibraryIcon color="primary" />
+                  Training & Resource Footage
+                </Typography>
+                <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mb: 2 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.youtube.com/@RisewithJamel"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    YouTube
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.twitch.tv/jameleliyah"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Twitch
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.patreon.com/cw/JamelEliYah"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Patreon
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.facebook.com/JamelEliYah"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Facebook
+                  </Button>
+                </Stack>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  href="https://isharehow.app/discord"
+                  target="_blank"
+                  endIcon={<OpenInNewIcon />}
+                >
+                  Join Our Discord Community
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
     </AppShell>
   );
