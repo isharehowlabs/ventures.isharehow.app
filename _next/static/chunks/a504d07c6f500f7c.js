@@ -1,0 +1,10 @@
+__turbopack_load_page_chunks__("/wellness", [
+  "static/chunks/89737ccdb7a4edbf.js",
+  "static/chunks/cdf36735293aedaa.js",
+  "static/chunks/772a5c3dfbc28b8f.js",
+  "static/chunks/2f7d47752deac485.js",
+  "static/chunks/4eca105378c28cee.js",
+  "static/chunks/1bdf0973974dc793.js",
+  "static/chunks/42d90c11633ad283.js",
+  "static/chunks/turbopack-54e92f8421240823.js"
+])
