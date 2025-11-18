@@ -447,7 +447,7 @@ const MspPage = () => {
               >
                 <Button
                   component="a"
-                  href="https://isharehow.app/discord"
+                  href="https://isharehow.app"
                   target="_blank"
                   variant="contained"
                   size="large"
@@ -462,11 +462,11 @@ const MspPage = () => {
                     },
                   }}
                 >
-                  Join Our Discord
+                  Learn More About iShareHow Labs
                 </Button>
                 <Button
                   component="a"
-                  href="mailto:support@isharehow.app"
+                  href="mailto:soc@isharehowlabs.com"
                   variant="outlined"
                   size="large"
                   sx={{
