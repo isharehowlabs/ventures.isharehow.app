@@ -15,13 +15,24 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 
+# Session configuration
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
-CORS(app)
+
+# Configure CORS to allow credentials (cookies)
+CORS(app, 
+     origins=['http://localhost:3000', 'http://localhost:3001', 'https://ventures.isharehow.app'],
+     supports_credentials=True,
+     allow_headers=['Content-Type', 'Authorization'])
 
 # Task model
 class Task(db.Model):
@@ -387,8 +398,12 @@ def figma_file_tokens(id):
 def auth_me():
     user = session.get('user')
     if user:
-        return jsonify(user)
-    return jsonify({'error': 'Not authenticated', 'message': 'No valid session found. Please log in again.'}), 401
+        response = jsonify(user)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    response = jsonify({'error': 'Not authenticated', 'message': 'No valid session found. Please log in again.'})
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response, 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def auth_logout():
@@ -519,18 +534,70 @@ def patreon_callback():
             print(f"Patreon OAuth error: No access token. Response: {token_data}")
             return redirect('/?auth=error&message=token_error')
 
-        # Fetch user identity
+        # Fetch user identity with memberships
         user_res = requests.get(
-            "https://www.patreon.com/api/oauth2/v2/identity",
+            "https://www.patreon.com/api/oauth2/v2/identity?include=memberships&fields[member]=patron_status,currently_entitled_amount_cents",
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=10
         )
         user_res.raise_for_status()
         user_data = user_res.json()
         
-        # TODO: Do something with user_data (e.g., create session, user record, etc.)
-        # For now, just redirect to success
-        return redirect('/?auth=success')
+        # Parse user data from Patreon API response
+        data = user_data.get('data', {})
+        attributes = data.get('attributes', {})
+        relationships = data.get('relationships', {})
+        
+        # Extract user info
+        user_id = data.get('id', '')
+        user_name = attributes.get('full_name') or attributes.get('first_name', '')
+        user_email = attributes.get('email', '')
+        user_avatar = attributes.get('image_url', '')
+        
+        # Check membership status
+        is_paid_member = False
+        membership_tier = None
+        membership_amount = 0
+        
+        memberships = relationships.get('memberships', {}).get('data', [])
+        if memberships:
+            # Get membership details from included data
+            included = user_data.get('included', [])
+            for membership in memberships:
+                membership_id = membership.get('id')
+                for item in included:
+                    if item.get('id') == membership_id and item.get('type') == 'member':
+                        member_attrs = item.get('attributes', {})
+                        patron_status = member_attrs.get('patron_status')
+                        amount_cents = member_attrs.get('currently_entitled_amount_cents', 0)
+                        
+                        # Check if active patron
+                        if patron_status == 'active_patron':
+                            is_paid_member = True
+                            membership_amount = amount_cents / 100  # Convert cents to dollars
+                            # You can determine tier based on amount if needed
+                            if membership_amount >= 10:
+                                membership_tier = 'premium'
+                            elif membership_amount >= 5:
+                                membership_tier = 'standard'
+                            else:
+                                membership_tier = 'basic'
+                        break
+        
+        # Store user data in session
+        session['user'] = {
+            'id': user_id,
+            'name': user_name,
+            'email': user_email,
+            'avatar': user_avatar,
+            'patreonId': user_id,
+            'isPaidMember': is_paid_member,
+            'membershipTier': membership_tier,
+            'membershipAmount': membership_amount,
+        }
+        
+        # Redirect to labs page with auth success
+        return redirect('/labs?auth=success')
         
     except requests.exceptions.HTTPError as e:
         error_detail = "Unknown error"
