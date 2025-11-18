@@ -132,11 +132,11 @@ const ventures = [
     title: 'Web3 Development',
     subtitle: 'Web3 Development',
     description: 'iShareHow Labs Web3 Development & Women in web3 Venture.',
-    image: '/web3/Gemini_Generated_Image_6y4dkw6y4dkw6y4d.png',
+    image: '/Gemini_Generated_Image_6y4dkw6y4dkw6y4d.png',
     category: 'Web3',
     color: '#5865F2',
     stats: { likes: 187, views: '10K', saves: 52 },
-    url: '/web3',
+    url: 'https://pheniox3.app',
     tags: ['Web3', 'Development', 'Women in web3'],
   },
 ];
