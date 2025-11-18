@@ -13,7 +13,7 @@ export const getBackendUrl = (): string => {
   // For Render internal communication (server-side or build-time)
   // Use internal address for better performance and security
   if (typeof window === 'undefined' && process.env.RENDER) {
-    return 'http://ventures-isharehow-app:3001';
+    return 'http://ventures-isharehow-app:5000';
   }
   
   // For browser/client-side requests, use external HTTPS URL

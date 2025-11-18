@@ -30,7 +30,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configure CORS to allow credentials (cookies)
 CORS(app, 
-     origins=['http://localhost:3000', 'http://localhost:3001', 'https://ventures.isharehow.app'],
+     origins=['http://localhost:5000', 'https://ventures.isharehow.app'],
      supports_credentials=True,
      allow_headers=['Content-Type', 'Authorization'])
 

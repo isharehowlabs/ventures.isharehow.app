@@ -10,5 +10,5 @@ Tables will be created when database is available
  * Debug mode: off
  * Running on all addresses.
    WARNING: This is a development server. Do not use it in a production deployment.
- * Running on http://184.94.212.248:3001/ (Press CTRL+C to quit)
-127.0.0.1 - - [18/Nov/2025 01:48:17] "[31m[1mGET /api/auth/me HTTP/1.1[0m" 401 -
+ * Running on http://184.94.212.248:5000/ (Press CTRL+C to quit)
+127.0.0.1 - - [18/Nov/2025 01:50:37] "[31m[1mGET /api/auth/me HTTP/1.1[0m" 401 -
