@@ -127,6 +127,18 @@ const ventures = [
     url: '/msp',
     tags: ['Manager', 'Toolkit', 'Project'],
   },
+  {
+    id: 'web3',
+    title: 'Web3 Development',
+    subtitle: 'Web3 Development',
+    description: 'iShareHow Labs Web3 Development & Women in web3 Venture.',
+    image: 'https://isharehowlabs.com/images/web3.png',
+    category: 'Web3',
+    color: '#5865F2',
+    stats: { likes: 187, views: '10K', saves: 52 },
+    url: '/web3',
+    tags: ['Web3', 'Development', 'Women in web3'],
+  },
 ];
 
 function App() {
