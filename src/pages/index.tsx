@@ -136,7 +136,7 @@ const ventures = [
     category: 'Web3',
     color: '#5865F2',
     stats: { likes: 187, views: '10K', saves: 52 },
-    url: 'https://phoenix3.app/',
+    url: '/labs',
     tags: ['Web3', 'Development', 'Women in web3'],
   },
   {
@@ -144,7 +144,7 @@ const ventures = [
     title: 'DivineAmusement YouTube Channel',
     subtitle: 'DivineAmusement YouTube Channel',
     description: 'DivineAmusement YouTube Channel',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop',
+    image: 'https://yt3.ggpht.com/s2hQQ2x05TS0ZTiGsSXaZN89hBHkfB5PE1JWaSzHOw68ndtRKZj_OKpfSl3xvZBkG4VU0QKI=s108-c-k-c0x00ffffff-no-rj',
     category: 'Entertainment',
     color: '#FF6B6B',
     stats: { likes: 187, views: '10K', saves: 52 },
