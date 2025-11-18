@@ -450,6 +450,18 @@ def handle_404_error(e):
     # Return default Flask 404 for non-API routes
     return e
 
+@app.errorhandler(405)
+def handle_405_error(e):
+    """Handle 405 Method Not Allowed errors and return JSON error response"""
+    # Only return JSON for API routes
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Method not allowed',
+            'message': f'The method {request.method} is not allowed for {request.path}.'
+        }), 405
+    # Return default Flask 405 for non-API routes
+    return e
+
 @app.errorhandler(500)
 def handle_500_error(e):
     """Handle 500 errors and return JSON error response"""
@@ -619,9 +631,18 @@ def delete_task(task_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
-@app.route('/api/admin/update', methods=['POST'])
+@app.route('/api/admin/update', methods=['POST', 'OPTIONS'])
 def admin_update():
     """Post an admin update that will be broadcast to all connected clients"""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
     try:
         # Check if user is authenticated
         user = session.get('user')
