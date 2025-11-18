@@ -136,7 +136,7 @@ const ventures = [
     category: 'Web3',
     color: '#5865F2',
     stats: { likes: 187, views: '10K', saves: 52 },
-    url: 'https://pheniox3.app',
+    url: 'https://phoenix3.app/',
     tags: ['Web3', 'Development', 'Women in web3'],
   },
 ];
