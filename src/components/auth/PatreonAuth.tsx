@@ -80,7 +80,7 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
         Sign in with Patreon
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Access the cowork dashboard by signing in with your Patreon account
+        Access the co-working space dashboard by signing in with your Patreon account
       </Typography>
       
       {errorMessage && (
