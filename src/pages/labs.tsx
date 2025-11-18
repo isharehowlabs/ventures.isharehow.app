@@ -7,6 +7,7 @@ import {
   Paper,
   Stack,
   Button,
+  Alert,
 } from '@mui/material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -148,6 +149,7 @@ function LabsDashboard() {
   const [currentViewers, setCurrentViewers] = useState<number | null>(null);
   const [viewerGoal, setViewerGoal] = useState<number>(5000);
   const [isLoadingFollowers, setIsLoadingFollowers] = useState(true);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const twitchPlayerRef = useRef<any | null>(null);
   const twitchPlayer = useRef<any | null>(null);
 
@@ -213,6 +215,29 @@ function LabsDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Effect to check for auth success message
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const auth = urlParams.get('auth');
+      
+      if (auth === 'success') {
+        setShowSuccessMessage(true);
+        
+        // Clean up URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+        
+        // Auto-hide success message after 5 seconds
+        const timer = setTimeout(() => {
+          setShowSuccessMessage(false);
+        }, 5000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
   // Effect to initialize Twitch Player
   useEffect(() => {
     const script = document.createElement('script');
@@ -242,6 +267,13 @@ function LabsDashboard() {
 
   return (
     <AppShell active="labs">
+      {showSuccessMessage && (
+        <Box sx={{ mb: 3 }}>
+          <Alert severity="success" onClose={() => setShowSuccessMessage(false)}>
+            Successfully authenticated! Welcome to the Co-Work Dashboard.
+          </Alert>
+        </Box>
+      )}
       <Box sx={{ mb: { xs: 2, sm: 4 }, textAlign: 'center', px: { xs: 1, sm: 2 } }}>
         <Typography
           variant="h3"

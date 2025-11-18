@@ -1,7 +1,7 @@
 // Get backend URL - supports environment variable or defaults
 // For Render.com backends, set NEXT_PUBLIC_BACKEND_URL environment variable
 // Default Render.com backend: https://api.ventures.isharehow.app
-// Internal Render address: http://ventures-isharehow-app:3001
+// Internal Render address: http://ventures-isharehow-app:5000
 export const getBackendUrl = (): string => {
   // Check for explicit environment variable (available at build time for static export)
   // This is the recommended way for Render.com backends

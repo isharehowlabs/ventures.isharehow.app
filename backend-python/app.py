@@ -617,8 +617,8 @@ def patreon_callback():
         # Debug: Print session info
         print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
         
-        # Redirect to labs page with auth success
-        return redirect('/labs?auth=success')
+        # Redirect to labs page with auth success (trailing slash for Next.js static export)
+        return redirect('/labs/?auth=success')
         
     except requests.exceptions.HTTPError as e:
         error_detail = "Unknown error"

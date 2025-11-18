@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Get query parameters
 $queryString = $_SERVER['QUERY_STRING'] ?? '';
-$backendUrl = 'http://localhost:3001/api/products' . ($queryString ? '?' . $queryString : '');
+$backendUrl = 'http://localhost:5000/api/products' . ($queryString ? '?' . $queryString : '');
 
 // Forward request to backend
 $ch = curl_init($backendUrl);

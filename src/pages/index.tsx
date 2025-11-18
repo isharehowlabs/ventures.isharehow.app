@@ -1,6 +1,6 @@
 // UNIQUE_BUILD_TEST_2025_OCT_24_V3
-import { useState } from 'react';
-import { Box, Typography, InputBase, Paper } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, Typography, InputBase, Paper, Alert } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import VentureCard from '../components/VentureCard';
 import AppShell from '../components/AppShell';
@@ -155,6 +155,57 @@ const ventures = [
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check for error messages in URL
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const authError = urlParams.get('auth');
+      const message = urlParams.get('message');
+      const detail = urlParams.get('detail');
+      
+      if (authError === 'error') {
+        let errorText = '';
+        if (message === 'not_paid_member') {
+          errorText = 'You need to be an active paid member to access the dashboard.';
+        } else if (message === 'missing_code') {
+          errorText = 'Authentication code missing. Please try again.';
+        } else if (message === 'missing_config') {
+          errorText = 'Authentication service not properly configured. Please contact support.';
+        } else if (message === 'token_error') {
+          errorText = 'Failed to obtain access token. Please try again.';
+        } else if (message === 'api_error') {
+          errorText = 'Patreon API error. Please try again later.';
+        } else if (message === 'timeout') {
+          errorText = 'Request timed out. Please check your connection and try again.';
+        } else if (message === 'network_error') {
+          errorText = 'Network error. Please check your connection and try again.';
+        } else if (message === 'user_fetch_failed') {
+          errorText = 'Failed to fetch user information. Please try again.';
+          if (detail) {
+            errorText += ` (${detail})`;
+          }
+        } else if (message === 'invalid_state') {
+          errorText = 'Authentication failed. Please try again.';
+        } else if (message === 'invalid_response') {
+          errorText = 'Invalid response from authentication service. Please try again.';
+        } else if (message === 'no_user_id') {
+          errorText = 'User ID not found in authentication response. Please try again.';
+        } else if (message) {
+          errorText = `Authentication error: ${message}. Please try again.`;
+        } else {
+          errorText = 'Authentication error. Please try again.';
+        }
+        
+        setErrorMessage(errorText);
+        
+        // Clean up URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, []);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
@@ -180,6 +231,13 @@ function App() {
 
   return (
     <AppShell active="ventures">
+      {errorMessage && (
+        <Box sx={{ mb: 3 }}>
+          <Alert severity="error" onClose={() => setErrorMessage(null)}>
+            {errorMessage}
+          </Alert>
+        </Box>
+      )}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography
           variant="h3"
