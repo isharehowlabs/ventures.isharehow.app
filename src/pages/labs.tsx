@@ -269,14 +269,9 @@ function LabsDashboard() {
         >
           Your hub for streaming, design collaboration, document management, and code handoff.
         </Typography>
-        
-        {/* Live Updates under the title */}
-        <Box sx={{ maxWidth: 1200, mx: 'auto', mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 0 } }}>
-          <LiveUpdates />
-        </Box>
       </Box>
 
-      <DashboardLayout taskList={<TaskList />}>
+      <DashboardLayout taskList={<TaskList />} liveUpdates={<LiveUpdates />}>
       </DashboardLayout>
     </AppShell>
   );

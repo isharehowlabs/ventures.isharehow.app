@@ -603,6 +603,73 @@ def delete_task(task_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
+@app.route('/api/twitch/status', methods=['GET'])
+def twitch_status():
+    """Check if Twitch stream is live"""
+    try:
+        # Get Twitch username from environment or use default
+        twitch_username = os.environ.get('TWITCH_USERNAME', 'jameleliyah')
+        twitch_client_id = os.environ.get('TWITCH_CLIENT_ID')
+        
+        # Use Twitch Helix API (requires Client-ID)
+        if twitch_client_id:
+            # Helix API endpoint
+            twitch_api_url = f'https://api.twitch.tv/helix/streams'
+            headers = {
+                'Client-ID': twitch_client_id,
+            }
+            params = {'user_login': twitch_username}
+            
+            response = requests.get(twitch_api_url, headers=headers, params=params, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                streams = data.get('data', [])
+                is_live = len(streams) > 0
+                stream_data = streams[0] if is_live else None
+                
+                # Emit socket event if just went live
+                if is_live:
+                    socketio.emit('twitch:live', {
+                        'message': f'🔴 {twitch_username} is now LIVE on Twitch!',
+                        'stream': stream_data
+                    })
+                
+                return jsonify({
+                    'isLive': is_live,
+                    'stream': stream_data,
+                    'username': twitch_username
+                })
+            else:
+                # API error
+                return jsonify({
+                    'isLive': False,
+                    'error': f'Twitch API error: {response.status_code}',
+                    'username': twitch_username
+                }), 500
+        else:
+            # No Twitch Client ID configured - return false but don't error
+            # Frontend will handle this gracefully
+            return jsonify({
+                'isLive': False,
+                'stream': None,
+                'username': twitch_username,
+                'message': 'Twitch API not configured'
+            })
+    except requests.exceptions.Timeout:
+        return jsonify({
+            'isLive': False,
+            'error': 'Request timeout',
+            'username': os.environ.get('TWITCH_USERNAME', 'jameleliyah')
+        }), 504
+    except Exception as e:
+        print(f"Error checking Twitch status: {e}")
+        return jsonify({
+            'isLive': False,
+            'error': str(e),
+            'username': os.environ.get('TWITCH_USERNAME', 'jameleliyah')
+        }), 500
+
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
