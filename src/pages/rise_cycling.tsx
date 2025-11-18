@@ -150,10 +150,10 @@ const RiseCycling = () => {
           <Box id="about" component="section" sx={{ py: 4, textAlign: 'center' }}>
             <Typography variant="h2" sx={{ fontFamily: "'Orbitron', sans-serif", color: ac.primary, fontWeight: 700, mb: 3 }}>RISE::OVERVIEW</Typography>
             <Typography sx={{ maxWidth: '800px', margin: '0 auto 2rem', fontSize: '1.1rem', color: ac.secondary }}>
-              RISE::CYCLING::MINISTRY, administered by <Typography component="span" sx={{ color: ac.accent, fontWeight: 'bold' }}>iShareHow Labs LLC</Typography>, integrates cybernetic enhancement with spiritual ascension through advanced cycling methodologies, wellness optimization, and consciousness expansion. Our <Typography component="span" sx={{ fontWeight: 'bold' }}>Rise Cycling Team</Typography> operates across digital and physical realms, competing on Zwift and in real-world race matrices.
+              RISE::CYCLING::MINISTRY, administered by <Box component="span" sx={{ color: ac.accent, fontWeight: 'bold' }}>iShareHow Labs LLC</Box>, integrates cybernetic enhancement with spiritual ascension through advanced cycling methodologies, wellness optimization, and consciousness expansion. Our <Box component="span" sx={{ fontWeight: 'bold' }}>Rise Cycling Team</Box> operates across digital and physical realms, competing on Zwift and in real-world race matrices.
             </Typography>
             <Typography sx={{ maxWidth: '800px', margin: '0 auto', color: ac.secondary }}>
-              Core modules include: <Typography component="span" sx={{ fontWeight: 'bold' }}>Qum (Rise) Above All</Typography>, Bushcraft Adventures, Gut Health Optimization, Energy & Healing Frequencies, and Consciousness Rising above all.
+              Core modules include: <Box component="span" sx={{ fontWeight: 'bold' }}>Qum (Rise) Above All</Box>, Bushcraft Adventures, Gut Health Optimization, Energy & Healing Frequencies, and Consciousness Rising above all.
             </Typography>
           </Box>
 

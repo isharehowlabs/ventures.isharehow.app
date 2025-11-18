@@ -185,9 +185,9 @@ function StatCard({ stat }: { stat: Stat }) {
             </Typography>
             <Typography variant="h4" fontWeight={700} color={stat.color}>
               {stat.value}
-              <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+              <Box component="span" sx={{ ml: 0.5, fontSize: '0.875rem', color: 'text.secondary' }}>
                 / {stat.max}
-              </Typography>
+              </Box>
             </Typography>
           </Box>
         </Stack>
@@ -385,9 +385,9 @@ function CyclingStatCard({ stat }: { stat: CyclingStat }) {
         </Typography>
         <Typography variant="h4" fontWeight={700} color="primary">
           {stat.value}
-          <Typography component="span" variant="h6" color="text.secondary" sx={{ ml: 0.5 }}>
+          <Box component="span" sx={{ ml: 0.5, fontSize: '1.25rem', color: 'text.secondary' }}>
             {stat.unit}
-          </Typography>
+          </Box>
         </Typography>
       </CardContent>
     </Card>
@@ -634,7 +634,9 @@ function RiseDashboard() {
                     {microHabitsFeatures.map((feature, index) => (
                       <Grid item xs={12} sm={6} md={3} key={index}>
                         <Box sx={{ bgcolor: 'rgba(255,255,255,0.1)', p: 2, borderRadius: 2, height: '100%' }}>
-                          <Typography variant="h4" sx={{ mb: 1 }}>{feature.icon}</Typography>
+                          <Box sx={{ fontSize: '2.5rem', mb: 1, display: 'flex', justifyContent: 'center' }}>
+                            {feature.icon}
+                          </Box>
                           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                             {feature.title}
                           </Typography>
