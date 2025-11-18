@@ -132,7 +132,7 @@ const ventures = [
     title: 'Web3 Development',
     subtitle: 'Web3 Development',
     description: 'iShareHow Labs Web3 Development & Women in web3 Venture.',
-    image: 'https://isharehowlabs.com/images/web3.png',
+    image: '/web3/Gemini_Generated_Image_6y4dkw6y4dkw6y4d.png',
     category: 'Web3',
     color: '#5865F2',
     stats: { likes: 187, views: '10K', saves: 52 },
