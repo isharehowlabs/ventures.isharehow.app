@@ -21,11 +21,26 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 
-# Database configuration
+# Database configuration - make it optional to handle import errors
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,  # Verify connections before using
+    'connect_args': {'connect_timeout': 5}  # 5 second timeout
+}
 
-db = SQLAlchemy(app)
+try:
+    db = SQLAlchemy(app)
+    DB_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Database initialization failed: {e}")
+    print("Database features will be disabled. This may be due to:")
+    print("1. Missing psycopg2 package or Python 3.13 compatibility issue")
+    print("2. Invalid DATABASE_URL")
+    print("3. Database server not accessible")
+    # Create a dummy db object to prevent crashes
+    db = None
+    DB_AVAILABLE = False
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configure CORS to allow credentials (cookies)
@@ -46,35 +61,44 @@ def get_frontend_url():
     frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
     return frontend_url.rstrip('/')
 
-# Task model
-class Task(db.Model):
-    id = db.Column(db.String(36), primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    hyperlinks = db.Column(db.Text)  # JSON string of array
-    status = db.Column(db.String(20), default='pending')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+# Task model - only define if database is available
+if DB_AVAILABLE:
+    class Task(db.Model):
+        id = db.Column(db.String(36), primary_key=True)
+        title = db.Column(db.String(200), nullable=False)
+        description = db.Column(db.Text)
+        hyperlinks = db.Column(db.Text)  # JSON string of array
+        status = db.Column(db.String(20), default='pending')
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'title': self.title,
-            'description': self.description,
-            'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
-            'status': self.status,
-            'createdAt': self.created_at.isoformat(),
-            'updatedAt': self.updated_at.isoformat()
-        }
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'title': self.title,
+                'description': self.description,
+                'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
+                'status': self.status,
+                'createdAt': self.created_at.isoformat(),
+                'updatedAt': self.updated_at.isoformat()
+            }
+else:
+    # Dummy Task class when database is unavailable
+    class Task:
+        pass
 
-# Create tables
-with app.app_context():
-    try:
-        db.create_all()
-        print("Database tables created successfully")
-    except Exception as e:
-        print(f"Database connection failed: {e}")
-        print("Tables will be created when database is available")
+# Create tables - only if database is available
+if DB_AVAILABLE:
+    with app.app_context():
+        try:
+            db.create_all()
+            print("Database tables created successfully")
+        except Exception as e:
+            print(f"Database connection failed: {e}")
+            print("Tables will be created when database is available")
+            DB_AVAILABLE = False
+else:
+    print("Database not available - skipping table creation")
 
 # Shopify configuration
 SHOPIFY_STORE_URL = os.environ.get('SHOPIFY_STORE_URL')
@@ -468,6 +492,8 @@ def auth_logout():
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
+    if not DB_AVAILABLE:
+        return jsonify({'tasks': [], 'error': 'Database not available. Please check database configuration.'}), 503
     try:
         tasks = Task.query.all()
         return jsonify({'tasks': [task.to_dict() for task in tasks]})
@@ -480,6 +506,11 @@ def get_tasks():
 
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
+    if not DB_AVAILABLE:
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database is not configured or unavailable. Please check your database configuration and ensure psycopg2 is properly installed for Python 3.13.'
+        }), 503
     try:
         data = request.get_json()
         if not data:
@@ -502,16 +533,20 @@ def create_task():
             db.session.add(task)
             db.session.commit()
         except Exception as db_error:
-            db.session.rollback()
+            if db and hasattr(db, 'session'):
+                try:
+                    db.session.rollback()
+                except:
+                    pass  # Ignore rollback errors if session is broken
             print(f"Database error creating task: {db_error}")
             import traceback
             traceback.print_exc()
             # Check if it's a connection error
             error_str = str(db_error).lower()
-            if 'connection' in error_str or 'database' in error_str or 'operational' in error_str:
+            if 'connection' in error_str or 'database' in error_str or 'operational' in error_str or 'import' in error_str or 'psycopg' in error_str:
                 return jsonify({
                     'error': 'Database unavailable', 
-                    'message': 'Database connection failed. Please check your database configuration.'
+                    'message': 'Database connection failed. Please check your database configuration and ensure psycopg2-binary is compatible with Python 3.13.'
                 }), 503
             raise db_error
         
@@ -528,6 +563,11 @@ def create_task():
 
 @app.route('/api/tasks/<task_id>', methods=['PUT'])
 def update_task(task_id):
+    if not DB_AVAILABLE:
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database is not configured or unavailable. Please check your database configuration.'
+        }), 503
     try:
         task = Task.query.get_or_404(task_id)
         data = request.get_json()
@@ -546,6 +586,11 @@ def update_task(task_id):
 
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
 def delete_task(task_id):
+    if not DB_AVAILABLE:
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database is not configured or unavailable. Please check your database configuration.'
+        }), 503
     try:
         task = Task.query.get_or_404(task_id)
         db.session.delete(task)
