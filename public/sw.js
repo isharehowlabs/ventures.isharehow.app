@@ -3,8 +3,7 @@ const CACHE_NAME = 'isharehow-labs-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  // Icons are optional - cache them if they exist
 ];
 
 // Install event - cache resources
@@ -12,13 +11,32 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(urlsToCache);
+        // Cache each URL individually to handle missing files gracefully
+        return Promise.allSettled(
+          urlsToCache.map((url) => 
+            fetch(url)
+              .then((response) => {
+                if (response.ok) {
+                  return cache.put(url, response);
+                }
+              })
+              .catch(() => {
+                // Silently skip files that don't exist
+                console.log(`Skipping cache for ${url} (file not found)`);
+              })
+          )
+        );
+      })
+      .then(() => {
+        // Always skip waiting, even if some files failed
+        self.skipWaiting();
       })
       .catch((error) => {
         console.error('Service Worker install error:', error);
+        // Still skip waiting on error
+        self.skipWaiting();
       })
   );
-  self.skipWaiting();
 });
 
 // Activate event - clean up old caches

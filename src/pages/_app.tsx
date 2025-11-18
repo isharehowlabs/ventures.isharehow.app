@@ -18,14 +18,15 @@ export default function MyApp({ Component, pageProps }: any) {
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="theme-color" content="#ff6b6b" />
         
+        <link rel="manifest" href="/manifest.json" />
+        {/* Icons - will work once icon files are added to /public */}
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icon-192.png" />
-        <link rel="manifest" href="/manifest.json" />
         <link rel="shortcut icon" href="/icon-192.png" />
       </Head>
       <Component {...pageProps} />
-      <PWAInstallButton />
+      {typeof window !== 'undefined' && <PWAInstallButton />}
     </ThemeProviderWrapper>
   );
 }

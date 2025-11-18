@@ -13,20 +13,22 @@ export default function PWAInstallButton() {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Register service worker
-    if ('serviceWorker' in navigator) {
+    // Register service worker with error handling
+    if ('serviceWorker' in navigator && typeof window !== 'undefined') {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
           console.log('Service Worker registered:', registration);
         })
         .catch((error) => {
-          console.log('Service Worker registration failed:', error);
+          // Silently handle service worker registration errors
+          // This is expected if service worker file doesn't exist or has issues
+          console.log('Service Worker registration failed (non-critical):', error.message);
         });
     }
 
     // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
     }
@@ -45,12 +47,16 @@ export default function PWAInstallButton() {
       setDeferredPrompt(null);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
+    }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+      }
     };
   }, []);
 
@@ -85,17 +91,21 @@ export default function PWAInstallButton() {
   const handleDismiss = () => {
     setShowButton(false);
     // Store dismissal in localStorage to avoid showing again for a while
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+    }
   };
 
   // Check if user previously dismissed (within 7 days)
   useEffect(() => {
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
-    if (dismissed) {
-      const dismissedTime = parseInt(dismissed, 10);
-      const sevenDays = 7 * 24 * 60 * 60 * 1000;
-      if (Date.now() - dismissedTime < sevenDays) {
-        setShowButton(false);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const dismissed = localStorage.getItem('pwa-install-dismissed');
+      if (dismissed) {
+        const dismissedTime = parseInt(dismissed, 10);
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        if (Date.now() - dismissedTime < sevenDays) {
+          setShowButton(false);
+        }
       }
     }
   }, []);

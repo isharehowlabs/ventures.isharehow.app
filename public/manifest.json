@@ -12,13 +12,13 @@
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["business", "productivity", "utilities"],
@@ -28,15 +28,13 @@
       "name": "Ventures",
       "short_name": "Ventures",
       "description": "Browse all ventures",
-      "url": "/",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/"
     },
     {
       "name": "Co-Work Dashboard",
       "short_name": "Labs",
       "description": "Access the co-work dashboard",
-      "url": "/labs/",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/labs/"
     }
   ]
 }
