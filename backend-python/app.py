@@ -624,7 +624,8 @@ def patreon_callback():
         print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
         
         # Redirect to labs page with auth success (trailing slash for Next.js static export)
-        return redirect(f'{get_frontend_url()}/labs/?auth=success')
+        # Use external redirect to ensure browser follows to frontend domain
+        return redirect(f'{get_frontend_url()}/labs/?auth=success', code=302)
         
     except requests.exceptions.HTTPError as e:
         error_detail = "Unknown error"
@@ -648,3 +649,28 @@ def patreon_callback():
         # Make error message URL-safe
         error_message = error_message.replace(' ', '_').replace(':', '').replace('\n', '')[:50]
         return redirect(f'{get_frontend_url()}/?auth=error&message=user_fetch_failed&detail={error_message}')
+
+# Catch-all routes for frontend paths - redirect to frontend domain
+# This must be at the end so all API routes are matched first
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    """Catch-all route to redirect frontend paths to the frontend domain"""
+    # Don't redirect API routes - these should have been matched by specific routes above
+    # If we get here with an API path, it means the route doesn't exist
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    
+    # Build the full frontend URL with query parameters
+    frontend_url = get_frontend_url()
+    query_string = request.query_string.decode('utf-8')
+    
+    if path:
+        redirect_url = f'{frontend_url}/{path}'
+    else:
+        redirect_url = frontend_url
+    
+    if query_string:
+        redirect_url = f'{redirect_url}?{query_string}'
+    
+    return redirect(redirect_url, code=302)
