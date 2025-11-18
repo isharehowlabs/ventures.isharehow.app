@@ -76,7 +76,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
             <ListItemButton
               key={item.key}
               onClick={() => {
-                if (window.location.pathname !== item.href) {
+                if (typeof window !== 'undefined' && window.location.pathname !== item.href) {
                   window.location.href = item.href;
                 }
               }}
