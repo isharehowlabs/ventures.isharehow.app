@@ -112,7 +112,7 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
           gridTemplateColumns: { 
             xs: '1fr', 
             sm: '1fr', 
-            md: '68% 32%' 
+            md: '1fr' 
           }, 
           gap: { xs: 1, sm: 2 },
           minHeight: 0,
@@ -164,41 +164,6 @@ export default function DashboardLayout({ children, taskList }: DashboardLayoutP
           }}
         >
           {children}
-          {/* Chat on the right side - always visible */}
-          <Paper 
-            sx={{ 
-              p: { xs: 1, sm: 2 }, 
-              flexGrow: 1, 
-              minHeight: { xs: 300, sm: 400 },
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-          >
-            <Typography variant="h6" gutterBottom sx={{ flexShrink: 0 }}>
-              Chat
-            </Typography>
-            <Box 
-              sx={{ 
-                flexGrow: 1,
-                minHeight: 0,
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <iframe
-                style={{
-                  border: 'none',
-                  borderRadius: 8,
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </Box>
-          </Paper>
         </Box>
       </Box>
     </Box>

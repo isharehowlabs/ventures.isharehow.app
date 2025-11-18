@@ -23,6 +23,16 @@ export function useTwitch() {
       });
 
       if (!response.ok) {
+        // If 404, endpoint doesn't exist yet - use default values
+        if (response.status === 404) {
+          setGoals({
+            followers: 0,
+            followerGoal: 2500,
+            viewers: 0,
+            viewerGoal: 5000,
+          });
+          return;
+        }
         throw new Error('Failed to fetch Twitch goals');
       }
 
@@ -34,8 +44,19 @@ export function useTwitch() {
         viewerGoal: data.viewerGoal || 5000,
       });
     } catch (err: any) {
-      setError(err.message);
-      console.error('Error fetching Twitch goals:', err);
+      // Only set error for non-404 cases
+      if (err.message && !err.message.includes('404')) {
+        setError(err.message);
+        console.error('Error fetching Twitch goals:', err);
+      } else {
+        // 404 or network error - use default values silently
+        setGoals({
+          followers: 0,
+          followerGoal: 2500,
+          viewers: 0,
+          viewerGoal: 5000,
+        });
+      }
     } finally {
       setIsLoading(false);
     }

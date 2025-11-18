@@ -182,9 +182,13 @@ function LabsDashboard() {
             setCurrentViewers(data.viewers || 0);
             if (data.viewerGoal) setViewerGoal(data.viewerGoal);
             return;
+          } else if (response.status === 404) {
+            // Endpoint doesn't exist yet, use fallback values silently
+            return;
           }
         } catch (err) {
-          console.log('Backend endpoint not available, trying direct Twitch API');
+          // Network error or other issue - silently use fallback values
+          // Don't log to avoid console noise
         }
 
         // Fallback to default values

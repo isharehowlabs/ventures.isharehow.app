@@ -357,7 +357,15 @@ def figma_files():
         files_r = requests.get(f'{FIGMA_API_URL}/projects/{project["id"]}/files', headers=figma_headers())
         if files_r.ok:
             files = files_r.json().get('files', [])
-            all_files.extend([{**file, 'projectName': project['name'], 'projectId': project['id']} for file in files])
+            # Normalize file objects: use 'key' as 'id' for frontend compatibility
+            normalized_files = []
+            for file in files:
+                normalized_file = {**file, 'projectName': project['name'], 'projectId': project['id']}
+                # Map 'key' to 'id' if 'id' doesn't exist
+                if 'key' in normalized_file and 'id' not in normalized_file:
+                    normalized_file['id'] = normalized_file['key']
+                normalized_files.append(normalized_file)
+            all_files.extend(normalized_files)
     return jsonify({'projects': all_files})
 
 @app.route('/api/figma/file/<id>', methods=['GET'])
