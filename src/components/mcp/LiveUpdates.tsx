@@ -1,20 +1,47 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Chip, IconButton, Tooltip } from '@mui/material';
-import { Notifications, NotificationsOff } from '@mui/icons-material';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Chip, 
+  IconButton, 
+  Tooltip, 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  TextField, 
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from '@mui/material';
+import { Notifications, NotificationsOff, Add as AddIcon } from '@mui/icons-material';
 import { getSocket } from '../../utils/socket';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Update {
   id: string;
-  type: 'token' | 'component' | 'document' | 'twitch' | 'cowork';
+  type: 'token' | 'component' | 'document' | 'twitch' | 'cowork' | 'admin';
   message: string;
   timestamp: Date;
+  author?: string;
 }
 
 export default function LiveUpdates() {
+  const { user } = useAuth();
   const [updates, setUpdates] = useState<Update[]>([]);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isLive, setIsLive] = useState(false);
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [adminMessage, setAdminMessage] = useState('');
+  const [adminType, setAdminType] = useState<'admin' | 'twitch' | 'cowork'>('admin');
+  const [isPosting, setIsPosting] = useState(false);
+
+  // Check if user is admin (paid member or specific email)
+  const isAdmin = user?.isPaidMember || user?.email === 'soc@isharehowlabs.com' || user?.email === 'admin@isharehowlabs.com';
 
   // Function to send browser notification
   const sendNotification = (title: string, options?: NotificationOptions) => {
@@ -182,6 +209,24 @@ export default function LiveUpdates() {
       setIsLive(false);
     });
 
+    // Listen for admin updates
+    socket.on('admin:update', (data: any) => {
+      const update = {
+        id: Date.now().toString(),
+        type: data.type || 'admin' as const,
+        message: data.message || 'Admin update',
+        timestamp: new Date(),
+        author: data.author || 'Admin',
+      };
+      setUpdates((prev) => [update, ...prev.slice(0, 9)]);
+      
+      // Send notification to all users who have permission
+      sendNotification(data.title || '📢 Admin Update', {
+        body: data.message || 'New update from admin',
+        tag: `admin-update-${Date.now()}`,
+      });
+    });
+
     // Check Twitch status every 2 minutes
     checkTwitchStatus();
     const twitchInterval = setInterval(checkTwitchStatus, 2 * 60 * 1000);
@@ -196,10 +241,46 @@ export default function LiveUpdates() {
       socket.off('document:updated');
       socket.off('twitch:live');
       socket.off('twitch:offline');
+      socket.off('admin:update');
       clearInterval(twitchInterval);
       clearInterval(coworkInterval);
     };
   }, []);
+
+  const handlePostAdminUpdate = async () => {
+    if (!adminMessage.trim()) return;
+
+    setIsPosting(true);
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/admin/update`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: adminMessage,
+          type: adminType,
+          title: adminType === 'twitch' ? '🔴 Live on Twitch!' : adminType === 'cowork' ? '⏰ Co-work Time!' : '📢 Admin Update',
+        }),
+      });
+
+      if (response.ok) {
+        setAdminMessage('');
+        setAdminDialogOpen(false);
+        // The update will be received via Socket.IO event
+      } else {
+        const error = await response.json();
+        alert(`Failed to post update: ${error.error || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      console.error('Error posting admin update:', err);
+      alert(`Failed to post update: ${err.message}`);
+    } finally {
+      setIsPosting(false);
+    }
+  };
 
   const handleRequestNotificationPermission = async () => {
     if ('Notification' in window) {
@@ -219,38 +300,51 @@ export default function LiveUpdates() {
       case 'component': return 'secondary';
       case 'twitch': return 'error';
       case 'cowork': return 'warning';
+      case 'admin': return 'info';
       default: return 'default';
     }
   };
 
   return (
-    <Paper sx={{ p: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="subtitle2">
-          Live Updates
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {isLive && (
-            <Chip
-              label="🔴 LIVE"
-              size="small"
-              color="error"
-              sx={{ fontWeight: 'bold' }}
-            />
-          )}
-          {notificationPermission !== 'granted' && (
-            <Tooltip title="Enable notifications for live streams and co-work times">
-              <IconButton
+    <>
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="subtitle2">
+            Live Updates
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isLive && (
+              <Chip
+                label="🔴 LIVE"
                 size="small"
-                onClick={handleRequestNotificationPermission}
-                color={notificationPermission === 'denied' ? 'error' : 'default'}
-              >
-                {notificationPermission === 'denied' ? <NotificationsOff /> : <Notifications />}
-              </IconButton>
-            </Tooltip>
-          )}
+                color="error"
+                sx={{ fontWeight: 'bold' }}
+              />
+            )}
+            {isAdmin && (
+              <Tooltip title="Post an admin update">
+                <IconButton
+                  size="small"
+                  onClick={() => setAdminDialogOpen(true)}
+                  color="primary"
+                >
+                  <AddIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+            {notificationPermission !== 'granted' && (
+              <Tooltip title="Enable notifications for live streams and co-work times">
+                <IconButton
+                  size="small"
+                  onClick={handleRequestNotificationPermission}
+                  color={notificationPermission === 'denied' ? 'error' : 'default'}
+                >
+                  {notificationPermission === 'denied' ? <NotificationsOff /> : <Notifications />}
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
-      </Box>
       <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
         {updates.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
@@ -270,11 +364,61 @@ export default function LiveUpdates() {
                 </Typography>
               </Box>
               <Typography variant="body2">{update.message}</Typography>
+              {update.author && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  — {update.author}
+                </Typography>
+              )}
             </Box>
           ))
         )}
       </Box>
     </Paper>
+
+    {/* Admin Update Dialog */}
+    <Dialog open={adminDialogOpen} onClose={() => setAdminDialogOpen(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Post Admin Update</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <FormControl fullWidth>
+            <InputLabel>Update Type</InputLabel>
+            <Select
+              value={adminType}
+              label="Update Type"
+              onChange={(e) => setAdminType(e.target.value as 'admin' | 'twitch' | 'cowork')}
+            >
+              <MenuItem value="admin">📢 General Update</MenuItem>
+              <MenuItem value="twitch">🔴 Twitch Live</MenuItem>
+              <MenuItem value="cowork">⏰ Co-work Time</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Message"
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            value={adminMessage}
+            onChange={(e) => setAdminMessage(e.target.value)}
+            placeholder="Enter your update message..."
+            helperText="This will be sent as a notification to all users who have enabled notifications"
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setAdminDialogOpen(false)}>Cancel</Button>
+        <Button
+          onClick={handlePostAdminUpdate}
+          variant="contained"
+          disabled={!adminMessage.trim() || isPosting}
+        >
+          {isPosting ? 'Posting...' : 'Post Update'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 }
 

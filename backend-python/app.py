@@ -603,6 +603,55 @@ def delete_task(task_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
+@app.route('/api/admin/update', methods=['POST'])
+def admin_update():
+    """Post an admin update that will be broadcast to all connected clients"""
+    try:
+        # Check if user is authenticated
+        user = session.get('user')
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Check if user is admin (paid member or specific email)
+        is_admin = user.get('isPaidMember', False) or user.get('email') in ['soc@isharehowlabs.com', 'admin@isharehowlabs.com']
+        
+        if not is_admin:
+            return jsonify({'error': 'Unauthorized: Admin access required'}), 403
+        
+        data = request.get_json()
+        if not data or 'message' not in data:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        message = data.get('message', '').strip()
+        if not message:
+            return jsonify({'error': 'Message cannot be empty'}), 400
+        
+        update_type = data.get('type', 'admin')
+        title = data.get('title', '📢 Admin Update')
+        author = user.get('name', 'Admin')
+        
+        # Emit Socket.IO event to all connected clients
+        socketio.emit('admin:update', {
+            'message': message,
+            'type': update_type,
+            'title': title,
+            'author': author,
+            'timestamp': datetime.now().isoformat(),
+        })
+        
+        print(f"Admin update posted by {author}: {message}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Update posted successfully',
+        })
+        
+    except Exception as e:
+        print(f"Error posting admin update: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to post update', 'message': str(e)}), 500
+
 @app.route('/api/twitch/status', methods=['GET'])
 def twitch_status():
     """Check if Twitch stream is live"""
