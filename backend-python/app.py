@@ -428,43 +428,68 @@ def auth_logout():
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
-    tasks = Task.query.all()
-    return jsonify({'tasks': [task.to_dict() for task in tasks]})
+    try:
+        tasks = Task.query.all()
+        return jsonify({'tasks': [task.to_dict() for task in tasks]})
+    except Exception as e:
+        print(f"Error fetching tasks: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return empty list if database is unavailable
+        return jsonify({'tasks': [], 'error': 'Database temporarily unavailable'}), 200
 
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
-    data = request.get_json()
-    task = Task(
-        id=str(uuid.uuid4()),
-        title=data['title'],
-        description=data.get('description', ''),
-        hyperlinks=json.dumps(data.get('hyperlinks', [])),
-        status=data.get('status', 'pending')
-    )
-    db.session.add(task)
-    db.session.commit()
-    socketio.emit('task_created', task.to_dict())
-    return jsonify({'task': task.to_dict()}), 201
+    try:
+        data = request.get_json()
+        task = Task(
+            id=str(uuid.uuid4()),
+            title=data['title'],
+            description=data.get('description', ''),
+            hyperlinks=json.dumps(data.get('hyperlinks', [])),
+            status=data.get('status', 'pending')
+        )
+        db.session.add(task)
+        db.session.commit()
+        socketio.emit('task_created', task.to_dict())
+        return jsonify({'task': task.to_dict()}), 201
+    except Exception as e:
+        print(f"Error creating task: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to create task', 'message': str(e)}), 500
 
 @app.route('/api/tasks/<task_id>', methods=['PUT'])
 def update_task(task_id):
-    task = Task.query.get_or_404(task_id)
-    data = request.get_json()
-    task.title = data.get('title', task.title)
-    task.description = data.get('description', task.description)
-    task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
-    task.status = data.get('status', task.status)
-    db.session.commit()
-    socketio.emit('task_updated', task.to_dict())
-    return jsonify({'task': task.to_dict()})
+    try:
+        task = Task.query.get_or_404(task_id)
+        data = request.get_json()
+        task.title = data.get('title', task.title)
+        task.description = data.get('description', task.description)
+        task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
+        task.status = data.get('status', task.status)
+        db.session.commit()
+        socketio.emit('task_updated', task.to_dict())
+        return jsonify({'task': task.to_dict()})
+    except Exception as e:
+        print(f"Error updating task: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to update task', 'message': str(e)}), 500
 
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
 def delete_task(task_id):
-    task = Task.query.get_or_404(task_id)
-    db.session.delete(task)
-    db.session.commit()
-    socketio.emit('task_deleted', {'id': task_id})
-    return jsonify({'success': True})
+    try:
+        task = Task.query.get_or_404(task_id)
+        db.session.delete(task)
+        db.session.commit()
+        socketio.emit('task_deleted', {'id': task_id})
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error deleting task: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
 @socketio.on('connect')
 def handle_connect():
