@@ -36,3 +36,4 @@ console.log('3. Download the PNG files');
 console.log('4. Save them as icon-192.png and icon-512.png in the /public directory');
 console.log('\nOr use an online tool like https://cloudconvert.com/svg-to-png');
 
+
