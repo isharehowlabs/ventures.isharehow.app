@@ -510,7 +510,7 @@ const SpiritualFestivalsPage = () => {
         </form>
         {quizResult && (
           <Box id="festivalQuizResult" marginTop="2em" textAlign="center" fontSize="1.15em" fontWeight={500}>
-            <Typography>{quizResult}</Typography>
+            <Typography>{String(quizResult)}</Typography>
             <Typography>To get your complete guide, check out our ebook on Patreon!</Typography>
             <Button
               variant="contained"

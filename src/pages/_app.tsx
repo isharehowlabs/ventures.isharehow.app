@@ -1,7 +1,9 @@
 import * as React from 'react';
 import Head from 'next/head';
+import Script from 'next/script';
 import { ThemeProviderWrapper } from '../ThemeContext';
 import PWAInstallButton from '../components/PWAInstallButton';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function MyApp({ Component, pageProps }: any) {
   return (
@@ -25,7 +27,26 @@ export default function MyApp({ Component, pageProps }: any) {
         <link rel="icon" type="image/png" sizes="16x16" href="/icon-192.png" />
         <link rel="shortcut icon" href="/icon-192.png" />
       </Head>
-      <Component {...pageProps} />
+      {/* Google Analytics - Global tracking for all pages */}
+      <Script
+        strategy="afterInteractive"
+        src="https://www.googletagmanager.com/gtag/js?id=G-WQE2GEYFQW"
+      />
+      <Script
+        id="google-analytics"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-WQE2GEYFQW');
+          `,
+        }}
+      />
+      <ErrorBoundary>
+        <Component {...pageProps} />
+      </ErrorBoundary>
       {typeof window !== 'undefined' && <PWAInstallButton />}
     </ThemeProviderWrapper>
   );

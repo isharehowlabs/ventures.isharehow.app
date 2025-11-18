@@ -267,7 +267,7 @@ const WellnessPage = () => {
             {quizResult && (
               <Box id="quiz-result" sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
                 <Typography variant="h5">Results</Typography>
-                <Typography dangerouslySetInnerHTML={{ __html: quizResult }} />
+                <Typography dangerouslySetInnerHTML={{ __html: String(quizResult) }} />
               </Box>
             )}
           </Container>

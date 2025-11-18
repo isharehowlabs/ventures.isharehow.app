@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -15,11 +15,6 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import LiveUpdates from '../components/mcp/LiveUpdates';
 import { getBackendUrl } from '../utils/backendUrl';
 
-declare global {
-  interface Window {
-    Twitch: any;
-  }
-}
 
 // Task List Feature
 interface Task {
@@ -150,18 +145,14 @@ function LabsDashboard() {
   const [viewerGoal, setViewerGoal] = useState<number>(5000);
   const [isLoadingFollowers, setIsLoadingFollowers] = useState(true);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const twitchPlayerRef = useRef<any | null>(null);
-  const twitchPlayer = useRef<any | null>(null);
 
   const handleToggleLibrary = useCallback(() => {
     const nextState = !libraryOpen;
     setLibraryOpen(nextState);
     if (nextState) {
       setVideoOpen(false);
-      twitchPlayer.current?.pause();
     } else {
       setVideoOpen(true);
-      twitchPlayer.current?.play();
     }
   }, [libraryOpen]);
 
@@ -170,10 +161,8 @@ function LabsDashboard() {
     setVideoOpen(nextState);
     if (nextState) {
       setLibraryOpen(false);
-      twitchPlayer.current?.play();
     } else {
       setLibraryOpen(true);
-      twitchPlayer.current?.pause();
     }
   }, [videoOpen]);
 
@@ -238,32 +227,6 @@ function LabsDashboard() {
     }
   }, []);
 
-  // Effect to initialize Twitch Player
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://player.twitch.tv/js/embed/v1.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if (window.Twitch && twitchPlayerRef.current) {
-        const player = new window.Twitch.Player(twitchPlayerRef.current, {
-          channel: 'jameleliyah',
-          width: '100%',
-          height: '100%',
-          parent: ['ventures.isharehow.app', 'localhost'],
-          autoplay: false,
-        });
-        twitchPlayer.current = player;
-      }
-    };
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
 
   return (
     <AppShell active="labs">
