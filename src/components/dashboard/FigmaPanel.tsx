@@ -198,7 +198,7 @@ export default function FigmaPanel() {
     e.stopPropagation();
     const currentStatus = componentStatuses[componentId]?.liked || false;
     try {
-      await likeComponent(componentId, !currentStatus);
+      await likeComponent(componentId, !currentStatus, selectedFile || undefined);
     } catch (err) {
       console.error('Error liking component:', err);
     }
@@ -208,7 +208,7 @@ export default function FigmaPanel() {
     e.stopPropagation();
     const currentStatus = componentStatuses[componentId]?.saved || false;
     try {
-      await saveComponent(componentId, !currentStatus);
+      await saveComponent(componentId, !currentStatus, selectedFile || undefined);
     } catch (err) {
       console.error('Error saving component:', err);
     }

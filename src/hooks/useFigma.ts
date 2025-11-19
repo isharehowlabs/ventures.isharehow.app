@@ -136,7 +136,7 @@ export function useFigma() {
     }
   };
 
-  const likeComponent = async (componentId: string, liked: boolean = true) => {
+  const likeComponent = async (componentId: string, liked: boolean = true, fileId?: string) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -144,7 +144,7 @@ export function useFigma() {
       const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/component/like`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ componentId, liked }),
+        body: JSON.stringify({ componentId, liked, fileId }),
       });
 
       const data = await response.json();
@@ -172,7 +172,7 @@ export function useFigma() {
     }
   };
 
-  const saveComponent = async (componentId: string, saved: boolean = true) => {
+  const saveComponent = async (componentId: string, saved: boolean = true, fileId?: string) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -180,7 +180,7 @@ export function useFigma() {
       const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/component/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ componentId, saved }),
+        body: JSON.stringify({ componentId, saved, fileId }),
       });
 
       const data = await response.json();

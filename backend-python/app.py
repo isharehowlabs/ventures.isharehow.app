@@ -300,22 +300,28 @@ class MCPServer:
             'code': code,
         }
     
-    def like_component(self, user_id, component_id, liked=True):
+    def like_component(self, user_id, component_id, liked=True, file_id=None):
         """Like or unlike a Figma component"""
         if user_id not in self.component_likes:
             self.component_likes[user_id] = {}
         if liked:
-            self.component_likes[user_id][component_id] = datetime.utcnow().isoformat()
+            self.component_likes[user_id][component_id] = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'fileId': file_id,
+            }
         else:
             self.component_likes[user_id].pop(component_id, None)
         return {'success': True, 'liked': liked}
     
-    def save_component(self, user_id, component_id, saved=True):
+    def save_component(self, user_id, component_id, saved=True, file_id=None):
         """Save or unsave a Figma component"""
         if user_id not in self.component_saves:
             self.component_saves[user_id] = {}
         if saved:
-            self.component_saves[user_id][component_id] = datetime.utcnow().isoformat()
+            self.component_saves[user_id][component_id] = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'fileId': file_id,
+            }
         else:
             self.component_saves[user_id].pop(component_id, None)
         return {'success': True, 'saved': saved}
@@ -460,10 +466,20 @@ def figma_component_like():
     data = request.get_json()
     component_id = data.get('componentId')
     liked = data.get('liked', True)
+    file_id = data.get('fileId')
     if not component_id:
         return jsonify({'error': 'Component ID required'}), 400
     user_id = get_user_id()
-    result = mcp_server.like_component(user_id, component_id, liked)
+    result = mcp_server.like_component(user_id, component_id, liked, file_id)
+    
+    # Sync with Figma Comments API if possible
+    if file_id and FIGMA_ACCESS_TOKEN:
+        try:
+            sync_like_to_figma(file_id, component_id, liked, user_id)
+        except Exception as e:
+            print(f'Error syncing like to Figma: {e}')
+            # Don't fail the request if sync fails
+    
     return jsonify(result)
 
 @app.route('/api/figma/component/save', methods=['POST'])
@@ -471,10 +487,20 @@ def figma_component_save():
     data = request.get_json()
     component_id = data.get('componentId')
     saved = data.get('saved', True)
+    file_id = data.get('fileId')
     if not component_id:
         return jsonify({'error': 'Component ID required'}), 400
     user_id = get_user_id()
-    result = mcp_server.save_component(user_id, component_id, saved)
+    result = mcp_server.save_component(user_id, component_id, saved, file_id)
+    
+    # Sync with Figma Comments API if possible
+    if file_id and FIGMA_ACCESS_TOKEN:
+        try:
+            sync_save_to_figma(file_id, component_id, saved, user_id)
+        except Exception as e:
+            print(f'Error syncing save to Figma: {e}')
+            # Don't fail the request if sync fails
+    
     return jsonify(result)
 
 @app.route('/api/figma/components/liked', methods=['GET'])
@@ -549,6 +575,94 @@ FIGMA_TEAM_ID = os.environ.get('FIGMA_TEAM_ID')
 def figma_headers():
     return {'X-Figma-Token': FIGMA_ACCESS_TOKEN}
 
+def sync_like_to_figma(file_id, component_id, liked, user_id):
+    """Sync like status to Figma using Comments API"""
+    # Get file to find node for component
+    try:
+        file_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}', headers=figma_headers())
+        if not file_r.ok:
+            return
+        file_data = file_r.json()
+        components = file_data.get('components', {})
+        
+        if component_id in components:
+            component = components[component_id]
+            node_id = component.get('key', component_id)
+            
+            # Search for existing like comment
+            comments_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}/comments', headers=figma_headers())
+            if comments_r.ok:
+                comments = comments_r.json().get('comments', [])
+                like_comment = next((c for c in comments if c.get('message') == '❤️ LIKED' and c.get('client_meta', {}).get('node_id') == node_id), None)
+                
+                if liked and not like_comment:
+                    # Create like comment
+                    requests.post(
+                        f'{FIGMA_API_URL}/files/{file_id}/comments',
+                        headers=figma_headers(),
+                        json={
+                            'message': '❤️ LIKED',
+                            'client_meta': {'node_id': node_id}
+                        }
+                    )
+                elif not liked and like_comment:
+                    # Delete like comment (Note: Figma API doesn't support deleting comments directly)
+                    # We'll leave a removal comment instead
+                    requests.post(
+                        f'{FIGMA_API_URL}/files/{file_id}/comments',
+                        headers=figma_headers(),
+                        json={
+                            'message': '💔 Removed like',
+                            'client_meta': {'node_id': node_id},
+                            'comment_id': like_comment.get('id')
+                        }
+                    )
+    except Exception as e:
+        print(f'Error syncing like to Figma: {e}')
+
+def sync_save_to_figma(file_id, component_id, saved, user_id):
+    """Sync save status to Figma using Comments API"""
+    try:
+        file_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}', headers=figma_headers())
+        if not file_r.ok:
+            return
+        file_data = file_r.json()
+        components = file_data.get('components', {})
+        
+        if component_id in components:
+            component = components[component_id]
+            node_id = component.get('key', component_id)
+            
+            # Search for existing save comment
+            comments_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}/comments', headers=figma_headers())
+            if comments_r.ok:
+                comments = comments_r.json().get('comments', [])
+                save_comment = next((c for c in comments if c.get('message') == '🔖 SAVED' and c.get('client_meta', {}).get('node_id') == node_id), None)
+                
+                if saved and not save_comment:
+                    # Create save comment
+                    requests.post(
+                        f'{FIGMA_API_URL}/files/{file_id}/comments',
+                        headers=figma_headers(),
+                        json={
+                            'message': '🔖 SAVED',
+                            'client_meta': {'node_id': node_id}
+                        }
+                    )
+                elif not saved and save_comment:
+                    # Mark as removed
+                    requests.post(
+                        f'{FIGMA_API_URL}/files/{file_id}/comments',
+                        headers=figma_headers(),
+                        json={
+                            'message': '📑 Removed from saved',
+                            'client_meta': {'node_id': node_id},
+                            'comment_id': save_comment.get('id')
+                        }
+                    )
+    except Exception as e:
+        print(f'Error syncing save to Figma: {e}')
+
 @app.route('/api/figma/teams', methods=['GET'])
 def figma_teams():
     if not FIGMA_ACCESS_TOKEN:
@@ -564,25 +678,53 @@ def figma_files():
         return jsonify({'error': 'Figma access token not configured'}), 500
     if not FIGMA_TEAM_ID:
         return jsonify({'error': 'Figma team ID not configured'}), 500
-    # Get all projects for the team
-    r = requests.get(f'{FIGMA_API_URL}/teams/{FIGMA_TEAM_ID}/projects', headers=figma_headers())
-    if not r.ok:
-        return jsonify({'error': 'Figma API error', 'message': r.text}), 500
-    projects = r.json().get('projects', [])
+    
     all_files = []
-    for project in projects:
-        files_r = requests.get(f'{FIGMA_API_URL}/projects/{project["id"]}/files', headers=figma_headers())
-        if files_r.ok:
-            files = files_r.json().get('files', [])
-            # Normalize file objects: use 'key' as 'id' for frontend compatibility
-            normalized_files = []
-            for file in files:
-                normalized_file = {**file, 'projectName': project['name'], 'projectId': project['id']}
-                # Map 'key' to 'id' if 'id' doesn't exist
-                if 'key' in normalized_file and 'id' not in normalized_file:
-                    normalized_file['id'] = normalized_file['key']
-                normalized_files.append(normalized_file)
-            all_files.extend(normalized_files)
+    seen_file_keys = set()  # Track files we've already added
+    
+    # Get all projects for the team
+    try:
+        r = requests.get(f'{FIGMA_API_URL}/teams/{FIGMA_TEAM_ID}/projects', headers=figma_headers())
+        if r.ok:
+            projects = r.json().get('projects', [])
+            for project in projects:
+                files_r = requests.get(f'{FIGMA_API_URL}/projects/{project["id"]}/files', headers=figma_headers())
+                if files_r.ok:
+                    files = files_r.json().get('files', [])
+                    for file in files:
+                        file_key = file.get('key') or file.get('id')
+                        if file_key and file_key not in seen_file_keys:
+                            # Check if this is a library (has published components)
+                            # We'll mark it as library if it has a specific naming or we can check later
+                            normalized_file = {
+                                **file,
+                                'projectName': project.get('name', 'Unknown Project'),
+                                'projectId': project.get('id'),
+                                'source': 'project',
+                                'isLibrary': False,  # Will be determined by checking for components
+                            }
+                            # Map 'key' to 'id' if 'id' doesn't exist
+                            if 'key' in normalized_file and 'id' not in normalized_file:
+                                normalized_file['id'] = normalized_file['key']
+                            
+                            # Quick check: if file name contains "library" or is in a library-like project, mark it
+                            file_name = normalized_file.get('name', '').lower()
+                            if 'library' in file_name or 'lib' in file_name or project.get('name', '').lower().find('library') != -1:
+                                normalized_file['isLibrary'] = True
+                                normalized_file['source'] = 'library'
+                            
+                            all_files.append(normalized_file)
+                            seen_file_keys.add(file_key)
+    except Exception as e:
+        print(f'Error fetching projects: {e}')
+    
+    # Sort files: libraries first, then by project name
+    all_files.sort(key=lambda f: (
+        0 if f.get('isLibrary') or f.get('source') == 'library' else 1,
+        f.get('projectName', ''),
+        f.get('name', '')
+    ))
+    
     return jsonify({'projects': all_files})
 
 @app.route('/api/figma/file/<id>', methods=['GET'])
