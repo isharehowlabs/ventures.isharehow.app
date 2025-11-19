@@ -10,6 +10,10 @@ import {
   IconButton,
   Tooltip,
   Collapse,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -25,12 +29,15 @@ interface Message {
   text: string;
 }
 
+type GeminiModel = 'gemini-3-pro-preview' | 'gemini-2.5-pro';
+
 export default function FloatingAIChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-3-pro-preview');
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +74,10 @@ export default function FloatingAIChat() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ 
+          messages: [...messages, userMessage],
+          model: selectedModel
+        }),
       });
 
       if (!response.ok) {
@@ -153,9 +163,9 @@ export default function FloatingAIChat() {
               alignItems: 'center',
             }}
           >
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
               <PsychologyIcon />
-              <Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>
                   AI Journal
                 </Typography>
@@ -163,6 +173,55 @@ export default function FloatingAIChat() {
                   Gemini-powered digital consciousness
                 </Typography>
               </Box>
+              <FormControl 
+                size="small" 
+                sx={{ 
+                  minWidth: 140,
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'inherit',
+                    '& fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.7)',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: 'rgba(255, 255, 255, 0.9)',
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: 'rgba(255, 255, 255, 0.9)',
+                  },
+                }}
+              >
+                <InputLabel id="model-select-label" sx={{ fontSize: '0.7rem' }}>
+                  Model
+                </InputLabel>
+                <Select
+                  labelId="model-select-label"
+                  value={selectedModel}
+                  label="Model"
+                  onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
+                  disabled={isLoading}
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    '& .MuiSelect-select': {
+                      py: 0.5,
+                    },
+                  }}
+                >
+                  <MenuItem value="gemini-3-pro-preview" sx={{ fontSize: '0.75rem' }}>
+                    Gemini 3 Pro Preview
+                  </MenuItem>
+                  <MenuItem value="gemini-2.5-pro" sx={{ fontSize: '0.75rem' }}>
+                    Gemini 2.5 Pro
+                  </MenuItem>
+                </Select>
+              </FormControl>
             </Stack>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <Tooltip title="Refresh chat">

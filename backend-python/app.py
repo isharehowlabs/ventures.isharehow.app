@@ -910,9 +910,15 @@ def gemini_chat():
                 'parts': [{'text': msg.get('text', '')}]
             })
         
-        # Call Gemini API - try multiple endpoint formats
-        # First try the newer v1beta format with gemini-1.5-flash (faster and cheaper)
-        model_name = 'gemini-1.5-flash'
+        # Get model from request, default to gemini-3-pro-preview
+        model_name = data.get('model', 'gemini-3-pro-preview')
+        
+        # Validate model name
+        valid_models = ['gemini-3-pro-preview', 'gemini-2.5-pro']
+        if model_name not in valid_models:
+            model_name = 'gemini-3-pro-preview'  # Default to gemini-3-pro-preview
+        
+        # Call Gemini API
         url = f'https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GOOGLE_AI_API_KEY}'
         payload = {
             'contents': contents
@@ -925,9 +931,10 @@ def gemini_chat():
             response = requests.post(url, json=payload, headers=headers, timeout=30)
             
             if response.status_code == 404:
-                # Try fallback to gemini-pro if gemini-1.5-flash doesn't exist
-                print(f"Model {model_name} not found, trying gemini-pro...")
-                model_name = 'gemini-pro'
+                # Try fallback to the other model if the requested one doesn't exist
+                fallback_model = 'gemini-2.5-pro' if model_name == 'gemini-3-pro-preview' else 'gemini-3-pro-preview'
+                print(f"Model {model_name} not found, trying {fallback_model}...")
+                model_name = fallback_model
                 url = f'https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GOOGLE_AI_API_KEY}'
                 response = requests.post(url, json=payload, headers=headers, timeout=30)
             
