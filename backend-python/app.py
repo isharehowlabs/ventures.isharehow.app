@@ -901,7 +901,7 @@ def gemini_chat():
         
         if response.status_code != 200:
             print(f"Gemini API error: {response.status_code} {response.text}")
-            return jsonify({'error': 'Gemini API error', 'text': 'Sorry, I encountered an error with the AI service.'}), 500
+            return jsonify({'error': f'Gemini API error ({response.status_code})', 'text': 'Sorry, I encountered an error with the AI service.'}), 500
         
         data = response.json()
         text = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'No response')
