@@ -573,93 +573,130 @@ FIGMA_API_URL = 'https://api.figma.com/v1'
 FIGMA_TEAM_ID = os.environ.get('FIGMA_TEAM_ID')
 
 def figma_headers():
+    """Get Figma API headers"""
+    if not FIGMA_ACCESS_TOKEN:
+        return {}
     return {'X-Figma-Token': FIGMA_ACCESS_TOKEN}
 
 def sync_like_to_figma(file_id, component_id, liked, user_id):
     """Sync like status to Figma using Comments API"""
-    # Get file to find node for component
+    if not file_id or not component_id or not FIGMA_ACCESS_TOKEN:
+        return
     try:
-        file_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}', headers=figma_headers())
+        file_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}', headers=figma_headers(), timeout=10)
         if not file_r.ok:
             return
-        file_data = file_r.json()
-        components = file_data.get('components', {})
+        try:
+            file_data = file_r.json()
+        except (ValueError, AttributeError):
+            return
+        components = file_data.get('components', {}) if isinstance(file_data, dict) else {}
         
-        if component_id in components:
+        if component_id in components and isinstance(components[component_id], dict):
             component = components[component_id]
             node_id = component.get('key', component_id)
             
             # Search for existing like comment
-            comments_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}/comments', headers=figma_headers())
+            comments_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}/comments', headers=figma_headers(), timeout=10)
             if comments_r.ok:
-                comments = comments_r.json().get('comments', [])
-                like_comment = next((c for c in comments if c.get('message') == '❤️ LIKED' and c.get('client_meta', {}).get('node_id') == node_id), None)
+                try:
+                    comments_data = comments_r.json()
+                    comments = comments_data.get('comments', []) if isinstance(comments_data, dict) else []
+                except (ValueError, AttributeError):
+                    comments = []
+                
+                like_comment = next((c for c in comments if isinstance(c, dict) and c.get('message') == '❤️ LIKED' and c.get('client_meta', {}).get('node_id') == node_id), None)
                 
                 if liked and not like_comment:
                     # Create like comment
-                    requests.post(
-                        f'{FIGMA_API_URL}/files/{file_id}/comments',
-                        headers=figma_headers(),
-                        json={
-                            'message': '❤️ LIKED',
-                            'client_meta': {'node_id': node_id}
-                        }
-                    )
+                    try:
+                        requests.post(
+                            f'{FIGMA_API_URL}/files/{file_id}/comments',
+                            headers=figma_headers(),
+                            json={
+                                'message': '❤️ LIKED',
+                                'client_meta': {'node_id': node_id}
+                            },
+                            timeout=10
+                        )
+                    except Exception:
+                        pass  # Silent fail for sync
                 elif not liked and like_comment:
-                    # Delete like comment (Note: Figma API doesn't support deleting comments directly)
-                    # We'll leave a removal comment instead
-                    requests.post(
-                        f'{FIGMA_API_URL}/files/{file_id}/comments',
-                        headers=figma_headers(),
-                        json={
-                            'message': '💔 Removed like',
-                            'client_meta': {'node_id': node_id},
-                            'comment_id': like_comment.get('id')
-                        }
-                    )
+                    # Mark as removed
+                    try:
+                        requests.post(
+                            f'{FIGMA_API_URL}/files/{file_id}/comments',
+                            headers=figma_headers(),
+                            json={
+                                'message': '💔 Removed like',
+                                'client_meta': {'node_id': node_id},
+                                'comment_id': like_comment.get('id')
+                            },
+                            timeout=10
+                        )
+                    except Exception:
+                        pass  # Silent fail for sync
     except Exception as e:
         print(f'Error syncing like to Figma: {e}')
 
 def sync_save_to_figma(file_id, component_id, saved, user_id):
     """Sync save status to Figma using Comments API"""
+    if not file_id or not component_id or not FIGMA_ACCESS_TOKEN:
+        return
     try:
-        file_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}', headers=figma_headers())
+        file_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}', headers=figma_headers(), timeout=10)
         if not file_r.ok:
             return
-        file_data = file_r.json()
-        components = file_data.get('components', {})
+        try:
+            file_data = file_r.json()
+        except (ValueError, AttributeError):
+            return
+        components = file_data.get('components', {}) if isinstance(file_data, dict) else {}
         
-        if component_id in components:
+        if component_id in components and isinstance(components[component_id], dict):
             component = components[component_id]
             node_id = component.get('key', component_id)
             
             # Search for existing save comment
-            comments_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}/comments', headers=figma_headers())
+            comments_r = requests.get(f'{FIGMA_API_URL}/files/{file_id}/comments', headers=figma_headers(), timeout=10)
             if comments_r.ok:
-                comments = comments_r.json().get('comments', [])
-                save_comment = next((c for c in comments if c.get('message') == '🔖 SAVED' and c.get('client_meta', {}).get('node_id') == node_id), None)
+                try:
+                    comments_data = comments_r.json()
+                    comments = comments_data.get('comments', []) if isinstance(comments_data, dict) else []
+                except (ValueError, AttributeError):
+                    comments = []
+                
+                save_comment = next((c for c in comments if isinstance(c, dict) and c.get('message') == '🔖 SAVED' and c.get('client_meta', {}).get('node_id') == node_id), None)
                 
                 if saved and not save_comment:
                     # Create save comment
-                    requests.post(
-                        f'{FIGMA_API_URL}/files/{file_id}/comments',
-                        headers=figma_headers(),
-                        json={
-                            'message': '🔖 SAVED',
-                            'client_meta': {'node_id': node_id}
-                        }
-                    )
+                    try:
+                        requests.post(
+                            f'{FIGMA_API_URL}/files/{file_id}/comments',
+                            headers=figma_headers(),
+                            json={
+                                'message': '🔖 SAVED',
+                                'client_meta': {'node_id': node_id}
+                            },
+                            timeout=10
+                        )
+                    except Exception:
+                        pass  # Silent fail for sync
                 elif not saved and save_comment:
                     # Mark as removed
-                    requests.post(
-                        f'{FIGMA_API_URL}/files/{file_id}/comments',
-                        headers=figma_headers(),
-                        json={
-                            'message': '📑 Removed from saved',
-                            'client_meta': {'node_id': node_id},
-                            'comment_id': save_comment.get('id')
-                        }
-                    )
+                    try:
+                        requests.post(
+                            f'{FIGMA_API_URL}/files/{file_id}/comments',
+                            headers=figma_headers(),
+                            json={
+                                'message': '📑 Removed from saved',
+                                'client_meta': {'node_id': node_id},
+                                'comment_id': save_comment.get('id')
+                            },
+                            timeout=10
+                        )
+                    except Exception:
+                        pass  # Silent fail for sync
     except Exception as e:
         print(f'Error syncing save to Figma: {e}')
 
@@ -674,58 +711,92 @@ def figma_teams():
 
 @app.route('/api/figma/files', methods=['GET'])
 def figma_files():
-    if not FIGMA_ACCESS_TOKEN:
-        return jsonify({'error': 'Figma access token not configured'}), 500
-    if not FIGMA_TEAM_ID:
-        return jsonify({'error': 'Figma team ID not configured'}), 500
-    
-    all_files = []
-    seen_file_keys = set()  # Track files we've already added
-    
-    # Get all projects for the team
     try:
-        r = requests.get(f'{FIGMA_API_URL}/teams/{FIGMA_TEAM_ID}/projects', headers=figma_headers())
-        if r.ok:
-            projects = r.json().get('projects', [])
-            for project in projects:
-                files_r = requests.get(f'{FIGMA_API_URL}/projects/{project["id"]}/files', headers=figma_headers())
-                if files_r.ok:
-                    files = files_r.json().get('files', [])
-                    for file in files:
-                        file_key = file.get('key') or file.get('id')
-                        if file_key and file_key not in seen_file_keys:
-                            # Check if this is a library (has published components)
-                            # We'll mark it as library if it has a specific naming or we can check later
-                            normalized_file = {
-                                **file,
-                                'projectName': project.get('name', 'Unknown Project'),
-                                'projectId': project.get('id'),
-                                'source': 'project',
-                                'isLibrary': False,  # Will be determined by checking for components
-                            }
-                            # Map 'key' to 'id' if 'id' doesn't exist
-                            if 'key' in normalized_file and 'id' not in normalized_file:
-                                normalized_file['id'] = normalized_file['key']
+        if not FIGMA_ACCESS_TOKEN:
+            return jsonify({'error': 'Figma access token not configured'}), 500
+        if not FIGMA_TEAM_ID:
+            return jsonify({'error': 'Figma team ID not configured'}), 500
+        
+        all_files = []
+        seen_file_keys = set()  # Track files we've already added
+        
+        # Get all projects for the team
+        try:
+            r = requests.get(f'{FIGMA_API_URL}/teams/{FIGMA_TEAM_ID}/projects', headers=figma_headers(), timeout=10)
+            if r.ok:
+                try:
+                    projects_data = r.json()
+                    projects = projects_data.get('projects', []) if isinstance(projects_data, dict) else []
+                except (ValueError, AttributeError) as e:
+                    print(f'Error parsing projects JSON: {e}')
+                    projects = []
+                
+                for project in projects:
+                    if not isinstance(project, dict) or 'id' not in project:
+                        continue
+                    try:
+                        files_r = requests.get(f'{FIGMA_API_URL}/projects/{project["id"]}/files', headers=figma_headers(), timeout=10)
+                        if files_r.ok:
+                            try:
+                                files_data = files_r.json()
+                                files = files_data.get('files', []) if isinstance(files_data, dict) else []
+                            except (ValueError, AttributeError) as e:
+                                print(f'Error parsing files JSON for project {project.get("id")}: {e}')
+                                files = []
                             
-                            # Quick check: if file name contains "library" or is in a library-like project, mark it
-                            file_name = normalized_file.get('name', '').lower()
-                            if 'library' in file_name or 'lib' in file_name or project.get('name', '').lower().find('library') != -1:
-                                normalized_file['isLibrary'] = True
-                                normalized_file['source'] = 'library'
-                            
-                            all_files.append(normalized_file)
-                            seen_file_keys.add(file_key)
+                            for file in files:
+                                if not isinstance(file, dict):
+                                    continue
+                                try:
+                                    file_key = file.get('key') or file.get('id')
+                                    if file_key and file_key not in seen_file_keys:
+                                        # Check if this is a library (has published components)
+                                        normalized_file = {
+                                            **file,
+                                            'projectName': str(project.get('name', 'Unknown Project')),
+                                            'projectId': project.get('id'),
+                                            'source': 'project',
+                                            'isLibrary': False,
+                                        }
+                                        # Map 'key' to 'id' if 'id' doesn't exist
+                                        if 'key' in normalized_file and 'id' not in normalized_file:
+                                            normalized_file['id'] = normalized_file['key']
+                                        
+                                        # Quick check: if file name contains "library" or is in a library-like project, mark it
+                                        file_name = str(normalized_file.get('name', '')).lower()
+                                        project_name = str(project.get('name', '')).lower()
+                                        if 'library' in file_name or 'lib' in file_name or 'library' in project_name:
+                                            normalized_file['isLibrary'] = True
+                                            normalized_file['source'] = 'library'
+                                        
+                                        all_files.append(normalized_file)
+                                        seen_file_keys.add(file_key)
+                                except Exception as e:
+                                    print(f'Error processing file: {e}')
+                                    continue
+                    except Exception as e:
+                        print(f'Error fetching files for project {project.get("id")}: {e}')
+                        continue
+        except Exception as e:
+            print(f'Error fetching projects: {e}')
+        
+        # Sort files: libraries first, then by project name (with safe defaults)
+        try:
+            all_files.sort(key=lambda f: (
+                0 if f.get('isLibrary') or f.get('source') == 'library' else 1,
+                str(f.get('projectName', '')),
+                str(f.get('name', ''))
+            ))
+        except Exception as e:
+            print(f'Error sorting files: {e}')
+            # Continue without sorting if it fails
+        
+        return jsonify({'projects': all_files})
     except Exception as e:
-        print(f'Error fetching projects: {e}')
-    
-    # Sort files: libraries first, then by project name
-    all_files.sort(key=lambda f: (
-        0 if f.get('isLibrary') or f.get('source') == 'library' else 1,
-        f.get('projectName', ''),
-        f.get('name', '')
-    ))
-    
-    return jsonify({'projects': all_files})
+        print(f'Error in figma_files endpoint: {e}')
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error', 'message': str(e)}), 500
 
 @app.route('/api/figma/file/<id>', methods=['GET'])
 def figma_file(id):
