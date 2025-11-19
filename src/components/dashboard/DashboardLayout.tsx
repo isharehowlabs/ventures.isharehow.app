@@ -3,7 +3,6 @@ import { Box, Tabs, Tab, useTheme, useMediaQuery, Paper, Typography } from '@mui
 import StreamingPanel from './StreamingPanel';
 import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
-import AIJournalPanel from './AIJournalPanel';
 import Web3Panel from './Web3Panel';
 
 interface TabPanelProps {
@@ -57,7 +56,6 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
           <Tab label="Streaming" />
           <Tab label="Designs & Code" />
           <Tab label="Documents" />
-          <Tab label="AI Journal" />
           <Tab label="Web3 Hub" />
         </Tabs>
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
@@ -71,9 +69,6 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
             <DocsPanel />
           </TabPanel>
           <TabPanel value={activeTab} index={3}>
-            <AIJournalPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={4}>
             <Web3Panel />
           </TabPanel>
         </Box>
@@ -96,7 +91,6 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
         <Tab label="Streaming" />
         <Tab label="Designs & Code" />
         <Tab label="Documents" />
-        <Tab label="AI Journal" />
         <Tab label="Web3 Hub" />
       </Tabs>
       <Box 
@@ -135,9 +129,6 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
               <DocsPanel />
             </TabPanel>
             <TabPanel value={activeTab} index={3}>
-              <AIJournalPanel />
-            </TabPanel>
-            <TabPanel value={activeTab} index={4}>
               <Web3Panel />
             </TabPanel>
           </Box>

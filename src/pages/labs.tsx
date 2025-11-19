@@ -13,6 +13,7 @@ import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import LiveUpdates from '../components/mcp/LiveUpdates';
+import FloatingAIChat from '../components/dashboard/FloatingAIChat';
 import { getBackendUrl } from '../utils/backendUrl';
 
 
@@ -273,6 +274,9 @@ function LabsDashboard() {
 
       <DashboardLayout taskList={<TaskList />} liveUpdates={<LiveUpdates />}>
       </DashboardLayout>
+      
+      {/* Floating AI Chat */}
+      <FloatingAIChat />
     </AppShell>
   );
 }
