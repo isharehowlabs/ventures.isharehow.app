@@ -28,6 +28,7 @@ import {
   TrendingUp as TrendingUpIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
+import ThemeToggle from './ThemeToggle';
 
 type NavKey = 'ventures' | 'content' | 'labs' | 'products' | 'rise' | 'about';
 
@@ -292,6 +293,8 @@ const AppShell = ({ active, children }: AppShellProps) => {
           </Typography>
 
           <Box sx={{ flexGrow: 1 }} />
+
+          <ThemeToggle />
         </Toolbar>
       </AppBar>
 

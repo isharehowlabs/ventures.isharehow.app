@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { ThemeProviderWrapper } from '../ThemeContext';
 import PWAInstallButton from '../components/PWAInstallButton';
 import ErrorBoundary from '../components/ErrorBoundary';
+import FloatingThemeToggle from '../components/FloatingThemeToggle';
 
 export default function MyApp({ Component, pageProps }: any) {
   return (
@@ -47,7 +48,12 @@ export default function MyApp({ Component, pageProps }: any) {
       <ErrorBoundary>
         <Component {...pageProps} />
       </ErrorBoundary>
-      {typeof window !== 'undefined' && <PWAInstallButton />}
+      {typeof window !== 'undefined' && (
+        <>
+          <PWAInstallButton />
+          <FloatingThemeToggle />
+        </>
+      )}
     </ThemeProviderWrapper>
   );
 }

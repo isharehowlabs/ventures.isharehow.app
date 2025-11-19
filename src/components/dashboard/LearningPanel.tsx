@@ -1,6 +1,6 @@
 // src/components/dashboard/LearningPanel.tsx
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import {
   Avatar,
@@ -15,6 +15,11 @@ import {
   Tabs,
   Tab,
   IconButton,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Paper,
 } from '@mui/material';
 import {
   ArticleOutlined,
@@ -27,20 +32,23 @@ import {
   Download,
   Launch,
   FilterList,
+  Close as CloseIcon,
+  Note as NoteIcon,
 } from '@mui/icons-material';
 import type { SvgIconComponent } from '@mui/icons-material';
 
-interface Course {
+interface LearningContent {
   id: string;
   title: string;
   description: string;
   instructor: string;
   duration: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
-  lessons: number;
-  thumbnail?: string;
   category: string;
   videoUrl?: string;
+  thumbnail?: string;
+  lessons?: number;
+  uploadDate?: string;
   pdfResources?: string[];
 }
 
@@ -54,19 +62,6 @@ interface PDFResource {
   pages?: number;
   uploadDate: string;
   thumbnail?: string;
-}
-
-interface VideoClass {
-  id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  duration: string;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: string;
-  videoUrl: string;
-  thumbnail?: string;
-  uploadDate: string;
 }
 
 // Sample course data
