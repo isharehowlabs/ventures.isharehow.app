@@ -711,92 +711,89 @@ def figma_teams():
 
 @app.route('/api/figma/files', methods=['GET'])
 def figma_files():
+    if not FIGMA_ACCESS_TOKEN:
+        return jsonify({'error': 'Figma access token not configured'}), 500
+    if not FIGMA_TEAM_ID:
+        return jsonify({'error': 'Figma team ID not configured'}), 500
+    
+    all_files = []
+    seen_file_keys = set()  # Track files we've already added
+    
+    # Get all projects for the team
     try:
-        if not FIGMA_ACCESS_TOKEN:
-            return jsonify({'error': 'Figma access token not configured'}), 500
-        if not FIGMA_TEAM_ID:
-            return jsonify({'error': 'Figma team ID not configured'}), 500
-        
-        all_files = []
-        seen_file_keys = set()  # Track files we've already added
-        
-        # Get all projects for the team
-        try:
-            r = requests.get(f'{FIGMA_API_URL}/teams/{FIGMA_TEAM_ID}/projects', headers=figma_headers(), timeout=10)
-            if r.ok:
+        r = requests.get(f'{FIGMA_API_URL}/teams/{FIGMA_TEAM_ID}/projects', headers=figma_headers(), timeout=10)
+        if r.ok:
+            try:
+                projects_data = r.json()
+                projects = projects_data.get('projects', []) if isinstance(projects_data, dict) else []
+            except (ValueError, AttributeError) as e:
+                print(f'Error parsing projects JSON: {e}')
+                projects = []
+            
+            for project in projects:
+                if not isinstance(project, dict) or 'id' not in project:
+                    continue
                 try:
-                    projects_data = r.json()
-                    projects = projects_data.get('projects', []) if isinstance(projects_data, dict) else []
-                except (ValueError, AttributeError) as e:
-                    print(f'Error parsing projects JSON: {e}')
-                    projects = []
-                
-                for project in projects:
-                    if not isinstance(project, dict) or 'id' not in project:
-                        continue
-                    try:
-                        files_r = requests.get(f'{FIGMA_API_URL}/projects/{project["id"]}/files', headers=figma_headers(), timeout=10)
-                        if files_r.ok:
+                    files_r = requests.get(f'{FIGMA_API_URL}/projects/{project["id"]}/files', headers=figma_headers(), timeout=10)
+                    if files_r.ok:
+                        try:
+                            files_data = files_r.json()
+                            files = files_data.get('files', []) if isinstance(files_data, dict) else []
+                        except (ValueError, AttributeError) as e:
+                            print(f'Error parsing files JSON for project {project.get("id")}: {e}')
+                            files = []
+                        
+                        for file in files:
+                            if not isinstance(file, dict):
+                                continue
                             try:
-                                files_data = files_r.json()
-                                files = files_data.get('files', []) if isinstance(files_data, dict) else []
-                            except (ValueError, AttributeError) as e:
-                                print(f'Error parsing files JSON for project {project.get("id")}: {e}')
-                                files = []
-                            
-                            for file in files:
-                                if not isinstance(file, dict):
-                                    continue
-                                try:
-                                    file_key = file.get('key') or file.get('id')
-                                    if file_key and file_key not in seen_file_keys:
-                                        # Check if this is a library (has published components)
-                                        normalized_file = {
-                                            **file,
-                                            'projectName': str(project.get('name', 'Unknown Project')),
-                                            'projectId': project.get('id'),
-                                            'source': 'project',
-                                            'isLibrary': False,
-                                        }
-                                        # Map 'key' to 'id' if 'id' doesn't exist
-                                        if 'key' in normalized_file and 'id' not in normalized_file:
-                                            normalized_file['id'] = normalized_file['key']
-                                        
-                                        # Quick check: if file name contains "library" or is in a library-like project, mark it
-                                        file_name = str(normalized_file.get('name', '')).lower()
-                                        project_name = str(project.get('name', '')).lower()
-                                        if 'library' in file_name or 'lib' in file_name or 'library' in project_name:
-                                            normalized_file['isLibrary'] = True
-                                            normalized_file['source'] = 'library'
-                                        
-                                        all_files.append(normalized_file)
-                                        seen_file_keys.add(file_key)
-                                except Exception as e:
-                                    print(f'Error processing file: {e}')
-                                    continue
-                    except Exception as e:
-                        print(f'Error fetching files for project {project.get("id")}: {e}')
-                        continue
-        except Exception as e:
-            print(f'Error fetching projects: {e}')
-        
-        # Sort files: libraries first, then by project name (with safe defaults)
-        try:
-            all_files.sort(key=lambda f: (
-                0 if f.get('isLibrary') or f.get('source') == 'library' else 1,
-                str(f.get('projectName', '')),
-                str(f.get('name', ''))
-            ))
-        except Exception as e:
-            print(f'Error sorting files: {e}')
-            # Continue without sorting if it fails
-        
-        return jsonify({'projects': all_files})
+                                file_key = file.get('key') or file.get('id')
+                                if file_key and file_key not in seen_file_keys:
+                                    # Check if this is a library (has published components)
+                                    normalized_file = {
+                                        **file,
+                                        'projectName': str(project.get('name', 'Unknown Project')),
+                                        'projectId': project.get('id'),
+                                        'source': 'project',
+                                        'isLibrary': False,
+                                    }
+                                    # Map 'key' to 'id' if 'id' doesn't exist
+                                    if 'key' in normalized_file and 'id' not in normalized_file:
+                                        normalized_file['id'] = normalized_file['key']
+                                    
+                                    # Quick check: if file name contains "library" or is in a library-like project, mark it
+                                    file_name = str(normalized_file.get('name', '')).lower()
+                                    project_name = str(project.get('name', '')).lower()
+                                    if 'library' in file_name or 'lib' in file_name or 'library' in project_name:
+                                        normalized_file['isLibrary'] = True
+                                        normalized_file['source'] = 'library'
+                                    
+                                    all_files.append(normalized_file)
+                                    seen_file_keys.add(file_key)
+                            except Exception as e:
+                                print(f'Error processing file: {e}')
+                                continue
+                except Exception as e:
+                    print(f'Error fetching files for project {project.get("id")}: {e}')
+                    continue
     except Exception as e:
-        print(f'Error in figma_files endpoint: {e}')
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': 'Internal server error', 'message': str(e)}), 500
+        print(f'Error fetching projects: {e}')
+        # Return empty list on error instead of failing
+    
+    # Sort files: libraries first, then by project name (with safe defaults)
+    try:
+        all_files.sort(key=lambda f: (
+            0 if f.get('isLibrary') or f.get('source') == 'library' else 1,
+            str(f.get('projectName', '')),
+            str(f.get('name', ''))
+        ))
+    except Exception as e:
+        print(f'Error sorting files: {e}')
+        # Continue without sorting if it fails
+    
+    # Ensure we always return a valid JSON response
+    response = jsonify({'projects': all_files})
+    return response
 
 @app.route('/api/figma/file/<id>', methods=['GET'])
 def figma_file(id):
