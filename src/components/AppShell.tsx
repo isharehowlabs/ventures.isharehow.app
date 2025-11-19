@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   AppBar,
@@ -17,6 +17,7 @@ import {
   useTheme,
   useMediaQuery,
   type SvgIconProps,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -53,47 +54,189 @@ interface AppShellProps {
 
 const AppShell = ({ active, children }: AppShellProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const DRAWER_WIDTH = 280;
+  const COLLAPSED_WIDTH = 64;
+  const HOVER_ZONE_WIDTH = 80; // Width of the hover zone on the left edge
 
   const handleDrawerToggle = () => {
     setMobileOpen((prev) => !prev);
   };
 
+  useEffect(() => {
+    if (isMobile) return; // Only apply on desktop
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const mouseX = e.clientX;
+      
+      // If mouse is in the hover zone (left edge) or in the drawer area
+      if (mouseX <= HOVER_ZONE_WIDTH || (drawerRef.current && drawerRef.current.contains(e.target as Node))) {
+        setIsCollapsed(false);
+        setIsHovering(true);
+        
+        // Clear any existing timeout
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+          hoverTimeoutRef.current = null;
+        }
+      } else {
+        // Mouse is away from drawer, set a delay before collapsing
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+        }
+        
+        hoverTimeoutRef.current = setTimeout(() => {
+          if (!drawerRef.current?.contains(e.target as Node)) {
+            setIsCollapsed(true);
+            setIsHovering(false);
+          }
+        }, 300); // 300ms delay before collapsing
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsCollapsed(true);
+        setIsHovering(false);
+      }, 300);
+    };
+
+    // Initialize as collapsed after a short delay
+    initTimeoutRef.current = setTimeout(() => {
+      setIsCollapsed(true);
+    }, 1000); // Start collapsed after 1 second
+
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
+    };
+  }, [isMobile]);
+
   const drawer = (
-    <Box sx={{ width: 280, height: '100%', bgcolor: 'background.paper' }}>
-      <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="caption" color="text.secondary">
-          Ventures Navigation
-        </Typography>
+    <Box 
+      ref={drawerRef}
+      sx={{ 
+        width: '100%', 
+        height: '100%', 
+        bgcolor: 'background.paper',
+        overflow: 'hidden',
+        transition: 'all 0.3s ease-in-out',
+      }}
+      onMouseEnter={() => {
+        if (!isMobile) {
+          setIsCollapsed(false);
+          setIsHovering(true);
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+          }
+        }
+      }}
+      onMouseLeave={() => {
+        if (!isMobile) {
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+          }
+          hoverTimeoutRef.current = setTimeout(() => {
+            setIsCollapsed(true);
+            setIsHovering(false);
+          }, 300);
+        }
+      }}
+    >
+      <Box 
+        sx={{ 
+          p: isCollapsed && !isMobile ? 2 : 3, 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          transition: 'padding 0.3s ease-in-out',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start',
+        }}
+      >
+        {(!isCollapsed || isMobile) && (
+          <Typography 
+            variant="caption" 
+            color="text.secondary"
+            sx={{
+              opacity: isCollapsed && !isMobile ? 0 : 1,
+              transition: 'opacity 0.2s ease-in-out',
+            }}
+          >
+            Ventures Navigation
+          </Typography>
+        )}
       </Box>
-      <List sx={{ px: 2, py: 2 }}>
+      <List sx={{ px: isCollapsed && !isMobile ? 1 : 2, py: 2 }}>
         {navigationItems.map((item) => {
           const selected = item.key === active;
           const IconComponent = item.icon;
 
           return (
-            <ListItemButton
+            <Tooltip 
               key={item.key}
-              onClick={() => {
-                if (typeof window !== 'undefined' && window.location.pathname !== item.href) {
-                  window.location.href = item.href;
-                }
-              }}
-              selected={selected}
-              sx={{ borderRadius: 2, mb: 1 }}
+              title={isCollapsed && !isMobile ? item.label : ''}
+              placement="right"
+              arrow
             >
-              <ListItemIcon>
-                <IconComponent color={selected ? 'primary' : 'inherit'} />
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                primaryTypographyProps={{
-                  fontWeight: selected ? 600 : 400,
-                  color: selected ? 'primary.main' : 'inherit',
+              <ListItemButton
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.location.pathname !== item.href) {
+                    window.location.href = item.href;
+                  }
                 }}
-              />
-            </ListItemButton>
+                selected={selected}
+                sx={{ 
+                  borderRadius: 2, 
+                  mb: 1,
+                  justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start',
+                  minHeight: 48,
+                  px: isCollapsed && !isMobile ? 1 : 2,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: isCollapsed && !isMobile ? 0 : 40,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <IconComponent color={selected ? 'primary' : 'inherit'} />
+                </ListItemIcon>
+                {(!isCollapsed || isMobile) && (
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      fontWeight: selected ? 600 : 400,
+                      color: selected ? 'primary.main' : 'inherit',
+                    }}
+                    sx={{
+                      opacity: isCollapsed && !isMobile ? 0 : 1,
+                      transition: 'opacity 0.2s ease-in-out',
+                    }}
+                  />
+                )}
+              </ListItemButton>
+            </Tooltip>
           );
         })}
       </List>
@@ -160,26 +303,52 @@ const AppShell = ({ active, children }: AppShellProps) => {
         sx={{
           display: { xs: 'block' },
           '& .MuiDrawer-paper': {
-            width: 280,
+            width: isCollapsed && !isMobile ? COLLAPSED_WIDTH : DRAWER_WIDTH,
             boxSizing: 'border-box',
             border: 'none',
             borderRight: 1,
             borderColor: 'divider',
             top: '64px',
             height: 'calc(100% - 64px)',
+            transition: 'width 0.3s ease-in-out',
+            overflowX: 'hidden',
           },
         }}
       >
         {drawer}
       </Drawer>
 
+      {/* Hover zone for triggering drawer expansion */}
+      {!isMobile && (
+        <Box
+          sx={{
+            position: 'fixed',
+            left: 0,
+            top: '64px',
+            width: HOVER_ZONE_WIDTH,
+            height: 'calc(100% - 64px)',
+            zIndex: isCollapsed ? 1200 : -1,
+            transition: 'z-index 0.3s ease-in-out',
+          }}
+        />
+      )}
+
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          width: { md: 'calc(100% - 280px)' },
-          ml: { md: '280px' },
+          width: { 
+            md: isCollapsed && !isMobile 
+              ? `calc(100% - ${COLLAPSED_WIDTH}px)` 
+              : `calc(100% - ${DRAWER_WIDTH}px)` 
+          },
+          ml: { 
+            md: isCollapsed && !isMobile 
+              ? `${COLLAPSED_WIDTH}px` 
+              : `${DRAWER_WIDTH}px` 
+          },
           mt: '64px',
+          transition: 'margin-left 0.3s ease-in-out, width 0.3s ease-in-out',
         }}
       >
         {isMobile && <Toolbar />}
