@@ -26,7 +26,8 @@ export function useFigma() {
   const [tokens, setTokens] = useState<FigmaToken[]>([]);
   const [likedComponents, setLikedComponents] = useState<string[]>([]);
   const [savedComponents, setSavedComponents] = useState<string[]>([]);
-  const [componentStatuses, setComponentStatuses] = useState<Record<string, { liked: boolean; saved: boolean }>>({});
+  const [draftedComponents, setDraftedComponents] = useState<string[]>([]);
+  const [componentStatuses, setComponentStatuses] = useState<Record<string, { liked: boolean; saved: boolean; drafted: boolean }>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -249,6 +250,63 @@ export function useFigma() {
     }
   };
 
+  const draftComponent = async (componentId: string, drafted: boolean = true, draftData?: any) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const backendUrl = getBackendUrl();
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/component/draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ componentId, drafted, draftData }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Update local state
+        setComponentStatuses((prev) => ({
+          ...prev,
+          [componentId]: { ...prev[componentId], drafted },
+        }));
+        
+        // Update drafted components list
+        if (drafted) {
+          setDraftedComponents((prev) => (prev.includes(componentId) ? prev : [...prev, componentId]));
+        } else {
+          setDraftedComponents((prev) => prev.filter((id) => id !== componentId));
+        }
+      }
+      return data;
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to draft component';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDraftedComponents = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const backendUrl = getBackendUrl();
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/components/drafted`, {
+        method: 'GET',
+      });
+
+      const data = await response.json();
+      setDraftedComponents(data.componentIds || []);
+      return data.componentIds || [];
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to fetch drafted components';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const fetchComponentStatus = async (componentId: string) => {
     try {
       const backendUrl = getBackendUrl();
@@ -259,12 +317,68 @@ export function useFigma() {
       const data = await response.json();
       setComponentStatuses((prev) => ({
         ...prev,
-        [componentId]: { liked: data.liked || false, saved: data.saved || false },
+        [componentId]: { liked: data.liked || false, saved: data.saved || false, drafted: data.drafted || false },
       }));
       return data;
     } catch (err: any) {
       console.error('Error fetching component status:', err);
-      return { liked: false, saved: false };
+      return { liked: false, saved: false, drafted: false };
+    }
+  };
+
+  const fetchComponentPreferences = async (componentIds?: string[]) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const backendUrl = getBackendUrl();
+      const method = componentIds ? 'POST' : 'GET';
+      const body = componentIds ? JSON.stringify({ componentIds }) : undefined;
+      
+      const response = await fetchWithErrorHandling(`${backendUrl}/api/figma/components/preferences`, {
+        method,
+        headers: componentIds ? { 'Content-Type': 'application/json' } : undefined,
+        body,
+      });
+
+      const data = await response.json();
+      
+      // Update component statuses
+      if (data.preferences) {
+        setComponentStatuses((prev) => {
+          const updated = { ...prev };
+          Object.entries(data.preferences).forEach(([componentId, prefs]: [string, any]) => {
+            updated[componentId] = {
+              liked: prefs.liked || false,
+              saved: prefs.saved || false,
+              drafted: prefs.drafted || false,
+            };
+          });
+          return updated;
+        });
+        
+        // Update lists
+        const liked = Object.entries(data.preferences)
+          .filter(([_, prefs]: [string, any]) => prefs.liked)
+          .map(([id]) => id);
+        const saved = Object.entries(data.preferences)
+          .filter(([_, prefs]: [string, any]) => prefs.saved)
+          .map(([id]) => id);
+        const drafted = Object.entries(data.preferences)
+          .filter(([_, prefs]: [string, any]) => prefs.drafted)
+          .map(([id]) => id);
+        
+        setLikedComponents(liked);
+        setSavedComponents(saved);
+        setDraftedComponents(drafted);
+      }
+      
+      return data;
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to fetch component preferences';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -274,6 +388,7 @@ export function useFigma() {
     tokens,
     likedComponents,
     savedComponents,
+    draftedComponents,
     componentStatuses,
     isLoading,
     error,
@@ -283,9 +398,12 @@ export function useFigma() {
     fetchTokens,
     likeComponent,
     saveComponent,
+    draftComponent,
     fetchLikedComponents,
     fetchSavedComponents,
+    fetchDraftedComponents,
     fetchComponentStatus,
+    fetchComponentPreferences,
   };
 }
 

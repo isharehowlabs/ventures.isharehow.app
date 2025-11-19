@@ -249,6 +249,7 @@ class MCPServer:
         self.design_tokens = {}  # {tokenName: {value, type, updatedAt}}
         self.component_likes = {}  # {userId: {componentId: liked}}
         self.component_saves = {}  # {userId: {componentId: saved}}
+        self.component_drafts = {}  # {userId: {componentId: draftData}}
 
     def link_component_to_code(self, figma_component_id, code_file_path, code_component_name, figma_file_id=None):
         link = {
@@ -338,6 +339,57 @@ class MCPServer:
     def is_saved(self, user_id, component_id):
         """Check if a component is saved by a user"""
         return user_id in self.component_saves and component_id in self.component_saves[user_id]
+    
+    def draft_component(self, user_id, component_id, draft=True, draft_data=None):
+        """Draft or undraft a Figma component (draft_data can include notes, tags, etc.)"""
+        if user_id not in self.component_drafts:
+            self.component_drafts[user_id] = {}
+        if draft:
+            self.component_drafts[user_id][component_id] = {
+                'draftedAt': datetime.utcnow().isoformat(),
+                'data': draft_data or {},
+            }
+        else:
+            self.component_drafts[user_id].pop(component_id, None)
+        return {'success': True, 'drafted': draft}
+    
+    def get_drafted_components(self, user_id):
+        """Get all drafted component IDs for a user"""
+        if user_id not in self.component_drafts:
+            return []
+        return list(self.component_drafts[user_id].keys())
+    
+    def is_drafted(self, user_id, component_id):
+        """Check if a component is drafted by a user"""
+        return user_id in self.component_drafts and component_id in self.component_drafts[user_id]
+    
+    def get_component_preferences(self, user_id, component_ids=None):
+        """Get all preferences (like, save, draft) for specified components or all components for a user"""
+        liked = set(self.get_liked_components(user_id))
+        saved = set(self.get_saved_components(user_id))
+        drafted = set(self.get_drafted_components(user_id))
+        
+        if component_ids:
+            # Return preferences only for specified components
+            return {
+                component_id: {
+                    'liked': component_id in liked,
+                    'saved': component_id in saved,
+                    'drafted': component_id in drafted,
+                }
+                for component_id in component_ids
+            }
+        else:
+            # Return all unique component IDs with their preferences
+            all_components = liked | saved | drafted
+            return {
+                component_id: {
+                    'liked': component_id in liked,
+                    'saved': component_id in saved,
+                    'drafted': component_id in drafted,
+                }
+                for component_id in all_components
+            }
 
 mcp_server = MCPServer()
 # --- MCP Endpoints ---
@@ -442,7 +494,52 @@ def figma_component_status(component_id):
     user_id = get_user_id()
     is_liked = mcp_server.is_liked(user_id, component_id)
     is_saved = mcp_server.is_saved(user_id, component_id)
-    return jsonify({'liked': is_liked, 'saved': is_saved})
+    is_drafted = mcp_server.is_drafted(user_id, component_id)
+    return jsonify({'liked': is_liked, 'saved': is_saved, 'drafted': is_drafted})
+
+@app.route('/api/figma/component/draft', methods=['POST'])
+def figma_component_draft():
+    data = request.get_json()
+    component_id = data.get('componentId')
+    drafted = data.get('drafted', True)
+    draft_data = data.get('draftData', None)
+    if not component_id:
+        return jsonify({'error': 'Component ID required'}), 400
+    user_id = get_user_id()
+    result = mcp_server.draft_component(user_id, component_id, drafted, draft_data)
+    return jsonify(result)
+
+@app.route('/api/figma/components/drafted', methods=['GET'])
+def figma_components_drafted():
+    user_id = get_user_id()
+    component_ids = mcp_server.get_drafted_components(user_id)
+    return jsonify({'componentIds': component_ids})
+
+@app.route('/api/figma/components/preferences', methods=['GET', 'POST'])
+def figma_components_preferences():
+    """Unified endpoint to get all component preferences (likes, saves, drafts)
+    GET: Returns all preferences for current user
+    POST: Accepts array of componentIds to get preferences for specific components"""
+    user_id = get_user_id()
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        component_ids = data.get('componentIds', [])
+        if not isinstance(component_ids, list):
+            return jsonify({'error': 'componentIds must be an array'}), 400
+        preferences = mcp_server.get_component_preferences(user_id, component_ids)
+    else:
+        # GET: Return all preferences
+        preferences = mcp_server.get_component_preferences(user_id)
+    
+    return jsonify({
+        'preferences': preferences,
+        'summary': {
+            'liked': len([p for p in preferences.values() if p['liked']]),
+            'saved': len([p for p in preferences.values() if p['saved']]),
+            'drafted': len([p for p in preferences.values() if p['drafted']]),
+        }
+    })
 
 # --- Figma API Proxy Endpoints ---
 FIGMA_ACCESS_TOKEN = os.environ.get('FIGMA_ACCESS_TOKEN')

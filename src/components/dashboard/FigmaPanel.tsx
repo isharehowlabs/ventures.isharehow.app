@@ -24,7 +24,7 @@ import {
   MenuItem,
   Divider,
 } from '@mui/material';
-import { Refresh as RefreshIcon, Link as LinkIcon, Code as CodeIcon, Favorite as FavoriteIcon, FavoriteBorder as FavoriteBorderIcon, Bookmark as BookmarkIcon, BookmarkBorder as BookmarkBorderIcon } from '@mui/icons-material';
+import { Refresh as RefreshIcon, Link as LinkIcon, Code as CodeIcon, Favorite as FavoriteIcon, FavoriteBorder as FavoriteBorderIcon, Bookmark as BookmarkIcon, BookmarkBorder as BookmarkBorderIcon, Edit as EditIcon, EditOutlined as EditOutlinedIcon } from '@mui/icons-material';
 import { useFigma, FigmaComponent } from '../../hooks/useFigma';
 import { useMCP } from '../../hooks/useMCP';
 
@@ -50,6 +50,7 @@ export default function FigmaPanel() {
     tokens: figmaTokens, 
     likedComponents,
     savedComponents,
+    draftedComponents,
     componentStatuses,
     isLoading: figmaLoading, 
     error: figmaError, 
@@ -58,9 +59,12 @@ export default function FigmaPanel() {
     fetchTokens,
     likeComponent,
     saveComponent,
+    draftComponent,
     fetchLikedComponents,
     fetchSavedComponents,
+    fetchDraftedComponents,
     fetchComponentStatus,
+    fetchComponentPreferences,
   } = useFigma();
   const { links, tokens: mcpTokens, isLoading: mcpLoading, error: mcpError, linkComponentToCode, fetchCodeLinks, fetchTokens: fetchMcpTokens, generateCode } = useMCP();
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -83,6 +87,7 @@ export default function FigmaPanel() {
           fetchMcpTokens(),
           fetchLikedComponents(),
           fetchSavedComponents(),
+          fetchDraftedComponents(),
         ]);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -209,13 +214,25 @@ export default function FigmaPanel() {
     }
   };
 
-  const getFilteredComponents = (filterType: 'all' | 'liked' | 'saved') => {
+  const handleDraft = async (componentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentStatus = componentStatuses[componentId]?.drafted || false;
+    try {
+      await draftComponent(componentId, !currentStatus);
+    } catch (err) {
+      console.error('Error drafting component:', err);
+    }
+  };
+
+  const getFilteredComponents = (filterType: 'all' | 'liked' | 'saved' | 'drafted') => {
     if (filterType === 'all') {
       return components;
     } else if (filterType === 'liked') {
       return components.filter((comp) => componentStatuses[comp.key]?.liked);
     } else if (filterType === 'saved') {
       return components.filter((comp) => componentStatuses[comp.key]?.saved);
+    } else if (filterType === 'drafted') {
+      return components.filter((comp) => componentStatuses[comp.key]?.drafted);
     }
     return components;
   };
@@ -297,6 +314,7 @@ export default function FigmaPanel() {
                 <Tab label="Components" />
                 <Tab label="Liked" />
                 <Tab label="Saved" />
+                <Tab label="Drafts" />
                 <Tab label="Design Tokens" />
                 <Tab label="Code Links" />
               </Tabs>
@@ -313,6 +331,7 @@ export default function FigmaPanel() {
                         const isLinked = links.some((link) => link.componentId === component.key);
                         const isLiked = componentStatuses[component.key]?.liked || false;
                         const isSaved = componentStatuses[component.key]?.saved || false;
+                        const isDrafted = componentStatuses[component.key]?.drafted || false;
                         return (
                           <ListItem
                             key={component.key}
@@ -340,6 +359,15 @@ export default function FigmaPanel() {
                                     sx={{ color: isSaved ? 'primary.main' : 'text.secondary' }}
                                   >
                                     {isSaved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isDrafted ? 'Remove from drafts' : 'Add to drafts'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleDraft(component.key, e)}
+                                    sx={{ color: isDrafted ? 'warning.main' : 'text.secondary' }}
+                                  >
+                                    {isDrafted ? <EditIcon fontSize="small" /> : <EditOutlinedIcon fontSize="small" />}
                                   </IconButton>
                                 </Tooltip>
                                 {isLinked ? (
@@ -394,6 +422,7 @@ export default function FigmaPanel() {
                         const isLinked = links.some((link) => link.componentId === component.key);
                         const isLiked = componentStatuses[component.key]?.liked || false;
                         const isSaved = componentStatuses[component.key]?.saved || false;
+                        const isDrafted = componentStatuses[component.key]?.drafted || false;
                         return (
                           <ListItem
                             key={component.key}
@@ -421,6 +450,15 @@ export default function FigmaPanel() {
                                     sx={{ color: isSaved ? 'primary.main' : 'text.secondary' }}
                                   >
                                     {isSaved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isDrafted ? 'Remove from drafts' : 'Add to drafts'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleDraft(component.key, e)}
+                                    sx={{ color: isDrafted ? 'warning.main' : 'text.secondary' }}
+                                  >
+                                    {isDrafted ? <EditIcon fontSize="small" /> : <EditOutlinedIcon fontSize="small" />}
                                   </IconButton>
                                 </Tooltip>
                                 {isLinked && (
@@ -473,6 +511,7 @@ export default function FigmaPanel() {
                         const isLinked = links.some((link) => link.componentId === component.key);
                         const isLiked = componentStatuses[component.key]?.liked || false;
                         const isSaved = componentStatuses[component.key]?.saved || false;
+                        const isDrafted = componentStatuses[component.key]?.drafted || false;
                         return (
                           <ListItem
                             key={component.key}
@@ -500,6 +539,15 @@ export default function FigmaPanel() {
                                     sx={{ color: isSaved ? 'primary.main' : 'text.secondary' }}
                                   >
                                     {isSaved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isDrafted ? 'Remove from drafts' : 'Add to drafts'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleDraft(component.key, e)}
+                                    sx={{ color: isDrafted ? 'warning.main' : 'text.secondary' }}
+                                  >
+                                    {isDrafted ? <EditIcon fontSize="small" /> : <EditOutlinedIcon fontSize="small" />}
                                   </IconButton>
                                 </Tooltip>
                                 {isLinked && (
@@ -540,8 +588,97 @@ export default function FigmaPanel() {
                   )}
                 </TabPanel>
 
-                {/* Design Tokens Tab */}
+                {/* Drafted Components Tab */}
                 <TabPanel value={tabValue} index={3}>
+                  {loadingComponents ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <List>
+                      {getFilteredComponents('drafted').map((component) => {
+                        const isLinked = links.some((link) => link.componentId === component.key);
+                        const isLiked = componentStatuses[component.key]?.liked || false;
+                        const isSaved = componentStatuses[component.key]?.saved || false;
+                        const isDrafted = componentStatuses[component.key]?.drafted || false;
+                        return (
+                          <ListItem
+                            key={component.key}
+                            sx={{
+                              border: 1,
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              mb: 1,
+                            }}
+                            secondaryAction={
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Tooltip title={isLiked ? 'Unlike' : 'Like'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleLike(component.key, e)}
+                                    sx={{ color: isLiked ? 'error.main' : 'text.secondary' }}
+                                  >
+                                    {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isSaved ? 'Remove from saved' : 'Save'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleSave(component.key, e)}
+                                    sx={{ color: isSaved ? 'primary.main' : 'text.secondary' }}
+                                  >
+                                    {isSaved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isDrafted ? 'Remove from drafts' : 'Add to drafts'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleDraft(component.key, e)}
+                                    sx={{ color: isDrafted ? 'warning.main' : 'text.secondary' }}
+                                  >
+                                    {isDrafted ? <EditIcon fontSize="small" /> : <EditOutlinedIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                {isLinked && (
+                                  <Button
+                                    size="small"
+                                    startIcon={<CodeIcon />}
+                                    onClick={() => handleGenerateCode(component.key)}
+                                  >
+                                    Generate Code
+                                  </Button>
+                                )}
+                              </Box>
+                            }
+                          >
+                            <ListItemText
+                              primary={component.name}
+                              secondary={component.description || `ID: ${component.key}`}
+                            />
+                            {isLinked && (
+                              <Chip
+                                label="Linked"
+                                size="small"
+                                color="success"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </ListItem>
+                        );
+                      })}
+                      {getFilteredComponents('drafted').length === 0 && (
+                        <Box sx={{ p: 4, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No drafted components yet. Add components to drafts from the Components tab.
+                          </Typography>
+                        </Box>
+                      )}
+                    </List>
+                  )}
+                </TabPanel>
+
+                {/* Design Tokens Tab */}
+                <TabPanel value={tabValue} index={4}>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {figmaTokens.map((token) => (
                       <Chip
@@ -555,7 +692,7 @@ export default function FigmaPanel() {
                 </TabPanel>
 
                 {/* Code Links Tab */}
-                <TabPanel value={tabValue} index={4}>
+                <TabPanel value={tabValue} index={5}>
                   {links.length === 0 ? (
                     <Box sx={{ p: 4, textAlign: 'center' }}>
                       <Typography variant="body2" color="text.secondary">
