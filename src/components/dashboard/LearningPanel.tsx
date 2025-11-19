@@ -64,8 +64,19 @@ interface PDFResource {
   thumbnail?: string;
 }
 
-// Sample course data
-const courses: Course[] = [
+// Combined courses and video classes
+const learningContent: LearningContent[] = [
+  {
+    id: 'video-1',
+    title: 'Learning Hub Video Classes',
+    description: 'A comprehensive collection of video classes covering various topics and learning paths.',
+    instructor: 'iShareHow',
+    duration: 'Playlist',
+    level: 'Beginner',
+    category: 'General',
+    videoUrl: 'https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp',
+    uploadDate: new Date().toISOString().split('T')[0],
+  },
   {
     id: 'course-1',
     title: 'Introduction to Web Development',
@@ -135,24 +146,13 @@ const pdfResources: PDFResource[] = [
   },
 ];
 
-// Video classes
-const videoClasses: VideoClass[] = [
-  {
-    id: 'video-1',
-    title: 'Learning Hub Video Classes',
-    description: 'A comprehensive collection of video classes covering various topics and learning paths.',
-    instructor: 'iShareHow',
-    duration: 'Playlist',
-    level: 'Beginner',
-    category: 'General',
-    videoUrl: 'https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp',
-    uploadDate: new Date().toISOString().split('T')[0],
-  },
-];
-
-const CourseCard: FC<{ course: Course }> = ({ course }) => (
+const LearningContentCard: FC<{ 
+  content: LearningContent;
+  onClick: () => void;
+}> = ({ content, onClick }) => (
   <Card
     variant="outlined"
+    onClick={onClick}
     sx={{
       borderRadius: 3,
       height: '100%',
@@ -162,17 +162,44 @@ const CourseCard: FC<{ course: Course }> = ({ course }) => (
       flexDirection: 'column',
       gap: 2,
       transition: 'transform 0.2s, box-shadow 0.2s',
+      cursor: 'pointer',
       '&:hover': {
         transform: 'translateY(-4px)',
         boxShadow: 4,
       },
     }}
   >
-    {course.thumbnail && (
+    {content.videoUrl ? (
+      <Box
+        sx={{
+          position: 'relative',
+          width: '100%',
+          paddingTop: '56.25%', // 16:9 aspect ratio
+          borderRadius: 2,
+          overflow: 'hidden',
+          bgcolor: 'grey.200',
+        }}
+      >
+        <iframe
+          src={content.videoUrl}
+          title={content.title}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: 0,
+          }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </Box>
+    ) : content.thumbnail ? (
       <Box
         component="img"
-        src={course.thumbnail}
-        alt={course.title}
+        src={content.thumbnail}
+        alt={content.title}
         sx={{
           width: '100%',
           height: 160,
@@ -180,27 +207,43 @@ const CourseCard: FC<{ course: Course }> = ({ course }) => (
           borderRadius: 2,
         }}
       />
+    ) : (
+      <Box
+        sx={{
+          width: '100%',
+          height: 160,
+          borderRadius: 2,
+          bgcolor: 'primary.light',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <PlayCircleOutline sx={{ fontSize: 64, color: 'primary.main' }} />
+      </Box>
     )}
     <Stack direction="row" spacing={1} alignItems="center">
       <Chip
-        label={course.level}
+        label={content.level}
         size="small"
-        color={course.level === 'Advanced' ? 'secondary' : course.level === 'Intermediate' ? 'default' : 'primary'}
+        color={content.level === 'Advanced' ? 'secondary' : content.level === 'Intermediate' ? 'default' : 'primary'}
         sx={{ fontWeight: 600 }}
       />
-      <Typography variant="body2" color="text.secondary">
-        {course.lessons} lessons
-      </Typography>
+      {content.lessons && (
+        <Typography variant="body2" color="text.secondary">
+          {content.lessons} lessons
+        </Typography>
+      )}
     </Stack>
     <Box>
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-        {course.title}
+        {content.title}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        {course.description}
+        {content.description}
       </Typography>
       <Typography variant="caption" color="text.secondary">
-        By {course.instructor} · {course.duration}
+        By {content.instructor} · {content.duration}
       </Typography>
     </Box>
     <Divider />
@@ -209,12 +252,12 @@ const CourseCard: FC<{ course: Course }> = ({ course }) => (
       color="primary"
       startIcon={<PlayCircleOutline />}
       sx={{ textTransform: 'none', fontWeight: 700, mt: 'auto' }}
-      onClick={() => {
-        // Navigate to course or open course details
-        console.log('Open course:', course.id);
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
       }}
     >
-      Start Course
+      {content.videoUrl ? 'Watch Class' : 'Start Course'}
     </Button>
   </Card>
 );
@@ -304,74 +347,6 @@ const PDFCard: FC<{ pdf: PDFResource }> = ({ pdf }) => (
   </Card>
 );
 
-const VideoCard: FC<{ video: VideoClass }> = ({ video }) => (
-  <Card
-    variant="outlined"
-    sx={{
-      borderRadius: 3,
-      height: '100%',
-      p: 3,
-      borderColor: 'divider',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 2,
-      transition: 'transform 0.2s, box-shadow 0.2s',
-      '&:hover': {
-        transform: 'translateY(-4px)',
-        boxShadow: 4,
-      },
-    }}
-  >
-    <Box
-      sx={{
-        position: 'relative',
-        width: '100%',
-        paddingTop: '56.25%', // 16:9 aspect ratio
-        borderRadius: 2,
-        overflow: 'hidden',
-        bgcolor: 'grey.200',
-      }}
-    >
-      <iframe
-        src={video.videoUrl}
-        title={video.title}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          border: 0,
-        }}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    </Box>
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Chip
-        label={video.level}
-        size="small"
-        color={video.level === 'Advanced' ? 'secondary' : video.level === 'Intermediate' ? 'default' : 'primary'}
-        sx={{ fontWeight: 600 }}
-      />
-      <Typography variant="body2" color="text.secondary">
-        {video.duration}
-      </Typography>
-    </Stack>
-    <Box>
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-        {video.title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        {video.description}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        By {video.instructor} · {new Date(video.uploadDate).toLocaleDateString()}
-      </Typography>
-    </Box>
-  </Card>
-);
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -395,9 +370,46 @@ function TabPanel(props: TabPanelProps) {
 
 export default function LearningPanel() {
   const [activeTab, setActiveTab] = useState(0);
+  const [selectedContent, setSelectedContent] = useState<LearningContent | null>(null);
+  const [notes, setNotes] = useState<{ [key: string]: string }>({});
+
+  // Load notes from localStorage on mount
+  useEffect(() => {
+    const savedNotes = localStorage.getItem('learningHubNotes');
+    if (savedNotes) {
+      try {
+        setNotes(JSON.parse(savedNotes));
+      } catch (e) {
+        console.error('Failed to load notes:', e);
+      }
+    }
+  }, []);
+
+  // Save notes to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(notes).length > 0 || localStorage.getItem('learningHubNotes')) {
+      localStorage.setItem('learningHubNotes', JSON.stringify(notes));
+    }
+  }, [notes]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
+  };
+
+  const handleContentClick = (content: LearningContent) => {
+    setSelectedContent(content);
+    // Load notes for this content if they exist
+    if (!notes[content.id]) {
+      setNotes((prev) => ({ ...prev, [content.id]: '' }));
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedContent(null);
+  };
+
+  const handleNotesChange = (contentId: string, value: string) => {
+    setNotes((prev) => ({ ...prev, [contentId]: value }));
   };
 
   return (
@@ -424,7 +436,7 @@ export default function LearningPanel() {
             Your Learning Hub
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
-            Access your courses, PDF resources, and video classes all in one place. Track your progress, download materials, and continue your learning journey.
+            Access your courses and video classes all in one place. Click any class to watch in a larger view and take notes.
           </Typography>
         </Box>
 
@@ -439,19 +451,13 @@ export default function LearningPanel() {
             <Tab
               icon={<MenuBookOutlined />}
               iconPosition="start"
-              label="Courses"
+              label="Courses & Classes"
               sx={{ textTransform: 'none', fontWeight: 600 }}
             />
             <Tab
               icon={<PictureAsPdfOutlined />}
               iconPosition="start"
               label="PDFs"
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            />
-            <Tab
-              icon={<VideoLibraryOutlined />}
-              iconPosition="start"
-              label="Video Classes"
               sx={{ textTransform: 'none', fontWeight: 600 }}
             />
           </Tabs>
@@ -462,10 +468,10 @@ export default function LearningPanel() {
             <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                  My Courses
+                  My Courses & Classes
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Structured learning paths designed to take you from beginner to advanced.
+                  Click any course or class to watch videos in a larger view and take notes.
                 </Typography>
               </Box>
               <Button
@@ -478,9 +484,12 @@ export default function LearningPanel() {
               </Button>
             </Stack>
             <Grid container spacing={3}>
-              {courses.map((course) => (
-                <Grid item xs={12} md={4} key={course.id}>
-                  <CourseCard course={course} />
+              {learningContent.map((content) => (
+                <Grid item xs={12} md={4} key={content.id}>
+                  <LearningContentCard 
+                    content={content} 
+                    onClick={() => handleContentClick(content)}
+                  />
                 </Grid>
               ))}
             </Grid>
@@ -514,37 +523,148 @@ export default function LearningPanel() {
             </Stack>
           </Stack>
         </TabPanel>
-
-        <TabPanel value={activeTab} index={2}>
-          <Stack spacing={3}>
-            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                  Video Classes
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Watch recorded classes and tutorials to enhance your understanding of key concepts.
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<FilterList />}
-                sx={{ textTransform: 'none', fontWeight: 600 }}
-              >
-                Filter
-              </Button>
-            </Stack>
-            <Grid container spacing={3}>
-              {videoClasses.map((video) => (
-                <Grid item xs={12} md={4} key={video.id}>
-                  <VideoCard video={video} />
-                </Grid>
-              ))}
-            </Grid>
-          </Stack>
-        </TabPanel>
       </Stack>
+
+      {/* Expanded Video/Class Dialog with Notes */}
+      <Dialog
+        open={!!selectedContent}
+        onClose={handleCloseDialog}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            height: '90vh',
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        {selectedContent && (
+          <>
+            <DialogTitle>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                    {selectedContent.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    By {selectedContent.instructor} · {selectedContent.duration}
+                  </Typography>
+                </Box>
+                <IconButton onClick={handleCloseDialog}>
+                  <CloseIcon />
+                </IconButton>
+              </Stack>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Grid container spacing={3} sx={{ height: 'calc(90vh - 120px)' }}>
+                {/* Video Section */}
+                <Grid item xs={12} md={8}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '56.25%', // 16:9 aspect ratio
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      bgcolor: 'grey.200',
+                      mb: 2,
+                    }}
+                  >
+                    {selectedContent.videoUrl ? (
+                      <iframe
+                        src={selectedContent.videoUrl}
+                        title={selectedContent.title}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          border: 0,
+                        }}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: 'primary.light',
+                        }}
+                      >
+                        <PlayCircleOutline sx={{ fontSize: 80, color: 'primary.main' }} />
+                      </Box>
+                    )}
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                      About This {selectedContent.videoUrl ? 'Class' : 'Course'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedContent.description}
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                      <Chip
+                        label={selectedContent.level}
+                        size="small"
+                        color={selectedContent.level === 'Advanced' ? 'secondary' : selectedContent.level === 'Intermediate' ? 'default' : 'primary'}
+                      />
+                      <Chip label={selectedContent.category} size="small" variant="outlined" />
+                    </Stack>
+                  </Box>
+                </Grid>
+
+                {/* Notes Section */}
+                <Grid item xs={12} md={4}>
+                  <Paper
+                    elevation={2}
+                    sx={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      p: 2,
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                      <NoteIcon color="primary" />
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        My Notes
+                      </Typography>
+                    </Stack>
+                    <TextField
+                      multiline
+                      fullWidth
+                      rows={20}
+                      placeholder="Take notes while watching..."
+                      value={notes[selectedContent.id] || ''}
+                      onChange={(e) => handleNotesChange(selectedContent.id, e.target.value)}
+                      variant="outlined"
+                      sx={{
+                        flexGrow: 1,
+                        '& .MuiInputBase-root': {
+                          height: '100%',
+                          alignItems: 'flex-start',
+                        },
+                        '& textarea': {
+                          height: '100% !important',
+                          overflow: 'auto !important',
+                        },
+                      }}
+                    />
+                  </Paper>
+                </Grid>
+              </Grid>
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
     </Box>
   );
 }
