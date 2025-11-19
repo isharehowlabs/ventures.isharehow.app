@@ -24,8 +24,8 @@ import {
   MenuItem,
   Divider,
 } from '@mui/material';
-import { Refresh as RefreshIcon, Link as LinkIcon, Code as CodeIcon } from '@mui/icons-material';
-import { useFigma } from '../../hooks/useFigma';
+import { Refresh as RefreshIcon, Link as LinkIcon, Code as CodeIcon, Favorite as FavoriteIcon, FavoriteBorder as FavoriteBorderIcon, Bookmark as BookmarkIcon, BookmarkBorder as BookmarkBorderIcon } from '@mui/icons-material';
+import { useFigma, FigmaComponent } from '../../hooks/useFigma';
 import { useMCP } from '../../hooks/useMCP';
 
 interface TabPanelProps {
@@ -44,7 +44,24 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function FigmaPanel() {
-  const { files, components, tokens: figmaTokens, isLoading: figmaLoading, error: figmaError, fetchFiles, fetchComponents, fetchTokens } = useFigma();
+  const { 
+    files, 
+    components, 
+    tokens: figmaTokens, 
+    likedComponents,
+    savedComponents,
+    componentStatuses,
+    isLoading: figmaLoading, 
+    error: figmaError, 
+    fetchFiles, 
+    fetchComponents, 
+    fetchTokens,
+    likeComponent,
+    saveComponent,
+    fetchLikedComponents,
+    fetchSavedComponents,
+    fetchComponentStatus,
+  } = useFigma();
   const { links, tokens: mcpTokens, isLoading: mcpLoading, error: mcpError, linkComponentToCode, fetchCodeLinks, fetchTokens: fetchMcpTokens, generateCode } = useMCP();
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
@@ -64,6 +81,8 @@ export default function FigmaPanel() {
           fetchFiles(),
           fetchCodeLinks(),
           fetchMcpTokens(),
+          fetchLikedComponents(),
+          fetchSavedComponents(),
         ]);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -76,7 +95,12 @@ export default function FigmaPanel() {
     if (selectedFile) {
       setLoadingComponents(true);
       Promise.all([
-        fetchComponents(selectedFile).catch((err) => {
+        fetchComponents(selectedFile).then(async (comps) => {
+          // Fetch status for each component
+          if (comps && comps.length > 0) {
+            await Promise.all(comps.map((comp: FigmaComponent) => fetchComponentStatus(comp.key)));
+          }
+        }).catch((err) => {
           console.error('Error fetching components:', err);
         }),
         fetchTokens(selectedFile).catch((err) => {
@@ -165,6 +189,37 @@ export default function FigmaPanel() {
     }
   };
 
+  const handleLike = async (componentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentStatus = componentStatuses[componentId]?.liked || false;
+    try {
+      await likeComponent(componentId, !currentStatus);
+    } catch (err) {
+      console.error('Error liking component:', err);
+    }
+  };
+
+  const handleSave = async (componentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentStatus = componentStatuses[componentId]?.saved || false;
+    try {
+      await saveComponent(componentId, !currentStatus);
+    } catch (err) {
+      console.error('Error saving component:', err);
+    }
+  };
+
+  const getFilteredComponents = (filterType: 'all' | 'liked' | 'saved') => {
+    if (filterType === 'all') {
+      return components;
+    } else if (filterType === 'liked') {
+      return components.filter((comp) => componentStatuses[comp.key]?.liked);
+    } else if (filterType === 'saved') {
+      return components.filter((comp) => componentStatuses[comp.key]?.saved);
+    }
+    return components;
+  };
+
   const isLoading = figmaLoading || mcpLoading || loadingComponents;
   const error = figmaError || mcpError;
 
@@ -240,10 +295,13 @@ export default function FigmaPanel() {
             <>
               <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
                 <Tab label="Components" />
+                <Tab label="Liked" />
+                <Tab label="Saved" />
                 <Tab label="Design Tokens" />
                 <Tab label="Code Links" />
               </Tabs>
               <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                {/* Components Tab */}
                 <TabPanel value={tabValue} index={0}>
                   {loadingComponents ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -253,6 +311,8 @@ export default function FigmaPanel() {
                     <List>
                       {components.map((component) => {
                         const isLinked = links.some((link) => link.componentId === component.key);
+                        const isLiked = componentStatuses[component.key]?.liked || false;
+                        const isSaved = componentStatuses[component.key]?.saved || false;
                         return (
                           <ListItem
                             key={component.key}
@@ -263,17 +323,37 @@ export default function FigmaPanel() {
                               mb: 1,
                             }}
                             secondaryAction={
-                              isLinked ? (
-                                <Button
-                                  size="small"
-                                  startIcon={<CodeIcon />}
-                                  onClick={() => handleGenerateCode(component.key)}
-                                >
-                                  Generate Code
-                                </Button>
-                              ) : (
-                                <Chip label="Not Linked" size="small" variant="outlined" />
-                              )
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Tooltip title={isLiked ? 'Unlike' : 'Like'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleLike(component.key, e)}
+                                    sx={{ color: isLiked ? 'error.main' : 'text.secondary' }}
+                                  >
+                                    {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isSaved ? 'Remove from saved' : 'Save'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleSave(component.key, e)}
+                                    sx={{ color: isSaved ? 'primary.main' : 'text.secondary' }}
+                                  >
+                                    {isSaved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                {isLinked ? (
+                                  <Button
+                                    size="small"
+                                    startIcon={<CodeIcon />}
+                                    onClick={() => handleGenerateCode(component.key)}
+                                  >
+                                    Generate Code
+                                  </Button>
+                                ) : (
+                                  <Chip label="Not Linked" size="small" variant="outlined" />
+                                )}
+                              </Box>
                             }
                           >
                             <ListItemText
@@ -291,10 +371,177 @@ export default function FigmaPanel() {
                           </ListItem>
                         );
                       })}
+                      {components.length === 0 && (
+                        <Box sx={{ p: 4, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No components found in this file
+                          </Typography>
+                        </Box>
+                      )}
                     </List>
                   )}
                 </TabPanel>
+
+                {/* Liked Components Tab */}
                 <TabPanel value={tabValue} index={1}>
+                  {loadingComponents ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <List>
+                      {getFilteredComponents('liked').map((component) => {
+                        const isLinked = links.some((link) => link.componentId === component.key);
+                        const isLiked = componentStatuses[component.key]?.liked || false;
+                        const isSaved = componentStatuses[component.key]?.saved || false;
+                        return (
+                          <ListItem
+                            key={component.key}
+                            sx={{
+                              border: 1,
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              mb: 1,
+                            }}
+                            secondaryAction={
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Tooltip title={isLiked ? 'Unlike' : 'Like'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleLike(component.key, e)}
+                                    sx={{ color: isLiked ? 'error.main' : 'text.secondary' }}
+                                  >
+                                    {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isSaved ? 'Remove from saved' : 'Save'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleSave(component.key, e)}
+                                    sx={{ color: isSaved ? 'primary.main' : 'text.secondary' }}
+                                  >
+                                    {isSaved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                {isLinked && (
+                                  <Button
+                                    size="small"
+                                    startIcon={<CodeIcon />}
+                                    onClick={() => handleGenerateCode(component.key)}
+                                  >
+                                    Generate Code
+                                  </Button>
+                                )}
+                              </Box>
+                            }
+                          >
+                            <ListItemText
+                              primary={component.name}
+                              secondary={component.description || `ID: ${component.key}`}
+                            />
+                            {isLinked && (
+                              <Chip
+                                label="Linked"
+                                size="small"
+                                color="success"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </ListItem>
+                        );
+                      })}
+                      {getFilteredComponents('liked').length === 0 && (
+                        <Box sx={{ p: 4, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No liked components yet. Like components from the Components tab.
+                          </Typography>
+                        </Box>
+                      )}
+                    </List>
+                  )}
+                </TabPanel>
+
+                {/* Saved Components Tab */}
+                <TabPanel value={tabValue} index={2}>
+                  {loadingComponents ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <List>
+                      {getFilteredComponents('saved').map((component) => {
+                        const isLinked = links.some((link) => link.componentId === component.key);
+                        const isLiked = componentStatuses[component.key]?.liked || false;
+                        const isSaved = componentStatuses[component.key]?.saved || false;
+                        return (
+                          <ListItem
+                            key={component.key}
+                            sx={{
+                              border: 1,
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              mb: 1,
+                            }}
+                            secondaryAction={
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Tooltip title={isLiked ? 'Unlike' : 'Like'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleLike(component.key, e)}
+                                    sx={{ color: isLiked ? 'error.main' : 'text.secondary' }}
+                                  >
+                                    {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={isSaved ? 'Remove from saved' : 'Save'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleSave(component.key, e)}
+                                    sx={{ color: isSaved ? 'primary.main' : 'text.secondary' }}
+                                  >
+                                    {isSaved ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                {isLinked && (
+                                  <Button
+                                    size="small"
+                                    startIcon={<CodeIcon />}
+                                    onClick={() => handleGenerateCode(component.key)}
+                                  >
+                                    Generate Code
+                                  </Button>
+                                )}
+                              </Box>
+                            }
+                          >
+                            <ListItemText
+                              primary={component.name}
+                              secondary={component.description || `ID: ${component.key}`}
+                            />
+                            {isLinked && (
+                              <Chip
+                                label="Linked"
+                                size="small"
+                                color="success"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </ListItem>
+                        );
+                      })}
+                      {getFilteredComponents('saved').length === 0 && (
+                        <Box sx={{ p: 4, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No saved components yet. Save components from the Components tab.
+                          </Typography>
+                        </Box>
+                      )}
+                    </List>
+                  )}
+                </TabPanel>
+
+                {/* Design Tokens Tab */}
+                <TabPanel value={tabValue} index={3}>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {figmaTokens.map((token) => (
                       <Chip
@@ -306,7 +553,9 @@ export default function FigmaPanel() {
                     ))}
                   </Box>
                 </TabPanel>
-                <TabPanel value={tabValue} index={2}>
+
+                {/* Code Links Tab */}
+                <TabPanel value={tabValue} index={4}>
                   {links.length === 0 ? (
                     <Box sx={{ p: 4, textAlign: 'center' }}>
                       <Typography variant="body2" color="text.secondary">

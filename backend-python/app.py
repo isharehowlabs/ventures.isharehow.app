@@ -247,6 +247,8 @@ class MCPServer:
     def __init__(self):
         self.code_links = {}  # {figmaComponentId: {filePath, componentName, linkedAt, figmaFileId}}
         self.design_tokens = {}  # {tokenName: {value, type, updatedAt}}
+        self.component_likes = {}  # {userId: {componentId: liked}}
+        self.component_saves = {}  # {userId: {componentId: saved}}
 
     def link_component_to_code(self, figma_component_id, code_file_path, code_component_name, figma_file_id=None):
         link = {
@@ -296,6 +298,46 @@ class MCPServer:
             'componentName': link['componentName'],
             'code': code,
         }
+    
+    def like_component(self, user_id, component_id, liked=True):
+        """Like or unlike a Figma component"""
+        if user_id not in self.component_likes:
+            self.component_likes[user_id] = {}
+        if liked:
+            self.component_likes[user_id][component_id] = datetime.utcnow().isoformat()
+        else:
+            self.component_likes[user_id].pop(component_id, None)
+        return {'success': True, 'liked': liked}
+    
+    def save_component(self, user_id, component_id, saved=True):
+        """Save or unsave a Figma component"""
+        if user_id not in self.component_saves:
+            self.component_saves[user_id] = {}
+        if saved:
+            self.component_saves[user_id][component_id] = datetime.utcnow().isoformat()
+        else:
+            self.component_saves[user_id].pop(component_id, None)
+        return {'success': True, 'saved': saved}
+    
+    def get_liked_components(self, user_id):
+        """Get all liked component IDs for a user"""
+        if user_id not in self.component_likes:
+            return []
+        return list(self.component_likes[user_id].keys())
+    
+    def get_saved_components(self, user_id):
+        """Get all saved component IDs for a user"""
+        if user_id not in self.component_saves:
+            return []
+        return list(self.component_saves[user_id].keys())
+    
+    def is_liked(self, user_id, component_id):
+        """Check if a component is liked by a user"""
+        return user_id in self.component_likes and component_id in self.component_likes[user_id]
+    
+    def is_saved(self, user_id, component_id):
+        """Check if a component is saved by a user"""
+        return user_id in self.component_saves and component_id in self.component_saves[user_id]
 
 mcp_server = MCPServer()
 # --- MCP Endpoints ---
@@ -354,6 +396,54 @@ def mcp_generate_code():
     if not snippet:
         return jsonify({'error': 'Component not linked to code'}), 404
     return jsonify(snippet)
+
+# --- Figma Component Likes & Saves Endpoints ---
+def get_user_id():
+    """Get user ID from session or use default"""
+    user = session.get('user')
+    return user.get('id', 'anonymous') if user else 'anonymous'
+
+@app.route('/api/figma/component/like', methods=['POST'])
+def figma_component_like():
+    data = request.get_json()
+    component_id = data.get('componentId')
+    liked = data.get('liked', True)
+    if not component_id:
+        return jsonify({'error': 'Component ID required'}), 400
+    user_id = get_user_id()
+    result = mcp_server.like_component(user_id, component_id, liked)
+    return jsonify(result)
+
+@app.route('/api/figma/component/save', methods=['POST'])
+def figma_component_save():
+    data = request.get_json()
+    component_id = data.get('componentId')
+    saved = data.get('saved', True)
+    if not component_id:
+        return jsonify({'error': 'Component ID required'}), 400
+    user_id = get_user_id()
+    result = mcp_server.save_component(user_id, component_id, saved)
+    return jsonify(result)
+
+@app.route('/api/figma/components/liked', methods=['GET'])
+def figma_components_liked():
+    user_id = get_user_id()
+    component_ids = mcp_server.get_liked_components(user_id)
+    return jsonify({'componentIds': component_ids})
+
+@app.route('/api/figma/components/saved', methods=['GET'])
+def figma_components_saved():
+    user_id = get_user_id()
+    component_ids = mcp_server.get_saved_components(user_id)
+    return jsonify({'componentIds': component_ids})
+
+@app.route('/api/figma/component/<component_id>/status', methods=['GET'])
+def figma_component_status(component_id):
+    user_id = get_user_id()
+    is_liked = mcp_server.is_liked(user_id, component_id)
+    is_saved = mcp_server.is_saved(user_id, component_id)
+    return jsonify({'liked': is_liked, 'saved': is_saved})
+
 # --- Figma API Proxy Endpoints ---
 FIGMA_ACCESS_TOKEN = os.environ.get('FIGMA_ACCESS_TOKEN')
 FIGMA_API_URL = 'https://api.figma.com/v1'
