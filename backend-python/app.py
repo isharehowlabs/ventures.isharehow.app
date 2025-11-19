@@ -874,12 +874,13 @@ def gemini_chat():
             })
         
         # Call Gemini API
-        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_AI_API_KEY}'
+        url = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent'
         payload = {
             'contents': contents
         }
         headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-goog-api-key': GOOGLE_AI_API_KEY
         }
         
         response = requests.post(url, json=payload, headers=headers)
