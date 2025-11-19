@@ -43,7 +43,7 @@ const navigationItems: NavigationItem[] = [
   { key: 'products', label: 'Product Catalog', href: '/products', icon: ShoppingBagIcon },
   { key: 'labs', label: 'Co-Work Dashboard', href: '/labs', icon: LiveTvIcon },
   { key: 'rise', label: 'RISE Dashboard', href: '/rise', icon: TrendingUpIcon },
-  { key: 'about', label: 'About', href: '/msp', icon: InfoIcon },
+  { key: 'about', label: 'About', href: '/about', icon: InfoIcon },
 ];
 
 interface AppShellProps {
