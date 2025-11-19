@@ -8,9 +8,18 @@ import uuid
 import json
 from dotenv import load_dotenv
 import requests
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
+
+# Configure Gemini API
+GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY')
+if GOOGLE_AI_API_KEY:
+    genai.configure(api_key=GOOGLE_AI_API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+else:
+    model = None
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -855,11 +864,30 @@ def gemini_chat():
         if not isinstance(messages, list) or len(messages) == 0:
             return jsonify({'error': 'Invalid or empty messages array'}), 400
         
-        # For now, return a placeholder response
-        # To use actual Gemini API, you'd need to install google-generativeai and configure API key
-        # This is a placeholder that returns a simple response
+        if not model:
+            return jsonify({
+                'error': 'Gemini API not configured',
+                'text': 'Gemini chat integration is not yet configured. Please configure GOOGLE_AI_API_KEY in your environment variables.'
+            }), 500
+        
+        # Convert messages to Gemini format
+        gemini_messages = []
+        for msg in messages:
+            role = 'user' if msg.get('role') == 'user' else 'model'
+            gemini_messages.append({
+                'role': role,
+                'parts': [{'text': msg.get('text', '')}]
+            })
+        
+        # Start chat session
+        chat = model.start_chat(history=gemini_messages[:-1])  # Exclude the last message as it's the new input
+        
+        # Send the last message
+        last_message = gemini_messages[-1]['parts'][0]['text']
+        response = chat.send_message(last_message)
+        
         return jsonify({
-            'text': 'Gemini chat integration is not yet configured. Please configure GOOGLE_AI_API_KEY in your environment variables.'
+            'text': response.text
         })
         
     except Exception as e:

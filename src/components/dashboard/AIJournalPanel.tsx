@@ -6,7 +6,6 @@ import {
   Psychology as PsychologyIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { getBackendUrl } from '../../utils/backendUrl';
 
 interface Message {
   role: 'user' | 'model';
@@ -47,8 +46,7 @@ export default function AIJournalPanel() {
     setError(null);
 
     try {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/gemini-chat`, {
+      const response = await fetch('/api/gemini-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
