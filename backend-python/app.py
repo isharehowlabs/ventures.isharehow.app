@@ -719,6 +719,27 @@ def admin_update():
         traceback.print_exc()
         return jsonify({'error': 'Failed to post update', 'message': str(e)}), 500
 
+@app.route('/api/twitch/goals', methods=['GET'])
+def twitch_goals():
+    """Get Twitch follower and viewer goals"""
+    try:
+        # Return default goals if not configured
+        # These can be customized via environment variables
+        return jsonify({
+            'followerGoal': int(os.environ.get('TWITCH_FOLLOWER_GOAL', 1000)),
+            'currentFollowers': int(os.environ.get('TWITCH_CURRENT_FOLLOWERS', 0)),
+            'viewerGoal': int(os.environ.get('TWITCH_VIEWER_GOAL', 100)),
+            'currentViewers': int(os.environ.get('TWITCH_CURRENT_VIEWERS', 0)),
+        })
+    except Exception as e:
+        print(f"Error fetching Twitch goals: {e}")
+        return jsonify({
+            'followerGoal': 1000,
+            'currentFollowers': 0,
+            'viewerGoal': 100,
+            'currentViewers': 0,
+        }), 200  # Return defaults even on error
+
 @app.route('/api/twitch/status', methods=['GET'])
 def twitch_status():
     """Check if Twitch stream is live"""
@@ -729,38 +750,65 @@ def twitch_status():
         
         # Use Twitch Helix API (requires Client-ID)
         if twitch_client_id:
-            # Helix API endpoint
-            twitch_api_url = f'https://api.twitch.tv/helix/streams'
+            # Helix API endpoint - need to get user ID first
+            # First, get user ID from username
+            user_lookup_url = 'https://api.twitch.tv/helix/users'
             headers = {
                 'Client-ID': twitch_client_id,
             }
-            params = {'user_login': twitch_username}
+            user_params = {'login': twitch_username}
             
-            response = requests.get(twitch_api_url, headers=headers, params=params, timeout=5)
+            user_response = requests.get(user_lookup_url, headers=headers, params=user_params, timeout=5)
             
-            if response.status_code == 200:
-                data = response.json()
-                streams = data.get('data', [])
-                is_live = len(streams) > 0
-                stream_data = streams[0] if is_live else None
+            if user_response.status_code == 200:
+                user_data = user_response.json()
+                users = user_data.get('data', [])
                 
-                # Emit socket event if just went live
-                if is_live:
-                    socketio.emit('twitch:live', {
-                        'message': f'🔴 {twitch_username} is now LIVE on Twitch!',
-                        'stream': stream_data
-                    })
-                
-                return jsonify({
-                    'isLive': is_live,
-                    'stream': stream_data,
-                    'username': twitch_username
-                })
+                if users:
+                    user_id = users[0].get('id')
+                    # Now get stream status
+                    twitch_api_url = 'https://api.twitch.tv/helix/streams'
+                    params = {'user_id': user_id}
+                    
+                    response = requests.get(twitch_api_url, headers=headers, params=params, timeout=5)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        streams = data.get('data', [])
+                        is_live = len(streams) > 0
+                        stream_data = streams[0] if is_live else None
+                        
+                        # Emit socket event if just went live
+                        if is_live:
+                            socketio.emit('twitch:live', {
+                                'message': f'🔴 {twitch_username} is now LIVE on Twitch!',
+                                'stream': stream_data
+                            })
+                        
+                        return jsonify({
+                            'isLive': is_live,
+                            'stream': stream_data,
+                            'username': twitch_username
+                        })
+                    else:
+                        # API error
+                        return jsonify({
+                            'isLive': False,
+                            'error': f'Twitch API error: {response.status_code}',
+                            'username': twitch_username
+                        }), 500
+                else:
+                    # User not found
+                    return jsonify({
+                        'isLive': False,
+                        'error': 'Twitch user not found',
+                        'username': twitch_username
+                    }), 404
             else:
-                # API error
+                # User lookup failed
                 return jsonify({
                     'isLive': False,
-                    'error': f'Twitch API error: {response.status_code}',
+                    'error': f'Twitch API error: {user_response.status_code}',
                     'username': twitch_username
                 }), 500
         else:
@@ -785,6 +833,40 @@ def twitch_status():
             'error': str(e),
             'username': os.environ.get('TWITCH_USERNAME', 'jameleliyah')
         }), 500
+
+@app.route('/api/gemini-chat', methods=['POST', 'OPTIONS'])
+def gemini_chat():
+    """Handle Gemini chat requests"""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    try:
+        data = request.get_json()
+        if not data or 'messages' not in data:
+            return jsonify({'error': 'Messages are required'}), 400
+        
+        messages = data.get('messages', [])
+        if not isinstance(messages, list) or len(messages) == 0:
+            return jsonify({'error': 'Invalid or empty messages array'}), 400
+        
+        # For now, return a placeholder response
+        # To use actual Gemini API, you'd need to install google-generativeai and configure API key
+        # This is a placeholder that returns a simple response
+        return jsonify({
+            'text': 'Gemini chat integration is not yet configured. Please configure GOOGLE_AI_API_KEY in your environment variables.'
+        })
+        
+    except Exception as e:
+        print(f"Error in Gemini chat: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error', 'message': str(e)}), 500
 
 @socketio.on('connect')
 def handle_connect():
