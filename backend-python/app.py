@@ -750,15 +750,29 @@ def twitch_status():
         # Get Twitch username from environment or use default
         twitch_username = os.environ.get('TWITCH_USERNAME', 'jameleliyah')
         twitch_client_id = os.environ.get('TWITCH_CLIENT_ID')
+        twitch_client_secret = os.environ.get('TWITCH_CLIENT_SECRET')
         
-        # Use Twitch Helix API (requires Client-ID)
+        # Use Twitch Helix API
         if twitch_client_id:
+            headers = {'Client-ID': twitch_client_id}
+            
+            # Get App Access Token if client secret is available
+            if twitch_client_secret:
+                token_url = 'https://id.twitch.tv/oauth2/token'
+                token_data = {
+                    'client_id': twitch_client_id,
+                    'client_secret': twitch_client_secret,
+                    'grant_type': 'client_credentials'
+                }
+                token_response = requests.post(token_url, data=token_data, timeout=5)
+                if token_response.status_code == 200:
+                    token = token_response.json().get('access_token')
+                    headers['Authorization'] = f'Bearer {token}'
+                # If token fails, proceed with Client-ID only (may not work for all endpoints)
+            
             # Helix API endpoint - need to get user ID first
             # First, get user ID from username
             user_lookup_url = 'https://api.twitch.tv/helix/users'
-            headers = {
-                'Client-ID': twitch_client_id,
-            }
             user_params = {'login': twitch_username}
             
             user_response = requests.get(user_lookup_url, headers=headers, params=user_params, timeout=5)
