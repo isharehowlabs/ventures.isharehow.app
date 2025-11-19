@@ -1,9 +1,10 @@
 // src/components/dashboard/AIJournalPanel.tsx
 import { useState, FormEvent, useRef, useEffect } from 'react';
-import { Box, Typography, Stack, Paper, TextField, Fab } from '@mui/material';
+import { Box, Typography, Stack, Paper, TextField, Fab, IconButton, Tooltip } from '@mui/material';
 import {
   Send as SendIcon,
   Psychology as PsychologyIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { getBackendUrl } from '../../utils/backendUrl';
 
@@ -26,6 +27,14 @@ export default function AIJournalPanel() {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleRefresh = () => {
+    // Clear all messages and reset the chat
+    setMessages([]);
+    setError(null);
+    setInput('');
+    setIsLoading(false);
+  };
 
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
@@ -106,6 +115,16 @@ export default function AIJournalPanel() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Tooltip title="Refresh chat">
+              <IconButton
+                onClick={handleRefresh}
+                disabled={isLoading}
+                size="small"
+                sx={{ color: 'text.secondary' }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
             <Box
               sx={{
                 bgcolor: '#00d4aa',
