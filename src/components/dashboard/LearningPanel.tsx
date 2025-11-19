@@ -140,40 +140,18 @@ const pdfResources: PDFResource[] = [
   },
 ];
 
-// Sample video classes
+// Video classes
 const videoClasses: VideoClass[] = [
   {
     id: 'video-1',
-    title: 'Building Your First API',
-    description: 'Learn how to build RESTful APIs using Node.js and Express from scratch.',
-    instructor: 'Mike Chen',
-    duration: '45 min',
+    title: 'Learning Hub Video Classes',
+    description: 'A comprehensive collection of video classes covering various topics and learning paths.',
+    instructor: 'iShareHow',
+    duration: 'Playlist',
     level: 'Beginner',
-    category: 'Backend',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    uploadDate: '2024-01-10',
-  },
-  {
-    id: 'video-2',
-    title: 'Advanced TypeScript Techniques',
-    description: 'Deep dive into TypeScript generics, decorators, and advanced type manipulation.',
-    instructor: 'Alex Rodriguez',
-    duration: '1h 20min',
-    level: 'Advanced',
-    category: 'Programming',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    uploadDate: '2024-01-25',
-  },
-  {
-    id: 'video-3',
-    title: 'Database Design Fundamentals',
-    description: 'Understanding relational database design, normalization, and query optimization.',
-    instructor: 'Emily Watson',
-    duration: '55 min',
-    level: 'Intermediate',
-    category: 'Database',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    uploadDate: '2024-02-05',
+    category: 'General',
+    videoUrl: 'https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp',
+    uploadDate: new Date().toISOString().split('T')[0],
   },
 ];
 
