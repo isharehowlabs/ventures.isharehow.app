@@ -1,5 +1,9 @@
 {
   "setup-worktree": [
     "npm install"
+    "path": "/home/ishaglcy/public_html/ventures.isharehow.app",
+    "branch": "master",
+    "description": "Main production worktree",
+    "active": true
   ]
 }
