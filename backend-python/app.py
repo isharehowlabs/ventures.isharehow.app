@@ -15,6 +15,9 @@ load_dotenv()
 # Configure Gemini API
 GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY')
 
+# Debugging: Log the GOOGLE_AI_API_KEY to verify it's being loaded
+print(f"GOOGLE_AI_API_KEY (from os.environ): {os.environ.get('GOOGLE_AI_API_KEY')}")
+
 # Initialize Flask app
 app = Flask(__name__)
 
