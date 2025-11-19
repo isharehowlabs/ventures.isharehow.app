@@ -1194,6 +1194,264 @@ def patreon_callback():
         error_message = error_message.replace(' ', '_').replace(':', '').replace('\n', '')[:50]
         return redirect(f'{get_frontend_url()}/?auth=error&message=user_fetch_failed&detail={error_message}')
 
+# --- Learning Hub Content Management ---
+class LearningContentStore:
+    def __init__(self):
+        self.courses = {}
+        self.pdfs = {}
+        self.videos = {}
+    
+    def add_course(self, course_data):
+        course_id = course_data.get('id') or str(uuid.uuid4())
+        course = {
+            'id': course_id,
+            'title': course_data.get('title', ''),
+            'description': course_data.get('description', ''),
+            'instructor': course_data.get('instructor', ''),
+            'duration': course_data.get('duration', ''),
+            'level': course_data.get('level', 'Beginner'),
+            'lessons': course_data.get('lessons', 0),
+            'thumbnail': course_data.get('thumbnail'),
+            'category': course_data.get('category', 'General'),
+            'videoUrl': course_data.get('videoUrl'),
+            'pdfResources': course_data.get('pdfResources', []),
+            'createdAt': datetime.utcnow().isoformat(),
+            'updatedAt': datetime.utcnow().isoformat(),
+        }
+        self.courses[course_id] = course
+        return course
+    
+    def get_courses(self):
+        return list(self.courses.values())
+    
+    def get_course(self, course_id):
+        return self.courses.get(course_id)
+    
+    def update_course(self, course_id, course_data):
+        if course_id not in self.courses:
+            return None
+        course = self.courses[course_id]
+        course.update(course_data)
+        course['updatedAt'] = datetime.utcnow().isoformat()
+        return course
+    
+    def delete_course(self, course_id):
+        if course_id in self.courses:
+            del self.courses[course_id]
+            return True
+        return False
+    
+    def add_pdf(self, pdf_data):
+        pdf_id = pdf_data.get('id') or str(uuid.uuid4())
+        pdf = {
+            'id': pdf_id,
+            'title': pdf_data.get('title', ''),
+            'description': pdf_data.get('description', ''),
+            'category': pdf_data.get('category', 'General'),
+            'url': pdf_data.get('url', ''),
+            'fileSize': pdf_data.get('fileSize', ''),
+            'pages': pdf_data.get('pages'),
+            'thumbnail': pdf_data.get('thumbnail'),
+            'uploadDate': pdf_data.get('uploadDate', datetime.utcnow().isoformat()),
+            'createdAt': datetime.utcnow().isoformat(),
+            'updatedAt': datetime.utcnow().isoformat(),
+        }
+        self.pdfs[pdf_id] = pdf
+        return pdf
+    
+    def get_pdfs(self):
+        return list(self.pdfs.values())
+    
+    def get_pdf(self, pdf_id):
+        return self.pdfs.get(pdf_id)
+    
+    def update_pdf(self, pdf_id, pdf_data):
+        if pdf_id not in self.pdfs:
+            return None
+        pdf = self.pdfs[pdf_id]
+        pdf.update(pdf_data)
+        pdf['updatedAt'] = datetime.utcnow().isoformat()
+        return pdf
+    
+    def delete_pdf(self, pdf_id):
+        if pdf_id in self.pdfs:
+            del self.pdfs[pdf_id]
+            return True
+        return False
+    
+    def add_video(self, video_data):
+        video_id = video_data.get('id') or str(uuid.uuid4())
+        video = {
+            'id': video_id,
+            'title': video_data.get('title', ''),
+            'description': video_data.get('description', ''),
+            'instructor': video_data.get('instructor', ''),
+            'duration': video_data.get('duration', ''),
+            'level': video_data.get('level', 'Beginner'),
+            'category': video_data.get('category', 'General'),
+            'videoUrl': video_data.get('videoUrl', ''),
+            'thumbnail': video_data.get('thumbnail'),
+            'uploadDate': video_data.get('uploadDate', datetime.utcnow().isoformat()),
+            'createdAt': datetime.utcnow().isoformat(),
+            'updatedAt': datetime.utcnow().isoformat(),
+        }
+        self.videos[video_id] = video
+        return video
+    
+    def get_videos(self):
+        return list(self.videos.values())
+    
+    def get_video(self, video_id):
+        return self.videos.get(video_id)
+    
+    def update_video(self, video_id, video_data):
+        if video_id not in self.videos:
+            return None
+        video = self.videos[video_id]
+        video.update(video_data)
+        video['updatedAt'] = datetime.utcnow().isoformat()
+        return video
+    
+    def delete_video(self, video_id):
+        if video_id in self.videos:
+            del self.videos[video_id]
+            return True
+        return False
+
+learning_store = LearningContentStore()
+
+# Courses endpoints
+@app.route('/api/learning/courses', methods=['GET'])
+def get_courses():
+    courses = learning_store.get_courses()
+    return jsonify({'courses': courses})
+
+@app.route('/api/learning/courses', methods=['POST'])
+def create_course():
+    try:
+        data = request.get_json()
+        if not data or 'title' not in data:
+            return jsonify({'error': 'Title is required'}), 400
+        course = learning_store.add_course(data)
+        return jsonify({'course': course}), 201
+    except Exception as e:
+        print(f"Error creating course: {e}")
+        return jsonify({'error': 'Failed to create course', 'message': str(e)}), 500
+
+@app.route('/api/learning/courses/<course_id>', methods=['GET'])
+def get_course(course_id):
+    course = learning_store.get_course(course_id)
+    if not course:
+        return jsonify({'error': 'Course not found'}), 404
+    return jsonify({'course': course})
+
+@app.route('/api/learning/courses/<course_id>', methods=['PUT'])
+def update_course(course_id):
+    try:
+        data = request.get_json()
+        course = learning_store.update_course(course_id, data)
+        if not course:
+            return jsonify({'error': 'Course not found'}), 404
+        return jsonify({'course': course})
+    except Exception as e:
+        print(f"Error updating course: {e}")
+        return jsonify({'error': 'Failed to update course', 'message': str(e)}), 500
+
+@app.route('/api/learning/courses/<course_id>', methods=['DELETE'])
+def delete_course(course_id):
+    success = learning_store.delete_course(course_id)
+    if not success:
+        return jsonify({'error': 'Course not found'}), 404
+    return jsonify({'success': True})
+
+# PDFs endpoints
+@app.route('/api/learning/pdfs', methods=['GET'])
+def get_pdfs():
+    pdfs = learning_store.get_pdfs()
+    return jsonify({'pdfs': pdfs})
+
+@app.route('/api/learning/pdfs', methods=['POST'])
+def create_pdf():
+    try:
+        data = request.get_json()
+        if not data or 'title' not in data:
+            return jsonify({'error': 'Title is required'}), 400
+        pdf = learning_store.add_pdf(data)
+        return jsonify({'pdf': pdf}), 201
+    except Exception as e:
+        print(f"Error creating PDF: {e}")
+        return jsonify({'error': 'Failed to create PDF', 'message': str(e)}), 500
+
+@app.route('/api/learning/pdfs/<pdf_id>', methods=['GET'])
+def get_pdf(pdf_id):
+    pdf = learning_store.get_pdf(pdf_id)
+    if not pdf:
+        return jsonify({'error': 'PDF not found'}), 404
+    return jsonify({'pdf': pdf})
+
+@app.route('/api/learning/pdfs/<pdf_id>', methods=['PUT'])
+def update_pdf(pdf_id):
+    try:
+        data = request.get_json()
+        pdf = learning_store.update_pdf(pdf_id, data)
+        if not pdf:
+            return jsonify({'error': 'PDF not found'}), 404
+        return jsonify({'pdf': pdf})
+    except Exception as e:
+        print(f"Error updating PDF: {e}")
+        return jsonify({'error': 'Failed to update PDF', 'message': str(e)}), 500
+
+@app.route('/api/learning/pdfs/<pdf_id>', methods=['DELETE'])
+def delete_pdf(pdf_id):
+    success = learning_store.delete_pdf(pdf_id)
+    if not success:
+        return jsonify({'error': 'PDF not found'}), 404
+    return jsonify({'success': True})
+
+# Videos endpoints
+@app.route('/api/learning/videos', methods=['GET'])
+def get_videos():
+    videos = learning_store.get_videos()
+    return jsonify({'videos': videos})
+
+@app.route('/api/learning/videos', methods=['POST'])
+def create_video():
+    try:
+        data = request.get_json()
+        if not data or 'title' not in data:
+            return jsonify({'error': 'Title is required'}), 400
+        video = learning_store.add_video(data)
+        return jsonify({'video': video}), 201
+    except Exception as e:
+        print(f"Error creating video: {e}")
+        return jsonify({'error': 'Failed to create video', 'message': str(e)}), 500
+
+@app.route('/api/learning/videos/<video_id>', methods=['GET'])
+def get_video(video_id):
+    video = learning_store.get_video(video_id)
+    if not video:
+        return jsonify({'error': 'Video not found'}), 404
+    return jsonify({'video': video})
+
+@app.route('/api/learning/videos/<video_id>', methods=['PUT'])
+def update_video(video_id):
+    try:
+        data = request.get_json()
+        video = learning_store.update_video(video_id, data)
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        return jsonify({'video': video})
+    except Exception as e:
+        print(f"Error updating video: {e}")
+        return jsonify({'error': 'Failed to update video', 'message': str(e)}), 500
+
+@app.route('/api/learning/videos/<video_id>', methods=['DELETE'])
+def delete_video(video_id):
+    success = learning_store.delete_video(video_id)
+    if not success:
+        return jsonify({'error': 'Video not found'}), 404
+    return jsonify({'success': True})
+
 # Catch-all routes for frontend paths - redirect to frontend domain
 # This must be at the end so all API routes are matched first
 @app.route('/', defaults={'path': ''})

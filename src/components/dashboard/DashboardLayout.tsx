@@ -3,7 +3,7 @@ import { Box, Tabs, Tab, useTheme, useMediaQuery, Paper, Typography } from '@mui
 import StreamingPanel from './StreamingPanel';
 import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
-import Web3Panel from './Web3Panel';
+import LearningPanel from './LearningPanel';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -56,7 +56,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
           <Tab label="Streaming" />
           <Tab label="Designs & Code" />
           <Tab label="Documents" />
-          <Tab label="Web3 Hub" />
+          <Tab label="Learning Hub" />
         </Tabs>
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
           <TabPanel value={activeTab} index={0}>
@@ -69,7 +69,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
             <DocsPanel />
           </TabPanel>
           <TabPanel value={activeTab} index={3}>
-            <Web3Panel />
+            <LearningPanel />
           </TabPanel>
         </Box>
       </Box>
@@ -91,7 +91,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
         <Tab label="Streaming" />
         <Tab label="Designs & Code" />
         <Tab label="Documents" />
-        <Tab label="Web3 Hub" />
+        <Tab label="Learning Hub" />
       </Tabs>
       <Box 
         sx={{ 
@@ -129,7 +129,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
               <DocsPanel />
             </TabPanel>
             <TabPanel value={activeTab} index={3}>
-              <Web3Panel />
+              <LearningPanel />
             </TabPanel>
           </Box>
           {/* Session Tasks on the left side with work tabs */}
