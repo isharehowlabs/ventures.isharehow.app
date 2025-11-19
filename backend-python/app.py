@@ -746,9 +746,18 @@ def twitch_goals():
             'currentViewers': 0,
         }), 200  # Return defaults even on error
 
-@app.route('/api/twitch/status', methods=['GET'])
+@app.route('/api/twitch/status', methods=['GET', 'OPTIONS'])
 def twitch_status():
     """Check if Twitch stream is live"""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
     try:
         # Get Twitch username from environment or use default
         twitch_username = os.environ.get('TWITCH_USERNAME', 'jameleliyah')
@@ -811,26 +820,32 @@ def twitch_status():
                             'username': twitch_username
                         })
                     else:
-                        # API error
+                        # API error - return 200 with isLive: false so frontend doesn't break
+                        print(f"Twitch streams API error: {response.status_code} - {response.text[:200]}")
                         return jsonify({
                             'isLive': False,
                             'error': f'Twitch API error: {response.status_code}',
-                            'username': twitch_username
-                        }), 500
+                            'username': twitch_username,
+                            'stream': None
+                        }), 200
                 else:
-                    # User not found
+                    # User not found - return 200 with isLive: false
+                    print(f"Twitch user not found: {twitch_username}")
                     return jsonify({
                         'isLive': False,
                         'error': 'Twitch user not found',
-                        'username': twitch_username
-                    }), 404
+                        'username': twitch_username,
+                        'stream': None
+                    }), 200
             else:
-                # User lookup failed
+                # User lookup failed - return 200 with isLive: false
+                print(f"Twitch user lookup failed: {user_response.status_code} - {user_response.text[:200]}")
                 return jsonify({
                     'isLive': False,
                     'error': f'Twitch API error: {user_response.status_code}',
-                    'username': twitch_username
-                }), 500
+                    'username': twitch_username,
+                    'stream': None
+                }), 200
         else:
             # No Twitch Client ID configured - return false but don't error
             # Frontend will handle this gracefully
@@ -839,20 +854,25 @@ def twitch_status():
                 'stream': None,
                 'username': twitch_username,
                 'message': 'Twitch API not configured'
-            })
+            }), 200
     except requests.exceptions.Timeout:
+        print("Twitch API request timeout")
         return jsonify({
             'isLive': False,
             'error': 'Request timeout',
-            'username': os.environ.get('TWITCH_USERNAME', 'jameleliyah')
-        }), 504
+            'username': os.environ.get('TWITCH_USERNAME', 'jameleliyah'),
+            'stream': None
+        }), 200  # Return 200 so frontend doesn't break
     except Exception as e:
         print(f"Error checking Twitch status: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'isLive': False,
             'error': str(e),
-            'username': os.environ.get('TWITCH_USERNAME', 'jameleliyah')
-        }), 500
+            'username': os.environ.get('TWITCH_USERNAME', 'jameleliyah'),
+            'stream': None
+        }), 200  # Return 200 so frontend doesn't break
 
 @app.route('/api/gemini-chat', methods=['POST', 'OPTIONS'])
 def gemini_chat():
@@ -890,8 +910,10 @@ def gemini_chat():
                 'parts': [{'text': msg.get('text', '')}]
             })
         
-        # Call Gemini API
-        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_AI_API_KEY}'
+        # Call Gemini API - try multiple endpoint formats
+        # First try the newer v1beta format with gemini-1.5-flash (faster and cheaper)
+        model_name = 'gemini-1.5-flash'
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GOOGLE_AI_API_KEY}'
         payload = {
             'contents': contents
         }
@@ -899,18 +921,71 @@ def gemini_chat():
             'Content-Type': 'application/json'
         }
         
-        response = requests.post(url, json=payload, headers=headers)
-        
-        if response.status_code != 200:
-            print(f"Gemini API error: {response.status_code} {response.text}")
-            return jsonify({'error': f'Gemini API error ({response.status_code})', 'text': 'Sorry, I encountered an error with the AI service.'}), 500
-        
-        data = response.json()
-        text = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'No response')
-        
-        return jsonify({
-            'text': text
-        })
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
+            
+            if response.status_code == 404:
+                # Try fallback to gemini-pro if gemini-1.5-flash doesn't exist
+                print(f"Model {model_name} not found, trying gemini-pro...")
+                model_name = 'gemini-pro'
+                url = f'https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GOOGLE_AI_API_KEY}'
+                response = requests.post(url, json=payload, headers=headers, timeout=30)
+            
+            if response.status_code != 200:
+                error_text = response.text[:500] if response.text else 'No error details'
+                print(f"Gemini API error: {response.status_code} - {error_text}")
+                print(f"Request URL: {url.split('?')[0]}")  # Don't log the API key
+                
+                # Return a user-friendly error
+                error_msg = f'Gemini API error ({response.status_code})'
+                if response.status_code == 404:
+                    error_msg = 'Gemini model not found. Please check your API key and model availability.'
+                elif response.status_code == 401:
+                    error_msg = 'Invalid Gemini API key. Please check your GOOGLE_AI_API_KEY configuration.'
+                elif response.status_code == 429:
+                    error_msg = 'Gemini API rate limit exceeded. Please try again later.'
+                
+                return jsonify({
+                    'error': error_msg,
+                    'text': 'Sorry, I encountered an error with the AI service. Please try again later.'
+                }), 500
+            
+            data = response.json()
+            
+            # Handle different response formats
+            if 'candidates' in data and len(data['candidates']) > 0:
+                candidate = data['candidates'][0]
+                if 'content' in candidate and 'parts' in candidate['content']:
+                    text = candidate['content']['parts'][0].get('text', 'No response')
+                else:
+                    text = 'No response generated'
+            else:
+                # Try alternative response format
+                text = data.get('text', 'No response')
+            
+            if not text or text == 'No response':
+                print(f"Unexpected Gemini response format: {json.dumps(data, indent=2)}")
+                return jsonify({
+                    'error': 'Unexpected response format from Gemini API',
+                    'text': 'Sorry, I received an unexpected response from the AI service.'
+                }), 500
+            
+            return jsonify({
+                'text': text
+            })
+            
+        except requests.exceptions.Timeout:
+            print("Gemini API request timeout")
+            return jsonify({
+                'error': 'Request timeout',
+                'text': 'The AI service took too long to respond. Please try again.'
+            }), 504
+        except requests.exceptions.RequestException as e:
+            print(f"Gemini API request exception: {e}")
+            return jsonify({
+                'error': 'Network error',
+                'text': 'Failed to connect to the AI service. Please check your connection.'
+            }), 500
         
     except Exception as e:
         print(f"Error in Gemini chat: {e}")
