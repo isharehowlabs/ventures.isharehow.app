@@ -8,18 +8,12 @@ import uuid
 import json
 from dotenv import load_dotenv
 import requests
-import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
 
 # Configure Gemini API
 GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY')
-if GOOGLE_AI_API_KEY:
-    genai.configure(api_key=GOOGLE_AI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-else:
-    model = None
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -864,30 +858,41 @@ def gemini_chat():
         if not isinstance(messages, list) or len(messages) == 0:
             return jsonify({'error': 'Invalid or empty messages array'}), 400
         
-        if not model:
+        if not GOOGLE_AI_API_KEY:
             return jsonify({
                 'error': 'Gemini API not configured',
                 'text': 'Gemini chat integration is not yet configured. Please configure GOOGLE_AI_API_KEY in your environment variables.'
             }), 500
         
         # Convert messages to Gemini format
-        gemini_messages = []
+        contents = []
         for msg in messages:
             role = 'user' if msg.get('role') == 'user' else 'model'
-            gemini_messages.append({
+            contents.append({
                 'role': role,
                 'parts': [{'text': msg.get('text', '')}]
             })
         
-        # Start chat session
-        chat = model.start_chat(history=gemini_messages[:-1])  # Exclude the last message as it's the new input
+        # Call Gemini API
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_AI_API_KEY}'
+        payload = {
+            'contents': contents
+        }
+        headers = {
+            'Content-Type': 'application/json'
+        }
         
-        # Send the last message
-        last_message = gemini_messages[-1]['parts'][0]['text']
-        response = chat.send_message(last_message)
+        response = requests.post(url, json=payload, headers=headers)
+        
+        if response.status_code != 200:
+            print(f"Gemini API error: {response.status_code} {response.text}")
+            return jsonify({'error': 'Gemini API error', 'text': 'Sorry, I encountered an error with the AI service.'}), 500
+        
+        data = response.json()
+        text = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'No response')
         
         return jsonify({
-            'text': response.text
+            'text': text
         })
         
     except Exception as e:
