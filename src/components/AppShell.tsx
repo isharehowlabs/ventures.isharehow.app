@@ -18,6 +18,9 @@ import {
   useMediaQuery,
   type SvgIconProps,
   Tooltip,
+  Avatar,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -27,8 +30,11 @@ import {
   ShoppingBag as ShoppingBagIcon,
   TrendingUp as TrendingUpIcon,
   Info as InfoIcon,
+  Person as PersonIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import ThemeToggle from './ThemeToggle';
+import { useAuth } from '../hooks/useAuth';
 
 type NavKey = 'ventures' | 'content' | 'labs' | 'products' | 'rise' | 'about';
 
@@ -57,6 +63,8 @@ const AppShell = ({ active, children }: AppShellProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const { user, isAuthenticated } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -65,6 +73,21 @@ const AppShell = ({ active, children }: AppShellProps) => {
   const DRAWER_WIDTH = 280;
   const COLLAPSED_WIDTH = 64;
   const HOVER_ZONE_WIDTH = 80; // Width of the hover zone on the left edge
+
+  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setUserMenuAnchor(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const handleNavigate = (path: string) => {
+    handleUserMenuClose();
+    if (typeof window !== 'undefined' && window.location.pathname !== path) {
+      window.location.href = path;
+    }
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen((prev) => !prev);
@@ -295,6 +318,46 @@ const AppShell = ({ active, children }: AppShellProps) => {
           <Box sx={{ flexGrow: 1 }} />
 
           <ThemeToggle />
+          
+          {isAuthenticated && user && (
+            <Tooltip title="Account">
+              <IconButton
+                onClick={handleUserMenuOpen}
+                sx={{ ml: 1 }}
+                size="small"
+              >
+                <Avatar
+                  src={user.avatar}
+                  sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}
+                >
+                  {user.name?.charAt(0).toUpperCase() || <PersonIcon />}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          <Menu
+            anchorEl={userMenuAnchor}
+            open={Boolean(userMenuAnchor)}
+            onClose={handleUserMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <MenuItem onClick={() => handleNavigate('/profile')}>
+              <PersonIcon sx={{ mr: 1 }} fontSize="small" />
+              Profile
+            </MenuItem>
+            <MenuItem onClick={() => handleNavigate('/settings')}>
+              <SettingsIcon sx={{ mr: 1 }} fontSize="small" />
+              Settings
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 

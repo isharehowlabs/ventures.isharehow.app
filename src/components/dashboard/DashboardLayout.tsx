@@ -1,9 +1,10 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Box, Tabs, Tab, useTheme, useMediaQuery, Paper, Typography } from '@mui/material';
 import StreamingPanel from './StreamingPanel';
 import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
 import LearningPanel from './LearningPanel';
+import { useSettings } from '../../hooks/useSettings';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -37,7 +38,44 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, taskList, liveUpdates }: DashboardLayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [activeTab, setActiveTab] = useState(0);
+  const { settings, getVisiblePanels } = useSettings();
+
+  // Get visible panels in order
+  const visiblePanels = getVisiblePanels();
+  
+  // Map panel keys to components and labels
+  const panelComponents: Record<string, { component: ReactNode; label: string }> = {
+    streaming: { component: <StreamingPanel />, label: 'Streaming' },
+    figma: { component: <FigmaPanel />, label: 'Designs & Code' },
+    docs: { component: <DocsPanel />, label: 'Documents' },
+    learning: { component: <LearningPanel />, label: 'Learning Hub' },
+  };
+
+  // Filter tabs to only show visible panels
+  const visibleTabs = visiblePanels
+    .filter(key => panelComponents[key])
+    .map((key) => ({
+      key,
+      component: panelComponents[key].component,
+      label: panelComponents[key].label,
+    }));
+
+  // Map the activeTab (which is based on defaultTab setting) to the visible tab index
+  // If the default tab is not visible, default to 0
+  const getActiveTabIndex = () => {
+    if (visibleTabs.length === 0) return 0;
+    // Find which visible tab corresponds to the default tab
+    const defaultTabKeys = ['streaming', 'figma', 'docs', 'learning'];
+    const defaultTabKey = defaultTabKeys[settings.dashboard.defaultTab];
+    const visibleIndex = visibleTabs.findIndex(tab => tab.key === defaultTabKey);
+    return visibleIndex >= 0 ? visibleIndex : 0;
+  };
+
+  const [activeTab, setActiveTab] = useState(getActiveTabIndex());
+
+  useEffect(() => {
+    setActiveTab(getActiveTabIndex());
+  }, [settings.dashboard.defaultTab, visibleTabs.length]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -53,24 +91,16 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
           scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label="Streaming" />
-          <Tab label="Designs & Code" />
-          <Tab label="Documents" />
-          <Tab label="Learning Hub" />
+          {visibleTabs.map((tab, index) => (
+            <Tab key={tab.key} label={tab.label} />
+          ))}
         </Tabs>
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-          <TabPanel value={activeTab} index={0}>
-            <StreamingPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={1}>
-            <FigmaPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={2}>
-            <DocsPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={3}>
-            <LearningPanel />
-          </TabPanel>
+          {visibleTabs.map((tab, index) => (
+            <TabPanel key={tab.key} value={activeTab} index={index}>
+              {tab.component}
+            </TabPanel>
+          ))}
         </Box>
       </Box>
     );
@@ -88,10 +118,9 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
           flexShrink: 0,
         }}
       >
-        <Tab label="Streaming" />
-        <Tab label="Designs & Code" />
-        <Tab label="Documents" />
-        <Tab label="Learning Hub" />
+        {visibleTabs.map((tab) => (
+          <Tab key={tab.key} label={tab.label} />
+        ))}
       </Tabs>
       <Box 
         sx={{ 
@@ -119,23 +148,16 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
           }}
         >
           <Box sx={{ flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
-            <TabPanel value={activeTab} index={0}>
-              <StreamingPanel />
-            </TabPanel>
-            <TabPanel value={activeTab} index={1}>
-              <FigmaPanel />
-            </TabPanel>
-            <TabPanel value={activeTab} index={2}>
-              <DocsPanel />
-            </TabPanel>
-            <TabPanel value={activeTab} index={3}>
-              <LearningPanel />
-            </TabPanel>
+            {visibleTabs.map((tab, index) => (
+              <TabPanel key={tab.key} value={activeTab} index={index}>
+                {tab.component}
+              </TabPanel>
+            ))}
           </Box>
           {/* Session Tasks on the left side with work tabs */}
-          {taskList}
+          {settings.dashboard.showTaskList && taskList}
           {/* Live Updates below Session Tasks */}
-          {liveUpdates}
+          {settings.dashboard.showLiveUpdates && liveUpdates}
         </Box>
         <Box 
           sx={{ 
