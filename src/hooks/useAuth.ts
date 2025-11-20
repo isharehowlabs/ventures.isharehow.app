@@ -32,6 +32,12 @@ export function useAuth() {
     try {
       const backendUrl = getBackendUrl();
       
+      // Debug: Log auth check attempt
+      console.log('[Auth] Checking authentication...', {
+        backendUrl,
+        timestamp: new Date().toISOString(),
+      });
+      
       // Create a timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Request timeout')), 10000);
@@ -50,8 +56,23 @@ export function useAuth() {
         timeoutPromise
       ]);
 
+      // Debug: Log response details
+      console.log('[Auth] Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: {
+          'content-type': response.headers.get('content-type'),
+          'set-cookie': response.headers.get('set-cookie') ? 'present' : 'not present',
+        },
+      });
+
       if (response.ok) {
         const user = await response.json();
+        console.log('[Auth] ✓ Authentication successful:', {
+          userId: user.id,
+          userName: user.name,
+          isPaidMember: user.isPaidMember,
+        });
         setAuthState({
           user,
           isAuthenticated: true,
@@ -61,10 +82,12 @@ export function useAuth() {
       } else {
         // Log error details for debugging
         const errorData = await response.json().catch(() => ({}));
-        console.warn('Auth check failed:', {
+        console.warn('[Auth] ✗ Auth check failed:', {
           status: response.status,
           statusText: response.statusText,
           error: errorData,
+          // Check if cookies are being sent (can't access directly but can infer)
+          credentialsMode: 'include',
         });
         setAuthState({
           user: null,
@@ -74,7 +97,11 @@ export function useAuth() {
         });
       }
     } catch (error: any) {
-      console.error('Auth check error:', error);
+      console.error('[Auth] ✗ Auth check error:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack?.split('\n')[0],
+      });
       const isTimeout = error.message === 'Request timeout';
       setAuthState({
         user: null,
@@ -92,10 +119,13 @@ export function useAuth() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('auth') === 'success') {
+        console.log('[Auth] Detected auth=success in URL, will retry auth checks...');
+        
         // Multiple attempts to check auth as session cookie becomes available
         const attempts = [500, 1000, 2000];
-        attempts.forEach((delay) => {
+        attempts.forEach((delay, index) => {
           setTimeout(() => {
+            console.log(`[Auth] Retry attempt ${index + 1}/${attempts.length} after ${delay}ms`);
             checkAuth();
           }, delay);
         });
@@ -104,6 +134,7 @@ export function useAuth() {
         setTimeout(() => {
           const newUrl = window.location.pathname;
           window.history.replaceState({}, '', newUrl);
+          console.log('[Auth] Cleaned up URL parameter');
         }, 2500);
       }
     }
@@ -111,12 +142,14 @@ export function useAuth() {
 
   const login = () => {
     const backendUrl = getBackendUrl();
+    console.log('[Auth] Initiating Patreon login...', { backendUrl });
     window.location.href = `${backendUrl}/api/auth/patreon`;
   };
 
   const logout = async () => {
     try {
       const backendUrl = getBackendUrl();
+      console.log('[Auth] Logging out...');
       await fetch(`${backendUrl}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
@@ -127,8 +160,9 @@ export function useAuth() {
         isLoading: false,
         error: null,
       });
+      console.log('[Auth] ✓ Logged out successfully');
     } catch (error: any) {
-      console.error('Logout error:', error);
+      console.error('[Auth] Logout error:', error);
     }
   };
 
@@ -139,4 +173,3 @@ export function useAuth() {
     refresh: checkAuth,
   };
 }
-

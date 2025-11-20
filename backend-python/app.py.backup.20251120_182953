@@ -949,31 +949,11 @@ def handle_general_exception(e):
 # --- Auth Endpoints (session-based) ---
 @app.route('/api/auth/me', methods=['GET'])
 def auth_me():
-    # Debug: Log incoming request details
-    print("=" * 80)
-    print("AUTH CHECK REQUEST:")
-    print(f"  Origin: {request.headers.get('Origin', 'Not set')}")
-    print(f"  Referer: {request.headers.get('Referer', 'Not set')}")
-    print(f"  Cookie header present: {'Cookie' in request.headers}")
-    
-    if 'Cookie' in request.headers:
-        # Log cookies (but mask sensitive values for security)
-        cookies = request.headers.get('Cookie', '')
-        # Just log if session cookie exists, don't print full value
-        has_session = 'session=' in cookies
-        print(f"  Has session cookie: {has_session}")
-    else:
-        print("  No cookies in request")
-    
-    # Check session
     user = session.get('user')
     if user:
-        print(f"✓ Session retrieved for user: {user.get('id', 'unknown')} - {user.get('name', 'unknown')}")
-        print("=" * 80)
+        print(f"Session retrieved for user: {user.get('id', 'unknown')}")
         return jsonify(user)
-    
-    print("✗ No user found in session - user not authenticated")
-    print("=" * 80)
+    print("No user found in session - user not authenticated")
     return jsonify({'error': 'Not authenticated', 'message': 'No valid session found. Please log in again.'}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
@@ -1597,27 +1577,7 @@ def patreon_callback():
         }
         
         print(f"Storing user in session: {user_session_data}")
-        # Debug: Log session configuration and data being stored
-        print("=" * 80)
-        print("STORING USER IN SESSION:")
-        print(f"  User ID: {user_session_data.get('id')}")
-        print(f"  User Name: {user_session_data.get('name')}")
-        print(f"  Is Paid Member: {user_session_data.get('isPaidMember')}")
-        print(f"  Session Cookie Config:")
-        print(f"    DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set')}")
-        print(f"    SECURE: {app.config.get('SESSION_COOKIE_SECURE')}")
-        print(f"    SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
-        print(f"    HTTPONLY: {app.config.get('SESSION_COOKIE_HTTPONLY')}")
-        
         session['user'] = user_session_data
-        
-        # Debug: Verify session was stored
-        stored_user = session.get('user')
-        if stored_user:
-            print(f"✓ Session stored successfully: {stored_user.get('id')}")
-        else:
-            print("✗ WARNING: Session storage failed!")
-        print("=" * 80)
         
         # Make sure session is saved
         session.permanent = True
