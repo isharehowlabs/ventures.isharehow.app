@@ -134,7 +134,7 @@ const contentItems = [
     color: '#ff6b6b',
     stats: { likes: 888, comments: 88, shares: 66, saves: 28 },
     mediaType: 'iframe' as const,
-    mediaUrl: 'https://www.tiktok.com/@journeythroughconscious',
+    mediaUrl: 'https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/bc638622a44629cb303c05cdb4bbd6b3~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=f1f4bf1c&x-expires=1763852400&x-signature=xbu5y1%2FGPr682UEzdG6bmeZR1lM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5',
     externalUrl: 'https://www.tiktok.com/@journeythroughconscious',
   },
   {
@@ -203,7 +203,7 @@ const contentItems = [
     category: ['Action', 'Community'],
     color: '#00d4ff',
     stats: { likes: 67, comments: 8, shares: 3, saves: 23 },
-    mediaType: 'iframe' as const,
+    mediaType: 'image' as const,
     mediaUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=650&fit=crop',
     externalUrl: '/PACT',
   },

@@ -1,247 +1,772 @@
 // UNIQUE_BUILD_TEST_2025_OCT_24_V3
-import { useState, useEffect } from 'react';
-import { Box, Typography, InputBase, Paper, Alert } from '@mui/material';
-import { Search as SearchIcon } from '@mui/icons-material';
-import VentureCard from '../components/VentureCard';
+import React from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  Grid,
+  Paper,
+  Stack,
+  Avatar,
+  Divider,
+  Container,
+} from '@mui/material';
+import {
+  CloudQueue as CloudIcon,
+  Security as SecurityIcon,
+  Analytics as AnalyticsIcon,
+  Dashboard as DashboardIcon,
+  Brush as BrushIcon,
+  Web as WebIcon,
+  VideoLibrary as VideoIcon,
+  School as SchoolIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  RocketLaunch as RocketLaunchIcon,
+  CheckCircle as CheckCircleIcon,
+  TrendingUp as TrendingUpIcon,
+  Shield as ShieldIcon,
+  Speed as SpeedIcon,
+} from '@mui/icons-material';
+import Head from 'next/head';
 import AppShell from '../components/AppShell';
 
-// Your actual ventures data
-const ventures = [
+const mbbaaSFeatures = [
   {
-    id: 'msp',
-    title: 'Managed Security Provider',
-    subtitle: '24/7 SOC Monitoring & Threat Hunting',
-    description: 'Complete managed security service provider offering enterprise-grade cybersecurity consulting, SOC monitoring, and threat intelligence.',
-    image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=600&fit=crop',
-    category: 'Cybersecurity',
-    color: '#1e3a8a',
-    stats: { likes: 247, views: '12K', saves: 89 },
-    url: 'https://isharehowlabs.com',
-    tags: ['Security', 'Enterprise', 'SOC'],
+    icon: <CloudIcon />,
+    title: 'Infrastructure Management',
+    description: 'Server provisioning, network configuration, security, optimal performance, scalability, and reliability.',
   },
   {
-    id: 'manager',
-    title: 'Managed Services Provider',
-    subtitle: 'Manager Toolkit',
-    description: 'iShareHow Labs Managed Services Provider Toolkit for Project Managers and Venture Teams.',
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop',
-    category: 'Community',
-    color: '#5865F2',
-    stats: { likes: 187, views: '10K', saves: 52 },
-    url: '/msp',
-    tags: ['Manager', 'Toolkit', 'Project'],
+    icon: <AnalyticsIcon />,
+    title: 'Data Analysis',
+    description: 'Transform raw data into actionable insights to identify trends and opportunities.',
   },
   {
-    id: 'wellness',
-    title: 'Wellness Lab',
-    subtitle: '7-Day Personalized Health Plans',
-    description: 'AI-powered wellness tracker with personalized micro-habits plans, free habit tracker, and biometric insights for optimal health.',
-    image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=900&fit=crop',
-    category: 'Health',
-    color: '#15803d',
-    stats: { likes: 423, views: '28K', saves: 156 },
-    url: '/wellness',
-    tags: ['Wellness', 'AI', 'Health'],
+    icon: <DashboardIcon />,
+    title: 'Business Intelligence (BI)',
+    description: 'Custom dashboards, reporting tools, and predictive analytics for a clear view of project health and potential.',
   },
   {
-    id: 'rise-cycling',
-    title: 'RISE Cycling',
-    subtitle: '4-Week Power-Ride Program',
-    description: 'Transform your cycling performance with structured training, performance tracking, and community support. First week completely free.',
-    image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&h=700&fit=crop',
-    category: 'Fitness',
-    color: '#c2410c',
-    stats: { likes: 312, views: '19K', saves: 78 },
-    url: '/rise_cycling',
-    tags: ['Cycling', 'Fitness', 'Training'],
-  },
-  {
-    id: 'spiritual-festivals',
-    title: 'Spiritual Festivals 2024',
-    subtitle: 'Complete Festival Guidebook',
-    description: 'Download the complete 2024 Festival Guidebook with 50+ spiritual events, rituals, traditions, and bonus ritual pack.',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=800&fit=crop',
-    category: 'Culture',
-    color: '#be185d',
-    stats: { likes: 345, views: '22K', saves: 123 },
-    url: '/spiritual_festivals',
-    tags: ['Festivals', 'Spirituality', 'Events'],
+    icon: <SecurityIcon />,
+    title: 'Essential Services',
+    description: 'Database administration, API management, cloud service integration, and continuous monitoring.',
   },
 ];
 
-function App() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+const creativeServices = [
+  {
+    icon: <BrushIcon />,
+    title: 'Brand Experience & UX/UI',
+    description: 'Branding, Web Design & Development, UI/UX Analysis & Improvement, Mobile App Design, and Content Creation.',
+  },
+  {
+    icon: <AutoAwesomeIcon />,
+    title: 'Experience Strategy',
+    description: 'Long-term planning to align digital experience with business and brand objectives.',
+  },
+  {
+    icon: <TrendingUpIcon />,
+    title: 'UX/UI Audits & Optimization',
+    description: 'Continuous analysis, user testing, and data-driven recommendations to resolve user pain points.',
+  },
+  {
+    icon: <WebIcon />,
+    title: 'Website Design, Development & Optimization',
+    description: 'High-performing websites that inform, inspire, and incite action (SEO, UX, Brand Identity).',
+  },
+];
 
-  useEffect(() => {
-    // Check for error messages in URL
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const authError = urlParams.get('auth');
-      const message = urlParams.get('message');
-      const detail = urlParams.get('detail');
-      
-      if (authError === 'error') {
-        let errorText = '';
-        if (message === 'not_paid_member') {
-          errorText = 'You need to be an active paid member to access the dashboard.';
-        } else if (message === 'missing_code') {
-          errorText = 'Authentication code missing. Please try again.';
-        } else if (message === 'missing_config') {
-          errorText = 'Authentication service not properly configured. Please contact support.';
-        } else if (message === 'token_error') {
-          errorText = 'Failed to obtain access token. Please try again.';
-        } else if (message === 'api_error') {
-          errorText = 'Patreon API error. Please try again later.';
-        } else if (message === 'timeout') {
-          errorText = 'Request timed out. Please check your connection and try again.';
-        } else if (message === 'network_error') {
-          errorText = 'Network error. Please check your connection and try again.';
-        } else if (message === 'user_fetch_failed') {
-          errorText = 'Failed to fetch user information. Please try again.';
-          if (detail) {
-            errorText += ` (${detail})`;
-          }
-        } else if (message === 'invalid_state') {
-          errorText = 'Authentication failed. Please try again.';
-        } else if (message === 'invalid_response') {
-          errorText = 'Invalid response from authentication service. Please try again.';
-        } else if (message === 'no_user_id') {
-          errorText = 'User ID not found in authentication response. Please try again.';
-        } else if (message) {
-          errorText = `Authentication error: ${message}. Please try again.`;
-        } else {
-          errorText = 'Authentication error. Please try again.';
-        }
-        
-        setErrorMessage(errorText);
-        
-        // Clean up URL
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-      }
-    }
-  }, []);
+const iShareHowDivisions = [
+  {
+    icon: <VideoIcon />,
+    title: 'Productions/Studios',
+    description: 'Independent Production & editor-in-chief. Develop Tech Solutions, DIY Maker Projects, Applied Labs, Product Reviews, and EV projects. Includes ELI Productions (Writers/Direction/Casting).',
+    color: '#6366f1',
+  },
+  {
+    icon: <SchoolIcon />,
+    title: 'Publishing',
+    description: 'Develop Websites, Courses, and ebooks. Ownership of digital copyright for video, academic journals, blogs. Responsible for video storyline and concept creation.',
+    color: '#8b5cf6',
+  },
+  {
+    icon: <VideoIcon />,
+    title: 'iShareHow YouTube Channel',
+    description: 'A resource for learning about technology, science, building, and more with informative and engaging videos.',
+    color: '#ec4899',
+  },
+];
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-  };
+const keyFeatures = [
+  {
+    icon: <ShieldIcon />,
+    title: 'The iShare Guarantee',
+    description: 'Unwavering support to help you bring your projects, dreams, and visions to fruition.',
+    color: '#10b981',
+  },
+  {
+    icon: <RocketLaunchIcon />,
+    title: 'Full Digital Lifecycle Coverage',
+    description: 'From secure studio setups and post-production to immersive XR/AR/VR experiences and asset management.',
+    color: '#3b82f6',
+  },
+  {
+    icon: <SpeedIcon />,
+    title: 'Battle-Tested Infrastructure',
+    description: 'Global, compliant infrastructure to neutralize technical and security risks in real-time.',
+    color: '#f59e0b',
+  },
+  {
+    icon: <TrendingUpIcon />,
+    title: 'Seamless Scalability',
+    description: 'Effortlessly scale from daily secure communications to enterprise-wide live events and AI-driven immersive projects.',
+    color: '#ef4444',
+  },
+];
 
-  // Filter ventures based on filters
-  const getFilteredVentures = () => {
-    let filtered = [...ventures];
+const HomePage = () => (
+  <>
+    <Head>
+      <title>iShareHow Labs - Empowering Your Vision with Managed Solutions</title>
+      <meta
+        name="description"
+        content="iShareHow Labs: Your Dedicated Infrastructure Provider for Next-Level Success. Integrated ecosystem of Managed Services, Creative-as-a-Service, and Strategic Intelligence."
+      />
+      <meta
+        name="keywords"
+        content="iShareHow Labs, managed services, MSP, creative services, SaaS, MBBaaS, infrastructure provider, business intelligence, UX/UI design, content creation"
+      />
+    </Head>
 
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(venture =>
-        venture.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        venture.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        venture.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    return filtered;
-  };
-
-  const filteredVentures = getFilteredVentures();
-
-  return (
-    <AppShell active="ventures">
-      {errorMessage && (
-        <Box sx={{ mb: 3 }}>
-          <Alert severity="error" onClose={() => setErrorMessage(null)}>
-            {errorMessage}
-          </Alert>
-        </Box>
-      )}
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography
-          variant="h3"
-          sx={{
-            fontWeight: 900,
-            mb: 2,
-            background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          Explore Our Ventures
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-          Discover innovative solutions across cybersecurity, wellness, fitness, and more.
-          Click any card to explore the full application.
-        </Typography>
-      </Box>
-
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
+    <AppShell active="about">
+      <Box>
         <Paper
           elevation={0}
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            bgcolor: 'background.default',
-            px: 3,
-            py: 1,
+            background: 'linear-gradient(135deg, #22D3EE 0%, #6366F1 100%)',
             borderRadius: 3,
-            minWidth: { xs: '100%', sm: 400, md: 500, lg: 600 },
-            maxWidth: '100%',
-            border: 1,
-            borderColor: 'divider',
+            p: { xs: 4, md: 8 },
+            mb: 6,
+            textAlign: 'center',
+            color: 'white',
           }}
         >
-          <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
-          <InputBase
-            placeholder="Search ventures..."
-            value={searchQuery}
-            onChange={handleSearchChange}
+          <Typography
+            variant="h2"
             sx={{
-              flex: 1,
-              '& input': {
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              },
-            }}
-          />
-        </Paper>
-      </Box>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(3, 1fr)',
-            lg: 'repeat(4, 1fr)',
-          },
-          gap: 3,
-          mb: 6,
-        }}
-      >
-        {filteredVentures.length > 0 ? (
-          filteredVentures.map((venture) => (
-            <VentureCard key={venture.id} venture={venture} />
-          ))
-        ) : (
-          <Box
-            sx={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              py: 8,
-              color: 'text.secondary',
+              fontWeight: 900,
+              mb: 2,
+              fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' },
             }}
           >
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              No ventures found
+            iShareHow Labs
+          </Typography>
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 700,
+              mb: 3,
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+              opacity: 0.95,
+            }}
+          >
+            Empowering Your Vision with Managed Solutions
+          </Typography>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              mb: 4,
+              fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+              opacity: 0.9,
+            }}
+          >
+            Your Dedicated Infrastructure Provider for Next-Level Success
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{
+              maxWidth: 900,
+              mx: 'auto',
+              mb: 4,
+              opacity: 0.95,
+              fontWeight: 400,
+              fontSize: { xs: '1rem', md: '1.25rem' },
+            }}
+          >
+            Tired of juggling complex IT back-ends, unpredictable creative hiring, and scattered digital strategies? iShareHow Labs offers an integrated ecosystem of Managed Services, Creative-as-a-Service, and Strategic Intelligence designed to be the robust foundation for your business growth.
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              maxWidth: 700,
+              mx: 'auto',
+              mb: 4,
+              opacity: 0.9,
+              fontSize: { xs: '0.95rem', md: '1.1rem' },
+              fontStyle: 'italic',
+            }}
+          >
+            We're here to support your dream with our tailored solutions.
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            href="#contact"
+            sx={{
+              bgcolor: 'white',
+              color: '#6366F1',
+              fontWeight: 700,
+              px: 4,
+              py: 1.5,
+              fontSize: '1.1rem',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.9)',
+              },
+            }}
+          >
+            Contact Us to Start Your Project Today
+          </Button>
+        </Paper>
+
+        <Box id="saas" sx={{ mb: 8 }}>
+          <Container maxWidth="lg">
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                textAlign: 'center',
+                fontSize: { xs: '1.75rem', md: '2.5rem' },
+                background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              SaaS
             </Typography>
-            <Typography variant="body2">Try adjusting your search or filters</Typography>
-          </Box>
-        )}
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                mb: 1,
+                textAlign: 'center',
+                color: 'text.primary',
+              }}
+            >
+              Your Indispensable, Dedicated Infrastructure Provider
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                textAlign: 'center',
+                mb: 5,
+                color: 'text.secondary',
+                maxWidth: 800,
+                mx: 'auto',
+                fontSize: '1.1rem',
+              }}
+            >
+              We meticulously manage all critical aspects of your project's back-end, ensuring a robust and efficient foundation for your success, allowing you to focus on client delivery and core business.
+            </Typography>
+
+            <Grid container spacing={3} sx={{ mb: 5 }}>
+              {mbbaaSFeatures.map((feature, index) => (
+                <Grid item xs={12} sm={6} md={3} key={index}>
+                  <Card
+                    elevation={2}
+                    sx={{
+                      height: '100%',
+                      p: 3,
+                      transition: 'transform 0.3s, box-shadow 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: 6,
+                      },
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        bgcolor: 'primary.main',
+                        width: 56,
+                        height: 56,
+                        mb: 2,
+                      }}
+                    >
+                      {feature.icon}
+                    </Avatar>
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                      {feature.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {feature.description}
+                    </Typography>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            <Paper
+              elevation={2}
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, rgba(34,211,238,0.1), rgba(99,102,241,0.1))',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mb: 2 }}>
+                MBBaaS Investment
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Total Estimated Value
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700} color="primary.main">
+                      $4,997
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Tier 1 Access
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Premium Upgrade
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700} color="secondary.main">
+                      +$2,500
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      1-on-1 Coaching
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Payment Terms
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      50% upfront, 50% upon 45-day milestone review.
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Container>
+        </Box>
+
+        <Divider sx={{ my: 8 }} />
+
+        <Box id="creative" sx={{ mb: 8 }}>
+          <Container maxWidth="lg">
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                textAlign: 'center',
+                fontSize: { xs: '1.75rem', md: '2.5rem' },
+                background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Experience & Design Services
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                mb: 1,
+                textAlign: 'center',
+                color: 'text.primary',
+                fontStyle: 'italic',
+              }}
+            >
+              Creative-as-a-Service
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                mb: 3,
+                textAlign: 'center',
+                color: 'text.secondary',
+              }}
+            >
+              Visionary Ideas. Fearless Creativity. Bold Innovation.
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                textAlign: 'center',
+                mb: 5,
+                color: 'text.secondary',
+                maxWidth: 800,
+                mx: 'auto',
+                fontSize: '1.1rem',
+              }}
+            >
+              Get the strategic creative leadership of an agency combined with the predictable, scalable structure of a Managed Service Provider (MSP). We focus on digital brand experience to drive next-level results.
+            </Typography>
+
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              {creativeServices.map((service, index) => (
+                <Grid item xs={12} md={6} key={index}>
+                  <Card
+                    elevation={2}
+                    sx={{
+                      height: '100%',
+                      p: 3,
+                      transition: 'transform 0.3s, box-shadow 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: 6,
+                      },
+                    }}
+                  >
+                    <Stack direction="row" spacing={2}>
+                      <Avatar
+                        sx={{
+                          bgcolor: 'secondary.main',
+                          width: 56,
+                          height: 56,
+                        }}
+                      >
+                        {service.icon}
+                      </Avatar>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" fontWeight={600} gutterBottom>
+                          {service.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {service.description}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            <Paper
+              elevation={2}
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Grid container spacing={4}>
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                      Core Focus
+                    </Typography>
+                    <Stack spacing={1}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                        <Typography variant="body2">Brand Experience & UX/UI</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                        <Typography variant="body2">Managed Model</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                        <Typography variant="body2">Scalability</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                        <Typography variant="body2">Technology Integration</Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                      Key Services
+                    </Typography>
+                    <Stack spacing={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        • Branding, Web Design & Development
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • UI/UX Analysis & Improvement
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • Mobile App Design
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • Content Creation
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • Front-End Coding & SEO
+                      </Typography>
+                    </Stack>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                      Managed Model
+                    </Typography>
+                    <Stack spacing={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        • Flat-rate, monthly subscription
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • Unlimited requests and revisions (within plan scope)
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • Month-to-month flexibility
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • Scale up or down by changing your plan
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • No overhead of hiring
+                      </Typography>
+                    </Stack>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Container>
+        </Box>
+
+        <Divider sx={{ my: 8 }} />
+
+        <Box id="isharehow" sx={{ mb: 8 }}>
+          <Container maxWidth="lg">
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                textAlign: 'center',
+                fontSize: { xs: '1.75rem', md: '2.5rem' },
+                background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              iShareHow
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                textAlign: 'center',
+                mb: 5,
+                color: 'text.secondary',
+                maxWidth: 800,
+                mx: 'auto',
+                fontSize: '1.1rem',
+              }}
+            >
+              We develop and distribute compelling content through our iShareHow YT Channel and publishing division.
+            </Typography>
+
+            <Grid container spacing={4}>
+              {iShareHowDivisions.map((division, index) => (
+                <Grid item xs={12} md={4} key={index}>
+                  <Card
+                    elevation={3}
+                    sx={{
+                      height: '100%',
+                      p: 4,
+                      background: `linear-gradient(135deg, ${division.color}15, ${division.color}05)`,
+                      border: '1px solid',
+                      borderColor: `${division.color}30`,
+                      transition: 'transform 0.3s, box-shadow 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: 8,
+                      },
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        bgcolor: division.color,
+                        width: 64,
+                        height: 64,
+                        mb: 3,
+                      }}
+                    >
+                      {division.icon}
+                    </Avatar>
+                    <Typography variant="h5" fontWeight={700} gutterBottom>
+                      {division.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {division.description}
+                    </Typography>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Container>
+        </Box>
+
+        <Box id="features" sx={{ mb: 8 }}>
+          <Container maxWidth="lg">
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                textAlign: 'center',
+                fontSize: { xs: '1.75rem', md: '2.5rem' },
+                background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Key Features of Our Integrated Ecosystem
+            </Typography>
+
+            <Grid container spacing={4}>
+              {keyFeatures.map((feature, index) => (
+                <Grid item xs={12} sm={6} md={3} key={index}>
+                  <Card
+                    elevation={2}
+                    sx={{
+                      height: '100%',
+                      p: 3,
+                      textAlign: 'center',
+                      transition: 'transform 0.3s, box-shadow 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: 6,
+                      },
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        bgcolor: feature.color,
+                        width: 64,
+                        height: 64,
+                        mx: 'auto',
+                        mb: 2,
+                      }}
+                    >
+                      {feature.icon}
+                    </Avatar>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                      {feature.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {feature.description}
+                    </Typography>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Container>
+        </Box>
+
+        <Box id="contact" sx={{ mb: 4 }}>
+          <Container maxWidth="lg">
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 4, md: 8 },
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #22D3EE 0%, #6366F1 100%)',
+                color: 'white',
+                textAlign: 'center',
+              }}
+            >
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 800,
+                  mb: 2,
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                }}
+              >
+                Ready to Transform Your Aspirations into Tangible Achievements?
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  mb: 4,
+                  opacity: 0.95,
+                  fontWeight: 400,
+                  maxWidth: 800,
+                  mx: 'auto',
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                }}
+              >
+                Trust iShareHow Labs and our advanced AI app ecosystem to provide the technical backbone and strategic insights that will ensure your competitive edge in today's dynamic market.
+              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={2}
+                justifyContent="center"
+                sx={{ mt: 4 }}
+              >
+                <Button
+                  component="a"
+                  href="mailto:soc@isharehowlabs.com?subject=Project Inquiry"
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    bgcolor: 'white',
+                    color: '#6366F1',
+                    fontWeight: 700,
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.9)',
+                    },
+                  }}
+                >
+                  Contact Us to Start Your Project Today
+                </Button>
+                <Button
+                  component="a"
+                  href="https://isharehow.app"
+                  target="_blank"
+                  variant="outlined"
+                  size="large"
+                  sx={{
+                    borderColor: 'white',
+                    color: 'white',
+                    fontWeight: 700,
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    '&:hover': {
+                      borderColor: 'rgba(255,255,255,0.8)',
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                    },
+                  }}
+                >
+                  Learn More About iShareHow
+                </Button>
+              </Stack>
+            </Paper>
+          </Container>
+        </Box>
       </Box>
     </AppShell>
-  );
-}
+  </>
+);
 
-export default App;
+export default HomePage;

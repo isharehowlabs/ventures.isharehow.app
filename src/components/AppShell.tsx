@@ -36,7 +36,7 @@ import {
 import ThemeToggle from './ThemeToggle';
 import { useAuth } from '../hooks/useAuth';
 
-type NavKey = 'ventures' | 'content' | 'labs' | 'products' | 'rise' | 'about';
+type NavKey = 'content' | 'labs' | 'products' | 'rise' | 'about';
 
 interface NavigationItem {
   key: NavKey;
@@ -46,12 +46,11 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
-  { key: 'ventures', label: 'Venture Directory', href: '/', icon: HomeIcon },
+  { key: 'about', label: 'Home', href: '/', icon: HomeIcon },
   { key: 'content', label: 'Content Library', href: '/content', icon: ArticleIcon },
   { key: 'products', label: 'Product Catalog', href: '/products', icon: ShoppingBagIcon },
   { key: 'labs', label: 'Co-Work Dashboard', href: '/labs', icon: LiveTvIcon },
   { key: 'rise', label: 'RISE Dashboard', href: '/rise', icon: TrendingUpIcon },
-  { key: 'about', label: 'About', href: '/about', icon: InfoIcon },
 ];
 
 interface AppShellProps {
@@ -207,7 +206,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
               transition: 'opacity 0.2s ease-in-out',
             }}
           >
-            Ventures Navigation
+            Navigation
           </Typography>
         )}
       </Box>
