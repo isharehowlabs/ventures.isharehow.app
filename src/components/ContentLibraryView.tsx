@@ -222,7 +222,6 @@ interface ContentLibraryViewProps {
 const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showVenturePartnershipsOnly, setShowVenturePartnershipsOnly] = useState(false);
 
   const handleCategoryFilter = (category: string) => {
     setSelectedCategory(category);
@@ -243,92 +242,85 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
       content.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       content.channelName.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesPartnership = !showVenturePartnershipsOnly || content.isVenturePartnership;
-
-    return matchesCategory && matchesSearch && matchesPartnership;
+    return matchesCategory && matchesSearch;
   });
 
-  return (
-    <Box>
-      {showHero && (
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 900,
-              mb: 2,
-              background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Explore our Content
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-            Discover our curated collection of articles, guides, and resources. Click any card to explore the full
-            content.
-          </Typography>
-        </Box>
-      )}
+    const contentGridItems = filteredContent.filter((item) => !item.isVenturePartnership);
+    const ventureGridItems = filteredContent.filter((item) => item.isVenturePartnership);
 
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-        <Paper
-          elevation={0}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            bgcolor: 'background.default',
-            px: 3,
-            py: 1,
-            borderRadius: 3,
-            minWidth: { xs: '100%', sm: 400, md: 500, lg: 600 },
-            maxWidth: '100%',
-            border: 1,
-            borderColor: 'divider',
-          }}
-        >
-          <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
-          <InputBase
-            placeholder="Search content..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            sx={{
-              flex: 1,
-              '& input': {
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              },
-            }}
-          />
-        </Paper>
+  return (
+      <Box>
+        {showHero && (
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 900,
+                mb: 2,
+                background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Our Portfolio
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 640, mx: 'auto' }}>
+              Explore the curated content that fuels our mission alongside the ventures and partnerships shaping the
+              future of iShareHow.
+            </Typography>
+          </Box>
+        )}
+
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+            <Paper
+              elevation={0}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                bgcolor: 'background.default',
+                px: 3,
+                py: 1,
+                borderRadius: 3,
+                minWidth: { xs: '100%', sm: 400, md: 500, lg: 600 },
+                maxWidth: '100%',
+                border: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                <InputBase
+                  placeholder="Search content..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  sx={{
+                    flex: 1,
+                    '& input': {
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                    },
+                  }}
+                />
+            </Paper>
       </Box>
 
-      <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ mb: 4 }}>
-        {categoryFilters.map((category) => (
-          <Chip
-            key={category}
-            label={category === 'all' ? 'All Categories' : category}
-            color={selectedCategory === category ? 'primary' : 'default'}
-            onClick={() => handleCategoryFilter(category)}
-            sx={{ textTransform: 'capitalize' }}
-            variant={selectedCategory === category ? 'filled' : 'outlined'}
-          />
-        ))}
-        <Chip
-          key="venture-partnerships"
-          label="Venture Partnerships"
-          color={showVenturePartnershipsOnly ? 'primary' : 'default'}
-          variant={showVenturePartnershipsOnly ? 'filled' : 'outlined'}
-          onClick={() => setShowVenturePartnershipsOnly((prev) => !prev)}
-          sx={{ textTransform: 'none' }}
-        />
-      </Stack>
+        <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ mb: 4 }}>
+          {categoryFilters.map((category) => (
+            <Chip
+              key={category}
+              label={category === 'all' ? 'All Categories' : category}
+              color={selectedCategory === category ? 'primary' : 'default'}
+              onClick={() => handleCategoryFilter(category)}
+              sx={{ textTransform: 'capitalize' }}
+              variant={selectedCategory === category ? 'filled' : 'outlined'}
+            />
+          ))}
+        </Stack>
 
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
-        Showing {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'}
-      </Typography>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
+          Showing {contentGridItems.length} {contentGridItems.length === 1 ? 'item' : 'items'} in the content library
+        </Typography>
 
       <Box
         sx={{
@@ -343,8 +335,8 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
           mb: 6,
         }}
       >
-        {filteredContent.length > 0 ? (
-          filteredContent.map((content) => <ContentCard key={content.id} content={content} />)
+        {contentGridItems.length > 0 ? (
+          contentGridItems.map((content) => <ContentCard key={content.id} content={content} />)
         ) : (
           <Box
             sx={{
@@ -360,6 +352,47 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
             <Typography variant="body2">Try adjusting your search or filters</Typography>
           </Box>
         )}
+      </Box>
+
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+          Venture Partnerships
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 640 }}>
+          Discover the ventures and collaborations that help expand the iShareHow community. These highlights are
+          handpicked for their impact on learning, innovation, and wellbeing.
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(3, 1fr)',
+              lg: 'repeat(4, 1fr)',
+            },
+            gap: 3,
+          }}
+        >
+          {ventureGridItems.length > 0 ? (
+            ventureGridItems.map((content) => <ContentCard key={content.id} content={content} />)
+          ) : (
+            <Box
+              sx={{
+                gridColumn: '1 / -1',
+                textAlign: 'center',
+                py: 8,
+                color: 'text.secondary',
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                No ventures match your filters
+              </Typography>
+              <Typography variant="body2">Adjust your search or filter selections to see more partnerships.</Typography>
+            </Box>
+          )}
+        </Box>
       </Box>
     </Box>
   );

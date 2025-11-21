@@ -2,7 +2,7 @@
 import AppShell from '../components/AppShell';
 import ContentLibraryView from '../components/ContentLibraryView';
 
-function ContentPage() {
+function OurPortfolioPage() {
   return (
     <AppShell active="content">
       <ContentLibraryView />
@@ -10,4 +10,4 @@ function ContentPage() {
   );
 }
 
-export default ContentPage;
+export default OurPortfolioPage;

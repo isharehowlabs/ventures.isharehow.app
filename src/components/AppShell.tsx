@@ -47,7 +47,7 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   { key: 'about', label: 'Home', href: '/', icon: HomeIcon },
-  { key: 'content', label: 'Content Library', href: '/content', icon: ArticleIcon },
+  { key: 'content', label: 'Our Portfolio', href: '/content', icon: ArticleIcon },
   { key: 'products', label: 'Product Catalog', href: '/products', icon: ShoppingBagIcon },
   { key: 'labs', label: 'Co-Work Dashboard', href: '/labs', icon: LiveTvIcon },
   { key: 'rise', label: 'RISE Dashboard', href: '/rise', icon: TrendingUpIcon },
