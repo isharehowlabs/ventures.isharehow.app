@@ -10,7 +10,11 @@ import {
   Button,
   Stack,
   useTheme,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import AppShell from '../components/AppShell';
 import WellnessQuiz from '../components/products/WellnessQuiz';
@@ -268,7 +272,20 @@ const ProductsPage = () => {
 
           {/* Wellness Quiz Section */}
           <Box sx={{ mb: 6 }}>
-            <WellnessQuiz onResult={(system) => console.log('Recommended system:', system)} />
+            <Accordion>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="wellness-quiz-content"
+                id="wellness-quiz-header"
+              >
+                <Typography variant="h5" fontWeight={600}>
+                  Body System Wellness Quiz
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <WellnessQuiz onResult={(system) => console.log('Recommended system:', system)} />
+              </AccordionDetails>
+            </Accordion>
           </Box>
 
           {error ? (
