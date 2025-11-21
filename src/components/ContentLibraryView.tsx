@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, type ChangeEvent } from 'react';
 import {
   Box,
@@ -205,8 +207,9 @@ const categoryFilters = [
   'Consciousness',
   'Business',
   'Community',
+  'Resources',
   'Entertainment',
-  'Venture Partnerships',
+  'Plants',
   'Discord',
   'Web3',
   'Amusement',
