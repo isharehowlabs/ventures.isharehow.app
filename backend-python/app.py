@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, redirect, session, url_for
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
@@ -49,14 +50,21 @@ print(f"  - COOKIE_HTTPONLY: {app.config['SESSION_COOKIE_HTTPONLY']}")
 # Database configuration - make it optional to handle import errors
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,  # Verify connections before using
-    'connect_args': {'connect_timeout': 5}  # 5 second timeout
+
+# Use engine options compatible with the chosen driver
+engine_options = {
+    'pool_pre_ping': True,
 }
+# Only pass connect_timeout for non-SQLite drivers
+if not app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
+    engine_options['connect_args'] = {'connect_timeout': 5}
+
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 try:
     db = SQLAlchemy(app)
     DB_AVAILABLE = True
+    migrate = Migrate(app, db)
 except Exception as e:
     print(f"Warning: Database initialization failed: {e}")
     print("Database features will be disabled. This may be due to:")

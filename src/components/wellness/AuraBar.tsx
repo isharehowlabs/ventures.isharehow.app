@@ -109,13 +109,17 @@ const AuraBar: React.FC<AuraBarProps> = ({
   onChange,
   editable = false,
 }) => {
-  const colors = AURA_COLORS[auraType] || AURA_COLORS.Physical;
-  const percentage = Math.min((value / maxValue) * 100, 100);
+  // Guard against undefined/empty auraType to avoid rendering invalid text nodes
+  const safeAuraType = typeof auraType === 'string' && auraType.trim().length > 0 ? auraType : 'Aura';
+  const safeValue = Number.isFinite(value) ? value : 0;
+  
+  const colors = AURA_COLORS[safeAuraType] || AURA_COLORS.Physical;
+  const percentage = Math.min((safeValue / maxValue) * 100, 100);
   
   // Determine value color based on level
   const getValueColor = () => {
-    if (value >= 80) return colors.primary;
-    if (value >= 50) return colors.secondary;
+    if (safeValue >= 80) return colors.primary;
+    if (safeValue >= 50) return colors.secondary;
     return '#999';
   };
 
@@ -123,7 +127,7 @@ const AuraBar: React.FC<AuraBarProps> = ({
     <StyledAuraContainer 
       auracolor={colors.primary}
       glowcolor={colors.glow}
-      value={value}
+      value={safeValue}
       elevation={3}
     >
       {/* Content wrapper with higher z-index */}
@@ -151,7 +155,7 @@ const AuraBar: React.FC<AuraBarProps> = ({
                 textShadow: `0 0 10px ${colors.glow}`,
               }}
             >
-              {auraType}
+              {safeAuraType}
             </Typography>
           </Box>
           
@@ -160,11 +164,11 @@ const AuraBar: React.FC<AuraBarProps> = ({
             fontWeight={900}
             sx={{ 
               color: getValueColor(),
-              textShadow: value >= 80 ? `0 0 15px ${colors.glow}` : 'none',
+              textShadow: safeValue >= 80 ? `0 0 15px ${colors.glow}` : 'none',
               transition: 'all 0.3s ease',
             }}
           >
-            {Math.round(value)}
+            {Math.round(safeValue)}
           </Typography>
         </Box>
         
