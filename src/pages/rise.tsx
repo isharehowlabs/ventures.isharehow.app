@@ -15,6 +15,17 @@ import {
   Button,
   Paper,
   useTheme,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -37,10 +48,13 @@ import {
   SelfImprovement as SelfImprovementIcon,
   OpenInNew as OpenInNewIcon,
   CheckCircle as CheckCircleIcon,
+  CloudDone as CloudDoneIcon,
+  CloudSync as CloudSyncIcon,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
 import AuraBar from '../components/wellness/AuraBar';
-import { fetchAuras, updateAuras, debounce, Aura } from '../components/wellness/api';
+import { fetchAuras, updateAuras, debounce, logActivity, Aura } from '../components/wellness/api';
 import {
   Hotel as SleepIcon,
   Restaurant as NutritionIcon,
@@ -434,10 +448,78 @@ function RiseDashboard() {
   const { user, isAuthenticated } = useAuth();
   const [isLoadingAuras, setIsLoadingAuras] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [stats, setStats] = useState<Stat[]>(initialStats);
   const [skills, setSkills] = useState<Skill[]>(initialSkills);
   const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
   const [goals, setGoals] = useState<TrainingGoal[]>(initialGoals);
+  // Activity logging state
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+  const [activityType, setActivityType] = useState('');
+  const [activityForm, setActivityForm] = useState({
+    name: '',
+    duration: '',
+    intensity: '',
+    notes: ''
+  });
+  const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'error'}>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  // Handle activity logging to database
+  const handleLogActivity = async (
+    type: string,
+    name: string,
+    metadata: Record<string, any> = {},
+    auraType: string,
+    auraBoost: number
+  ) => {
+    if (!isAuthenticated || !user) {
+      setSnackbar({
+        open: true,
+        message: 'Activity tracked locally. Sign in to sync across devices!',
+        severity: 'success'
+      });
+      // Update local aura
+      updateLocalAura(auraType, auraBoost);
+      return;
+    }
+
+    try {
+      // Log activity to database
+      await logActivity(type, name, JSON.stringify(metadata));
+      
+      // Update aura value locally
+      updateLocalAura(auraType, auraBoost);
+      
+      setSnackbar({
+        open: true,
+        message: `Activity logged! +${auraBoost} ${auraType} aura`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Failed to log activity:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to log activity. Try again.',
+        severity: 'error'
+      });
+    }
+  };
+
+  // Update local aura value
+  const updateLocalAura = (auraType: string, boost: number) => {
+    setStats(prevStats => prevStats.map(stat => {
+      if (stat.name === auraType) {
+        return { ...stat, value: Math.min(stat.max, stat.value + boost) };
+      }
+      return stat;
+    }));
+  };
+
 
   // Load from localStorage if available
   useEffect(() => {
@@ -505,7 +587,9 @@ function RiseDashboard() {
       debounce(async (statsToSync: Stat[]) => {
         if (!isAuthenticated || !user) return;
         
+
         setIsSyncing(true);
+        setSyncError(null);
         try {
           const updates = statsToSync.map(stat => ({
             auraType: stat.name,
@@ -513,9 +597,11 @@ function RiseDashboard() {
           }));
           
           await updateAuras(updates);
+          setLastSyncTime(new Date());
           console.log('✓ Synced auras to API');
         } catch (error) {
           console.error('Failed to sync auras:', error);
+          setSyncError(error instanceof Error ? error.message : 'Sync failed');
         } finally {
           setIsSyncing(false);
         }
@@ -535,9 +621,47 @@ function RiseDashboard() {
   );
 
   return (
-    <AppShell active="rise">
-      <Box sx={{ mb: 4 }}>
+    <>
+      <AppShell active="rise">
+        <Box sx={{ mb: 4 }}>
         {/* Header */}
+        {/* Sync Status Indicator */}
+        {isAuthenticated && (
+          <Box sx={{ 
+            position: 'fixed', 
+            top: 80, 
+            right: 20, 
+            zIndex: 1000,
+            background: syncError ? 'rgba(244, 67, 54, 0.9)' : isSyncing ? 'rgba(255, 152, 0, 0.9)' : 'rgba(76, 175, 80, 0.9)',
+            color: 'white',
+            px: 2,
+            py: 1,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            boxShadow: 3
+          }}>
+            {syncError ? (
+              <>
+                <ErrorIcon fontSize="small" />
+                <Typography variant="caption">Sync Error</Typography>
+              </>
+            ) : isSyncing ? (
+              <>
+                <CloudSyncIcon fontSize="small" className="rotating-icon" />
+                <Typography variant="caption">Syncing...</Typography>
+              </>
+            ) : (
+              <>
+                <CloudDoneIcon fontSize="small" />
+                <Typography variant="caption">
+                  Saved {lastSyncTime && `at ${lastSyncTime.toLocaleTimeString()}`}
+                </Typography>
+              </>
+            )}
+          </Box>
+        )}
         <Box sx={{ mb: 4, textAlign: 'center' }}>
           <Typography
             variant="h3"
@@ -674,17 +798,7 @@ function RiseDashboard() {
                   <SpaIcon color="primary" />
                   Wellness Lab
                 </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  href="https://ventures.isharehow.app/wellness/"
-                  target="_blank"
-                  endIcon={<OpenInNewIcon />}
-                >
-                  Visit Wellness Lab
-                </Button>
               </Stack>
-
               {/* 7-Day Micro-Habits Plan */}
               <Box sx={{ mb: 4 }}>
                 <Paper
@@ -737,49 +851,55 @@ function RiseDashboard() {
                 </Paper>
               </Box>
 
-              {/* Body System Cleanse Quiz */}
+              {/* Fitness Activity Logging */}
               <Box sx={{ mb: 4 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                   <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <QuizIcon color="primary" />
-                    Body System Cleanse Quiz
+                    <FitnessCenterIcon color="primary" />
+                    Log Wellness Activity
                   </Typography>
                   <Button
                     variant="contained"
                     size="small"
-                    href="https://ventures.isharehow.app/wellness/#quiz"
-                    target="_blank"
-                    endIcon={<OpenInNewIcon />}
+                    onClick={() => {
+                      setActivityType('wellness');
+                      setActivityDialogOpen(true);
+                    }}
                   >
-                    Take Quiz
+                    Log Activity
                   </Button>
                 </Stack>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Answer questions to identify which body system may need cleansing: Digestive, Urinary, Lymphatic, Respiratory, or Integumentary.
+                <Typography variant="body2" color="text.secondary">
+                  Track your fitness activities, workouts, and wellness practices. Each activity boosts your Mental aura.
                 </Typography>
               </Box>
 
-              {/* Healing Products */}
-              <Box>
-                <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ShoppingCartIcon color="primary" />
-                  Our Healing Products
+              {/* Product Recommendations */}
+              <Box sx={{ mb: 4 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                  <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ShoppingCartIcon color="primary" />
+                    Wellness Products & Quiz
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="/products"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Browse Products & Take Quiz
+                  </Button>
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  Take our wellness quiz to get personalized product recommendations based on your body systems.
                 </Typography>
-                <Grid container spacing={2}>
-                  {wellnessProducts.map((product) => (
-                    <Grid item xs={12} sm={6} md={3} key={product.id}>
-                      <WellnessProductCard product={product} />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-
               {/* Educational Resources */}
               <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
                 <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <VideoLibraryIcon color="primary" />
                   Educational Resources
                 </Typography>
+              </Box>
                 <Stack direction="row" spacing={2} flexWrap="wrap">
                   <Button
                     variant="outlined"
@@ -823,54 +943,44 @@ function RiseDashboard() {
                   <DirectionsBikeIcon color="primary" />
                   RISE Cycling
                 </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  href="https://ventures.isharehow.app/rise_cycling/"
-                  target="_blank"
-                  endIcon={<OpenInNewIcon />}
-                >
-                  Visit RISE Cycling
-                </Button>
               </Stack>
-
-              {/* 4-Week Power-Ride Program */}
-              <Paper
-                elevation={2}
-                sx={{
-                  p: 3,
-                  mb: 4,
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  color: 'white',
-                }}
-              >
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                  <DirectionsBikeIcon sx={{ fontSize: 40 }} />
-                  <Box>
-                    <Typography variant="h6" fontWeight={700}>
-                      4-Week Power-Ride Program
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Transform your cycling performance with structured training plans, performance tracking, and community support. Try your first week completely free.
-                    </Typography>
-                  </Box>
-                </Stack>
-                <Button
-                  variant="contained"
-                  sx={{ mt: 2, bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
-                  href="https://ventures.isharehow.app/rise_cycling/"
-                  target="_blank"
-                  endIcon={<OpenInNewIcon />}
-                >
-                  Get Started
-                </Button>
-              </Paper>
 
               {/* Rider Statistics */}
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
                   Rider Statistics
                 </Typography>
+                <Paper
+                  elevation={2}
+                  sx={{
+                    p: 3,
+                    mb: 4,
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    color: 'white',
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <DirectionsBikeIcon sx={{ fontSize: 40 }} />
+                    <Box>
+                      <Typography variant="h6" fontWeight={700}>
+                        Cycling for Health: Body Fluid Circulation
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        Cycling is more than exercise - it's a practice that circulates your body's fluids (lymphatic, blood, digestive systems), promoting detoxification, cardiovascular health, and overall wellness.
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Button
+                    variant="contained"
+                    sx={{ mt: 2, bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
+                    onClick={() => {
+                      setActivityType('cycling');
+                      setActivityDialogOpen(true);
+                    }}
+                  >
+                    Log Cycling Session
+                  </Button>
+                </Paper>
                 <Grid container spacing={2}>
                   {cyclingStats.map((stat, index) => (
                     <Grid item xs={12} sm={4} key={index}>
@@ -952,7 +1062,223 @@ function RiseDashboard() {
           </Card>
         </Box>
       </Box>
+
+        {/* Consciousness Journey Section */}
+        <Box sx={{ mb: 4 }}>
+          <Card>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                <Typography variant="h5" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SelfImprovementIcon color="primary" />
+                  Consciousness Journey
+                </Typography>
+              </Stack>
+
+              {/* Learning Path Overview */}
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 3,
+                  mb: 4,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                }}
+              >
+                <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                  Expand Your Consciousness Through Learning
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9, mb: 2 }}>
+                  Track your spiritual growth journey through curated video content. Watch videos on meditation, philosophy, spiritual practices, and consciousness exploration. Each video you complete boosts your Spiritual aura.
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  📚 Videos watched contribute to your learning path milestones
+                </Typography>
+              </Paper>
+
+              {/* Featured YouTube Videos */}
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+                  Featured Content
+                </Typography>
+                <Grid container spacing={2}>
+                  {[
+                    { title: 'Introduction to Consciousness', duration: '15:00', category: 'Philosophy' },
+                    { title: 'Meditation for Beginners', duration: '20:00', category: 'Practice' },
+                    { title: 'Understanding Spiritual Growth', duration: '18:00', category: 'Growth' },
+                    { title: 'Daily Mindfulness Practices', duration: '12:00', category: 'Practice' },
+                  ].map((video, index) => (
+                    <Grid item xs={12} sm={6} md={3} key={index}>
+                      <Card sx={{ height: '100%' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                            {video.title}
+                          </Typography>
+                          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                            <Chip label={video.category} size="small" color="primary" />
+                            <Chip label={video.duration} size="small" variant="outlined" />
+                          </Stack>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            fullWidth
+                            onClick={() => handleLogActivity(
+                              'consciousness',
+                              video.title,
+                              { duration: video.duration, category: video.category },
+                              'Spiritual',
+                              5
+                            )}
+                          >
+                            Mark as Watched
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+
+              {/* YouTube Channel Link */}
+              <Box sx={{ pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VideoLibraryIcon color="primary" />
+                  Full Video Library
+                </Typography>
+                <Stack direction="row" spacing={2} flexWrap="wrap">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.youtube.com/@RisewithJamel"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    YouTube - Rise with Jamel
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href="https://www.patreon.com/cw/JamelEliYah"
+                    target="_blank"
+                    endIcon={<OpenInNewIcon />}
+                  >
+                    Patreon - Jamel EliYah
+                  </Button>
+                </Stack>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
     </AppShell>
+
+      {/* Snackbar for notifications */}
+
+      {/* Activity Logging Dialog */}
+      <Dialog
+        open={activityDialogOpen}
+        onClose={() => setActivityDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {activityType === 'wellness' && 'Log Wellness Activity'}
+          {activityType === 'cycling' && 'Log Cycling Session'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              label="Activity Name"
+              fullWidth
+              value={activityForm.name}
+              onChange={(e) => setActivityForm({...activityForm, name: e.target.value})}
+              sx={{ mb: 2 }}
+              placeholder={activityType === 'cycling' ? 'e.g., Morning Ride' : 'e.g., Yoga Session'}
+            />
+            
+            {activityType === 'cycling' && (
+              <>
+                <TextField
+                  label="Duration (minutes)"
+                  type="number"
+                  fullWidth
+                  value={activityForm.duration}
+                  onChange={(e) => setActivityForm({...activityForm, duration: e.target.value})}
+                  sx={{ mb: 2 }}
+                />
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Intensity</InputLabel>
+                  <Select
+                    value={activityForm.intensity}
+                    label="Intensity"
+                    onChange={(e) => setActivityForm({...activityForm, intensity: e.target.value})}
+                  >
+                    <MenuItem value="Easy">Easy</MenuItem>
+                    <MenuItem value="Moderate">Moderate</MenuItem>
+                    <MenuItem value="Hard">Hard</MenuItem>
+                  </Select>
+                </FormControl>
+              </>
+            )}
+            
+            {activityType === 'wellness' && (
+              <TextField
+                label="Duration (minutes)"
+                type="number"
+                fullWidth
+                value={activityForm.duration}
+                onChange={(e) => setActivityForm({...activityForm, duration: e.target.value})}
+                sx={{ mb: 2 }}
+              />
+            )}
+            
+            <TextField
+              label="Notes (optional)"
+              fullWidth
+              multiline
+              rows={3}
+              value={activityForm.notes}
+              onChange={(e) => setActivityForm({...activityForm, notes: e.target.value})}
+              placeholder="How did you feel? Any observations?"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setActivityDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const auraBoost = activityType === 'cycling'
+                ? (activityForm.intensity === 'Hard' ? 10 : activityForm.intensity === 'Moderate' ? 7 : 5)
+                : 5;
+              const auraType = activityType === 'cycling' ? 'Physical' : 'Mental';
+              
+              handleLogActivity(
+                activityType,
+                activityForm.name,
+                { duration: activityForm.duration, intensity: activityForm.intensity, notes: activityForm.notes },
+                auraType,
+                auraBoost
+              );
+              
+              setActivityDialogOpen(false);
+              setActivityForm({ name: '', duration: '', intensity: '', notes: '' });
+            }}
+            disabled={!activityForm.name}
+          >
+            Log Activity
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({...snackbar, open: false})}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({...snackbar, open: false})} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
 

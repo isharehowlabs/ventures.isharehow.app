@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 
 import AppShell from '../components/AppShell';
+import WellnessQuiz from '../components/products/WellnessQuiz';
 import { getBackendUrl } from '../utils/backendUrl';
 
 const STORE_DOMAIN = 'isharehow.myshopify.com';
@@ -262,6 +263,12 @@ const ProductsPage = () => {
             <Typography variant="body1" color="text.secondary">
               Browse curated products from the IShareHow Ventures storefront.
             </Typography>
+          </Box>
+
+
+          {/* Wellness Quiz Section */}
+          <Box sx={{ mb: 6 }}>
+            <WellnessQuiz onResult={(system) => console.log('Recommended system:', system)} />
           </Box>
 
           {error ? (
