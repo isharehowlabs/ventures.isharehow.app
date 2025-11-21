@@ -9,17 +9,11 @@ import {
   alpha,
   useTheme,
   Fade,
+  IconButton,
+  Snackbar,
+  Tooltip,
 } from '@mui/material';
-import {
-  PlayArrow as PlayIcon,
-} from '@mui/icons-material';
-
-interface ContentStats {
-  likes: number;
-  comments: number;
-  shares: number;
-  saves: number;
-}
+import { PlayArrow as PlayIcon, Share as ShareIcon } from '@mui/icons-material';
 
 interface ContentItem {
   id: string;
@@ -30,10 +24,10 @@ interface ContentItem {
   timestamp: string;
   category: string[];
   color: string;
-  stats: ContentStats;
   mediaType: 'video' | 'image' | 'iframe';
   mediaUrl: string;
   externalUrl?: string;
+  isVenturePartnership?: boolean;
 }
 
 interface ContentCardProps {
@@ -41,9 +35,47 @@ interface ContentCardProps {
 }
 
 const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
-  const { title, description, channelName, channelIcon, timestamp, category, color, mediaType, mediaUrl, externalUrl } = content;
+  const { title, description, channelName, channelIcon, timestamp, category, color, mediaType, mediaUrl, externalUrl, isVenturePartnership } = content;
   const [isHovered, setIsHovered] = useState(false);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
   const theme = useTheme();
+
+  const handleShareClose = () => {
+    setShareMessage(null);
+  };
+
+  const handleShareClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const fallbackUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const shareUrl = externalUrl ?? fallbackUrl;
+
+    if (!shareUrl) {
+      setShareMessage('No link available to share');
+      return;
+    }
+
+    const handleCopyFallback = async () => {
+      if (typeof navigator === 'undefined' || !navigator.clipboard) {
+        setShareMessage('Unable to copy link');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareMessage('Link copied to clipboard');
+      } catch {
+        setShareMessage('Unable to copy link');
+      }
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.share && externalUrl) {
+      navigator
+        .share({ title, url: shareUrl })
+        .then(() => setShareMessage('Link shared successfully'))
+        .catch(() => handleCopyFallback());
+    } else {
+      handleCopyFallback();
+    }
+  };
 
   const handleCardClick = () => {
     if (externalUrl) {
@@ -183,89 +215,113 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
         )}
       </Box>
 
-      {/* Content */}
-      <CardContent sx={{ p: 3 }}>
-        {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar
-            sx={{
-              bgcolor: content.color,
-              width: 32,
-              height: 32,
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              mr: 1.5,
-            }}
-          >
-            {content.channelIcon}
-          </Avatar>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              {content.channelName}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {content.timestamp}
-            </Typography>
+        {/* Content */}
+        <CardContent sx={{ p: 3 }}>
+          {/* Header */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Avatar
+              sx={{
+                bgcolor: content.color,
+                width: 32,
+                height: 32,
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                mr: 1.5,
+              }}
+            >
+              {content.channelIcon}
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                {content.channelName}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {content.timestamp}
+              </Typography>
+            </Box>
+            <Tooltip title="Share this content" arrow>
+              <IconButton aria-label="Share content" onClick={handleShareClick} sx={{ p: 0.5 }}>
+                <ShareIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
-        </Box>
 
-        {/* Title and Description */}
-        <Typography
-          variant="h6"
-          sx={{
-            fontWeight: 700,
-            mb: 1,
-            lineHeight: 1.3,
-            color: 'text.primary',
-          }}
-        >
-          {content.title}
-        </Typography>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{
-            lineHeight: 1.5,
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {content.description}
-        </Typography>
-      </CardContent>
-
-      {/* Hover Overlay */}
-      <Fade in={isHovered}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bgcolor: alpha(theme.palette.primary.main, 0.9),
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 3,
-            zIndex: 1,
-          }}
-        >
+          {/* Title and Description */}
           <Typography
             variant="h6"
             sx={{
-              color: 'white',
               fontWeight: 700,
-              textAlign: 'center',
+              mb: 1,
+              lineHeight: 1.3,
+              color: 'text.primary',
             }}
           >
-            {content.externalUrl ? 'Visit Content' : 'View Content'}
+            {content.title}
           </Typography>
-        </Box>
-      </Fade>
-    </Card>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              lineHeight: 1.5,
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {content.description}
+          </Typography>
+          {isVenturePartnership && (
+            <Chip
+              label="Venture Partnership"
+              size="small"
+              sx={{
+                mt: 2,
+                bgcolor: alpha(color, 0.15),
+                color,
+                fontWeight: 600,
+                textTransform: 'none',
+              }}
+            />
+          )}
+        </CardContent>
+
+        {/* Hover Overlay */}
+        <Fade in={isHovered}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: alpha(theme.palette.primary.main, 0.9),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 3,
+              zIndex: 1,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                color: 'white',
+                fontWeight: 700,
+                textAlign: 'center',
+              }}
+            >
+              {content.externalUrl ? 'Visit Content' : 'View Content'}
+            </Typography>
+          </Box>
+        </Fade>
+        <Snackbar
+          open={Boolean(shareMessage)}
+          autoHideDuration={2500}
+          onClose={handleShareClose}
+          message={shareMessage}
+        />
+      </Card>
   );
 };
 

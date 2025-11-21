@@ -18,12 +18,11 @@ const contentItems = [
     channelName: 'iShareHow',
     channelIcon: 'iS',
     timestamp: '3 days ago',
-    category: ['Cybersecurity', 'Resources'],
-    color: '#00d4ff',
-    stats: { likes: 89, comments: 12, shares: 8, saves: 23 },
-    mediaType: 'video' as const,
-    mediaUrl: 'https://www.youtube.com/embed/rQ2NkeJ6yPs',
-    externalUrl: 'https://www.youtube.com/watch?v=rQ2NkeJ6yPs',
+      category: ['Cybersecurity', 'Resources'],
+      color: '#00d4ff',
+      mediaType: 'video' as const,
+      mediaUrl: 'https://www.youtube.com/embed/rQ2NkeJ6yPs',
+      externalUrl: 'https://www.youtube.com/watch?v=rQ2NkeJ6yPs',
   },
   {
     id: 'cosmic-consciousness',
@@ -32,10 +31,9 @@ const contentItems = [
     channelName: 'Consciousness Journey',
     channelIcon: 'CJ',
     timestamp: '5 days ago',
-    category: ['Consciousness'],
-    color: '#7c3aed',
-    stats: { likes: 156, comments: 28, shares: 15, saves: 67 },
-    mediaType: 'iframe' as const,
+      category: ['Consciousness'],
+      color: '#7c3aed',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PL5oPceUn7qyfn6ifad_U8ydnRMn0HXCO6',
     externalUrl: 'https://www.youtube.com/playlist?list=PL5oPceUn7qyfn6ifad_U8ydnRMn0HXCO6',
   },
@@ -46,10 +44,9 @@ const contentItems = [
     channelName: 'PACT Foundation',
     channelIcon: 'PF',
     timestamp: '2 weeks ago',
-    category: ['Business', 'Community'],
-    color: '#00d4ff',
-    stats: { likes: 67, comments: 8, shares: 3, saves: 23 },
-    mediaType: 'iframe' as const,
+      category: ['Business', 'Community'],
+      color: '#00d4ff',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLQ5BVpGud4m-xCRd_um_Vpq-_duzhBi77',
     externalUrl: 'https://www.youtube.com/playlist?list=PLQ5BVpGud4m-xCRd_um_Vpq-_duzhBi77',
   },
@@ -60,10 +57,9 @@ const contentItems = [
     channelName: 'Zwift Shorts',
     channelIcon: 'ZS',
     timestamp: '3 weeks ago',
-    category: ['Fitness'],
-    color: '#ff6b6b',
-    stats: { likes: 45, comments: 6, shares: 2, saves: 12 },
-    mediaType: 'iframe' as const,
+      category: ['Fitness'],
+      color: '#ff6b6b',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
     externalUrl: 'https://www.youtube.com/playlist?list=PLwz42x-QsWjNHtX07E_fuc7RslJt4_CWD',
   },
@@ -74,10 +70,9 @@ const contentItems = [
     channelName: 'Rise with Jamel',
     channelIcon: 'RJ',
     timestamp: '3 weeks ago',
-    category: ['Health'],
-    color: '#15803d',
-    stats: { likes: 89, comments: 15, shares: 8, saves: 34 },
-    mediaType: 'iframe' as const,
+      category: ['Health'],
+      color: '#15803d',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://www.youtube.com/embed/playlist?list=PLwz42x-QsWjMK-xXIIwpWh15mLcXLWRnP',
     externalUrl: 'https://www.youtube.com/playlist?list=PLwz42x-QsWjMK-xXIIwpWh15mLcXLWRnP',
   },
@@ -88,10 +83,9 @@ const contentItems = [
     channelName: 'AI Comedy',
     channelIcon: 'AC',
     timestamp: '1 month ago',
-    category: ['Entertainment'],
-    color: '#ff6b6b',
-    stats: { likes: 67, comments: 8, shares: 5, saves: 18 },
-    mediaType: 'iframe' as const,
+      category: ['Entertainment'],
+      color: '#ff6b6b',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLTlfw7UqgC-s1eNiMWyVq-QDFPXMFf-3Q',
     externalUrl: 'https://www.youtube.com/playlist?list=PLTlfw7UqgC-s1eNiMWyVq-QDFPXMFf-3Q',
   },
@@ -102,10 +96,9 @@ const contentItems = [
     channelName: 'AI Comedy',
     channelIcon: 'AC',
     timestamp: '1 week ago',
-    category: ['Entertainment'],
-    color: '#ff6b6b',
-    stats: { likes: 89, comments: 15, shares: 6, saves: 28 },
-    mediaType: 'iframe' as const,
+      category: ['Entertainment'],
+      color: '#ff6b6b',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLTlfw7UqgC-tmXwXlMeZyf7xuGm5yD0uL',
     externalUrl: 'https://www.youtube.com/playlist?list=PLTlfw7UqgC-tmXwXlMeZyf7xuGm5yD0uL',
   },
@@ -116,10 +109,9 @@ const contentItems = [
     channelName: 'AI What If',
     channelIcon: 'AI',
     timestamp: '1 week ago',
-    category: ['Entertainment'],
-    color: '#ff6b6b',
-    stats: { likes: 679, comments: 15, shares: 6, saves: 28 },
-    mediaType: 'iframe' as const,
+      category: ['Entertainment'],
+      color: '#ff6b6b',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://www.youtube.com/embed/videoseries?list=PLTlfw7UqgC-sT9IzbdJbbHnYZv-ct8r7p',
     externalUrl: 'https://www.youtube.com/playlist?list=PLTlfw7UqgC-sT9IzbdJbbHnYZv-ct8r7p',
   },
@@ -130,10 +122,9 @@ const contentItems = [
     channelName: 'Journey Through Consciousness',
     channelIcon: 'JTC',
     timestamp: '1 week ago',
-    category: ['Consciousness'],
-    color: '#ff6b6b',
-    stats: { likes: 888, comments: 88, shares: 66, saves: 28 },
-    mediaType: 'iframe' as const,
+      category: ['Consciousness'],
+      color: '#ff6b6b',
+      mediaType: 'iframe' as const,
     mediaUrl: 'https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/bc638622a44629cb303c05cdb4bbd6b3~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=f1f4bf1c&x-expires=1763852400&x-signature=xbu5y1%2FGPr682UEzdG6bmeZR1lM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5',
     externalUrl: 'https://www.tiktok.com/@journeythroughconscious',
   },
@@ -144,10 +135,10 @@ const contentItems = [
     channelName: 'Kabloom',
     channelIcon: 'KB',
     timestamp: '1 week ago',
-    category: ['Plants'],
-    color: '#ff6b6b',
-    stats: { likes: 888, comments: 88, shares: 66, saves: 28 },
-    mediaType: 'image' as const,
+      category: ['Plants'],
+      color: '#ff6b6b',
+      isVenturePartnership: true,
+      mediaType: 'image' as const,
     mediaUrl: 'https://kabloomplants.com/public/kabloom-logo-png.png',
     externalUrl: 'https://kabloomplants.com',
   },
@@ -158,10 +149,9 @@ const contentItems = [
     channelName: 'DivineAmusement',
     channelIcon: 'DA',
     timestamp: '1 week ago',
-    category: ['Amusement'],
-    color: '#ff6b6b',
-    stats: { likes: 123, comments: 88, shares: 66, saves: 28 },
-    mediaType: 'image' as const,
+      category: ['Amusement'],
+      color: '#ff6b6b',
+      mediaType: 'image' as const,
     mediaUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&h=600&fit=crop',
     externalUrl: 'https://www.youtube.com/@DivineAmusement?sub_confirmation=1',
   },
@@ -172,10 +162,10 @@ const contentItems = [
     channelName: 'Web3 Development',
     channelIcon: 'WD',
     timestamp: '1 week ago',
-    category: ['Web3'],
-    color: '#5865F2',
-    stats: { likes: 123, comments: 88, shares: 66, saves: 28 },
-    mediaType: 'image' as const,
+      category: ['Web3'],
+      color: '#5865F2',
+      isVenturePartnership: true,
+      mediaType: 'image' as const,
     mediaUrl: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&h=600&fit=crop',
     externalUrl: '/labs',
   },
@@ -183,13 +173,12 @@ const contentItems = [
     id: 'discord-chat',
     title: 'Discord Chat',
     description: 'Join our community on Discord to chat, collaborate, and get support for our ventures.',
-    channelName: 'Web3 Development',
+    channelName: 'iShareHow Discord',
     channelIcon: 'WD',
     timestamp: '1 week ago',
-    category: ['Discord'],
-    color: '#5865F2',
-    stats: { likes: 123, comments: 88, shares: 66, saves: 28 },
-    mediaType: 'image' as const,
+      category: ['Discord'],
+      color: '#5865F2',
+      mediaType: 'image' as const,
     mediaUrl: 'https://images.unsplash.com/photo-1611605698335-8b1569810432?w=800&h=700&fit=crop',
     externalUrl: 'https://isharehow.app/discord',
   },
@@ -200,10 +189,9 @@ const contentItems = [
     channelName: 'PACT Foundation',
     channelIcon: 'PF',
     timestamp: '1 week ago',
-    category: ['Action', 'Community'],
-    color: '#00d4ff',
-    stats: { likes: 67, comments: 8, shares: 3, saves: 23 },
-    mediaType: 'image' as const,
+      category: ['Action', 'Community'],
+      color: '#00d4ff',
+      mediaType: 'image' as const,
     mediaUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=650&fit=crop',
     externalUrl: '/PACT',
   },
@@ -217,8 +205,11 @@ const categoryFilters = [
   'Consciousness',
   'Business',
   'Community',
-  'Resources',
   'Entertainment',
+  'Venture Partnerships',
+  'Discord',
+  'Web3',
+  'Amusement',
 ];
 
 interface ContentLibraryViewProps {
@@ -228,6 +219,7 @@ interface ContentLibraryViewProps {
 const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showVenturePartnershipsOnly, setShowVenturePartnershipsOnly] = useState(false);
 
   const handleCategoryFilter = (category: string) => {
     setSelectedCategory(category);
@@ -248,7 +240,9 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
       content.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       content.channelName.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesCategory && matchesSearch;
+    const matchesPartnership = !showVenturePartnershipsOnly || content.isVenturePartnership;
+
+    return matchesCategory && matchesSearch && matchesPartnership;
   });
 
   return (
@@ -319,6 +313,14 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
             variant={selectedCategory === category ? 'filled' : 'outlined'}
           />
         ))}
+        <Chip
+          key="venture-partnerships"
+          label="Venture Partnerships"
+          color={showVenturePartnershipsOnly ? 'primary' : 'default'}
+          variant={showVenturePartnershipsOnly ? 'filled' : 'outlined'}
+          onClick={() => setShowVenturePartnershipsOnly((prev) => !prev)}
+          sx={{ textTransform: 'none' }}
+        />
       </Stack>
 
       <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
