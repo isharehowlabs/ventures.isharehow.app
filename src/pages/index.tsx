@@ -361,7 +361,7 @@ const HomePage = () => (
               </Grid>
             </Paper>
           </Container>
-        </Box>
+      </Box>
 
         <Divider sx={{ my: 8 }} />
 
@@ -384,25 +384,25 @@ const HomePage = () => (
             </Typography>
             <Typography
               variant="h5"
-              sx={{
+        sx={{
                 fontWeight: 700,
                 mb: 1,
                 textAlign: 'center',
                 color: 'text.primary',
                 fontStyle: 'italic',
-              }}
-            >
+        }}
+      >
               Creative-as-a-Service
             </Typography>
             <Typography
               variant="h6"
-              sx={{
+            sx={{
                 fontWeight: 600,
                 mb: 3,
-                textAlign: 'center',
-                color: 'text.secondary',
-              }}
-            >
+              textAlign: 'center',
+              color: 'text.secondary',
+            }}
+          >
               Visionary Ideas. Fearless Creativity. Bold Innovation.
             </Typography>
             <Typography
@@ -763,10 +763,10 @@ const HomePage = () => (
               </Stack>
             </Paper>
           </Container>
-        </Box>
+          </Box>
       </Box>
     </AppShell>
   </>
-);
+  );
 
 export default HomePage;
