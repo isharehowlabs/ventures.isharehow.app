@@ -43,6 +43,14 @@ const PANEL_LABELS: Record<string, string> = {
 
 function SettingsPage() {
   const { settings, updateDashboardSettings, updatePanelSettings, resetSettings } = useSettings();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/api/profile', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => setUser(data))
+      .catch((err) => console.error('Failed to fetch user profile:', err));
+  }, []);
   const [showResetAlert, setShowResetAlert] = useState(false);
   const [panelOrders, setPanelOrders] = useState<Record<string, number>>(() => {
     const orders: Record<string, number> = {};
@@ -94,8 +102,8 @@ function SettingsPage() {
     updatePanelSettings(panelKey as any, { order: newOrder });
   };
 
-  // Simulate admin check (replace with real auth logic)
-  const isAdmin = false;
+  // Admin check: Super Admin if Patreon ID 56776112 or user.isAdmin
+  const isAdmin = user?.isAdmin || user?.patreonId === 56776112;
 
   return (
     <AppShell active="about">
@@ -130,9 +138,7 @@ function SettingsPage() {
               Dashboard Settings
             </Typography>
           </Stack>
-
           <Divider sx={{ mb: 3 }} />
-
           <Stack spacing={3}>
             <FormControl fullWidth>
               <InputLabel>Default Tab</InputLabel>
@@ -147,7 +153,6 @@ function SettingsPage() {
                 <MenuItem value={3}>Learning Hub</MenuItem>
               </Select>
             </FormControl>
-
             <FormControl fullWidth>
               <InputLabel>Layout Style</InputLabel>
               <Select
@@ -159,74 +164,39 @@ function SettingsPage() {
                 <MenuItem value="list">List</MenuItem>
               </Select>
             </FormControl>
-
-            <Box>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={settings.dashboard.showTaskList}
-                    onChange={(e) => updateDashboardSettings({ showTaskList: e.target.checked })}
-                  />
-                }
-                label="Show Task List"
-              />
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 4, mt: 0.5 }}>
-                Display the session task list in the dashboard
+            {/* Realtime Chat Box replaces Session Task List */}
+            <Paper elevation={1} sx={{ p: 3, mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                Realtime Chat Box
               </Typography>
-            </Box>
-
-            <Box>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={settings.dashboard.showLiveUpdates}
-                    onChange={(e) => updateDashboardSettings({ showLiveUpdates: e.target.checked })}
-                  />
-                }
-                label="Show Live Updates"
-              />
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 4, mt: 0.5 }}>
-                Display real-time updates in the dashboard
-              </Typography>
-            </Box>
-
-            <Box>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={settings.dashboard.autoRefresh}
-                    onChange={(e) => updateDashboardSettings({ autoRefresh: e.target.checked })}
-                  />
-                }
-                label="Auto Refresh"
-              />
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 4, mt: 0.5 }}>
-                Automatically refresh dashboard data
-              </Typography>
-            </Box>
-
-            {settings.dashboard.autoRefresh && (
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Refresh Interval: {settings.dashboard.refreshInterval} seconds
+              {/* Chat messages UI - scaffolded */}
+              <Box sx={{ maxHeight: 250, overflowY: 'auto', mb: 2 }}>
+                {/* Pinned messages at top (expire after 7 days) */}
+                <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
+                  Pinned Messages
                 </Typography>
-                <Slider
-                  value={settings.dashboard.refreshInterval}
-                  onChange={(_, value) => updateDashboardSettings({ refreshInterval: value as number })}
-                  min={60}
-                  max={1800}
-                  step={60}
-                  marks={[
-                    { value: 60, label: '1m' },
-                    { value: 300, label: '5m' },
-                    { value: 600, label: '10m' },
-                    { value: 1800, label: '30m' },
-                  ]}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(value) => `${value}s`}
-                />
+                {/* Example pinned messages */}
+                <Paper variant="outlined" sx={{ p: 1, mb: 1, bgcolor: 'yellow.100' }}>
+                  <Typography variant="body2">Welcome to the chat! (Pinned by Admin)</Typography>
+                  <Button size="small" color="warning" sx={{ ml: 1 }}>Unpin</Button>
+                </Paper>
+                {/* Chat messages */}
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Recent Messages
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
+                  <Typography variant="body2">User123: Hello team!</Typography>
+                  <Button size="small" color="warning" sx={{ ml: 1 }}>Pin</Button>
+                </Paper>
               </Box>
-            )}
+              <Stack direction="row" spacing={2} alignItems="center">
+                <TextField fullWidth size="small" placeholder="Type your message..." />
+                <Button variant="contained" color="primary">Send</Button>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                Messages can be pinned for 7 days. Only admins can pin/unpin.
+              </Typography>
+            </Paper>
           </Stack>
         </Paper>
 
@@ -337,18 +307,24 @@ function SettingsPage() {
           </Stack>
         </Paper>
 
-        {/* Admin Actions: Q&A Moderation & Visibility */}
+        {/* Admin Section: Live Updates & Q&A Moderation */}
         {isAdmin && (
           <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
               <SettingsIcon sx={{ color: 'gold', fontSize: 32 }} />
               <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
-                Admin Actions: Community Q&A Moderation
+                Admin Section
               </Typography>
             </Stack>
             <Divider sx={{ mb: 3, borderColor: 'gold' }} />
+            {/* Live Updates Feature (moved here) */}
             <Typography variant="body1" sx={{ mb: 2 }}>
-              Review, approve, or remove questions and answers. Set question visibility duration. Manage categories and highlight featured questions. Bulk moderation and audit logging supported.
+              <b>Live Updates</b>: Manage real-time dashboard updates and notifications.
+            </Typography>
+            <Button variant="contained" color="primary" sx={{ mb: 2 }}>Send Live Update</Button>
+            {/* Q&A Moderation Controls */}
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              <b>Community Q&A Moderation</b>: Review, approve, or remove questions and answers. Set question visibility duration. Manage categories and highlight featured questions. Bulk moderation and audit logging supported.
             </Typography>
             <Stack spacing={2}>
               <Button variant="contained" color="primary">Review Pending Questions</Button>
