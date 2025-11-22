@@ -42,10 +42,16 @@ export function useAuth() {
       
       // Create a timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 10000);
+        setTimeout(() => {
+          console.log('[Auth] Request timed out after 10 seconds');
+          reject(new Error('Request timeout'));
+        }, 10000);
       });
 
+      console.log('[Auth] About to start Promise.race...');
+
       // Race the fetch against the timeout
+      console.log('[Auth] Starting fetch request...');
       const response = await Promise.race([
         fetch(`${backendUrl}/api/auth/me`, {
           method: 'GET',
@@ -57,6 +63,7 @@ export function useAuth() {
         }),
         timeoutPromise
       ]);
+      console.log('[Auth] Fetch completed, got response');
 
       // Debug: Log response details
       console.log('[Auth] Response received:', {
