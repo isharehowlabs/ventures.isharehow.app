@@ -279,12 +279,6 @@ export default function Web3Panel() {
     <Box sx={{ height: '100%', overflow: 'auto', p: { xs: 2, sm: 3 } }}>
       <Stack spacing={5}>
         <Box>
-          <Chip
-            label="Web3 Women"
-            color="primary"
-            icon={<ArticleOutlined fontSize="small" />}
-            sx={{ fontWeight: 700, mb: 2, alignSelf: 'flex-start' }}
-          />
           <Typography
             variant="h4"
             sx={{
@@ -296,11 +290,10 @@ export default function Web3Panel() {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            Web3 Strategy & Community Hub
+            Web3 Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
-            A centralized dashboard for the Web3 Women initiative—bringing education, community programs, and
-            downloadable resources into the same workspace that powers the rest of the iShareHow Labs ventures.
+            Welcome to your centralized dashboard for managing your decentralized life. Here you can track your crypto balances, review transactions, and access learning tracks and resources to help you thrive in the Web3 ecosystem.
           </Typography>
         </Box>
         <Grid container spacing={3}>
@@ -310,92 +303,26 @@ export default function Web3Panel() {
             </Grid>
           ))}
         </Grid>
-        <Box id="foundations">
-          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" sx={{ mb: 2 }}>
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                Guided Learning Tracks
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Assign a pathway to a teammate or bookmark for your own professional development plan.
-              </Typography>
-            </Box>
-            <Button
-              variant="text"
-              href="mailto:ventures@isharehowlabs.com?subject=Workshop%20Request"
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Request a private workshop
-            </Button>
-          </Stack>
-          <Grid container spacing={3}>
+        <Box id="learning">
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
+            Guided Learning Tracks & Resource Library
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 720, mb: 2 }}>
+            Explore curated learning pathways and essential resources to deepen your understanding and skills in Web3. Assign a pathway to a teammate or bookmark for your own professional development plan.
+          </Typography>
+          <Grid container spacing={3} sx={{ mb: 3 }}>
             {learningTracks.map((track) => (
               <Grid item xs={12} md={4} key={track.title}>
                 <LearningTrackCard track={track} />
               </Grid>
             ))}
           </Grid>
-        </Box>
-        <Stack spacing={2}>
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>
-            Resource Library
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 720 }}>
-            These assets plug directly into the broader ventures dashboard—each link is aligned with existing
-            Notion documentation, Discord channels, or internal storage that your team already uses.
-          </Typography>
           <Stack spacing={2}>
             {resourceItems.map((resource) => (
               <ResourceCard key={resource.title} resource={resource} />
             ))}
           </Stack>
-        </Stack>
-        <Card
-          variant="outlined"
-          sx={{
-            borderRadius: 3,
-            p: { xs: 3, md: 4 },
-            borderColor: 'divider',
-            background: 'linear-gradient(120deg, rgba(34,211,238,0.12), rgba(99,102,241,0.12))',
-          }}
-        >
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={3}
-            alignItems={{ xs: 'flex-start', md: 'center' }}
-            justifyContent="space-between"
-          >
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                Bring Web3 Into Your Roadmap
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Drop a note in #venture-labs inside Discord or email the product council to queue up the next
-                experiment. We coordinate playbooks, speakers, and workshop facilitation for you.
-              </Typography>
-            </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                href="https://isharehow.app/discord"
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ textTransform: 'none', fontWeight: 700 }}
-              >
-                Join the Discord
-              </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                href="mailto:ventures@isharehowlabs.com?subject=Program%20Inquiry"
-                sx={{ textTransform: 'none', fontWeight: 700 }}
-              >
-                Email Program Team
-              </Button>
-            </Stack>
-          </Stack>
-        </Card>
+        </Box>
       </Stack>
     </Box>
   );
