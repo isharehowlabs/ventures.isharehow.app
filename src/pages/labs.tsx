@@ -30,109 +30,15 @@ interface Task {
   completed: boolean;
 }
 
-// Realtime Chat Box Feature (scaffolded)
-function RealtimeChatBox() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  // TODO: Replace with real admin/user logic
-  const isAdmin = false;
-
-  // Fetch messages from backend
-  useEffect(() => {
-    const fetchMessages = () => {
-      fetch('/api/chat/messages', { credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
-          setMessages(data);
-          setLoading(false);
-        })
-        .catch(err => {
-          setError('Failed to load messages');
-          setLoading(false);
-        });
-    };
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 5000); // Poll every 5s
-    return () => clearInterval(interval);
-  }, []);
-
-  // Send new message
-  const handleSend = () => {
-    if (!input.trim()) return;
-    fetch('/api/chat/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ text: input }),
-    })
-      .then(res => res.json())
-      .then(() => setInput(''));
-  };
-
-  // Pin/unpin message (admin only)
-  const handlePin = (id: number) => {
-    if (!isAdmin) return;
-    fetch('/api/chat/pin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id, pin: true }),
-    }).then(() => {/* Optionally refetch messages */});
-  };
-  const handleUnpin = (id: number) => {
-    if (!isAdmin) return;
-    fetch('/api/chat/pin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id, pin: false }),
-    }).then(() => {/* Optionally refetch messages */});
-  };
-
-  // Filter pinned messages (expire after 7 days)
-  const now = Date.now();
-  const pinnedMessages = messages.filter((m: any) => m.pinned && now - m.timestamp < 7 * 24 * 60 * 60 * 1000);
-  const recentMessages = messages.filter((m: any) => !m.pinned);
-
+// Task List Feature (placeholder - chat feature not yet implemented)
+function TaskListPlaceholder() {
   return (
     <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>Realtime Chat Box</Typography>
-      {loading && <Typography variant="body2">Loading messages...</Typography>}
-      {error && <Typography variant="body2" color="error">{error}</Typography>}
-      <Box sx={{ maxHeight: 250, overflowY: 'auto', mb: 2 }}>
-        <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-          Pinned Messages
-        </Typography>
-        {pinnedMessages.length === 0 && (
-          <Typography variant="body2" color="text.secondary">No pinned messages.</Typography>
-        )}
-        {pinnedMessages.map((m: any) => (
-          <Paper key={m.id} variant="outlined" sx={{ p: 1, mb: 1, bgcolor: 'yellow.100' }}>
-            <Typography variant="body2">{m.user}: {m.text}</Typography>
-            {isAdmin && <Button size="small" color="warning" sx={{ ml: 1 }} onClick={() => handleUnpin(m.id)}>Unpin</Button>}
-          </Paper>
-        ))}
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-          Recent Messages
-        </Typography>
-        {recentMessages.length === 0 && (
-          <Typography variant="body2" color="text.secondary">No messages yet.</Typography>
-        )}
-        {recentMessages.map((m: any) => (
-          <Paper key={m.id} variant="outlined" sx={{ p: 1, mb: 1 }}>
-            <Typography variant="body2">{m.user}: {m.text}</Typography>
-            {isAdmin && <Button size="small" color="warning" sx={{ ml: 1 }} onClick={() => handlePin(m.id)}>Pin</Button>}
-          </Paper>
-        ))}
-      </Box>
-      <Stack direction="row" spacing={2} alignItems="center">
-        <TextField fullWidth size="small" placeholder="Type your message..." value={input} onChange={e => setInput(e.target.value)} />
-        <Button variant="contained" color="primary" onClick={handleSend}>Send</Button>
-      </Stack>
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-        Messages can be pinned for 7 days. Only admins can pin/unpin.
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Task List & Chat
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Real-time chat and task management features coming soon!
       </Typography>
     </Paper>
   );
@@ -276,7 +182,7 @@ function LabsDashboard() {
       </Box>
 
       <DashboardLayout
-        taskList={<RealtimeChatBox />}
+        taskList={<TaskListPlaceholder />}
         liveUpdates={<LiveUpdates />}
         communityQA={
           <Paper elevation={4} sx={{ p: 4, mb: 4, border: '2px solid gold', background: 'rgba(255, 255, 224, 0.15)' }}>

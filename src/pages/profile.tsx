@@ -19,7 +19,8 @@ function ProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch('/api/profile', { credentials: 'include' });
+        const backendUrl = getBackendUrl();
+        const response = await fetch(`${backendUrl}/api/profile`, { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setProfileData(data);
