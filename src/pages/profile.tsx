@@ -152,6 +152,14 @@ function ProfilePage() {
                       <Typography variant="body1">${user.membershipAmount.toFixed(2)}/month</Typography>
                     </Box>
                   )}
+                  {user.membershipPaymentDate && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Membership Payment Date
+                      </Typography>
+                      <Typography variant="body1">{new Date(user.membershipPaymentDate).toLocaleDateString()}</Typography>
+                    </Box>
+                  )}
                   {user.lifetimeSupportAmount && (
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
@@ -160,6 +168,18 @@ function ProfilePage() {
                       <Typography variant="body1">${user.lifetimeSupportAmount.toFixed(2)}</Typography>
                     </Box>
                   )}
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      href="https://www.patreon.com/cw/JamelEliYah/membership"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Increase Support on Patreon
+                    </Button>
+                  </Box>
                 </Stack>
               </Box>
             </Box>
