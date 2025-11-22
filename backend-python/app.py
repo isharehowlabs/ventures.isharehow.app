@@ -2678,15 +2678,11 @@ def delete_video(video_id):
         return jsonify({'error': 'Video not found'}), 404
     return jsonify({'success': True})
 
-# Catch-all routes for frontend paths - redirect to frontend domain
-# This must be at the end so all API routes are matched first
-@app.route('/', defaults={'path': ''})
-
-# Board collaboration endpoints for Firebase fallback
+@require_session
 
 @require_session
 @app.route('/api/boards/<board_id>/snapshot', methods=['GET'])
-def get_board_snapshot(board_id):
+  def get_board_snapshot(board_id):
     """Get board snapshot for Firebase fallback"""
     try:
         user_info = get_user_info()
@@ -2762,6 +2758,7 @@ def handle_auth_restored(data):
     if user_info:
         emit('auth_restored_ack', {'userId': user_info['id']}, broadcast=False)
 
+@app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def catch_all(path):
     """Catch-all route to redirect frontend paths to the frontend domain"""
