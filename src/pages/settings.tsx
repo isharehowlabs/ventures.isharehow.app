@@ -94,6 +94,9 @@ function SettingsPage() {
     updatePanelSettings(panelKey as any, { order: newOrder });
   };
 
+  // Simulate admin check (replace with real auth logic)
+  const isAdmin = false;
+
   return (
     <AppShell active="about">
       <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
@@ -313,7 +316,7 @@ function SettingsPage() {
         </Paper>
 
         {/* Reset Button */}
-        <Paper elevation={2} sx={{ p: 3 }}>
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
@@ -333,6 +336,53 @@ function SettingsPage() {
             </Button>
           </Stack>
         </Paper>
+
+        {/* Admin Actions: Q&A Moderation & Visibility */}
+        {isAdmin && (
+          <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+              <SettingsIcon sx={{ color: 'gold', fontSize: 32 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
+                Admin Actions: Community Q&A Moderation
+              </Typography>
+            </Stack>
+            <Divider sx={{ mb: 3, borderColor: 'gold' }} />
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Review, approve, or remove questions and answers. Set question visibility duration. Manage categories and highlight featured questions. Bulk moderation and audit logging supported.
+            </Typography>
+            <Stack spacing={2}>
+              <Button variant="contained" color="primary">Review Pending Questions</Button>
+              <Button variant="contained" color="secondary">Manage Answers</Button>
+              <Button variant="contained" color="info">Bulk Moderation</Button>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Typography variant="body2" sx={{ color: 'gold', minWidth: 180 }}>
+                  Set Question Visibility (hours):
+                </Typography>
+                <TextField type="number" size="small" defaultValue={48} inputProps={{ min: 1, max: 168 }} sx={{ width: 100 }} />
+                <Button variant="outlined" color="success">Update</Button>
+              </Stack>
+              <Button variant="outlined" color="warning">Manage Categories</Button>
+              <Button variant="outlined" color="secondary">Bulk Category Management</Button>
+            </Stack>
+            <Divider sx={{ my: 3, borderColor: 'gold' }} />
+            {/* Audit Logging Section */}
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold', mb: 2 }}>
+              Audit Log (Render)
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              All admin actions are logged for review and compliance. Logs are available in the Render dashboard.
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 2, background: 'rgba(255,255,224,0.15)', border: '1px solid gold' }}>
+              <Typography variant="body2" color="gold">
+                {/* Example log entries - replace with real log data */}
+                [2025-11-22 10:15] Admin Jane approved question #123<br />
+                [2025-11-22 10:16] Admin Jane removed answer #456<br />
+                [2025-11-22 10:17] Admin Jane updated category "Streaming"<br />
+                [2025-11-22 10:18] Admin Jane performed bulk moderation<br />
+              </Typography>
+            </Paper>
+          </Paper>
+        )}
       </Box>
     </AppShell>
   );

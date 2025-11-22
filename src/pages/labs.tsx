@@ -8,6 +8,11 @@ import {
   Stack,
   Button,
   Alert,
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
 } from '@mui/material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -275,8 +280,72 @@ function LabsDashboard() {
 
       <DashboardLayout taskList={<TaskList />} liveUpdates={<LiveUpdates />}>
         <CryptoIncentivesPanel />
+
+        {/* Community Q&A Panel */}
+        <Paper elevation={4} sx={{ p: 4, mb: 4, border: '2px solid gold', background: 'rgba(255, 255, 224, 0.15)' }}>
+          <Typography variant="h4" sx={{ fontWeight: 900, color: 'gold', mb: 2 }}>
+            Community Q&A
+          </Typography>
+          <Divider sx={{ mb: 3, borderColor: 'gold' }} />
+          {/* Categories Example */}
+          {['General', 'Streaming', 'Design', 'Docs'].map(category => (
+            <Box key={category} sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ color: 'gold', mb: 1 }}>
+                {category}
+              </Typography>
+              {/* FAQ-style Accordions for Questions */}
+              {[1,2].map(q => (
+                <Paper key={q} elevation={1} sx={{ mb: 2, border: '1px solid gold' }}>
+                  <Accordion>
+                    <AccordionSummary expandIcon={<span style={{ color: 'gold' }}>+</span>}>
+                      <Typography sx={{ fontWeight: 700 }}>Sample Question {q} in {category}</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        Sample answer for question {q}. Answers can be upvoted, marked as accepted, and users receive notifications for replies.
+                      </Typography>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Button variant="outlined" color="success">Upvote</Button>
+                        <Button variant="contained" color="primary">Mark as Accepted</Button>
+                      </Stack>
+                    </AccordionDetails>
+                  </Accordion>
+                </Paper>
+              ))}
+            </Box>
+          ))}
+          {/* Add Question Button */}
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Button variant="contained" color="warning" sx={{ fontWeight: 700 }}>
+              + Ask a Question
+            </Button>
+          </Box>
+
+          {/* Admin Controls for Moderation/Visibility (match settings) */}
+          {/* Simulate admin check (replace with real auth logic) */}
+          {false && (
+            <Paper elevation={2} sx={{ p: 3, mt: 4, border: '2px solid gold' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold', mb: 2 }}>
+                Admin Actions: Q&A Moderation
+              </Typography>
+              <Divider sx={{ mb: 2, borderColor: 'gold' }} />
+              <Stack spacing={2}>
+                <Button variant="contained" color="primary">Review Pending Questions</Button>
+                <Button variant="contained" color="secondary">Manage Answers</Button>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Typography variant="body2" sx={{ color: 'gold', minWidth: 180 }}>
+                    Set Question Visibility (hours):
+                  </Typography>
+                  <TextField type="number" size="small" defaultValue={48} inputProps={{ min: 1, max: 168 }} sx={{ width: 100 }} />
+                  <Button variant="outlined" color="success">Update</Button>
+                </Stack>
+                <Button variant="outlined" color="warning">Manage Categories</Button>
+              </Stack>
+            </Paper>
+          )}
+        </Paper>
       </DashboardLayout>
-      
+
       {/* Floating AI Chat */}
       <FloatingAIChat />
     </AppShell>
