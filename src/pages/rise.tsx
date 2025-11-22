@@ -456,6 +456,7 @@ function RiseDashboard() {
   const [goals, setGoals] = useState<TrainingGoal[]>(initialGoals);
   // Activity logging state
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+  const [focusModalOpen, setFocusModalOpen] = useState(false);
   const [activityType, setActivityType] = useState('');
   const [activityForm, setActivityForm] = useState({
     name: '',

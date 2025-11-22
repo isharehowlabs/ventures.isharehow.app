@@ -14,6 +14,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import LiveUpdates from '../components/mcp/LiveUpdates';
 import FloatingAIChat from '../components/dashboard/FloatingAIChat';
+import CryptoIncentivesPanel from '../components/dashboard/CryptoIncentivesPanel';
 import { getBackendUrl } from '../utils/backendUrl';
 
 
@@ -273,6 +274,7 @@ function LabsDashboard() {
       </Box>
 
       <DashboardLayout taskList={<TaskList />} liveUpdates={<LiveUpdates />}>
+        <CryptoIncentivesPanel />
       </DashboardLayout>
       
       {/* Floating AI Chat */}

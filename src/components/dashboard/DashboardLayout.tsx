@@ -4,6 +4,7 @@ import StreamingPanel from './StreamingPanel';
 import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
 import LearningPanel from './LearningPanel';
+import OpportunityPanel from './OpportunityPanel';
 import { useSettings } from '../../hooks/useSettings';
 
 interface TabPanelProps {
@@ -48,6 +49,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
     streaming: { component: <StreamingPanel />, label: 'Streaming' },
     figma: { component: <FigmaPanel />, label: 'Designs & Code' },
     docs: { component: <DocsPanel />, label: 'Documents' },
+    opportunities: { component: <OpportunityPanel />, label: 'Opportunities' },
     learning: { component: <LearningPanel />, label: 'Learning Hub' },
   };
 
@@ -65,7 +67,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
   const getActiveTabIndex = () => {
     if (visibleTabs.length === 0) return 0;
     // Find which visible tab corresponds to the default tab
-    const defaultTabKeys = ['streaming', 'figma', 'docs', 'learning'];
+    const defaultTabKeys = ['streaming', 'figma', 'docs', 'opportunities', 'learning'];
     const defaultTabKey = defaultTabKeys[settings.dashboard.defaultTab];
     const visibleIndex = visibleTabs.findIndex(tab => tab.key === defaultTabKey);
     return visibleIndex >= 0 ? visibleIndex : 0;

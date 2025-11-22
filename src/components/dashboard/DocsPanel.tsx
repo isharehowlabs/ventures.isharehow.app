@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import {
   Box,
   Typography,
@@ -20,6 +21,8 @@ import {
   FormControl,
   InputLabel,
   Chip,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -30,19 +33,28 @@ import {
   CheckCircle as CheckCircleIcon,
   RadioButtonUnchecked as PendingIcon,
   PlayCircle as InProgressIcon,
+  Warning as WarningIcon,
+  Login as LoginIcon,
+  Dashboard as BoardIcon,
 } from '@mui/icons-material';
 import { useTasks, Task } from '../../hooks/useTasks';
+import { trackTaskCompleted } from '../../utils/analytics';
 
 export default function DocsPanel() {
   const {
     tasks,
     isLoading,
     error,
+    authRequired,
+    isStale,
+    lastUpdated,
+    refresh,
     fetchTasks,
     createTask,
     updateTask,
     deleteTask,
   } = useTasks();
+  const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
@@ -53,7 +65,7 @@ export default function DocsPanel() {
   const [status, setStatus] = useState<'pending' | 'in-progress' | 'completed'>('pending');
 
   const handleRefresh = () => {
-    fetchTasks();
+    refresh();
   };
 
   const handleOpenCreate = () => {
@@ -91,6 +103,11 @@ export default function DocsPanel() {
           hyperlinks: hyperlinksArray,
           status,
         });
+        
+        // Track task completion
+        if (status === 'completed') {
+          trackTaskCompleted(currentId, 'mentee', 'cowork');
+        }
       }
 
       setOpen(false);
@@ -112,6 +129,11 @@ export default function DocsPanel() {
     }
   };
 
+  const handleOpenBoard = (taskId: string) => {
+    // Navigate to board with task-specific ID
+    router.push(`/board?boardId=task_${taskId}`);
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
@@ -128,8 +150,13 @@ export default function DocsPanel() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Team Tasks</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Refresh">
-            <IconButton onClick={handleRefresh} disabled={isLoading || error?.includes('Authentication required')} size="small">
+          <Tooltip title={isStale ? "Data may be outdated - Click to refresh" : "Refresh"}>
+            <IconButton 
+              onClick={handleRefresh} 
+              disabled={isLoading || authRequired} 
+              size="small"
+              color={isStale ? "warning" : "default"}
+            >
               <RefreshIcon />
             </IconButton>
           </Tooltip>
@@ -137,7 +164,7 @@ export default function DocsPanel() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenCreate}
-            disabled={isLoading || error?.includes('Authentication required')}
+            disabled={isLoading || authRequired}
             size="small"
           >
             Add Task
@@ -145,14 +172,40 @@ export default function DocsPanel() {
         </Box>
       </Box>
 
-      {error && (
-        <Paper sx={{ p: 2, bgcolor: error.includes('Authentication required') ? 'warning.light' : 'error.light', color: error.includes('Authentication required') ? 'warning.contrastText' : 'error.contrastText' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2">
-              {error.includes('Authentication required') 
-                ? 'Please log in to access team tasks and collaborate with your team.' 
-                : error}
+      {/* Authentication Required Alert */}
+      {authRequired && (
+        <Alert severity="warning" icon={<LoginIcon />}>
+          <AlertTitle>Authentication Required</AlertTitle>
+          Please log in to access team tasks and collaborate with your team.
+          <Button
+            size="small"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefresh}
+            disabled={isLoading}
+            sx={{ mt: 1 }}
+          >
+            Retry
+          </Button>
+        </Alert>
+      )}
+
+      {/* Stale Data Warning */}
+      {isStale && !authRequired && (
+        <Alert severity="info" icon={<WarningIcon />}>
+          Task data may be outdated. Click refresh to get the latest updates.
+          {lastUpdated && (
+            <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+              Last updated: {lastUpdated.toLocaleTimeString()}
             </Typography>
+          )}
+        </Alert>
+      )}
+
+      {/* General Error */}
+      {error && !authRequired && (
+        <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2">{error}</Typography>
             <IconButton onClick={handleRefresh} disabled={isLoading} size="small" sx={{ color: 'inherit', ml: 1 }}>
               <RefreshIcon fontSize="small" />
             </IconButton>
@@ -188,13 +241,22 @@ export default function DocsPanel() {
                       </IconButton>
                     </Tooltip>
                   ))}
+                  <Tooltip title="Open Collaboration Board">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenBoard(task.id)}
+                      color="primary"
+                    >
+                      <BoardIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title="Edit">
-                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(task)} disabled={!!error?.includes('Authentication required')}>
+                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(task)} disabled={authRequired}>
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete">
-                    <IconButton edge="end" size="small" onClick={() => handleDelete(task.id)} disabled={!!error?.includes('Authentication required')}>
+                    <IconButton edge="end" size="small" onClick={() => handleDelete(task.id)} disabled={authRequired}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
@@ -228,7 +290,7 @@ export default function DocsPanel() {
               />
             </ListItem>
           ))}
-          {!tasks.length && !isLoading && !error && (
+          {!tasks.length && !isLoading && !error && !authRequired && (
             <Box sx={{ p: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 No tasks yet. Add tasks and hyperlinks for the team to work on.
@@ -290,7 +352,7 @@ export default function DocsPanel() {
           <Button
             onClick={handleSave}
             variant="contained"
-            disabled={!title.trim() || isLoading || error?.includes('Authentication required')}
+            disabled={!title.trim() || isLoading || authRequired}
           >
             {editMode === 'create' ? 'Add' : 'Save'}
           </Button>
@@ -299,4 +361,3 @@ export default function DocsPanel() {
     </Box>
   );
 }
-

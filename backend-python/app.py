@@ -6,6 +6,7 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
 import uuid
+from functools import wraps
 import json
 from dotenv import load_dotenv
 import requests
@@ -604,6 +605,29 @@ def get_user_id():
     """Get user ID from session or use default"""
     user = session.get('user')
     return user.get('id', 'anonymous') if user else 'anonymous'
+
+
+# Authentication decorator
+def require_session(f):
+    """Decorator to require authenticated session for API endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = session.get('user')
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_user_info():
+    """Get user info from session including id and role"""
+    user = session.get('user')
+    if not user:
+        return None
+    return {
+        'id': user.get('id', 'anonymous'),
+        'role': user.get('role', 'mentee'),  # default to mentee
+        'name': user.get('name', 'Unknown')
+    }
 
 @app.route('/api/figma/component/like', methods=['POST'])
 def figma_component_like():
@@ -1234,6 +1258,7 @@ def update_profile():
         })
 
 
+@require_session
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
     if not DB_AVAILABLE:
@@ -1248,6 +1273,7 @@ def get_tasks():
         # Return empty list if database is unavailable
         return jsonify({'tasks': [], 'error': 'Database temporarily unavailable'}), 200
 
+@require_session
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
     if not DB_AVAILABLE:
@@ -1294,7 +1320,11 @@ def create_task():
                 }), 503
             raise db_error
         
-        socketio.emit('task_created', task.to_dict())
+        user_info = get_user_info()
+        task_data = task.to_dict()
+        task_data['userId'] = user_info['id'] if user_info else 'anonymous'
+        task_data['userRole'] = user_info['role'] if user_info else 'mentee'
+        socketio.emit('task_created', task_data)
         return jsonify({'task': task.to_dict()}), 201
     except KeyError as e:
         print(f"Missing required field: {e}")
@@ -1305,6 +1335,7 @@ def create_task():
         traceback.print_exc()
         return jsonify({'error': 'Failed to create task', 'message': str(e)}), 500
 
+@require_session
 @app.route('/api/tasks/<task_id>', methods=['PUT'])
 def update_task(task_id):
     if not DB_AVAILABLE:
@@ -1320,7 +1351,11 @@ def update_task(task_id):
         task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
         task.status = data.get('status', task.status)
         db.session.commit()
-        socketio.emit('task_updated', task.to_dict())
+        user_info = get_user_info()
+        task_data = task.to_dict()
+        task_data['userId'] = user_info['id'] if user_info else 'anonymous'
+        task_data['userRole'] = user_info['role'] if user_info else 'mentee'
+        socketio.emit('task_updated', task_data)
         return jsonify({'task': task.to_dict()})
     except Exception as e:
         print(f"Error updating task: {e}")
@@ -1328,6 +1363,7 @@ def update_task(task_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to update task', 'message': str(e)}), 500
 
+@require_session
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
 def delete_task(task_id):
     if not DB_AVAILABLE:
@@ -1339,7 +1375,8 @@ def delete_task(task_id):
         task = Task.query.get_or_404(task_id)
         db.session.delete(task)
         db.session.commit()
-        socketio.emit('task_deleted', {'id': task_id})
+        user_info = get_user_info()
+        socketio.emit('task_deleted', {'id': task_id, 'userId': user_info['id'] if user_info else 'anonymous'})
         return jsonify({'success': True})
     except Exception as e:
         print(f"Error deleting task: {e}")
@@ -2644,6 +2681,87 @@ def delete_video(video_id):
 # Catch-all routes for frontend paths - redirect to frontend domain
 # This must be at the end so all API routes are matched first
 @app.route('/', defaults={'path': ''})
+
+# Board collaboration endpoints for Firebase fallback
+
+@require_session
+@app.route('/api/boards/<board_id>/snapshot', methods=['GET'])
+def get_board_snapshot(board_id):
+    """Get board snapshot for Firebase fallback"""
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # In a full implementation, this would fetch from a database
+        # For now, return a minimal snapshot structure
+        snapshot = {
+            'boardId': board_id,
+            'canvasState': {
+                'version': 0,
+                'lastUpdated': datetime.utcnow().isoformat(),
+                'ownerId': user_info['id'],
+                'actions': [],
+                'metadata': {}
+            },
+            'presence': {},
+            'notifications': []
+        }
+        
+        # Emit socket event
+        socketio.emit('board_snapshot_ready', {
+            'boardId': board_id,
+            'userId': user_info['id']
+        })
+        
+        return jsonify(snapshot), 200
+    except Exception as e:
+        print(f"Error getting board snapshot: {e}")
+        return jsonify({'error': 'Failed to get board snapshot'}), 500
+
+@require_session
+@app.route('/api/boards/<board_id>/presence', methods=['GET', 'POST'])
+def board_presence(board_id):
+    """Handle board presence updates"""
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        if request.method == 'GET':
+            # Return current presence data
+            # In full implementation, fetch from database/cache
+            return jsonify({'presence': {}}), 200
+        else:  # POST
+            # Update presence
+            data = request.get_json()
+            presence_data = {
+                'userId': user_info['id'],
+                'name': user_info['name'],
+                'status': data.get('status', 'active'),
+                'cursor': data.get('cursor'),
+                'lastHeartbeat': datetime.utcnow().isoformat()
+            }
+            
+            # Emit presence update
+            socketio.emit('presence_updated', {
+                'boardId': board_id,
+                'presence': presence_data
+            })
+            
+            return jsonify({'success': True, 'presence': presence_data}), 200
+    except Exception as e:
+        print(f"Error handling board presence: {e}")
+        return jsonify({'error': 'Failed to handle presence'}), 500
+
+# Socket.IO event for auth restoration
+@socketio.on('auth_restored')
+def handle_auth_restored(data):
+    """Handle auth restoration event from client"""
+    user_info = get_user_info()
+    if user_info:
+        emit('auth_restored_ack', {'userId': user_info['id']}, broadcast=False)
+
 @app.route('/<path:path>')
 def catch_all(path):
     """Catch-all route to redirect frontend paths to the frontend domain"""
@@ -2665,3 +2783,358 @@ def catch_all(path):
         redirect_url = f'{redirect_url}?{query_string}'
     
     return redirect(redirect_url, code=302)
+# Wellness Module Models
+if DB_AVAILABLE:
+    class WellnessModule(db.Model):
+        __tablename__ = 'wellness_modules'
+        id = db.Column(db.String(36), primary_key=True)
+        title = db.Column(db.String(200), nullable=False)
+        description = db.Column(db.Text)
+        duration = db.Column(db.Integer)  # minutes
+        prerequisites = db.Column(db.Text)  # JSON array of module IDs
+        completion_criteria = db.Column(db.Text)  # JSON object
+        activation_key = db.Column(db.String(255))  # hashed
+        category = db.Column(db.String(50))  # mental, physical, spiritual
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'title': self.title,
+                'description': self.description,
+                'duration': self.duration,
+                'prerequisites': json.loads(self.prerequisites) if self.prerequisites else [],
+                'completionCriteria': json.loads(self.completion_criteria) if self.completion_criteria else {},
+                'category': self.category,
+                'createdAt': self.created_at.isoformat() if self.created_at else None
+            }
+    
+    class WellnessProgress(db.Model):
+        __tablename__ = 'wellness_progress'
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        module_id = db.Column(db.String(36), db.ForeignKey('wellness_modules.id'), nullable=False)
+        state = db.Column(db.String(20), default='locked')  # locked, in-progress, completed
+        started_at = db.Column(db.DateTime)
+        completed_at = db.Column(db.DateTime)
+        activation_attempts = db.Column(db.Integer, default=0)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'moduleId': self.module_id,
+                'state': self.state,
+                'startedAt': self.started_at.isoformat() if self.started_at else None,
+                'completedAt': self.completed_at.isoformat() if self.completed_at else None,
+                'activationAttempts': self.activation_attempts
+            }
+    
+    class MentorCue(db.Model):
+        __tablename__ = 'mentor_cues'
+        id = db.Column(db.String(36), primary_key=True)
+        module_id = db.Column(db.String(36), db.ForeignKey('wellness_modules.id'), nullable=False)
+        type = db.Column(db.String(20))  # audio, video
+        content_url = db.Column(db.Text)
+        duration = db.Column(db.Integer)  # seconds
+        transcription = db.Column(db.Text)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'moduleId': self.module_id,
+                'type': self.type,
+                'contentUrl': self.content_url,
+                'duration': self.duration,
+                'transcription': self.transcription
+            }
+
+# Wellness Module API Endpoints
+
+@require_session
+@app.route('/api/wellness/modules', methods=['GET'])
+def get_wellness_modules():
+    """Get all wellness modules with user progress"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        modules = WellnessModule.query.all()
+        user_progress = WellnessProgress.query.filter_by(user_id=user_info['id']).all()
+        
+        # Map progress by module ID
+        progress_map = {p.module_id: p for p in user_progress}
+        
+        result = []
+        for module in modules:
+            module_dict = module.to_dict()
+            if module.id in progress_map:
+                module_dict['progress'] = progress_map[module.id].to_dict()
+            else:
+                module_dict['progress'] = {'state': 'locked'}
+            result.append(module_dict)
+        
+        return jsonify({'modules': result}), 200
+    except Exception as e:
+        print(f"Error fetching wellness modules: {e}")
+        return jsonify({'error': 'Failed to fetch modules'}), 500
+
+@require_session
+@app.route('/api/wellness/modules/<module_id>', methods=['GET'])
+def get_wellness_module(module_id):
+    """Get specific wellness module details"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        module = WellnessModule.query.get_or_404(module_id)
+        return jsonify({'module': module.to_dict()}), 200
+    except Exception as e:
+        print(f"Error fetching wellness module: {e}")
+        return jsonify({'error': 'Failed to fetch module'}), 500
+
+@require_session
+@app.route('/api/wellness/activate', methods=['POST'])
+def activate_wellness_module():
+    """Verify activation key and transition module state"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        module_id = data.get('moduleId')
+        activation_key = data.get('activationKey')
+        
+        if not module_id or not activation_key:
+            return jsonify({'error': 'Module ID and activation key required'}), 400
+        
+        module = WellnessModule.query.get_or_404(module_id)
+        
+        # Simple key verification (in production, use proper hashing)
+        if module.activation_key and module.activation_key != activation_key:
+            # Increment attempt count
+            progress = WellnessProgress.query.filter_by(
+                user_id=user_info['id'],
+                module_id=module_id
+            ).first()
+            
+            if progress:
+                progress.activation_attempts += 1
+                db.session.commit()
+            
+            return jsonify({'error': 'Invalid activation key'}), 400
+        
+        # Get or create progress
+        progress = WellnessProgress.query.filter_by(
+            user_id=user_info['id'],
+            module_id=module_id
+        ).first()
+        
+        if not progress:
+            progress = WellnessProgress(
+                id=str(uuid.uuid4()),
+                user_id=user_info['id'],
+                module_id=module_id,
+                state='in-progress',
+                started_at=datetime.utcnow()
+            )
+            db.session.add(progress)
+        else:
+            if progress.state == 'locked':
+                progress.state = 'in-progress'
+                progress.started_at = datetime.utcnow()
+            elif progress.state == 'in-progress':
+                progress.state = 'completed'
+                progress.completed_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'progress': progress.to_dict()
+        }), 200
+    except Exception as e:
+        print(f"Error activating module: {e}")
+        return jsonify({'error': 'Failed to activate module'}), 500
+
+@require_session
+@app.route('/api/wellness/mentor-cues/<module_id>', methods=['GET'])
+def get_mentor_cues(module_id):
+    """Get mentor cues for a specific module"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        cues = MentorCue.query.filter_by(module_id=module_id).all()
+        return jsonify({'cues': [cue.to_dict() for cue in cues]}), 200
+    except Exception as e:
+        print(f"Error fetching mentor cues: {e}")
+        return jsonify({'error': 'Failed to fetch cues'}), 500
+
+
+# Crypto Incentive Models
+if DB_AVAILABLE:
+    class CryptoTransaction(db.Model):
+        __tablename__ = 'crypto_transactions'
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        amount = db.Column(db.Float, nullable=False)
+        reason = db.Column(db.String(200))
+        transaction_hash = db.Column(db.String(255))
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'amount': self.amount,
+                'reason': self.reason,
+                'transactionHash': self.transaction_hash,
+                'createdAt': self.created_at.isoformat() if self.created_at else None
+            }
+    
+    class MentorMentee(db.Model):
+        __tablename__ = 'mentor_mentee'
+        id = db.Column(db.String(36), primary_key=True)
+        mentor_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        mentee_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        started_at = db.Column(db.DateTime, default=datetime.utcnow)
+        last_active_at = db.Column(db.DateTime, default=datetime.utcnow)
+        tasks_completed = db.Column(db.Integer, default=0)
+        retention_days = db.Column(db.Integer, default=0)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'mentorId': self.mentor_id,
+                'menteeId': self.mentee_id,
+                'startedAt': self.started_at.isoformat() if self.started_at else None,
+                'lastActiveAt': self.last_active_at.isoformat() if self.last_active_at else None,
+                'tasksCompleted': self.tasks_completed,
+                'retentionDays': self.retention_days
+            }
+
+# Crypto Transaction API Endpoints
+
+@require_session
+@app.route('/api/crypto/balance', methods=['GET'])
+def get_crypto_balance():
+    """Get user's crypto balance and transaction history"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Get all transactions for user
+        transactions = CryptoTransaction.query.filter_by(
+            user_id=user_info['id']
+        ).order_by(CryptoTransaction.created_at.desc()).limit(50).all()
+        
+        # Calculate balance
+        balance = sum(tx.amount for tx in transactions)
+        
+        return jsonify({
+            'balance': balance,
+            'transactions': [tx.to_dict() for tx in transactions]
+        }), 200
+    except Exception as e:
+        print(f"Error fetching crypto balance: {e}")
+        return jsonify({'error': 'Failed to fetch balance'}), 500
+
+@require_session
+@app.route('/api/crypto/award', methods=['POST'])
+def award_crypto():
+    """Award crypto to user (admin or system function)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        amount = data.get('amount')
+        reason = data.get('reason', 'Task completion')
+        recipient_id = data.get('recipientId', user_info['id'])
+        
+        if not amount or amount <= 0:
+            return jsonify({'error': 'Invalid amount'}), 400
+        
+        # Create transaction
+        transaction = CryptoTransaction(
+            id=str(uuid.uuid4()),
+            user_id=recipient_id,
+            amount=amount,
+            reason=reason,
+            transaction_hash=f"tx_{uuid.uuid4().hex[:16]}"
+        )
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        # Emit socket event
+        socketio.emit('crypto_awarded', {
+            'userId': recipient_id,
+            'amount': amount,
+            'reason': reason,
+            'transactionId': transaction.id
+        })
+        
+        return jsonify({
+            'success': True,
+            'transaction': transaction.to_dict()
+        }), 201
+    except Exception as e:
+        print(f"Error awarding crypto: {e}")
+        return jsonify({'error': 'Failed to award crypto'}), 500
+
+@require_session
+@app.route('/api/crypto/stats', methods=['GET'])
+def get_crypto_stats():
+    """Get crypto statistics for user"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Get completed tasks count
+        completed_tasks = Task.query.filter_by(status='completed').count()
+        
+        # Get mentor-mentee relationships
+        as_mentor = MentorMentee.query.filter_by(mentor_id=user_info['id']).all()
+        as_mentee = MentorMentee.query.filter_by(mentee_id=user_info['id']).all()
+        
+        # Calculate retention bonus (placeholder logic)
+        total_retention_bonus = 0
+        for relationship in as_mentor:
+            # Award bonus based on retention days
+            if relationship.retention_days > 30:
+                total_retention_bonus += relationship.retention_days * 0.5
+        
+        return jsonify({
+            'completedTasks': completed_tasks,
+            'tasksToVenture': 100,
+            'mentorRelationships': len(as_mentor),
+            'menteeRelationships': len(as_mentee),
+            'retentionBonus': total_retention_bonus,
+            'role': user_info['role']
+        }), 200
+    except Exception as e:
+        print(f"Error fetching crypto stats: {e}")
+        return jsonify({'error': 'Failed to fetch stats'}), 500
+
