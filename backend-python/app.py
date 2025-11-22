@@ -37,7 +37,7 @@ if app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True  # Always use secure cookies in production
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for cross-origin requests with Secure flag
-app.config['SESSION_COOKIE_DOMAIN'] = os.environ.get('SESSION_COOKIE_DOMAIN', None)
+app.config['SESSION_COOKIE_DOMAIN'] = '.ventures.isharehow.app'  # Allow cookies across subdomains
 app.config['SESSION_COOKIE_PATH'] = '/'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Sessions expire after 7 days
 
@@ -1168,34 +1168,64 @@ def get_profile():
         'isPaidMember': user_data.get('isPaidMember', False)
     })
 
-@app.route('/api/profile', methods=['PUT'])
+@app.route('/api/profile', methods=['PUT', 'OPTIONS'])
 def update_profile():
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'message': 'OK'})
+        response.headers.add('Access-Control-Allow-Origin', 'https://ventures.isharehow.app')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response
     """Update user's profile (email and name)"""
+    print("=" * 80)
+    print("PROFILE UPDATE REQUEST:")
+    print(f"  Method: {request.method}")
+    print(f"  Content-Type: {request.headers.get('Content-Type')}")
+    print(f"  Origin: {request.headers.get('Origin')}")
+    print(f"  Cookie present: {'Cookie' in request.headers}")
+    
     if 'user' not in session:
+        print("✗ No user in session - not authenticated")
+        print("=" * 80)
         return jsonify({'error': 'Not authenticated'}), 401
     
     user_data = session['user']
     user_id = user_data.get('id')
+    print(f"✓ User authenticated: {user_id}")
     
     if not user_id:
+        print("✗ Invalid session data - no user ID")
+        print("=" * 80)
         return jsonify({'error': 'Invalid session data'}), 400
     
     # Get request data
     data = request.get_json()
+    print(f"  Request data: {data}")
+    
     if not data:
+        print("✗ No data provided in request")
+        print("=" * 80)
         return jsonify({'error': 'No data provided'}), 400
     
     new_email = data.get('email')
     new_name = data.get('name')
+    print(f"  New email: {new_email}")
+    print(f"  New name: {new_name}")
     
     # Validate email if provided
     if new_email is not None:
         if not new_email or '@' not in new_email:
+            print("✗ Invalid email format")
+            print("=" * 80)
             return jsonify({'error': 'Invalid email format'}), 400
     
     # Validate name if provided
     if new_name is not None:
         if not new_name or len(new_name.strip()) == 0:
+            print("✗ Invalid name")
+            print("=" * 80)
             return jsonify({'error': 'Name cannot be empty'}), 400
     
     # Update database if available

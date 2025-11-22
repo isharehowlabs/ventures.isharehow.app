@@ -5,6 +5,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
+import { getBackendUrl } from '../utils/backendUrl';
 
 function ProfilePage() {
   const { user: authUser, logout } = useAuth();
@@ -65,9 +66,20 @@ function ProfilePage() {
       return;
     }
 
+    // Check if user is authenticated
+    if (!authUser) {
+      alert('You must be logged in to update your email');
+      return;
+    }
+
     setSavingEmail(true);
     try {
-      const response = await fetch('/api/profile', {
+      const backendUrl = getBackendUrl();
+      console.log('Updating email:', emailValue.trim());
+      console.log('Backend URL:', backendUrl);
+      console.log('User authenticated:', !!authUser);
+      
+      const response = await fetch(`${backendUrl}/api/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -76,19 +88,31 @@ function ProfilePage() {
         body: JSON.stringify({ email: emailValue.trim() }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
         const updatedProfile = await response.json();
+        console.log('Updated profile:', updatedProfile);
         setProfileData(updatedProfile);
         setEditingEmail(false);
         // Show success message
         alert('Email updated successfully!');
       } else {
-        const error = await response.json();
-        alert(`Failed to update email: ${error.error || 'Unknown error'}`);
+        let errorMessage = 'Unknown error';
+        try {
+          const error = await response.json();
+          errorMessage = error.error || error.message || `HTTP ${response.status}`;
+          console.error('Server error:', error);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        alert(`Failed to update email: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('Error updating email:', error);
-      alert('Failed to update email. Please try again.');
+      console.error('Network error updating email:', error);
+      alert(`Network error: ${error.message || 'Failed to connect to server. Please check your connection and try again.'}`);
     } finally {
       setSavingEmail(false);
     }
