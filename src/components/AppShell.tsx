@@ -284,7 +284,59 @@ const AppShell = ({ active, children }: AppShellProps): React.ReactElement => {
             </MenuItem>
           </Menu>
         </Box>
-        {/* ...existing navigation code... */}
+        {/* Navigation menu restored below features */}
+        <List sx={{ px: isCollapsed && !isMobile ? 1 : 2, py: 2 }}>
+          {navigationItems.map((item) => {
+            const selected = item.key === active;
+            const IconComponent = item.icon;
+            return (
+              <Tooltip 
+                key={item.key}
+                title={isCollapsed && !isMobile ? item.label : ''}
+                placement="right"
+                arrow
+              >
+                <ListItemButton
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && window.location.pathname !== item.href) {
+                      window.location.href = item.href;
+                    }
+                  }}
+                  selected={selected}
+                  sx={{ 
+                    borderRadius: 2, 
+                    mb: 1,
+                    justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start',
+                    minHeight: 48,
+                    px: isCollapsed && !isMobile ? 1 : 2,
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: isCollapsed && !isMobile ? 0 : 40,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <IconComponent color={selected ? 'primary' : 'inherit'} />
+                  </ListItemIcon>
+                  {(!isCollapsed || isMobile) && (
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontWeight: selected ? 600 : 400,
+                        color: selected ? 'primary.main' : 'inherit',
+                      }}
+                      sx={{
+                        opacity: isCollapsed && !isMobile ? 0 : 1,
+                        transition: 'opacity 0.2s ease-in-out',
+                      }}
+                    />
+                  )}
+                </ListItemButton>
+              </Tooltip>
+            );
+          })}
+        </List>
       </Drawer>
 
       <Box
