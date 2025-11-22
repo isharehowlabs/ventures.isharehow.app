@@ -12,6 +12,7 @@ interface User {
   membershipAmount?: number;
   lifetimeSupportAmount?: number;
   membershipPaymentDate?: string;
+  membershipRenewalDate?: string;
 }
 
 interface AuthState {

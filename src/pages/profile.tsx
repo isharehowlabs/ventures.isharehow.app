@@ -160,6 +160,14 @@ function ProfilePage() {
                       <Typography variant="body1">{new Date(user.membershipPaymentDate).toLocaleDateString()}</Typography>
                     </Box>
                   )}
+                  {user.membershipRenewalDate && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Membership Renewal Date
+                      </Typography>
+                      <Typography variant="body1">{new Date(user.membershipRenewalDate).toLocaleDateString()}</Typography>
+                    </Box>
+                  )}
                   {user.lifetimeSupportAmount && (
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
