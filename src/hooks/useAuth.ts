@@ -13,6 +13,7 @@ interface User {
   lifetimeSupportAmount?: number;
   membershipPaymentDate?: string;
   membershipRenewalDate?: string;
+  isTeamMember?: boolean;
 }
 
 interface AuthState {

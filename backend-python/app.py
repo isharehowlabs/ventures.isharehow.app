@@ -1193,9 +1193,11 @@ def update_profile():
     
     user_data = session['user']
     user_id = user_data.get('id')
-    print(f"✓ User authenticated: {user_id}")
-    
-    if not user_id:
+        print(f"✓ User authenticated: {user_id}")
+        print(f"  - Is Paid Member: {is_paid_member}")
+        print(f"  - Membership Tier: {membership_tier}")
+        print(f"  - Membership Amount: ${membership_amount}")
+        print(f"  - Is Team Member: {is_team_member}")    if not user_id:
         print("✗ Invalid session data - no user ID")
         print("=" * 80)
         return jsonify({'error': 'Invalid session data'}), 400
@@ -2292,9 +2294,9 @@ def patreon_callback():
             print(f"Patreon OAuth error: No access token. Response: {token_data}")
             return redirect(f'{get_frontend_url()}/?auth=error&message=token_error')
 
-        # Fetch user identity with memberships
+        # Fetch user identity with memberships and campaign relationships
         user_res = requests.get(
-            "https://www.patreon.com/api/oauth2/v2/identity?include=memberships&fields[member]=patron_status,currently_entitled_amount_cents",
+            "https://www.patreon.com/api/oauth2/v2/identity?include=memberships,campaigns&fields[member]=patron_status,currently_entitled_amount_cents&fields[campaign]=name,creation_name",
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=10
         )
@@ -2322,12 +2324,20 @@ def patreon_callback():
         user_email = attributes.get('email', '')
         user_avatar = attributes.get('image_url', '')
         
-        # Check membership status
+        # Check membership status and team access
         is_paid_member = False
         membership_tier = None
         membership_amount = 0
+        is_team_member = False
         
         memberships = relationships.get('memberships', {}).get('data', [])
+        campaigns = relationships.get('campaigns', {}).get('data', [])
+        
+        # Check if user owns any campaigns (indicates they're a creator/admin)
+        if campaigns:
+            is_team_member = True
+            print(f"✓ User {user_id} is a campaign creator/owner - granting team access")
+        
         if memberships:
             # Get membership details from included data
             included = user_data.get('included', [])
@@ -2362,6 +2372,7 @@ def patreon_callback():
             'isPaidMember': is_paid_member,
             'membershipTier': membership_tier,
             'membershipAmount': membership_amount,
+            'isTeamMember': is_team_member,
         }
         
         print(f"Storing user in session: {user_session_data}")

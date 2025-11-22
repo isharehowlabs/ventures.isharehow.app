@@ -272,12 +272,32 @@ function ProfilePage() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Role
                     </Typography>
-                    <Chip
-                      label={user.patreonId === '56776112' ? 'Super Admin' : 'Community Member'}
-                      color={user.patreonId === '56776112' ? 'secondary' : 'primary'}
-                      variant={user.patreonId === '56776112' ? 'filled' : 'outlined'}
-                      size="small"
-                    />
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      {user.isTeamMember && (
+                        <Chip
+                          label="Team Member"
+                          color="secondary"
+                          variant="filled"
+                          size="small"
+                        />
+                      )}
+                      <Chip
+                        label={
+                          user.patreonId === '56776112' ? 'Super Admin' :
+                          user.isTeamMember ? 'Staff' :
+                          'Community Member'
+                        }
+                        color={
+                          user.patreonId === '56776112' ? 'error' :
+                          user.isTeamMember ? 'warning' :
+                          'primary'
+                        }
+                        variant={
+                          user.patreonId === '56776112' || user.isTeamMember ? 'filled' : 'outlined'
+                        }
+                        size="small"
+                      />
+                    </Stack>
                   </Box>
                 </Stack>
               </Box>
@@ -299,6 +319,14 @@ function ProfilePage() {
                       Membership Status
                     </Typography>
                     <Stack direction="row" spacing={1} alignItems="center">
+                      {user.isTeamMember && (
+                        <Chip
+                          label="Team Access"
+                          color="warning"
+                          variant="filled"
+                          size="small"
+                        />
+                      )}
                       <Chip
                         label={user.isPaidMember ? 'Active Paid Member' : 'Free Member'}
                         color={user.isPaidMember ? 'success' : 'default'}
