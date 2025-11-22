@@ -159,6 +159,40 @@ const AppShell = ({ active, children }: AppShellProps): React.ReactElement => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Toolbar sx={{ minHeight: '64px !important', px: { xs: 1, sm: 2 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <IconButton 
+              edge="start" 
+              onClick={handleDrawerToggle} 
+              sx={{ display: { md: 'none' }, mr: 1 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography
+              variant="body2"
+              sx={{
+                display: { md: 'none' },
+                fontWeight: 600,
+                color: 'text.primary',
+                cursor: 'pointer',
+              }}
+              onClick={handleDrawerToggle}
+            >
+              Menu
+            </Typography>
+          </Box>
+          {/* AppBar remains, but features are moved to Drawer */}
+        </Toolbar>
+      </AppBar>
       <Drawer
         variant={isMobile ? 'temporary' : 'permanent'}
         open={isMobile ? mobileOpen : true}
@@ -172,8 +206,8 @@ const AppShell = ({ active, children }: AppShellProps): React.ReactElement => {
             border: 'none',
             borderRight: 1,
             borderColor: 'divider',
-            top: 0,
-            height: '100%',
+            top: '64px',
+            height: 'calc(100% - 64px)',
             transition: 'width 0.3s ease-in-out',
             overflowX: 'hidden',
           },
