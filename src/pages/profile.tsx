@@ -99,6 +99,16 @@ function ProfilePage() {
                       <Typography variant="body1">{user.patreonId}</Typography>
                     </Box>
                   )}
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Role
+                    </Typography>
+                    <Typography variant="body1">
+                      {user.patreonId === '56776112'
+                        ? 'Super Admin'
+                        : 'Regular User'}
+                    </Typography>
+                  </Box>
                 </Stack>
               </Box>
             </Box>

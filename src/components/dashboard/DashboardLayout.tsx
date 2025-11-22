@@ -5,6 +5,7 @@ import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
 import LearningPanel from './LearningPanel';
 import OpportunityPanel from './OpportunityPanel';
+import Web3Panel from './Web3Panel';
 import { useSettings } from '../../hooks/useSettings';
 
 interface TabPanelProps {
@@ -53,6 +54,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates, commu
     opportunities: { component: <OpportunityPanel />, label: 'Opportunities' },
     learning: { component: <LearningPanel />, label: 'Learning Hub' },
     communityQA: { component: communityQA, label: 'Community Q&A' },
+    web3: { component: <Web3Panel />, label: 'Web3' },
   };
 
   // Filter tabs to only show visible panels
