@@ -202,19 +202,6 @@ function SettingsPage() {
                       Order: {config.order + 1}
                     </Typography>
                     {/* Add link for Web3 Panel */}
-                    {key === 'web3' && (
-                      <Button
-                        href="/web3"
-                        target="_blank"
-                        rel="noopener"
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        sx={{ ml: 2 }}
-                      >
-                        Open Web3 Panel
-                      </Button>
-                    )}
                   </Stack>
                 </AccordionSummary>
                 <AccordionDetails>
