@@ -1193,11 +1193,13 @@ def update_profile():
     
     user_data = session['user']
     user_id = user_data.get('id')
-        print(f"✓ User authenticated: {user_id}")
-        print(f"  - Is Paid Member: {is_paid_member}")
-        print(f"  - Membership Tier: {membership_tier}")
-        print(f"  - Membership Amount: ${membership_amount}")
-        print(f"  - Is Team Member: {is_team_member}")    if not user_id:
+    print(f"✓ User authenticated: {user_id}")
+    print(f"  - Is Paid Member: {user_data.get('isPaidMember', False)}")
+    print(f"  - Membership Tier: {user_data.get('membershipTier')}")
+    print(f"  - Membership Amount: ${user_data.get('membershipAmount', 0)}")
+    print(f"  - Is Team Member: {user_data.get('isTeamMember', False)}")
+    
+    if not user_id:
         print("✗ Invalid session data - no user ID")
         print("=" * 80)
         return jsonify({'error': 'Invalid session data'}), 400
