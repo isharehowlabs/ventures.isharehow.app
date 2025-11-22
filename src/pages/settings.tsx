@@ -164,39 +164,6 @@ function SettingsPage() {
                 <MenuItem value="list">List</MenuItem>
               </Select>
             </FormControl>
-            {/* Realtime Chat Box replaces Session Task List */}
-            <Paper elevation={1} sx={{ p: 3, mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Realtime Chat Box
-              </Typography>
-              {/* Chat messages UI - scaffolded */}
-              <Box sx={{ maxHeight: 250, overflowY: 'auto', mb: 2 }}>
-                {/* Pinned messages at top (expire after 7 days) */}
-                <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-                  Pinned Messages
-                </Typography>
-                {/* Example pinned messages */}
-                <Paper variant="outlined" sx={{ p: 1, mb: 1, bgcolor: 'yellow.100' }}>
-                  <Typography variant="body2">Welcome to the chat! (Pinned by Admin)</Typography>
-                  <Button size="small" color="warning" sx={{ ml: 1 }}>Unpin</Button>
-                </Paper>
-                {/* Chat messages */}
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                  Recent Messages
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
-                  <Typography variant="body2">User123: Hello team!</Typography>
-                  <Button size="small" color="warning" sx={{ ml: 1 }}>Pin</Button>
-                </Paper>
-              </Box>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <TextField fullWidth size="small" placeholder="Type your message..." />
-                <Button variant="contained" color="primary">Send</Button>
-              </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                Messages can be pinned for 7 days. Only admins can pin/unpin.
-              </Typography>
-            </Paper>
           </Stack>
         </Paper>
 
@@ -234,6 +201,20 @@ function SettingsPage() {
                     <Typography variant="caption" color="text.secondary">
                       Order: {config.order + 1}
                     </Typography>
+                    {/* Add link for Web3 Panel */}
+                    {key === 'web3' && (
+                      <Button
+                        href="/web3"
+                        target="_blank"
+                        rel="noopener"
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        sx={{ ml: 2 }}
+                      >
+                        Open Web3 Panel
+                      </Button>
+                    )}
                   </Stack>
                 </AccordionSummary>
                 <AccordionDetails>
@@ -307,7 +288,7 @@ function SettingsPage() {
           </Stack>
         </Paper>
 
-        {/* Admin Section: Live Updates & Q&A Moderation */}
+        {/* Admin Section: Q&A Moderation Only */}
         {isAdmin && (
           <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
@@ -317,11 +298,6 @@ function SettingsPage() {
               </Typography>
             </Stack>
             <Divider sx={{ mb: 3, borderColor: 'gold' }} />
-            {/* Live Updates Feature (moved here) */}
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              <b>Live Updates</b>: Manage real-time dashboard updates and notifications.
-            </Typography>
-            <Button variant="contained" color="primary" sx={{ mb: 2 }}>Send Live Update</Button>
             {/* Q&A Moderation Controls */}
             <Typography variant="body1" sx={{ mb: 2 }}>
               <b>Community Q&A Moderation</b>: Review, approve, or remove questions and answers. Set question visibility duration. Manage categories and highlight featured questions. Bulk moderation and audit logging supported.

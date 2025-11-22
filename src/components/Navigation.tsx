@@ -21,7 +21,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'profile' | 'settings' | 'about';
+type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'profile' | 'settings' | 'about' | 'web3';
 
 interface NavigationItem {
   key: NavKey;

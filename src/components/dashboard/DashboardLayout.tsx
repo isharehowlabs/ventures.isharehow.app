@@ -34,9 +34,10 @@ interface DashboardLayoutProps {
   children?: ReactNode;
   taskList?: ReactNode;
   liveUpdates?: ReactNode;
+  communityQA?: ReactNode;
 }
 
-export default function DashboardLayout({ children, taskList, liveUpdates }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, taskList, liveUpdates, communityQA }: DashboardLayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { settings, getVisiblePanels } = useSettings();
@@ -51,6 +52,7 @@ export default function DashboardLayout({ children, taskList, liveUpdates }: Das
     docs: { component: <DocsPanel />, label: 'Documents' },
     opportunities: { component: <OpportunityPanel />, label: 'Opportunities' },
     learning: { component: <LearningPanel />, label: 'Learning Hub' },
+    communityQA: { component: communityQA, label: 'Community Q&A' },
   };
 
   // Filter tabs to only show visible panels
