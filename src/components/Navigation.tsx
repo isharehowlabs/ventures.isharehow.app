@@ -17,7 +17,7 @@ import {
   Person as PersonIcon,
   Settings as SettingsIcon,
   Info as InfoIcon,
-  Dashboard as DashboardIcon,
+  Login as LoginIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
@@ -94,9 +94,10 @@ interface NavigationProps {
   active: NavKey;
   isAuthenticated?: boolean;
   collapsed?: boolean;
+  onLogin?: () => void;
 }
 
-export default function Navigation({ active, isAuthenticated = false, collapsed = false }: NavigationProps) {
+export default function Navigation({ active, isAuthenticated = false, collapsed = false, onLogin }: NavigationProps) {
   const router = useRouter();
 
   const handleNavigate = (href: string) => {
@@ -111,7 +112,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   });
 
   return (
-    <Box sx={{ overflow: 'auto', height: '100%' }}>
+    <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {!collapsed && (
         <Box sx={{ p: 2, textAlign: 'center' }}>
           <Typography variant="h6" color="primary" fontWeight="bold">
@@ -123,7 +124,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
         </Box>
       )}
       
-      <List sx={{ px: 1 }}>
+      <List sx={{ px: 1, flexGrow: 1 }}>
         {filteredItems.map((item) => (
           <Box key={item.key}>
             <Tooltip title={collapsed ? item.label : ''} placement="right">
@@ -160,6 +161,43 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
             {item.dividerAfter && <Divider sx={{ my: 1 }} />}
           </Box>
         ))}
+        
+        {/* Sign In button for unauthenticated users */}
+        {!isAuthenticated && onLogin && (
+          <>
+            <Divider sx={{ my: 1 }} />
+            <Tooltip title={collapsed ? 'Sign In' : ''} placement="right">
+              <ListItemButton
+                onClick={onLogin}
+                sx={{
+                  minHeight: 48,
+                  justifyContent: collapsed ? 'center' : 'initial',
+                  px: 2.5,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: collapsed ? 0 : 3,
+                    justifyContent: 'center',
+                    color: 'primary.main',
+                  }}
+                >
+                  <LoginIcon />
+                </ListItemIcon>
+                {!collapsed && (
+                  <ListItemText
+                    primary="Sign In"
+                    primaryTypographyProps={{
+                      fontWeight: 600,
+                      color: 'primary.main',
+                    }}
+                  />
+                )}
+              </ListItemButton>
+            </Tooltip>
+          </>
+        )}
       </List>
     </Box>
   );

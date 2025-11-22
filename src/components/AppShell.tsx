@@ -26,6 +26,7 @@ import ThemeToggle from './ThemeToggle';
 import SearchBar from './SearchBar';
 import NotificationMenu from './NotificationMenu';
 import Navigation, { type NavKey } from './Navigation';
+import { getBackendUrl } from '../utils/backendUrl';
 import { useAuth } from '../hooks/useAuth';
 
 const DRAWER_WIDTH = 240;
@@ -74,7 +75,8 @@ const AppShell = ({ active, children }: AppShellProps) => {
 
   const handleLogin = () => {
     // Redirect to Patreon OAuth
-    window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ventures.isharehow.app'}/auth/patreon`;
+    const backendUrl = getBackendUrl();
+    window.location.href = `${backendUrl}/api/auth/patreon`;
   };
 
   const drawerContent = (
@@ -82,6 +84,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
       active={active} 
       isAuthenticated={isAuthenticated}
       collapsed={false}
+      onLogin={handleLogin}
     />
   );
 

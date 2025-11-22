@@ -24,6 +24,7 @@ import {
   Stars as AchievementsIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
 import PomodoroTimer from '../components/shared/PomodoroTimer';
 import FocusModal from '../components/shared/FocusModal';
 import MindsetJournal from '../components/shared/MindsetJournal';
@@ -206,6 +207,7 @@ export default function RiseDashboard() {
   const overallLevel = Math.floor(Object.values(stats).reduce((sum, val) => sum + val, 0) / Object.keys(stats).length);
 
   return (
+    <ProtectedRoute>
     <AppShell active="rise">
       <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
         {/* Header */}
@@ -465,5 +467,6 @@ export default function RiseDashboard() {
         </Snackbar>
       </Container>
     </AppShell>
+    </ProtectedRoute>
   );
 }
