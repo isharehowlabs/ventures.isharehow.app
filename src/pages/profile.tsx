@@ -1,20 +1,105 @@
-import { Box, Typography, Paper, Avatar, Stack, Divider, Chip, Button, Alert } from '@mui/material';
-import { Person, Email, AccountCircle, Logout, Settings } from '@mui/icons-material';
+import { Box, Typography, Paper, Avatar, Stack, Divider, Chip, Button, Alert, TextField, IconButton } from '@mui/material';
+import { Person, Email, AccountCircle, Logout, Settings, Edit, Check, Close } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
 
 function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const router = useRouter();
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailValue, setEmailValue] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('/api/profile', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setProfileData(data);
+        } else {
+          console.error('Failed to fetch profile:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (authUser) {
+      fetchProfile();
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    if (profileData?.email) {
+      setEmailValue(profileData.email);
+    } else if (authUser?.email) {
+      setEmailValue(authUser.email);
+    }
+  }, [profileData, authUser]);
+
+  const handleEditEmail = () => {
+    setEditingEmail(true);
+  };
+
+  const handleCancelEditEmail = () => {
+    setEditingEmail(false);
+    // Reset to current value
+    if (profileData?.email) {
+      setEmailValue(profileData.email);
+    } else if (authUser?.email) {
+      setEmailValue(authUser.email);
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    if (!emailValue.trim() || !emailValue.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email: emailValue.trim() }),
+      });
+
+      if (response.ok) {
+        const updatedProfile = await response.json();
+        setProfileData(updatedProfile);
+        setEditingEmail(false);
+        // Show success message
+        alert('Email updated successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to update email: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating email:', error);
+      alert('Failed to update email. Please try again.');
+    } finally {
+      setSavingEmail(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
     router.push('/');
   };
 
-  if (!user) {
+  if (!authUser) {
     return (
       <AppShell active="about">
         <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -23,6 +108,19 @@ function ProfilePage() {
       </AppShell>
     );
   }
+
+  if (loading) {
+    return (
+      <AppShell active="about">
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Typography>Loading profile...</Typography>
+        </Box>
+      </AppShell>
+    );
+  }
+
+  // Use profileData if available, otherwise fall back to authUser
+  const user = profileData || authUser;
 
   return (
     <AppShell active="about">
@@ -58,10 +156,43 @@ function ProfilePage() {
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
                 {user.name || 'User'}
               </Typography>
-              {user.email && (
-                <Typography variant="body2" color="text.secondary">
-                  {user.email}
-                </Typography>
+              {editingEmail ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TextField
+                    size="small"
+                    type="email"
+                    value={emailValue}
+                    onChange={(e) => setEmailValue(e.target.value)}
+                    placeholder="Enter your email"
+                    disabled={savingEmail}
+                    sx={{ minWidth: 200 }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={handleSaveEmail}
+                    disabled={savingEmail}
+                    color="primary"
+                  >
+                    <Check />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={handleCancelEditEmail}
+                    disabled={savingEmail}
+                    color="error"
+                  >
+                    <Close />
+                  </IconButton>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {user.email || 'Not provided'}
+                  </Typography>
+                  <IconButton size="small" onClick={handleEditEmail}>
+                    <Edit fontSize="small" />
+                  </IconButton>
+                </Box>
               )}
             </Box>
             <Button
@@ -99,15 +230,29 @@ function ProfilePage() {
                       <Typography variant="body1">{user.patreonId}</Typography>
                     </Box>
                   )}
+                  {user.createdAt && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Member Since
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {new Date(user.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long'
+                        })}
+                      </Typography>
+                    </Box>
+                  )}
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Role
                     </Typography>
-                    <Typography variant="body1">
-                      {user.patreonId === '56776112'
-                        ? 'Super Admin'
-                        : 'Regular User'}
-                    </Typography>
+                    <Chip
+                      label={user.patreonId === '56776112' ? 'Super Admin' : 'Community Member'}
+                      color={user.patreonId === '56776112' ? 'secondary' : 'primary'}
+                      variant={user.patreonId === '56776112' ? 'filled' : 'outlined'}
+                      size="small"
+                    />
                   </Box>
                 </Stack>
               </Box>
@@ -116,10 +261,10 @@ function ProfilePage() {
             <Divider />
 
             <Box>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                 <Email color="action" />
-                <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Membership
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Membership Information
                 </Typography>
               </Stack>
               <Box sx={{ pl: 5 }}>
@@ -152,20 +297,32 @@ function ProfilePage() {
                       <Typography variant="body1">${user.membershipAmount.toFixed(2)}/month</Typography>
                     </Box>
                   )}
-                  {user.membershipPaymentDate && (
+                  {user.isPaidMember && user.membershipPaymentDate && (
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Membership Payment Date
+                        Payment Date
                       </Typography>
-                      <Typography variant="body1">{new Date(user.membershipPaymentDate).toLocaleDateString()}</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {new Date(user.membershipPaymentDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
                     </Box>
                   )}
-                  {user.membershipRenewalDate && (
+                  {user.isPaidMember && user.membershipRenewalDate && (
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Membership Renewal Date
+                        Next Renewal
                       </Typography>
-                      <Typography variant="body1">{new Date(user.membershipRenewalDate).toLocaleDateString()}</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {new Date(user.membershipRenewalDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
                     </Box>
                   )}
                   {user.lifetimeSupportAmount && (
@@ -176,16 +333,25 @@ function ProfilePage() {
                       <Typography variant="body1">${user.lifetimeSupportAmount.toFixed(2)}</Typography>
                     </Box>
                   )}
-                  <Box sx={{ mt: 2 }}>
+                  <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.light', borderRadius: 2 }}>
+                    <Typography variant="body2" color="primary.contrastText" sx={{ mb: 1, fontWeight: 500 }}>
+                      Support Our Mission
+                    </Typography>
                     <Button
                       variant="contained"
-                      color="primary"
+                      color="secondary"
                       href="https://www.patreon.com/cw/JamelEliYah/membership"
                       target="_blank"
                       rel="noopener noreferrer"
-                      sx={{ textTransform: 'none', fontWeight: 600 }}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: 2,
+                        '&:hover': { boxShadow: 4 }
+                      }}
+                      startIcon={<Settings />}
                     >
-                      Increase Support on Patreon
+                      Increase Monthly Support
                     </Button>
                   </Box>
                 </Stack>

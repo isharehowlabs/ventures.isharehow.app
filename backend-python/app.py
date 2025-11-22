@@ -127,6 +127,8 @@ if DB_AVAILABLE:
         patreon_id = db.Column(db.String(50), nullable=True)
         membership_tier = db.Column(db.String(50))
         is_paid_member = db.Column(db.Boolean, default=False)
+        membership_payment_date = db.Column(db.DateTime, nullable=True)
+        membership_renewal_date = db.Column(db.DateTime, nullable=True)
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -139,6 +141,8 @@ if DB_AVAILABLE:
                 'patreonId': self.patreon_id,
                 'membershipTier': self.membership_tier,
                 'isPaidMember': self.is_paid_member,
+                'membershipPaymentDate': self.membership_payment_date.isoformat() if self.membership_payment_date else None,
+                'membershipRenewalDate': self.membership_renewal_date.isoformat() if self.membership_renewal_date else None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
                 'updatedAt': self.updated_at.isoformat() if self.updated_at else None
             }
@@ -2368,7 +2372,9 @@ def patreon_callback():
                         avatar_url=user_avatar,
                         patreon_id=user_id,
                         membership_tier=membership_tier,
-                        is_paid_member=is_paid_member
+                        is_paid_member=is_paid_member,
+                        membership_payment_date=datetime.utcnow() if is_paid_member else None,
+                        membership_renewal_date=(datetime.utcnow() + timedelta(days=30)) if is_paid_member else None
                     )
                     db.session.add(profile)
                     print(f"✓ Created new user profile in database: {user_id}")
@@ -2379,6 +2385,10 @@ def patreon_callback():
                     profile.avatar_url = user_avatar
                     profile.membership_tier = membership_tier
                     profile.is_paid_member = is_paid_member
+                    # Only update payment date if it wasn't set before and they're now a paid member
+                    if is_paid_member and not profile.membership_payment_date:
+                        profile.membership_payment_date = datetime.utcnow()
+                        profile.membership_renewal_date = datetime.utcnow() + timedelta(days=30)
                     profile.updated_at = datetime.utcnow()
                     print(f"✓ Updated existing user profile in database: {user_id}")
                 
@@ -2682,7 +2692,7 @@ def delete_video(video_id):
 
 @require_session
 @app.route('/api/boards/<board_id>/snapshot', methods=['GET'])
-  def get_board_snapshot(board_id):
+def get_board_snapshot(board_id):
     """Get board snapshot for Firebase fallback"""
     try:
         user_info = get_user_info()
