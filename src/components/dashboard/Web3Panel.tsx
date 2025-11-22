@@ -1,280 +1,49 @@
 // src/components/dashboard/Web3Panel.tsx
 import type { FC } from 'react';
-
+import { useEffect, useState } from 'react';
 import {
-  Avatar,
   Box,
   Button,
   Card,
-  Chip,
   Divider,
   Grid,
   Stack,
   Typography,
+  Paper,
 } from '@mui/material';
-import {
-  ArticleOutlined,
-  Diversity3Outlined,
-  EmojiObjectsOutlined,
-  HubOutlined,
-  RocketLaunchOutlined,
-  SchoolOutlined,
-  VerifiedOutlined,
-} from '@mui/icons-material';
-import type { SvgIconComponent } from '@mui/icons-material';
-
-interface ExperienceHighlight {
-  title: string;
-  description: string;
-  icon: SvgIconComponent;
-}
-
-interface LearningTrack {
-  title: string;
-  description: string;
-  duration: string;
-  level: 'Foundational' | 'Intermediate' | 'Advanced';
-  focus: string;
-  ctaLabel: string;
-  ctaLink: string;
-}
-
-interface ResourceItem {
-  title: string;
-  description: string;
-  category: string;
-  href: string;
-  external?: boolean;
-}
-
-const experienceHighlights: ExperienceHighlight[] = [
-  {
-    title: 'Community-First Strategy',
-    description:
-      'Playbooks for aligning community incentives, onboarding rituals, and retention loops with your product roadmap.',
-    icon: Diversity3Outlined,
-  },
-  {
-    title: 'Protocol Partnerships',
-    description:
-      'Curated relationships with L1 and L2 ecosystems so you can fast-track grants, hackathons, and co-marketing.',
-    icon: HubOutlined,
-  },
-  {
-    title: 'Regenerative Education',
-    description:
-      'Learning sprints, office hours, and IRL salons designed for fast-moving operators and emerging venture teams.',
-    icon: SchoolOutlined,
-  },
-];
-
-const learningTracks: LearningTrack[] = [
-  {
-    title: 'Web3 Women Foundations',
-    description:
-      'A six-week cohort covering wallets, governance, DAOs, and safety. Built for product managers and community leads.',
-    duration: '6 weeks · Live & async',
-    level: 'Foundational',
-    focus: 'Community Operations',
-    ctaLabel: 'Join next cohort',
-    ctaLink: 'https://isharehow.notion.site/web3-women-foundations',
-  },
-  {
-    title: 'Token Utility Studio',
-    description:
-      'Rapid prototyping exercises to design token-enabled experiences with real user feedback from partner communities.',
-    duration: '3 weeks · Studio format',
-    level: 'Intermediate',
-    focus: 'Product Experimentation',
-    ctaLabel: 'Book a studio slot',
-    ctaLink: 'mailto:ventures@isharehowlabs.com?subject=Token%20Utility%20Studio',
-  },
-  {
-    title: 'Community Treasury Residency',
-    description:
-      'Hands-on residency for treasury stewards exploring revenue share models, on-chain analytics, and sustainability.',
-    duration: '4 weeks · Residency',
-    level: 'Advanced',
-    focus: 'Treasury Stewardship',
-    ctaLabel: 'Request invite',
-    ctaLink: 'https://isharehowlabs.com/web3-treasury',
-  },
-];
-
-const resourceItems: ResourceItem[] = [
-  {
-    title: 'Playbook: Designing Onboarding Rituals',
-    description:
-      'Step-by-step guide to craft onboarding arcs that convert newcomers into active contributors within 14 days.',
-    category: 'Playbook',
-    href: 'https://isharehow.notion.site/web3-onboarding-playbook',
-    external: true,
-  },
-  {
-    title: 'Template: Partner Ecosystem Brief',
-    description:
-      'A Notion template to align BD, community, and product teams before you pitch protocol partnerships.',
-    category: 'Template',
-    href: 'https://isharehow.notion.site/partner-ecosystem-brief',
-    external: true,
-  },
-  {
-    title: 'Report: State of Regenerative Economies',
-    description:
-      'Quarterly trend report summarizing funding, regenerative initiatives, and emerging experiments across the space.',
-    category: 'Report',
-    href: 'https://isharehow.app/regenerative-economies-report.pdf',
-    external: true,
-  },
-];
-
-const ExperienceCard: FC<ExperienceHighlight> = ({ title, description, icon: Icon }) => (
-  <Card
-    variant="outlined"
-    sx={{
-      borderRadius: 3,
-      height: '100%',
-      borderColor: 'divider',
-      p: 3,
-      display: 'flex',
-    }}
-  >
-    <Stack spacing={2} sx={{ flexGrow: 1 }}>
-      <Avatar
-        variant="rounded"
-        sx={{
-          bgcolor: 'primary.light',
-          color: 'primary.main',
-          width: 48,
-          height: 48,
-        }}
-      >
-        <Icon fontSize="small" />
-      </Avatar>
-      <Box>
-        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {description}
-        </Typography>
-      </Box>
-    </Stack>
-  </Card>
-);
-
-const LearningTrackCard: FC<{ track: LearningTrack }> = ({ track }) => (
-  <Card
-    variant="outlined"
-    sx={{
-      borderRadius: 3,
-      height: '100%',
-      p: 3,
-      borderColor: 'divider',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 2,
-    }}
-  >
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Avatar
-        variant="rounded"
-        sx={{
-          bgcolor: 'secondary.light',
-          color: 'secondary.main',
-          width: 40,
-          height: 40,
-        }}
-      >
-        <RocketLaunchOutlined fontSize="small" />
-      </Avatar>
-      <Stack spacing={0.5}>
-        <Chip
-          label={track.level}
-          size="small"
-          color={track.level === 'Advanced' ? 'secondary' : 'default'}
-          sx={{ fontWeight: 600 }}
-        />
-        <Typography variant="body2" color="text.secondary">
-          {track.duration}
-        </Typography>
-      </Stack>
-    </Stack>
-    <Box>
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-        {track.title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {track.description}
-      </Typography>
-    </Box>
-    <Divider />
-    <Stack direction="row" spacing={1} alignItems="center">
-      <EmojiObjectsOutlined color="primary" fontSize="small" />
-      <Typography variant="body2" color="text.secondary">
-        Spotlight: {track.focus}
-      </Typography>
-    </Stack>
-    <Button
-      variant="contained"
-      color="primary"
-      href={track.ctaLink}
-      target={track.ctaLink.startsWith('http') ? '_blank' : undefined}
-      rel={track.ctaLink.startsWith('http') ? 'noopener noreferrer' : undefined}
-      sx={{ textTransform: 'none', fontWeight: 700, mt: 'auto' }}
-    >
-      {track.ctaLabel}
-    </Button>
-  </Card>
-);
-
-const ResourceCard: FC<{ resource: ResourceItem }> = ({ resource }) => (
-  <Card
-    variant="outlined"
-    sx={{
-      borderRadius: 3,
-      p: 3,
-      borderColor: 'divider',
-      display: 'flex',
-      gap: 2,
-      flexDirection: { xs: 'column', sm: 'row' },
-      alignItems: { xs: 'flex-start', sm: 'center' },
-      justifyContent: 'space-between',
-    }}
-  >
-    <Stack spacing={1.5}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Chip
-          label={resource.category}
-          size="small"
-          color="primary"
-          sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.6 }}
-        />
-        {resource.external && (
-          <VerifiedOutlined fontSize="small" sx={{ color: 'primary.main', opacity: 0.8 }} />
-        )}
-      </Stack>
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>
-        {resource.title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
-        {resource.description}
-      </Typography>
-    </Stack>
-    <Button
-      href={resource.href}
-      target={resource.external ? '_blank' : undefined}
-      rel={resource.external ? 'noopener noreferrer' : undefined}
-      variant="outlined"
-      color="primary"
-      sx={{ textTransform: 'none', fontWeight: 700, minWidth: 180 }}
-    >
-      Open resource
-    </Button>
-  </Card>
-);
 
 export default function Web3Panel() {
+  const [balance, setBalance] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Fetch crypto balance, transactions, and current price from backend
+    fetch('/api/web3/balance', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setBalance(data.balance);
+      })
+      .catch(() => setError('Failed to load balance'));
+
+    fetch('/api/web3/transactions', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setTransactions(data.transactions || []);
+        setLoading(false);
+      })
+      .catch(() => setError('Failed to load transactions'));
+
+    fetch('/api/web3/price', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setCurrentPrice(data.price);
+      })
+      .catch(() => setError('Failed to load price'));
+  }, []);
+
   return (
     <Box sx={{ height: '100%', overflow: 'auto', p: { xs: 2, sm: 3 } }}>
       <Stack spacing={5}>
@@ -293,35 +62,116 @@ export default function Web3Panel() {
             Web3 Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
-            Welcome to your centralized dashboard for managing your decentralized life. Here you can track your crypto balances, review transactions, and access learning tracks and resources to help you thrive in the Web3 ecosystem.
+            Welcome to your centralized dashboard for managing your decentralized life. Here you can track your crypto balances, review transactions, and access training resources to help you thrive in the Web3 ecosystem.
           </Typography>
         </Box>
-        <Grid container spacing={3}>
-          {experienceHighlights.map((item) => (
-            <Grid item xs={12} md={4} key={item.title}>
-              <ExperienceCard {...item} />
+
+        {/* Trackers Section */}
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>
+            Web3 Token Trackers
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Paper elevation={2} sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  Current Price
+                </Typography>
+                {currentPrice !== null ? (
+                  <Typography variant="h4" color="primary">${currentPrice.toFixed(2)}</Typography>
+                ) : (
+                  <Typography variant="body2">Loading...</Typography>
+                )}
+              </Paper>
             </Grid>
-          ))}
-        </Grid>
-        <Box id="learning">
-          <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
-            Guided Learning Tracks & Resource Library
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 720, mb: 2 }}>
-            Explore curated learning pathways and essential resources to deepen your understanding and skills in Web3. Assign a pathway to a teammate or bookmark for your own professional development plan.
-          </Typography>
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            {learningTracks.map((track) => (
-              <Grid item xs={12} md={4} key={track.title}>
-                <LearningTrackCard track={track} />
-              </Grid>
-            ))}
+            <Grid item xs={12} md={4}>
+              <Paper elevation={2} sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  Crypto Balance
+                </Typography>
+                {balance !== null ? (
+                  <Typography variant="h4" color="primary">{balance} ETH</Typography>
+                ) : (
+                  <Typography variant="body2">Loading...</Typography>
+                )}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Paper elevation={2} sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  Recent Transactions
+                </Typography>
+                <Typography variant="h4" color="primary">{transactions.length}</Typography>
+                <Typography variant="body2">Total</Typography>
+              </Paper>
+            </Grid>
           </Grid>
-          <Stack spacing={2}>
-            {resourceItems.map((resource) => (
-              <ResourceCard key={resource.title} resource={resource} />
-            ))}
-          </Stack>
+        </Box>
+
+        {/* Training Section with YouTube Embeds */}
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>
+            Web3 Training Videos
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                  Introduction to Web3
+                </Typography>
+                <Box sx={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+                  <iframe
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    title="Introduction to Web3"
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </Box>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                  Crypto Trading Basics
+                </Typography>
+                <Box sx={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+                  <iframe
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    title="Crypto Trading Basics"
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+
+        {/* Recent Transactions List */}
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>
+            Recent Transactions
+          </Typography>
+          {loading ? (
+            <Typography variant="body2">Loading transactions...</Typography>
+          ) : transactions.length === 0 ? (
+            <Typography variant="body2">No transactions found.</Typography>
+          ) : (
+            <Stack spacing={2}>
+              {transactions.slice(0, 5).map((tx, idx) => (
+                <Paper key={idx} variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="body2">Hash: {tx.hash}</Typography>
+                  <Typography variant="body2">Amount: {tx.amount} ETH</Typography>
+                  <Typography variant="body2">To: {tx.to}</Typography>
+                  <Typography variant="body2">Date: {tx.date}</Typography>
+                </Paper>
+              ))}
+            </Stack>
+          )}
         </Box>
       </Stack>
     </Box>
