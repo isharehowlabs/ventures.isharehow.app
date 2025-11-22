@@ -30,113 +30,110 @@ interface Task {
   completed: boolean;
 }
 
-function TaskList() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+// Realtime Chat Box Feature (scaffolded)
+function RealtimeChatBox() {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  // TODO: Replace with real admin/user logic
+  const isAdmin = false;
 
+  // Fetch messages from backend
   useEffect(() => {
-    const stored = localStorage.getItem('live_task_list');
-    if (stored) setTasks(JSON.parse(stored));
+    const fetchMessages = () => {
+      fetch('/api/chat/messages', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          setMessages(data);
+          setLoading(false);
+        })
+        .catch(err => {
+          setError('Failed to load messages');
+          setLoading(false);
+        });
+    };
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5000); // Poll every 5s
+    return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('live_task_list', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const handleAddTask = () => {
+  // Send new message
+  const handleSend = () => {
     if (!input.trim()) return;
-    setInput('');
+    fetch('/api/chat/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ text: input }),
+    })
+      .then(res => res.json())
+      .then(() => setInput(''));
   };
 
-  const handleToggle = (id: number) => {
-    setTasks(prev =>
-      prev.map(t =>
-        t.id === id ? { ...t, completed: !t.completed } : t
-      )
-    );
+  // Pin/unpin message (admin only)
+  const handlePin = (id: number) => {
+    if (!isAdmin) return;
+    fetch('/api/chat/pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id, pin: true }),
+    }).then(() => {/* Optionally refetch messages */});
+  };
+  const handleUnpin = (id: number) => {
+    if (!isAdmin) return;
+    fetch('/api/chat/pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id, pin: false }),
+    }).then(() => {/* Optionally refetch messages */});
   };
 
-  const handleDelete = (id: number) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
-  };
+  // Filter pinned messages (expire after 7 days)
+  const now = Date.now();
+  const pinnedMessages = messages.filter((m: any) => m.pinned && now - m.timestamp < 7 * 24 * 60 * 60 * 1000);
+  const recentMessages = messages.filter((m: any) => !m.pinned);
 
   return (
     <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>Session Tasks</Typography>
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        <input
-          value={input}
-          type="text"
-          placeholder="Add new task..."
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleAddTask();
-          }}
-          style={{
-            flex: 1,
-            border: '1px solid #ccc',
-            borderRadius: 4,
-            padding: '6px 10px'
-          }}
-        />
-        <Button
-          variant="contained"
-          size="small"
-          onClick={handleAddTask}
-          disabled={!input.trim()}
-        >
-          Add
-        </Button>
-      </Stack>
-      <Box>
-        {tasks.length === 0 && (
-          <Typography variant="body2" color="text.secondary">No tasks yet. Add one!</Typography>
+      <Typography variant="h6" gutterBottom>Realtime Chat Box</Typography>
+      {loading && <Typography variant="body2">Loading messages...</Typography>}
+      {error && <Typography variant="body2" color="error">{error}</Typography>}
+      <Box sx={{ maxHeight: 250, overflowY: 'auto', mb: 2 }}>
+        <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
+          Pinned Messages
+        </Typography>
+        {pinnedMessages.length === 0 && (
+          <Typography variant="body2" color="text.secondary">No pinned messages.</Typography>
         )}
-        <Stack spacing={1}>
-          {tasks.map(task => (
-            <Box
-              key={task.id}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                px: 1,
-                py: 0.5,
-                bgcolor: task.completed ? 'action.selected' : undefined,
-                borderRadius: 1,
-                textDecoration: task.completed ? 'line-through' : undefined,
-                opacity: task.completed ? 0.6 : 1,
-                transition: 'background 0.2s'
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={task.completed}
-                onChange={() => handleToggle(task.id)}
-                style={{ marginRight: 8 }}
-              />
-              <Typography
-                variant="body1"
-                sx={{
-                  flex: 1,
-                  fontSize: 15,
-                  color: task.completed ? 'text.secondary' : 'text.primary'
-                }}
-              >
-                {task.text}
-              </Typography>
-              <Button
-                variant="text"
-                color="error"
-                size="small"
-                onClick={() => handleDelete(task.id)}
-                sx={{ minWidth: 0 }}
-              >
-                ✕
-              </Button>
-            </Box>
-          ))}
-        </Stack>
+        {pinnedMessages.map((m: any) => (
+          <Paper key={m.id} variant="outlined" sx={{ p: 1, mb: 1, bgcolor: 'yellow.100' }}>
+            <Typography variant="body2">{m.user}: {m.text}</Typography>
+            {isAdmin && <Button size="small" color="warning" sx={{ ml: 1 }} onClick={() => handleUnpin(m.id)}>Unpin</Button>}
+          </Paper>
+        ))}
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+          Recent Messages
+        </Typography>
+        {recentMessages.length === 0 && (
+          <Typography variant="body2" color="text.secondary">No messages yet.</Typography>
+        )}
+        {recentMessages.map((m: any) => (
+          <Paper key={m.id} variant="outlined" sx={{ p: 1, mb: 1 }}>
+            <Typography variant="body2">{m.user}: {m.text}</Typography>
+            {isAdmin && <Button size="small" color="warning" sx={{ ml: 1 }} onClick={() => handlePin(m.id)}>Pin</Button>}
+          </Paper>
+        ))}
       </Box>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <TextField fullWidth size="small" placeholder="Type your message..." value={input} onChange={e => setInput(e.target.value)} />
+        <Button variant="contained" color="primary" onClick={handleSend}>Send</Button>
+      </Stack>
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+        Messages can be pinned for 7 days. Only admins can pin/unpin.
+      </Typography>
     </Paper>
   );
 }
@@ -278,7 +275,7 @@ function LabsDashboard() {
         </Typography>
       </Box>
 
-      <DashboardLayout taskList={<TaskList />} liveUpdates={<LiveUpdates />}>
+      <DashboardLayout taskList={<RealtimeChatBox />} liveUpdates={<LiveUpdates />}>
         <CryptoIncentivesPanel />
 
         {/* Community Q&A Panel */}
