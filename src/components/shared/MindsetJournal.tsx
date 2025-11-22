@@ -1,21 +1,17 @@
 import { useState, useEffect } from 'react';
 import { trackJournalEntry } from '../../utils/analytics';
+import { logActivity } from '../wellness/api';
+import { useAuth } from '../../hooks/useAuth';
 import {
   Box,
   Typography,
-  Paper,
   TextField,
   Button,
-  List,
-  ListItem,
-  ListItemText,
+  Paper,
   Chip,
+  Stack,
   Divider,
 } from '@mui/material';
-import {
-  AutoStories as JournalIcon,
-  Save as SaveIcon,
-} from '@mui/icons-material';
 
 interface JournalEntry {
   id: string;
@@ -25,19 +21,29 @@ interface JournalEntry {
   tags: string[];
 }
 
-export default function MindsetJournal() {
+interface MindsetJournalProps {
+  location?: string;
+}
+
+export default function MindsetJournal({ location = 'rise' }: MindsetJournalProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [currentEntry, setCurrentEntry] = useState('');
-  const [currentMood, setCurrentMood] = useState<JournalEntry['mood']>('good');
+  const [currentMood, setCurrentMood] = useState<'great' | 'good' | 'okay' | 'challenging'>('good');
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const stored = localStorage.getItem('mindset_journal');
     if (stored) {
-      setEntries(JSON.parse(stored));
+      try {
+        const parsed = JSON.parse(stored);
+        setEntries(parsed.slice(0, 30)); // Keep last 30 entries
+      } catch (error) {
+        console.error('Failed to load journal entries:', error);
+      }
     }
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!currentEntry.trim()) return;
 
     const newEntry: JournalEntry = {
@@ -48,17 +54,30 @@ export default function MindsetJournal() {
       tags: ['gratitude', 'reflection'],
     };
 
-    const updated = [newEntry, ...entries].slice(0, 30); // Keep last 30
-    setEntries(updated);
-    localStorage.setItem('mindset_journal', JSON.stringify(updated));
-    
-    // Track journal entry
-    trackJournalEntry(currentMood, 'rise');
-    
+    const updatedEntries = [newEntry, ...entries].slice(0, 30);
+    setEntries(updatedEntries);
+    localStorage.setItem('mindset_journal', JSON.stringify(updatedEntries));
+
+    // Track analytics
+    trackJournalEntry(currentMood, location as 'cowork' | 'rise');
+
+    // Save to backend if authenticated
+    if (isAuthenticated) {
+      try {
+        await logActivity(
+          'journal',
+          'Journal Entry',
+          currentEntry
+        );
+      } catch (error) {
+        console.error('Failed to save journal entry to backend:', error);
+      }
+    }
+
     setCurrentEntry('');
   };
 
-  const getMoodColor = (mood: string) => {
+  const getMoodColor = (mood: string): 'success' | 'primary' | 'warning' | 'error' => {
     switch (mood) {
       case 'great':
         return 'success';
@@ -69,50 +88,50 @@ export default function MindsetJournal() {
       case 'challenging':
         return 'error';
       default:
-        return 'default';
+        return 'primary';
     }
   };
 
   return (
     <Paper sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <JournalIcon sx={{ mr: 1 }} />
-        <Typography variant="h6">Mindset Journal</Typography>
-      </Box>
-
+      <Typography variant="h5" gutterBottom>
+        Mindset Journal
+      </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        Daily reflections and gratitude
+        Reflect on your day and track your mindset
       </Typography>
 
       <Box sx={{ my: 3 }}>
         <TextField
           fullWidth
           multiline
-          rows={4}
-          placeholder="What are you grateful for today? What did you learn?"
+          rows={6}
+          placeholder="What's on your mind? What are you grateful for today?"
           value={currentEntry}
           onChange={(e) => setCurrentEntry(e.target.value)}
           sx={{ mb: 2 }}
         />
 
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-          <Typography variant="caption" sx={{ width: '100%', mb: 1 }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body2" gutterBottom>
             How are you feeling?
           </Typography>
-          {(['great', 'good', 'okay', 'challenging'] as const).map((mood) => (
-            <Chip
-              key={mood}
-              label={mood}
-              onClick={() => setCurrentMood(mood)}
-              color={currentMood === mood ? getMoodColor(mood) as any : 'default'}
-              variant={currentMood === mood ? 'filled' : 'outlined'}
-            />
-          ))}
+          <Stack direction="row" spacing={1}>
+            {(['great', 'good', 'okay', 'challenging'] as const).map((mood) => (
+              <Chip
+                key={mood}
+                label={mood}
+                color={getMoodColor(mood)}
+                variant={currentMood === mood ? 'filled' : 'outlined'}
+                onClick={() => setCurrentMood(mood)}
+                sx={{ textTransform: 'capitalize' }}
+              />
+            ))}
+          </Stack>
         </Box>
 
         <Button
           variant="contained"
-          startIcon={<SaveIcon />}
           onClick={handleSave}
           disabled={!currentEntry.trim()}
           fullWidth
@@ -121,30 +140,33 @@ export default function MindsetJournal() {
         </Button>
       </Box>
 
-      <Divider sx={{ my: 2 }} />
-
-      <Typography variant="subtitle2" gutterBottom>
-        Recent Entries
-      </Typography>
-
-      {entries.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-          Start your mindset journey by writing your first entry
-        </Typography>
-      ) : (
-        <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
-          {entries.slice(0, 5).map((entry) => (
-            <ListItem key={entry.id} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {new Date(entry.date).toLocaleDateString()}
+      {entries.length > 0 && (
+        <>
+          <Divider sx={{ my: 3 }} />
+          <Typography variant="h6" gutterBottom>
+            Recent Entries
+          </Typography>
+          <Stack spacing={2}>
+            {entries.slice(0, 5).map((entry) => (
+              <Paper key={entry.id} variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(entry.date).toLocaleDateString()}
+                  </Typography>
+                  <Chip
+                    label={entry.mood}
+                    size="small"
+                    color={getMoodColor(entry.mood)}
+                    sx={{ textTransform: 'capitalize' }}
+                  />
+                </Box>
+                <Typography variant="body2">
+                  {entry.content}
                 </Typography>
-                <Chip label={entry.mood} size="small" color={getMoodColor(entry.mood) as any} />
-              </Box>
-              <Typography variant="body2">{entry.content}</Typography>
-            </ListItem>
-          ))}
-        </List>
+              </Paper>
+            ))}
+          </Stack>
+        </>
       )}
     </Paper>
   );
