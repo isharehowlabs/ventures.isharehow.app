@@ -2364,6 +2364,13 @@ def patreon_callback():
                                 membership_tier = 'basic'
                         break
         
+        # Special handling for creator/admin - they shouldn't be considered paid members of their own product
+        if user_id == '56776112':
+            is_paid_member = False
+            membership_tier = None
+            membership_amount = 0
+            print(f"✓ Creator {user_id} - overriding paid membership status to False")
+        
         # Store user data in session
         user_session_data = {
             'id': user_id,
