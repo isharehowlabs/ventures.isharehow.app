@@ -74,9 +74,9 @@ const AppShell = ({ active, children }: AppShellProps) => {
   };
 
   const handleLogin = () => {
-    // Redirect to Patreon OAuth
-    const backendUrl = getBackendUrl();
-    window.location.href = `${backendUrl}/api/auth/patreon`;
+    // Redirect to login page (or current page if it shows login form)
+    // The ProtectedRoute component will show the login form
+    router.push('/labs');
   };
 
   const drawerContent = (
