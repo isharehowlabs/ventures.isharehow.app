@@ -1185,6 +1185,8 @@ def handle_general_exception(e):
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     """Register a new user with username and password"""
+    global DB_AVAILABLE
+    
     if not DB_AVAILABLE:
         # Try to reinitialize database connection if db object exists
         if db is not None:
@@ -1193,7 +1195,6 @@ def register():
                 print(f"Attempting to reconnect to database: {db_uri[:50]}...")
                 with app.app_context():
                     db.engine.connect()
-                    global DB_AVAILABLE
                     DB_AVAILABLE = True
                     print("✓ Database reconnection successful")
             except Exception as reconnect_error:
@@ -1273,18 +1274,25 @@ def register():
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     """Login with username/email and password"""
+    global DB_AVAILABLE
+    
     if not DB_AVAILABLE:
-        # Try to reinitialize database connection
-        try:
-            with app.app_context():
-                db.engine.connect()
-                global DB_AVAILABLE
-                DB_AVAILABLE = True
-                print("✓ Database reconnection successful")
-        except Exception as reconnect_error:
+        # Try to reinitialize database connection if db object exists
+        if db is not None:
+            try:
+                with app.app_context():
+                    db.engine.connect()
+                    DB_AVAILABLE = True
+                    print("✓ Database reconnection successful")
+            except Exception as reconnect_error:
+                return jsonify({
+                    'error': 'Database not available',
+                    'message': 'Database connection failed. Please check your DATABASE_URL environment variable.'
+                }), 500
+        else:
             return jsonify({
                 'error': 'Database not available',
-                'message': 'Database connection failed. Please check your DATABASE_URL environment variable.'
+                'message': 'Database connection failed. Please ensure DATABASE_URL is set in your environment variables.'
             }), 500
     
     data = request.json
