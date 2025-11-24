@@ -1102,6 +1102,7 @@ def handle_general_exception(e):
 # --- Auth Endpoints (session-based) ---
 @app.route('/api/auth/me', methods=['GET'])
 def auth_me():
+    app.logger.info(f"Request cookies: {request.cookies}")
     # Debug: Log incoming request details
     print("=" * 80)
     print("AUTH CHECK REQUEST:")
@@ -1152,7 +1153,11 @@ def get_profile():
         try:
             profile = UserProfile.query.get(user_id)
             if profile:
-                return jsonify(profile.to_dict())
+                profile_dict = profile.to_dict()
+                # Add last_charge_date and pledge_start from session if present
+                profile_dict['lastChargeDate'] = user_data.get('lastChargeDate')
+                profile_dict['pledgeStart'] = user_data.get('pledgeStart')
+                return jsonify(profile_dict)
         except Exception as e:
             print(f"Warning: Failed to fetch profile from database: {e}")
             # Fall through to return session data
@@ -1165,7 +1170,9 @@ def get_profile():
         'avatarUrl': user_data.get('avatar'),
         'patreonId': user_data.get('patreonId'),
         'membershipTier': user_data.get('membershipTier'),
-        'isPaidMember': user_data.get('isPaidMember', False)
+        'isPaidMember': user_data.get('isPaidMember', False),
+        'lastChargeDate': user_data.get('lastChargeDate'),
+        'pledgeStart': user_data.get('pledgeStart'),
     })
 
 @app.route('/api/profile', methods=['PUT', 'OPTIONS'])
@@ -2257,6 +2264,9 @@ def patreon_login():
 
 @app.route('/api/auth/patreon/callback')
 def patreon_callback():
+    # Log incoming error from Patreon if present
+    if 'error' in request.args:
+        app.logger.error(f"Patreon error: {request.args['error']}")
     code = request.args.get('code')
     state = request.args.get('state')
     if not code:
@@ -2267,7 +2277,6 @@ def patreon_callback():
         client_id = os.environ.get('PATREON_CLIENT_ID')
         client_secret = os.environ.get('PATREON_CLIENT_SECRET')
         redirect_uri = os.environ.get('PATREON_REDIRECT_URI')
-        
         if not client_id or not client_secret or not redirect_uri:
             print("Patreon OAuth error: Missing environment variables")
             return redirect(f'{get_frontend_url()}/?auth=error&message=missing_config')
@@ -2283,39 +2292,32 @@ def patreon_callback():
         "client_secret": client_secret,
         "redirect_uri": redirect_uri,
     }
-    
     try:
         # Exchange code for access token
         token_res = requests.post(token_url, data=data, timeout=10)
         token_res.raise_for_status()
         token_data = token_res.json()
         access_token = token_data.get('access_token')
-        
         if not access_token:
             error_msg = token_data.get('error', 'Unknown error')
             print(f"Patreon OAuth error: No access token. Response: {token_data}")
             return redirect(f'{get_frontend_url()}/?auth=error&message=token_error')
 
-        # Step 3: Use the access token to fetch the user's identity
+        # Fetch user identity with memberships and campaign relationships, including last_charge_date and pledge_start
+        identity_url = (
+            "https://www.patreon.com/api/oauth2/v2/identity?include=memberships,campaigns"
+            "&fields[member]=patron_status,currently_entitled_amount_cents,last_charge_date,pledge_start"
+            "&fields[campaign]=name,creation_name"
+        )
         headers = {
-            'Authorization': f'Bearer {access_token}',
-            'User-Agent': 'VenturesApp/1.0 (+https://ventures.isharehow.app)'
+            "Authorization": f"Bearer {access_token}",
+            "User-Agent": "VenturesApp/1.0 (+https://ventures.isharehow.app)"
         }
-        
-        # Simplify the request to debug the 400 error
-        # We will try a minimal request first, and then add fields back.
-        identity_url = 'https://www.patreon.com/api/oauth2/v2/identity?include=memberships,campaigns&fields%5Bmember%5D=patron_status,currently_entitled_amount_cents'
-        
-        try:
-            user_res = requests.get(identity_url, headers=headers, timeout=10)
-            user_res.raise_for_status()
-            user_data = user_res.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Patreon OAuth HTTP error: {e} - {e.response.text if e.response else 'No response'}")
-            return redirect(f"{get_frontend_url()}/?auth=error&message=patreon_api_error")
-        
-        print(f"Patreon API response: {json.dumps(user_data, indent=2)}")
-        
+        user_res = requests.get(identity_url, headers=headers, timeout=10)
+        user_res.raise_for_status()
+        user_data = user_res.json()
+        app.logger.info(f"Patreon API response: {json.dumps(user_data, indent=2)}")
+
         # Parse user data from Patreon API response
         if 'data' not in user_data:
             print(f"Error: No 'data' field in Patreon response: {user_data}")
@@ -2391,32 +2393,12 @@ def patreon_callback():
             'membershipTier': membership_tier,
             'membershipAmount': membership_amount,
             'isTeamMember': is_team_member,
+            'accessToken': access_token,
+            'lastChargeDate': last_charge_date,
+            'pledgeStart': pledge_start,
         }
-        
-        print(f"Storing user in session: {user_session_data}")
-        # Debug: Log session configuration and data being stored
-        print("=" * 80)
-        print("STORING USER IN SESSION:")
-        print(f"  User ID: {user_session_data.get('id')}")
-        print(f"  User Name: {user_session_data.get('name')}")
-        print(f"  Is Paid Member: {user_session_data.get('isPaidMember')}")
-        print(f"  Session Cookie Config:")
-        print(f"    DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set')}")
-        print(f"    SECURE: {app.config.get('SESSION_COOKIE_SECURE')}")
-        print(f"    SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
-        print(f"    HTTPONLY: {app.config.get('SESSION_COOKIE_HTTPONLY')}")
-        
         session['user'] = user_session_data
-        
-        # Debug: Verify session was stored
-        stored_user = session.get('user')
-        if stored_user:
-            print(f"✓ Session stored successfully: {stored_user.get('id')}")
-        else:
-            print("✗ WARNING: Session storage failed!")
-        print("=" * 80)
-        
-        # Make sure session is saved
+        app.logger.info(f"Session data after login: {session}")
         
         # Sync user profile to database
         if DB_AVAILABLE:
@@ -2458,34 +2440,31 @@ def patreon_callback():
                 # Continue even if database sync fails
 
         session.permanent = True
-        
         # Debug: Print session info
         print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
         
         # Redirect to labs page with auth success (trailing slash for Next.js static export)
         # Use external redirect to ensure browser follows to frontend domain
         return redirect(f'{get_frontend_url()}/labs/?auth=success', code=302)
-        
     except requests.exceptions.HTTPError as e:
         error_detail = "Unknown error"
         try:
             error_detail = e.response.json() if e.response else str(e)
         except:
             error_detail = str(e)
-        print(f"Patreon OAuth HTTP error: {e} - {error_detail}")
+        app.logger.error(f"Patreon OAuth HTTP error: {e} - {error_detail}")
         return redirect(f'{get_frontend_url()}/?auth=error&message=api_error')
     except requests.exceptions.Timeout:
-        print("Patreon OAuth error: Request timeout")
+        app.logger.error("Patreon OAuth error: Request timeout")
         return redirect(f'{get_frontend_url()}/?auth=error&message=timeout')
     except requests.exceptions.RequestException as e:
-        print(f"Patreon OAuth network error: {e}")
+        app.logger.error(f"Patreon OAuth network error: {e}")
         return redirect(f'{get_frontend_url()}/?auth=error&message=network_error')
     except Exception as e:
-        print(f"Patreon OAuth error: {type(e).__name__}: {e}")
+        app.logger.error(f"Patreon OAuth error: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         error_message = str(e)
-        # Make error message URL-safe
         error_message = error_message.replace(' ', '_').replace(':', '').replace('\n', '')[:50]
         return redirect(f'{get_frontend_url()}/?auth=error&message=user_fetch_failed&detail={error_message}')
 
