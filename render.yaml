@@ -13,6 +13,23 @@ services:
         sync: false
       - key: PORT
         value: 5000
+
+      # --- Critical Session & Auth Configuration ---
+      # These variables are essential for authentication to work correctly.
+      # Set them in your Render.com dashboard under Environment.
+      #
+      # Generate a secure secret key by running this command in your terminal:
+      # python -c "import secrets; print(secrets.token_hex(32))"
+      - key: FLASK_SECRET_KEY
+        sync: false # Must be set in Render dashboard
+      - key: FLASK_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://ventures.isharehow.app
+      - key: SESSION_COOKIE_DOMAIN
+        value: .ventures.isharehow.app
+      # --- ------------------------------------- ---
+
       - key: SHOPIFY_STORE_URL
         sync: false
       - key: SHOPIFY_ACCESS_TOKEN

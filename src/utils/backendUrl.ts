@@ -18,7 +18,7 @@ export const getBackendUrl = (): string => {
   
   // For browser/client-side requests, use external HTTPS URL
   // The backend is deployed on Render at https://api.ventures.isharehow.app
-  return 'http://184.94.212.248:5000';
+  return 'https://api.ventures.isharehow.app';
   
   // Legacy logic (commented out since we always use Render now)
   /*
