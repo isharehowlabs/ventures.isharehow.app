@@ -386,6 +386,34 @@ function ProfilePage() {
                       <Typography variant="body1">${user.lifetimeSupportAmount.toFixed(2)}</Typography>
                     </Box>
                   )}
+                  {user.lastChargeDate && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Last Charge Date
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {new Date(user.lastChargeDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
+                    </Box>
+                  )}
+                  {user.pledgeStart && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Pledge Start
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {new Date(user.pledgeStart).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
+                    </Box>
+                  )}
                   <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.light', borderRadius: 2 }}>
                     <Typography variant="body2" color="primary.contrastText" sx={{ mb: 1, fontWeight: 500 }}>
                       Support Our Mission
