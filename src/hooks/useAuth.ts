@@ -31,13 +31,28 @@ export function useAuth() {
     error: null,
   });
 
+  // Helper function to get token from various sources
+  const getAuthToken = useCallback((): string | null => {
+    if (typeof window === 'undefined') return null;
+    
+    // First check localStorage
+    const storedToken = localStorage.getItem('auth_token');
+    if (storedToken) return storedToken;
+    
+    // Token might be in cookie (httpOnly), but we can't access it from JS
+    // The backend will check cookies automatically
+    return null;
+  }, []);
+
   const checkAuth = useCallback(async () => {
     try {
       const backendUrl = getBackendUrl();
+      const token = getAuthToken();
       
       // Debug: Log auth check attempt
       console.log('[Auth] Checking authentication...', {
         backendUrl,
+        hasToken: !!token,
         timestamp: new Date().toISOString(),
       });
       
@@ -51,15 +66,21 @@ export function useAuth() {
 
       console.log('[Auth] About to start Promise.race...');
 
+      // Build headers with token if available
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       // Race the fetch against the timeout
       console.log('[Auth] Starting fetch request...');
       const response = await Promise.race([
         fetch(`${backendUrl}/api/auth/me`, {
           method: 'GET',
-          credentials: 'include', // Important: include cookies
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          credentials: 'include', // Important: include cookies (for httpOnly JWT cookie)
+          headers,
           mode: 'cors', // Ensure CORS mode
         }),
         timeoutPromise
@@ -83,6 +104,12 @@ export function useAuth() {
           userName: user.name,
           isPaidMember: user.isPaidMember,
         });
+        
+        // Store token if returned in response (shouldn't normally happen, but handle it)
+        if (user.token && typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', user.token);
+        }
+        
         setAuthState({
           user,
           isAuthenticated: true,
@@ -99,6 +126,12 @@ export function useAuth() {
           // Check if cookies are being sent (can't access directly but can infer)
           credentialsMode: 'include',
         });
+        
+        // Clear invalid token
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
+        }
+        
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -113,6 +146,12 @@ export function useAuth() {
         stack: error.stack?.split('\n')[0],
       });
       const isTimeout = error.message === 'Request timeout';
+      
+      // Clear token on error
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+      }
+      
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -120,32 +159,48 @@ export function useAuth() {
         error: isTimeout ? 'Request timeout' : error.message,
       });
     }
-  }, []);
+  }, [getAuthToken]);
 
   useEffect(() => {
     checkAuth();
     
-    // Check for auth success parameter in URL and refresh auth
+    // Check for auth success parameter in URL and extract JWT token
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('auth') === 'success') {
-        console.log('[Auth] Detected auth=success in URL, will retry auth checks...');
-        
-        // Multiple attempts to check auth as session cookie becomes available
-        const attempts = [500, 1000, 2000];
-        attempts.forEach((delay, index) => {
-          setTimeout(() => {
-            console.log(`[Auth] Retry attempt ${index + 1}/${attempts.length} after ${delay}ms`);
-            checkAuth();
-          }, delay);
-        });
-        
-        // Clean up URL parameter after last attempt
-        setTimeout(() => {
+        const token = urlParams.get('token');
+        if (token) {
+          console.log('[Auth] Detected auth=success with token in URL, storing token...');
+          localStorage.setItem('auth_token', token);
+          
+          // Clean URL immediately
           const newUrl = window.location.pathname;
           window.history.replaceState({}, '', newUrl);
           console.log('[Auth] Cleaned up URL parameter');
-        }, 2500);
+          
+          // Retry auth check with new token
+          setTimeout(() => {
+            checkAuth();
+          }, 100);
+        } else {
+          console.log('[Auth] Detected auth=success in URL, will retry auth checks...');
+          
+          // Multiple attempts to check auth (cookie might be available)
+          const attempts = [500, 1000, 2000];
+          attempts.forEach((delay, index) => {
+            setTimeout(() => {
+              console.log(`[Auth] Retry attempt ${index + 1}/${attempts.length} after ${delay}ms`);
+              checkAuth();
+            }, delay);
+          });
+          
+          // Clean up URL parameter after last attempt
+          setTimeout(() => {
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+            console.log('[Auth] Cleaned up URL parameter');
+          }, 2500);
+        }
       }
     }
   }, [checkAuth]);
@@ -159,11 +214,29 @@ export function useAuth() {
   const logout = async () => {
     try {
       const backendUrl = getBackendUrl();
+      const token = getAuthToken();
+      
       console.log('[Auth] Logging out...');
+      
+      // Build headers with token if available
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       await fetch(`${backendUrl}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
+        headers,
       });
+      
+      // Clear token from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+      }
+      
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -173,6 +246,10 @@ export function useAuth() {
       console.log('[Auth] ✓ Logged out successfully');
     } catch (error: any) {
       console.error('[Auth] Logout error:', error);
+      // Clear token even on error
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+      }
     }
   };
 

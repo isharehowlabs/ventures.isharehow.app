@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material';
+import { Box, Button, Typography, CircularProgress, Alert, TextField, Divider, Collapse } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 interface PatreonAuthProps {
   onSuccess?: () => void;
 }
 
 export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
-  const { isAuthenticated, isLoading, login, user } = useAuth();
+  const { isAuthenticated, isLoading, login, user, refresh } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualPatreonId, setManualPatreonId] = useState('');
+  const [manualAccessToken, setManualAccessToken] = useState('');
+  const [manualEmail, setManualEmail] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifySuccess, setVerifySuccess] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for error messages in URL
@@ -74,13 +81,60 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
     );
   }
 
+  const handleManualVerify = async () => {
+    if (!manualAccessToken.trim()) {
+      setErrorMessage('Patreon access token is required');
+      return;
+    }
+
+    setIsVerifying(true);
+    setErrorMessage(null);
+    setVerifySuccess(null);
+
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/auth/verify-and-create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          patreon_id: manualPatreonId.trim(),
+          access_token: manualAccessToken.trim() || undefined,
+          email: manualEmail.trim() || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setVerifySuccess(`User verified successfully! ${data.user.isPaidMember ? 'Active paid member.' : 'Not an active paid member.'}`);
+        setManualPatreonId('');
+        setManualAccessToken('');
+        setManualEmail('');
+        // Refresh auth state
+        setTimeout(() => {
+          refresh();
+        }, 1000);
+      } else {
+        setErrorMessage(data.error || 'Failed to verify user');
+      }
+    } catch (error: any) {
+      setErrorMessage(`Error: ${error.message || 'Network error'}`);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   return (
-    <Box sx={{ p: 4, textAlign: 'center' }}>
+    <Box sx={{ p: 4, textAlign: 'center', maxWidth: 500, mx: 'auto' }}>
       <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
         Sign in with Patreon
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Access the co-working space dashboard by signing in with your Patreon account
+        Access the co-working space dashboard by signing in with your Patreon account.
+        Your membership status will be verified automatically.
       </Typography>
       
       {errorMessage && (
@@ -88,11 +142,18 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
           {errorMessage}
         </Alert>
       )}
+
+      {verifySuccess && (
+        <Alert severity="success" sx={{ mb: 3, textAlign: 'left' }}>
+          {verifySuccess}
+        </Alert>
+      )}
       
       <Button
         variant="contained"
         size="large"
         onClick={login}
+        fullWidth
         sx={{
           bgcolor: '#FF424D',
           '&:hover': {
@@ -100,14 +161,86 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
           },
           px: 4,
           py: 1.5,
+          mb: 2,
         }}
       >
-        Sign in with Patreon
+        Sign in with Patreon (OAuth)
       </Button>
-      
-      <Typography variant="caption" display="block" sx={{ mt: 2, color: 'text.secondary' }}>
-        Note: You must be an active paid member to access the dashboard
-      </Typography>
+
+      <Divider sx={{ my: 3 }}>OR</Divider>
+
+      <Button
+        variant="outlined"
+        size="medium"
+        onClick={() => setShowManualForm(!showManualForm)}
+        sx={{ mb: 2 }}
+      >
+        {showManualForm ? 'Hide' : 'Show'} Manual Verification Form
+      </Button>
+
+      <Collapse in={showManualForm}>
+        <Box sx={{ mt: 2, textAlign: 'left' }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
+            Manual Verification
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+            Enter Patreon user information to verify membership and add to database.
+            Access token is optional but recommended for accurate verification.
+          </Typography>
+
+          <TextField
+            fullWidth
+            label="Patreon Access Token *"
+            type="password"
+            value={manualAccessToken}
+            onChange={(e) => setManualAccessToken(e.target.value)}
+            margin="normal"
+            required
+            helperText="Patreon access token (required for verification). Get one via OAuth or from Patreon API settings."
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            fullWidth
+            label="Patreon User ID (Optional)"
+            value={manualPatreonId}
+            onChange={(e) => setManualPatreonId(e.target.value)}
+            margin="normal"
+            helperText="Optional: Verify the token belongs to this specific user ID"
+          />
+
+          <TextField
+            fullWidth
+            label="Email (Optional)"
+            type="email"
+            value={manualEmail}
+            onChange={(e) => setManualEmail(e.target.value)}
+            margin="normal"
+            helperText="Optional: User's email address (will be fetched from Patreon if not provided)"
+            sx={{ mb: 2 }}
+          />
+
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={handleManualVerify}
+            disabled={isVerifying || !manualAccessToken.trim()}
+            sx={{
+              bgcolor: '#1976d2',
+              '&:hover': {
+                bgcolor: '#1565c0',
+              },
+            }}
+          >
+            {isVerifying ? 'Verifying...' : 'Verify & Add User'}
+          </Button>
+
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
+            Note: The easiest way to get an access token is to use the OAuth login above.
+            Manual verification is for admin use or when OAuth is not available.
+          </Typography>
+        </Box>
+      </Collapse>
     </Box>
   );
 }

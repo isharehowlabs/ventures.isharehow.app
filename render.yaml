@@ -44,4 +44,26 @@ services:
         sync: false
       - key: PATREON_REDIRECT_URI
         sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  - type: cron
+    name: verify-patreon-memberships
+    runtime: python
+    rootDir: backend-python
+    plan: free
+    schedule: "0 0 1,15 * *"  # 1st and 15th of each month at midnight UTC
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python verify_members.py
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PATREON_CLIENT_ID
+        sync: false
+      - key: PATREON_CLIENT_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FLASK_SECRET_KEY
+        sync: false
 

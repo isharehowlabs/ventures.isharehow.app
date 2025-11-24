@@ -10,6 +10,7 @@ from functools import wraps
 import json
 from dotenv import load_dotenv
 import requests
+import jwt
 
 # Load environment variables
 load_dotenv()
@@ -89,6 +90,30 @@ CORS(app,
      supports_credentials=True,
      allow_headers=['Content-Type', 'Authorization'])
 
+# JWT Configuration
+JWT_SECRET = os.environ.get('JWT_SECRET', app.config['SECRET_KEY'])
+JWT_ALGORITHM = 'HS256'
+JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
+
+def generate_jwt_token(user_id):
+    """Generate JWT token for authenticated user"""
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
+        'iat': datetime.utcnow()
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def verify_jwt_token(token):
+    """Verify and decode JWT token"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload.get('user_id')
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
 # Frontend URL helper - for redirects to frontend domain
 def get_frontend_url():
     """Get the frontend URL from environment or default to production"""
@@ -115,6 +140,30 @@ if DB_AVAILABLE:
                 'status': self.status,
                 'createdAt': self.created_at.isoformat(),
                 'updatedAt': self.updated_at.isoformat()
+            }
+
+    # Authentication User Model
+    class User(db.Model):
+        __tablename__ = 'users'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        patreon_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
+        email = db.Column(db.String(120), unique=True, nullable=True)
+        access_token = db.Column(db.String(500), nullable=True)  # Increased length for tokens
+        refresh_token = db.Column(db.String(500), nullable=True)
+        membership_active = db.Column(db.Boolean, default=False, nullable=False)
+        last_checked = db.Column(db.DateTime, nullable=True)
+        token_expires_at = db.Column(db.DateTime, nullable=True)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        
+        def to_dict(self):
+            return {
+                'id': self.patreon_id,  # Use patreon_id as external ID
+                'patreonId': self.patreon_id,
+                'email': self.email,
+                'membershipActive': self.membership_active,
+                'lastChecked': self.last_checked.isoformat() if self.last_checked else None
             }
 
     # Wellness Models
@@ -1099,41 +1148,366 @@ def handle_general_exception(e):
         'message': str(e)
     }), 500
 
-# --- Auth Endpoints (session-based) ---
+# --- Auth Endpoints (JWT-based) ---
 @app.route('/api/auth/me', methods=['GET'])
 def auth_me():
-    app.logger.info(f"Request cookies: {request.cookies}")
-    # Debug: Log incoming request details
-    print("=" * 80)
-    print("AUTH CHECK REQUEST:")
-    print(f"  Origin: {request.headers.get('Origin', 'Not set')}")
-    print(f"  Referer: {request.headers.get('Referer', 'Not set')}")
-    print(f"  Cookie header present: {'Cookie' in request.headers}")
-    
-    if 'Cookie' in request.headers:
-        # Log cookies (but mask sensitive values for security)
-        cookies = request.headers.get('Cookie', '')
-        # Just log if session cookie exists, don't print full value
-        has_session = 'session=' in cookies
-        print(f"  Has session cookie: {has_session}")
+    # Get token from Authorization header or cookie
+    token = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
     else:
-        print("  No cookies in request")
+        token = request.cookies.get('auth_token')
     
-    # Check session
-    user = session.get('user')
-    if user:
-        print(f"✓ Session retrieved for user: {user.get('id', 'unknown')} - {user.get('name', 'unknown')}")
-        print("=" * 80)
-        return jsonify(user)
+    # Fallback to session for backward compatibility during transition
+    if not token:
+        user = session.get('user')
+        if user:
+            print(f"✓ Session retrieved for user: {user.get('id', 'unknown')} - {user.get('name', 'unknown')}")
+            app.logger.info(f"Session found for user: {user}")
+            return jsonify(user)
+        print("✗ No token or session found - user not authenticated")
+        app.logger.warning("No token or session found - not authenticated")
+        return jsonify({'error': 'Not authenticated', 'message': 'No valid token or session found. Please log in again.'}), 401
     
-    print("✗ No user found in session - user not authenticated")
-    print("=" * 80)
-    return jsonify({'error': 'Not authenticated', 'message': 'No valid session found. Please log in again.'}), 401
+    # Verify JWT token
+    user_id = verify_jwt_token(token)
+    if not user_id:
+        # Fallback to session if JWT is invalid
+        user = session.get('user')
+        if user:
+            print(f"✓ JWT invalid, but session found for user: {user.get('id', 'unknown')}")
+            return jsonify(user)
+        print("✗ Invalid or expired token - user not authenticated")
+        app.logger.warning("Invalid or expired token - not authenticated")
+        return jsonify({'error': 'Not authenticated', 'message': 'Invalid or expired token. Please log in again.'}), 401
+    
+    # Query database for user
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        user = User.query.filter_by(patreon_id=user_id).first()
+        if not user:
+            # Fallback to session if user not in database
+            user_session = session.get('user')
+            if user_session:
+                print(f"✓ User not in database, but session found: {user_session.get('id', 'unknown')}")
+                return jsonify(user_session)
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Also sync with UserProfile if it exists
+        profile_data = {}
+        try:
+            profile = UserProfile.query.get(user_id)
+            if profile:
+                profile_data = profile.to_dict()
+        except Exception as e:
+            print(f"Warning: Failed to fetch profile: {e}")
+        
+        # Return combined user data
+        user_data = user.to_dict()
+        user_data.update({
+            'name': profile_data.get('name', ''),
+            'avatarUrl': profile_data.get('avatarUrl', ''),
+            'membershipTier': profile_data.get('membershipTier'),
+            'isPaidMember': user.membership_active,  # Use database value
+            'isTeamMember': profile_data.get('isTeamMember', False)
+        })
+        
+        print(f"✓ User authenticated via JWT: {user_id}")
+        return jsonify(user_data)
+    except Exception as e:
+        print(f"Error fetching user from database: {e}")
+        app.logger.error(f"Error fetching user from database: {e}")
+        # Fallback to session
+        user_session = session.get('user')
+        if user_session:
+            return jsonify(user_session)
+        return jsonify({'error': 'Database error'}), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
 def auth_logout():
     session.clear()
-    return jsonify({'message': 'Logged out successfully'})
+    response = jsonify({'message': 'Logged out successfully'})
+    # Clear JWT cookie if using cookie-based auth
+    response.set_cookie('auth_token', '', expires=0, httponly=True, secure=True, samesite='None', domain='.ventures.isharehow.app')
+    return response
+
+def refresh_patreon_token(refresh_token):
+    """Refresh Patreon access token using refresh token"""
+    token_url = "https://www.patreon.com/api/oauth2/token"
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": os.environ.get('PATREON_CLIENT_ID'),
+        "client_secret": os.environ.get('PATREON_CLIENT_SECRET')
+    }
+    try:
+        response = requests.post(token_url, data=data, timeout=10)
+        if response.ok:
+            return response.json()
+    except Exception as e:
+        print(f"Error refreshing Patreon token: {e}")
+    return None
+
+@app.route('/api/auth/refresh', methods=['POST'])
+def refresh_token():
+    """Refresh Patreon access token if expired"""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Authentication required'}), 401
+    
+    token = auth_header.split(' ')[1]
+    user_id = verify_jwt_token(token)
+    if not user_id:
+        return jsonify({'error': 'Invalid token'}), 401
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        user = User.query.filter_by(patreon_id=user_id).first()
+        if not user or not user.refresh_token:
+            return jsonify({'error': 'No refresh token available'}), 400
+        
+        # Check if token is expired or expiring soon (within 5 minutes)
+        if user.token_expires_at and user.token_expires_at > datetime.utcnow() + timedelta(minutes=5):
+            return jsonify({'message': 'Token still valid', 'token': token})
+        
+        # Refresh Patreon token
+        new_token_data = refresh_patreon_token(user.refresh_token)
+        if not new_token_data:
+            return jsonify({'error': 'Failed to refresh token'}), 500
+        
+        # Update user with new tokens
+        user.access_token = new_token_data.get('access_token')
+        if new_token_data.get('refresh_token'):
+            user.refresh_token = new_token_data.get('refresh_token')
+        expires_in = new_token_data.get('expires_in', 3600)
+        user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        db.session.commit()
+        
+        # Generate new JWT
+        new_jwt = generate_jwt_token(user_id)
+        return jsonify({'token': new_jwt, 'message': 'Token refreshed'})
+    except Exception as e:
+        print(f"Error in token refresh: {e}")
+        app.logger.error(f"Error in token refresh: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/auth/verify-and-create', methods=['POST'])
+def verify_and_create_user():
+    """
+    Verify Patreon membership and create/update user in database.
+    Requires either:
+    1. An access token (preferred) - will get user info from token
+    2. Or Patreon ID + email (manual entry, but requires access token for verification)
+    """
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    data = request.json
+    patreon_id = data.get('patreon_id') or data.get('patreonId')
+    access_token = data.get('access_token')
+    email = data.get('email')
+    
+    if not access_token and not patreon_id:
+        return jsonify({'error': 'Either access token or Patreon ID is required'}), 400
+    
+    try:
+        # Access token is required to verify with Patreon API
+        if not access_token:
+            return jsonify({
+                'error': 'Access token is required for verification',
+                'message': 'Please provide a Patreon access token. You can get one by going through OAuth or from your Patreon account settings.'
+            }), 400
+        
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "User-Agent": "VenturesApp/1.0 (+https://ventures.isharehow.app)"
+        }
+        
+        # Fetch user identity from Patreon API using their access token
+        identity_url = (
+            "https://www.patreon.com/api/oauth2/v2/identity"
+            "?fields[user]=id,email,full_name,image_url"
+            "&include=memberships"
+            "&fields[member]=patron_status,currently_entitled_amount_cents,last_charge_date,pledge_start"
+        )
+        
+        user_res = requests.get(identity_url, headers=headers, timeout=10)
+        
+        if not user_res.ok:
+            if user_res.status_code == 401:
+                return jsonify({
+                    'error': 'Invalid or expired access token',
+                    'message': 'The access token provided is invalid or has expired. Please get a new token via OAuth.'
+                }), 401
+            error_text = user_res.text
+            return jsonify({
+                'error': f'Patreon API error: {user_res.status_code}',
+                'message': error_text[:200] if error_text else 'Unknown error'
+            }), 500
+        
+        user_data = user_res.json()
+        
+        # Parse user data
+        if 'data' not in user_data:
+            return jsonify({'error': 'Invalid response from Patreon API'}), 500
+        
+        data_obj = user_data.get('data', {})
+        attributes = data_obj.get('attributes', {})
+        relationships = data_obj.get('relationships', {})
+        
+        # Get user ID from API response
+        api_user_id = data_obj.get('id', '')
+        if not api_user_id:
+            return jsonify({'error': 'Could not get user ID from Patreon API'}), 500
+        
+        # If patreon_id was provided, verify it matches
+        if patreon_id and api_user_id != patreon_id:
+            return jsonify({
+                'error': f'User ID mismatch',
+                'message': f'Expected {patreon_id}, but token belongs to user {api_user_id}'
+            }), 400
+        
+        user_name = attributes.get('full_name') or attributes.get('first_name') or 'Patreon User'
+        user_email = attributes.get('email') or email
+        user_avatar = attributes.get('image_url', '')
+        
+        # Check membership status
+        is_paid_member = False
+        membership_tier = None
+        membership_amount = 0
+        last_charge_date = None
+        pledge_start = None
+        
+        memberships = relationships.get('memberships', {}).get('data', [])
+        if memberships:
+            included = user_data.get('included', [])
+            for membership in memberships:
+                membership_id = membership.get('id')
+                for item in included:
+                    if item.get('id') == membership_id and item.get('type') == 'member':
+                        member_attrs = item.get('attributes', {})
+                        patron_status = member_attrs.get('patron_status')
+                        amount_cents = member_attrs.get('currently_entitled_amount_cents', 0)
+                        
+                        # Extract dates
+                        last_charge_str = member_attrs.get('last_charge_date')
+                        if last_charge_str:
+                            try:
+                                last_charge_date = datetime.fromisoformat(last_charge_str.replace('Z', '+00:00'))
+                            except:
+                                pass
+                        pledge_start_str = member_attrs.get('pledge_start')
+                        if pledge_start_str:
+                            try:
+                                pledge_start = datetime.fromisoformat(pledge_start_str.replace('Z', '+00:00'))
+                            except:
+                                pass
+                        
+                        if patron_status == 'active_patron':
+                            is_paid_member = True
+                            membership_amount = amount_cents / 100
+                            if membership_amount >= 10:
+                                membership_tier = 'premium'
+                            elif membership_amount >= 5:
+                                membership_tier = 'standard'
+                            else:
+                                membership_tier = 'basic'
+                        break
+        
+        # Special handling for creator/admin
+        if api_user_id == '56776112':
+            is_paid_member = False
+            membership_tier = None
+            membership_amount = 0
+        
+        # Get refresh token from token response if available
+        refresh_token = None
+        # Note: Refresh token is only available during OAuth flow, not from manual token entry
+        
+        # Create or update user in database
+        user = User.query.filter_by(patreon_id=api_user_id).first()
+        if not user:
+            user = User(
+                patreon_id=api_user_id,
+                email=user_email,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                membership_active=is_paid_member,
+                last_checked=datetime.utcnow()
+            )
+            # Set token expiration (default 1 hour, but tokens can vary)
+            expires_in = 3600  # Default, actual expiration should come from token response
+            user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+            db.session.add(user)
+            print(f"✓ Created new user: {api_user_id}")
+        else:
+            user.email = user_email or user.email
+            user.access_token = access_token
+            if refresh_token:
+                user.refresh_token = refresh_token
+            user.membership_active = is_paid_member
+            user.last_checked = datetime.utcnow()
+            expires_in = 3600
+            user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+            print(f"✓ Updated existing user: {api_user_id}")
+        
+        # Also sync with UserProfile
+        profile = UserProfile.query.get(api_user_id)
+        if not profile:
+            profile = UserProfile(
+                id=api_user_id,
+                email=user_email,
+                name=user_name,
+                avatar_url=user_avatar,
+                patreon_id=api_user_id,
+                membership_tier=membership_tier,
+                is_paid_member=is_paid_member,
+                membership_payment_date=last_charge_date if is_paid_member else None,
+                membership_renewal_date=(last_charge_date + timedelta(days=30)) if (is_paid_member and last_charge_date) else None
+            )
+            db.session.add(profile)
+        else:
+            profile.email = user_email or profile.email
+            profile.name = user_name or profile.name
+            profile.avatar_url = user_avatar or profile.avatar_url
+            profile.membership_tier = membership_tier
+            profile.is_paid_member = is_paid_member
+            if is_paid_member and last_charge_date:
+                profile.membership_payment_date = last_charge_date
+                profile.membership_renewal_date = last_charge_date + timedelta(days=30)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'User verified and created/updated successfully',
+            'user': {
+                'id': api_user_id,
+                'patreonId': api_user_id,
+                'email': user_email,
+                'name': user_name,
+                'isPaidMember': is_paid_member,
+                'membershipTier': membership_tier,
+                'membershipAmount': membership_amount,
+                'lastChargeDate': last_charge_date.isoformat() if last_charge_date else None,
+                'pledgeStart': pledge_start.isoformat() if pledge_start else None
+            }
+        })
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error verifying user with Patreon API: {e}")
+        return jsonify({'error': f'Failed to verify with Patreon: {str(e)}'}), 500
+    except Exception as e:
+        print(f"Error in verify_and_create_user: {e}")
+        app.logger.error(f"Error in verify_and_create_user: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
 
 # Profile Management Endpoints
 @app.route('/api/profile', methods=['GET'])
@@ -2298,6 +2672,9 @@ def patreon_callback():
         token_res.raise_for_status()
         token_data = token_res.json()
         access_token = token_data.get('access_token')
+        refresh_token = token_data.get('refresh_token')
+        expires_in = token_data.get('expires_in', 3600)
+        token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
         if not access_token:
             error_msg = token_data.get('error', 'Unknown error')
             print(f"Patreon OAuth error: No access token. Response: {token_data}")
@@ -2342,6 +2719,8 @@ def patreon_callback():
         membership_tier = None
         membership_amount = 0
         is_team_member = False
+        last_charge_date = None
+        pledge_start = None
         
         memberships = relationships.get('memberships', {}).get('data', [])
         campaigns = relationships.get('campaigns', {}).get('data', [])
@@ -2361,6 +2740,20 @@ def patreon_callback():
                         member_attrs = item.get('attributes', {})
                         patron_status = member_attrs.get('patron_status')
                         amount_cents = member_attrs.get('currently_entitled_amount_cents', 0)
+                        
+                        # Extract last_charge_date and pledge_start
+                        last_charge_str = member_attrs.get('last_charge_date')
+                        if last_charge_str:
+                            try:
+                                last_charge_date = datetime.fromisoformat(last_charge_str.replace('Z', '+00:00'))
+                            except:
+                                pass
+                        pledge_start_str = member_attrs.get('pledge_start')
+                        if pledge_start_str:
+                            try:
+                                pledge_start = datetime.fromisoformat(pledge_start_str.replace('Z', '+00:00'))
+                            except:
+                                pass
                         
                         # Check if active patron
                         if patron_status == 'active_patron':
@@ -2382,7 +2775,39 @@ def patreon_callback():
             membership_amount = 0
             print(f"✓ Creator {user_id} - overriding paid membership status to False")
         
-        # Store user data in session
+        # Store/update user in database (User model for authentication)
+        if DB_AVAILABLE:
+            try:
+                user = User.query.filter_by(patreon_id=user_id).first()
+                if not user:
+                    user = User(
+                        patreon_id=user_id,
+                        email=user_email,
+                        access_token=access_token,
+                        refresh_token=refresh_token,
+                        membership_active=is_paid_member,
+                        last_checked=datetime.utcnow(),
+                        token_expires_at=token_expires_at
+                    )
+                    db.session.add(user)
+                    print(f"✓ Created new user in database: {user_id}")
+                else:
+                    user.email = user_email
+                    user.access_token = access_token
+                    if refresh_token:
+                        user.refresh_token = refresh_token
+                    user.membership_active = is_paid_member
+                    user.last_checked = datetime.utcnow()
+                    user.token_expires_at = token_expires_at
+                    print(f"✓ Updated existing user in database: {user_id}")
+                
+                db.session.commit()
+            except Exception as db_error:
+                print(f"Warning: Failed to store user in database: {db_error}")
+                db.session.rollback()
+                # Continue even if database storage fails
+        
+        # Store user data in session (for backward compatibility during transition)
         user_session_data = {
             'id': user_id,
             'name': user_name,
@@ -2394,13 +2819,16 @@ def patreon_callback():
             'membershipAmount': membership_amount,
             'isTeamMember': is_team_member,
             'accessToken': access_token,
-            'lastChargeDate': last_charge_date,
-            'pledgeStart': pledge_start,
+            'lastChargeDate': last_charge_date.isoformat() if last_charge_date else None,
+            'pledgeStart': pledge_start.isoformat() if pledge_start else None,
         }
         session['user'] = user_session_data
         app.logger.info(f"Session data after login: {session}")
         
-        # Sync user profile to database
+        # Generate JWT token
+        jwt_token = generate_jwt_token(user_id)
+        
+        # Sync user profile to database (UserProfile for wellness features)
         if DB_AVAILABLE:
             try:
                 profile = UserProfile.query.get(user_id)
@@ -2443,9 +2871,23 @@ def patreon_callback():
         # Debug: Print session info
         print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
         
-        # Redirect to labs page with auth success (trailing slash for Next.js static export)
+        # Redirect to labs page with auth success and JWT token
         # Use external redirect to ensure browser follows to frontend domain
-        return redirect(f'{get_frontend_url()}/labs/?auth=success', code=302)
+        # Token is passed in URL for frontend to extract and store
+        redirect_url = f'{get_frontend_url()}/labs/?auth=success&token={jwt_token}'
+        response = redirect(redirect_url, code=302)
+        
+        # Also set JWT as httpOnly cookie for more secure access
+        response.set_cookie(
+            'auth_token',
+            jwt_token,
+            httponly=True,
+            secure=True,
+            samesite='None',
+            max_age=JWT_EXPIRATION_HOURS * 3600,
+            domain='.ventures.isharehow.app'
+        )
+        return response
     except requests.exceptions.HTTPError as e:
         error_detail = "Unknown error"
         try:
