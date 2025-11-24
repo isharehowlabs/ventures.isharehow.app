@@ -2296,14 +2296,23 @@ def patreon_callback():
             print(f"Patreon OAuth error: No access token. Response: {token_data}")
             return redirect(f'{get_frontend_url()}/?auth=error&message=token_error')
 
-        # Fetch user identity with memberships and campaign relationships
-        user_res = requests.get(
-            "https://www.patreon.com/api/oauth2/v2/identity?include=memberships,campaigns&fields[member]=patron_status,currently_entitled_amount_cents&fields[campaign]=name,creation_name",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10
-        )
-        user_res.raise_for_status()
-        user_data = user_res.json()
+        # Step 3: Use the access token to fetch the user's identity
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'User-Agent': 'VenturesApp/1.0 (+https://ventures.isharehow.app)'
+        }
+        
+        # Simplify the request to debug the 400 error
+        # We will try a minimal request first, and then add fields back.
+        identity_url = 'https://www.patreon.com/api/oauth2/v2/identity?include=memberships,campaigns&fields%5Bmember%5D=patron_status,currently_entitled_amount_cents'
+        
+        try:
+            user_res = requests.get(identity_url, headers=headers, timeout=10)
+            user_res.raise_for_status()
+            user_data = user_res.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Patreon OAuth HTTP error: {e} - {e.response.text if e.response else 'No response'}")
+            return redirect(f"{get_frontend_url()}/?auth=error&message=patreon_api_error")
         
         print(f"Patreon API response: {json.dumps(user_data, indent=2)}")
         
