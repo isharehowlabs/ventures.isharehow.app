@@ -33,7 +33,7 @@ def migrate_sessions():
                     user = User(
                         patreon_id=profile.id,
                         email=profile.email,
-                        membership_active=profile.is_paid_member or False,
+                        membership_paid=profile.is_paid_member or False,  # Updated field name
                         last_checked=datetime.utcnow() if profile.is_paid_member else None
                     )
                     db.session.add(user)
@@ -43,8 +43,8 @@ def migrate_sessions():
                     # Update existing user with UserProfile data if needed
                     if not user.email and profile.email:
                         user.email = profile.email
-                    if user.membership_active != (profile.is_paid_member or False):
-                        user.membership_active = profile.is_paid_member or False
+                    if user.membership_paid != (profile.is_paid_member or False):  # Updated field name
+                        user.membership_paid = profile.is_paid_member or False  # Updated field name
                     if not user.last_checked and profile.is_paid_member:
                         user.last_checked = datetime.utcnow()
                     skipped_count += 1

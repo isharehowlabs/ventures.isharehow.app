@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
 from datetime import datetime, timedelta
 import os
 import uuid
@@ -10,7 +11,6 @@ from functools import wraps
 import json
 from dotenv import load_dotenv
 import requests
-import jwt
 import bcrypt
 
 # Load environment variables
@@ -35,20 +35,8 @@ if app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
     print("Set FLASK_SECRET_KEY environment variable immediately!")
     print("=" * 80)
 
-# Session cookie configuration
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True  # Always use secure cookies in production
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for cross-origin requests with Secure flag
-app.config['SESSION_COOKIE_DOMAIN'] = '.ventures.isharehow.app'  # Allow cookies across subdomains
-app.config['SESSION_COOKIE_PATH'] = '/'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Sessions expire after 7 days
-
-# Log session configuration for debugging
-print(f"Session Configuration:")
-print(f"  - COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set (will use request domain)')}")
-print(f"  - COOKIE_SECURE: {app.config['SESSION_COOKIE_SECURE']}")
-print(f"  - COOKIE_SAMESITE: {app.config['SESSION_COOKIE_SAMESITE']}")
-print(f"  - COOKIE_HTTPONLY: {app.config['SESSION_COOKIE_HTTPONLY']}")
+# Session cookie configuration - REMOVED: Using JWT-only authentication
+# Session-based auth removed to eliminate conflicts and errors
 
 # Database configuration - make it optional to handle import errors
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
@@ -96,29 +84,18 @@ CORS(app,
      supports_credentials=True,
      allow_headers=['Content-Type', 'Authorization'])
 
+# Initialize JWT Manager (flask-jwt-extended)
+jwt = JWTManager(app)
+
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', app.config['SECRET_KEY'])
-JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
-
-def generate_jwt_token(user_id):
-    """Generate JWT token for authenticated user"""
-    payload = {
-        'user_id': user_id,
-        'exp': datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
-        'iat': datetime.utcnow()
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-def verify_jwt_token(token):
-    """Verify and decode JWT token"""
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload.get('user_id')
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET', app.config['SECRET_KEY'])
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
+app.config['JWT_COOKIE_SECURE'] = True
+app.config['JWT_COOKIE_HTTPONLY'] = True
+app.config['JWT_COOKIE_SAMESITE'] = 'None'
+app.config['JWT_COOKIE_DOMAIN'] = '.ventures.isharehow.app'
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # Set to True if you add CSRF protection later
 
 # Frontend URL helper - for redirects to frontend domain
 def get_frontend_url():
@@ -159,7 +136,7 @@ if DB_AVAILABLE:
         patreon_id = db.Column(db.String(50), unique=True, nullable=True, index=True)
         access_token = db.Column(db.String(500), nullable=True)  # Increased length for tokens
         refresh_token = db.Column(db.String(500), nullable=True)
-        membership_active = db.Column(db.Boolean, default=False, nullable=False)
+        membership_paid = db.Column(db.Boolean, default=False, nullable=False)  # Renamed from membership_active
         last_checked = db.Column(db.DateTime, nullable=True)
         token_expires_at = db.Column(db.DateTime, nullable=True)
         patreon_connected = db.Column(db.Boolean, default=False, nullable=False)
@@ -182,7 +159,7 @@ if DB_AVAILABLE:
                 'patreonId': self.patreon_id,
                 'username': self.username,
                 'email': self.email,
-                'membershipActive': self.membership_active,
+                'membershipPaid': self.membership_paid,  # Updated field name
                 'patreonConnected': self.patreon_connected,
                 'lastChecked': self.last_checked.isoformat() if self.last_checked else None
             }
@@ -688,31 +665,57 @@ def mcp_generate_code():
 
 # --- Figma Component Likes & Saves Endpoints ---
 def get_user_id():
-    """Get user ID from session or use default"""
-    user = session.get('user')
-    return user.get('id', 'anonymous') if user else 'anonymous'
+    """Get user ID from JWT token or use default"""
+    try:
+        user_id = get_jwt_identity()
+        if user_id:
+            # Try to get user from database
+            if DB_AVAILABLE:
+                user = User.query.get(int(user_id)) if user_id.isdigit() else None
+                if user:
+                    return user.patreon_id or user.username or str(user.id)
+            return str(user_id)
+    except Exception:
+        pass
+    return 'anonymous'
 
-
-# Authentication decorator
-def require_session(f):
-    """Decorator to require authenticated session for API endpoints"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        user = session.get('user')
+def get_current_user():
+    """Get current user from JWT token"""
+    try:
+        user_id = get_jwt_identity()
+        if not user_id or not DB_AVAILABLE:
+            return None
+        
+        # Find user by ID
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
         if not user:
-            return jsonify({'error': 'Authentication required'}), 401
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        return user
+    except Exception:
+        return None
+
+# Authentication decorator - DEPRECATED: Use @jwt_required() instead
+def require_session(f):
+    """DEPRECATED: Decorator to require authenticated session - Use @jwt_required() instead"""
+    @wraps(f)
+    @jwt_required()  # Use JWT authentication
+    def decorated_function(*args, **kwargs):
         return f(*args, **kwargs)
     return decorated_function
 
 def get_user_info():
-    """Get user info from session including id and role"""
-    user = session.get('user')
+    """Get user info from JWT token including id and role"""
+    user = get_current_user()
     if not user:
         return None
     return {
-        'id': user.get('id', 'anonymous'),
-        'role': user.get('role', 'mentee'),  # default to mentee
-        'name': user.get('name', 'Unknown')
+        'id': user.patreon_id or user.username or str(user.id),
+        'role': 'mentee',  # default to mentee (can be extended later)
+        'name': user.username or user.email or 'Unknown'
     }
 
 @app.route('/api/figma/component/like', methods=['POST'])
@@ -1255,15 +1258,17 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Generate JWT token
-        jwt_token = generate_jwt_token(user.username or str(user.id))
+        # Generate JWT token using flask-jwt-extended
+        access_token = create_access_token(identity=str(user.id))
         
-        return jsonify({
+        # Set JWT in httpOnly cookie
+        response = jsonify({
             'success': True,
             'message': 'User registered successfully',
-            'token': jwt_token,
             'user': user.to_dict()
-        }), 201
+        })
+        set_access_cookies(response, access_token)
+        return response, 201
         
     except Exception as e:
         print(f"Error in registration: {e}")
@@ -1311,18 +1316,20 @@ def login():
         if not user or not user.check_password(password):
             return jsonify({'error': 'Invalid username/email or password'}), 401
         
-        # Generate JWT token
-        jwt_token = generate_jwt_token(user.username or str(user.id))
+        # Generate JWT token using flask-jwt-extended
+        access_token = create_access_token(identity=str(user.id))
         
         user_data = user.to_dict()
-        user_data['needsPatreonVerification'] = not user.patreon_connected
+        # Remove needsPatreonVerification - handled by cron job
         
-        return jsonify({
+        # Set JWT in httpOnly cookie
+        response = jsonify({
             'success': True,
             'message': 'Login successful',
-            'token': jwt_token,
             'user': user_data
         })
+        set_access_cookies(response, access_token)
+        return response
         
     except Exception as e:
         print(f"Error in login: {e}")
@@ -1330,26 +1337,26 @@ def login():
         return jsonify({'error': 'Login failed'}), 500
 
 @app.route('/api/auth/verify-patreon', methods=['POST'])
+@jwt_required()
 def verify_patreon():
-    """Verify Patreon membership status using stored token"""
+    """DEPRECATED: Verify Patreon membership status - Use cron job for automatic verification"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
-    # Get user from JWT token
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({'error': 'Authentication required'}), 401
-    
-    token = auth_header.split(' ')[1]
-    user_identifier = verify_jwt_token(token)
-    if not user_identifier:
-        return jsonify({'error': 'Invalid or expired token'}), 401
-    
     try:
-        # Find user by username or ID
-        user = User.query.filter(
-            (User.username == user_identifier) | (User.id == int(user_identifier) if user_identifier.isdigit() else None)
-        ).first()
+        # Get user from JWT token
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Invalid token'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -1436,14 +1443,14 @@ def verify_patreon():
             is_paid_member = False
         
         # Update user membership status
-        user.membership_active = is_paid_member
+        user.membership_paid = is_paid_member  # Updated field name
         user.last_checked = datetime.utcnow()
         db.session.commit()
         
         return jsonify({
             'success': True,
             'message': 'Patreon status verified',
-            'membershipActive': is_paid_member,
+            'membershipPaid': is_paid_member,  # Updated field name
             'user': user.to_dict()
         })
         
@@ -1457,57 +1464,29 @@ def verify_patreon():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/auth/me', methods=['GET'])
+@jwt_required()
 def auth_me():
-    # Get token from Authorization header or cookie
-    token = None
-    auth_header = request.headers.get('Authorization')
-    if auth_header and auth_header.startswith('Bearer '):
-        token = auth_header.split(' ')[1]
-    else:
-        token = request.cookies.get('auth_token')
-    
-    # Fallback to session for backward compatibility during transition
-    if not token:
-        user = session.get('user')
-        if user:
-            print(f"✓ Session retrieved for user: {user.get('id', 'unknown')} - {user.get('name', 'unknown')}")
-            app.logger.info(f"Session found for user: {user}")
-            return jsonify(user)
-        print("✗ No token or session found - user not authenticated")
-        app.logger.warning("No token or session found - not authenticated")
-        return jsonify({'error': 'Not authenticated', 'message': 'No valid token or session found. Please log in again.'}), 401
-    
-    # Verify JWT token
-    user_id = verify_jwt_token(token)
-    if not user_id:
-        # Fallback to session if JWT is invalid
-        user = session.get('user')
-        if user:
-            print(f"✓ JWT invalid, but session found for user: {user.get('id', 'unknown')}")
-            return jsonify(user)
-        print("✗ Invalid or expired token - user not authenticated")
-        app.logger.warning("Invalid or expired token - not authenticated")
-        return jsonify({'error': 'Not authenticated', 'message': 'Invalid or expired token. Please log in again.'}), 401
-    
-    # Query database for user
+    """Get current user information from JWT token"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
     try:
-        # Find user by username or patreon_id (user_id from JWT could be either)
-        user = User.query.filter(
-            (User.username == user_id) | (User.patreon_id == user_id) | (User.id == int(user_id) if user_id.isdigit() else None)
-        ).first()
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        
+        # Find user by ID (could be integer ID, username, or patreon_id)
+        user = None
+        if user_id and user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=user_id).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=user_id).first()
         
         if not user:
-            # Fallback to session if user not in database
-            user_session = session.get('user')
-            if user_session:
-                print(f"✓ User not in database, but session found: {user_session.get('id', 'unknown')}")
-                return jsonify(user_session)
             return jsonify({'error': 'User not found'}), 404
         
-        # Also sync with UserProfile if it exists (use patreon_id or username as ID)
+        # Also sync with UserProfile if it exists
         profile_data = {}
         try:
             profile_id = user.patreon_id or user.username or str(user.id)
@@ -1523,9 +1502,9 @@ def auth_me():
             'name': profile_data.get('name', user.username or user.email or 'User'),
             'avatarUrl': profile_data.get('avatarUrl', ''),
             'membershipTier': profile_data.get('membershipTier'),
-            'isPaidMember': user.membership_active,  # Use database value
-            'isTeamMember': profile_data.get('isTeamMember', False),
-            'needsPatreonVerification': not user.patreon_connected
+            'isPaidMember': user.membership_paid,  # Updated field name
+            'isTeamMember': profile_data.get('isTeamMember', False)
+            # Removed needsPatreonVerification - handled by cron job
         })
         
         print(f"✓ User authenticated via JWT: {user_id}")
@@ -1533,18 +1512,14 @@ def auth_me():
     except Exception as e:
         print(f"Error fetching user from database: {e}")
         app.logger.error(f"Error fetching user from database: {e}")
-        # Fallback to session
-        user_session = session.get('user')
-        if user_session:
-            return jsonify(user_session)
         return jsonify({'error': 'Database error'}), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
+@jwt_required()
 def auth_logout():
-    session.clear()
+    """Logout user by clearing JWT cookie"""
     response = jsonify({'message': 'Logged out successfully'})
-    # Clear JWT cookie if using cookie-based auth
-    response.set_cookie('auth_token', '', expires=0, httponly=True, secure=True, samesite='None', domain='.ventures.isharehow.app')
+    unset_jwt_cookies(response)
     return response
 
 def refresh_patreon_token(refresh_token):
@@ -1565,28 +1540,34 @@ def refresh_patreon_token(refresh_token):
     return None
 
 @app.route('/api/auth/refresh', methods=['POST'])
+@jwt_required()
 def refresh_token():
     """Refresh Patreon access token if expired"""
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({'error': 'Authentication required'}), 401
-    
-    token = auth_header.split(' ')[1]
-    user_id = verify_jwt_token(token)
-    if not user_id:
-        return jsonify({'error': 'Invalid token'}), 401
-    
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
     try:
-        user = User.query.filter_by(patreon_id=user_id).first()
+        # Get user from JWT token
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Invalid token'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        
         if not user or not user.refresh_token:
             return jsonify({'error': 'No refresh token available'}), 400
         
         # Check if token is expired or expiring soon (within 5 minutes)
         if user.token_expires_at and user.token_expires_at > datetime.utcnow() + timedelta(minutes=5):
-            return jsonify({'message': 'Token still valid', 'token': token})
+            # Token still valid, return current JWT
+            return jsonify({'message': 'Token still valid'})
         
         # Refresh Patreon token
         new_token_data = refresh_patreon_token(user.refresh_token)
@@ -1601,9 +1582,13 @@ def refresh_token():
         user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
         db.session.commit()
         
-        # Generate new JWT
-        new_jwt = generate_jwt_token(user_id)
-        return jsonify({'token': new_jwt, 'message': 'Token refreshed'})
+        # Generate new JWT using flask-jwt-extended
+        new_jwt = create_access_token(identity=str(user.id))
+        
+        # Set JWT in httpOnly cookie
+        response = jsonify({'message': 'Token refreshed'})
+        set_access_cookies(response, new_jwt)
+        return response
     except Exception as e:
         print(f"Error in token refresh: {e}")
         app.logger.error(f"Error in token refresh: {e}")
@@ -1751,7 +1736,7 @@ def verify_and_create_user():
                 email=user_email,
                 access_token=access_token,
                 refresh_token=refresh_token,
-                membership_active=is_paid_member,
+                membership_paid=is_paid_member,  # Updated field name
                 last_checked=datetime.utcnow()
             )
             # Set token expiration (default 1 hour, but tokens can vary)
@@ -1764,7 +1749,7 @@ def verify_and_create_user():
             user.access_token = access_token
             if refresh_token:
                 user.refresh_token = refresh_token
-            user.membership_active = is_paid_member
+            user.membership_paid = is_paid_member  # Updated field name
             user.last_checked = datetime.utcnow()
             expires_in = 3600
             user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
@@ -3110,7 +3095,7 @@ def patreon_callback():
                             email=user_email,
                             access_token=access_token,
                             refresh_token=refresh_token,
-                            membership_active=is_paid_member,
+                            membership_paid=is_paid_member,  # Updated field name
                             last_checked=datetime.utcnow(),
                             token_expires_at=token_expires_at,
                             patreon_connected=True
@@ -3123,7 +3108,7 @@ def patreon_callback():
                         user.access_token = access_token
                         if refresh_token:
                             user.refresh_token = refresh_token
-                        user.membership_active = is_paid_member
+                        user.membership_paid = is_paid_member  # Updated field name
                         user.last_checked = datetime.utcnow()
                         user.token_expires_at = token_expires_at
                         user.patreon_connected = True
@@ -3134,7 +3119,7 @@ def patreon_callback():
                     user.access_token = access_token
                     if refresh_token:
                         user.refresh_token = refresh_token
-                    user.membership_active = is_paid_member
+                    user.membership_paid = is_paid_member  # Updated field name
                     user.last_checked = datetime.utcnow()
                     user.token_expires_at = token_expires_at
                     user.patreon_connected = True
@@ -3147,30 +3132,12 @@ def patreon_callback():
                 db.session.rollback()
                 # Continue even if database storage fails
         
-        # Store user data in session (for backward compatibility during transition)
-        user_session_data = {
-            'id': user_id,
-            'name': user_name,
-            'email': user_email,
-            'avatar': user_avatar,
-            'patreonId': user_id,
-            'isPaidMember': is_paid_member,
-            'membershipTier': membership_tier,
-            'membershipAmount': membership_amount,
-            'isTeamMember': is_team_member,
-            'accessToken': access_token,
-            'lastChargeDate': last_charge_date.isoformat() if last_charge_date else None,
-            'pledgeStart': pledge_start.isoformat() if pledge_start else None,
-        }
-        session['user'] = user_session_data
-        app.logger.info(f"Session data after login: {session}")
-        
-        # Generate JWT token for the linked user
+        # Generate JWT token using flask-jwt-extended for the linked user
         if linked_user:
-            user_identifier = linked_user.username or str(linked_user.id)
-            jwt_token = generate_jwt_token(user_identifier)
+            jwt_token = create_access_token(identity=str(linked_user.id))
         else:
-            jwt_token = generate_jwt_token(user_id)
+            # If no linked user, create a temporary token (shouldn't happen in normal flow)
+            jwt_token = create_access_token(identity=user_id)
         
         # Sync user profile to database (UserProfile for wellness features)
         if DB_AVAILABLE:
@@ -3211,25 +3178,12 @@ def patreon_callback():
                 db.session.rollback()
                 # Continue even if database sync fails
 
-        session.permanent = True
-        # Debug: Print session info
-        print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
-        
-        # Redirect to labs page with auth success and JWT token
-        # If user was linked, indicate Patreon connection success
-        redirect_url = f'{get_frontend_url()}/labs/?auth=success&token={jwt_token}&patreon_connected=true'
+        # Redirect to labs page with auth success (JWT in cookie, not URL)
+        redirect_url = f'{get_frontend_url()}/labs/?auth=success&patreon_connected=true'
         response = redirect(redirect_url, code=302)
         
-        # Also set JWT as httpOnly cookie for more secure access
-        response.set_cookie(
-            'auth_token',
-            jwt_token,
-            httponly=True,
-            secure=True,
-            samesite='None',
-            max_age=JWT_EXPIRATION_HOURS * 3600,
-            domain='.ventures.isharehow.app'
-        )
+        # Set JWT in httpOnly cookie using flask-jwt-extended
+        set_access_cookies(response, jwt_token)
         return response
     except requests.exceptions.HTTPError as e:
         error_detail = "Unknown error"

@@ -2,154 +2,352 @@
 
 ## Overview
 
-This document outlines the complete migration from fragile session-based authentication to a robust database-backed system with JWT tokens and automated Patreon membership verification. This upgrade enables persistent user data storage and scheduled membership checks via cron jobs.
+This document outlines the complete migration from fragile session-based authentication to a robust database-backed system with JWT tokens (using flask-jwt-extended) and automated Patreon membership verification. This upgrade enables persistent user data storage and scheduled membership checks via cron jobs.
+
+**Key Changes**:
+
+- Refactoring to use `flask-jwt-extended==4.5.0` exclusively, eliminating session-based authentication to reduce errors
+- Renaming `membership_active` to `membership_paid` in the User model for clarity
+- Removing all user-facing Patreon verification UI since the cron job handles membership verification automatically twice monthly
 
 ## Current State
 
-- **Authentication**: Flask session-based (`session['user']`)
-- **Storage**: User data stored in session cookies (fragile, not persistent)
-- **Patreon Verification**: Manual check only during login
-- **Token Management**: Access tokens stored in session (lost on logout/expiry)
+- **Authentication**: Mixed JWT (PyJWT) + Flask session-based (`session['user']`) - causing conflicts
+- **Storage**: User data stored in session cookies (fragile, not persistent) + database
+- **Patreon Verification**: Manual check during login + automated twice-monthly cron job
+- **Token Management**: Access tokens stored in session (lost on logout/expiry) + database
 - **Database**: PostgreSQL with SQLAlchemy already configured
-- **Models**: `UserProfile` exists but not used for authentication
+- **Models**: `User` model exists with `membership_active` field (needs renaming to `membership_paid`)
+- **Frontend**: Patreon verification UI components exist (`PatreonVerification.tsx`, `PatreonAuth.tsx`)
 
 ## Target State
 
-- **Authentication**: JWT-based tokens (stateless, scalable)
+- **Authentication**: Pure JWT via flask-jwt-extended (stateless, scalable, no sessions)
 - **Storage**: PostgreSQL database with dedicated `User` model
-- **Patreon Verification**: Automated twice-monthly checks via cron jobs
-- **Token Management**: Access and refresh tokens stored in database
-- **Real-time Updates**: Webhook support for immediate membership status changes
-- **Frontend**: Updated login form (removes user-facing Patreon check messaging)
+- **Patreon Verification**: Automated twice-monthly checks via cron jobs (no user-facing UI)
+- **Token Management**: Access and refresh tokens stored in database, JWT in httpOnly cookies
+- **Field Naming**: `membership_paid` instead of `membership_active` for clarity
+- **Frontend**: Simplified login flow without Patreon verification step
 
 ---
 
-## Migration Steps
+## Implementation Plan
 
-### Phase 1: Database Setup & Model Creation
+### Phase 1: Update Dependencies
 
-#### 1.1 Update Requirements
 **File**: `backend-python/requirements.txt`
 
-Add JWT support:
-```
-PyJWT==2.8.0
-cryptography==41.0.7
+Add flask-jwt-extended and update dependencies:
+
+```txt
+Flask==2.0.3
+Werkzeug==2.0.3
+SQLAlchemy==1.4.54
+Flask-SocketIO==5.3.6
+Flask-SQLAlchemy==2.5.1
+Flask-CORS==4.0.0
+Flask-Migrate==4.0.1
+flask-jwt-extended==4.5.0
+psycopg2-binary==2.9.8
+python-dotenv==0.19.2
+requests==2.31.0
+PyJWT==2.4.0  # Keep temporarily for migration, remove after refactor
+cryptography==3.4.8
+bcrypt==4.0.1
 ```
 
-Update SQLAlchemy versions (if needed):
-```
-flask-sqlalchemy==3.0.5
-psycopg2-binary==2.9.9
-```
+**Action**: Add `flask-jwt-extended==4.5.0` to requirements.txt
 
-#### 1.2 Create User Model
+---
+
+
+### Phase 2: Database Model Updates
+
 **File**: `backend-python/app.py`
 
-Add new `User` model (separate from `UserProfile` for authentication):
+#### 2.1 Rename Field in User Model
+
+Update the User model (around line 162):
+
 ```python
 class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    patreon_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=True)
-    access_token = db.Column(db.String(500), nullable=True)  # Increased length for tokens
+    username = db.Column(db.String(80), unique=True, nullable=True, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=True, index=True)
+    password_hash = db.Column(db.String(255), nullable=True)
+    patreon_id = db.Column(db.String(50), unique=True, nullable=True, index=True)
+    access_token = db.Column(db.String(500), nullable=True)
     refresh_token = db.Column(db.String(500), nullable=True)
-    membership_active = db.Column(db.Boolean, default=False, nullable=False)
+    membership_paid = db.Column(db.Boolean, default=False, nullable=False)  # Renamed from membership_active
     last_checked = db.Column(db.DateTime, nullable=True)
     token_expires_at = db.Column(db.DateTime, nullable=True)
+    patreon_connected = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
+    # ... password methods ...
+    
     def to_dict(self):
         return {
-            'id': self.patreon_id,  # Use patreon_id as external ID
+            'id': self.patreon_id or self.username or str(self.id),
             'patreonId': self.patreon_id,
+            'username': self.username,
             'email': self.email,
-            'membershipActive': self.membership_active,
+            'membershipPaid': self.membership_paid,  # Updated field name
+            'patreonConnected': self.patreon_connected,
             'lastChecked': self.last_checked.isoformat() if self.last_checked else None
         }
 ```
 
-#### 1.3 Create Database Migration
+#### 2.2 Create Database Migration
+
 **Command**:
 ```bash
 cd backend-python
 export DATABASE_URL="your_postgresql_url"
 export FLASK_APP=app.py
-flask db migrate -m "Add User model for authentication"
+flask db migrate -m "Rename membership_active to membership_paid"
 flask db upgrade
 ```
 
+**Note**: Review the generated migration file before applying to ensure it's correct.
+
 ---
 
-### Phase 2: JWT Implementation
 
-#### 2.1 Add JWT Helper Functions
+### Phase 3: Replace PyJWT with flask-jwt-extended
+
 **File**: `backend-python/app.py`
 
-Add JWT utilities:
+#### 3.1 Initialize JWT Manager
+
+Add after Flask app initialization (around line 26, after `app = Flask(__name__)`):
+
 ```python
-import jwt
-from datetime import datetime, timedelta
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
 
-JWT_SECRET = os.environ.get('JWT_SECRET', app.config['SECRET_KEY'])
-JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
+# Initialize JWT Manager
+jwt = JWTManager(app)
 
-def generate_jwt_token(user_id):
-    """Generate JWT token for authenticated user"""
-    payload = {
-        'user_id': user_id,
-        'exp': datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
-        'iat': datetime.utcnow()
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+# JWT Configuration
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET', app.config['SECRET_KEY'])
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
+app.config['JWT_COOKIE_SECURE'] = True
+app.config['JWT_COOKIE_HTTPONLY'] = True
+app.config['JWT_COOKIE_SAMESITE'] = 'None'
+app.config['JWT_COOKIE_DOMAIN'] = '.ventures.isharehow.app'
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # Set to True if you add CSRF protection later
+```
 
-def verify_jwt_token(token):
-    """Verify and decode JWT token"""
+#### 3.2 Remove Old JWT Functions
+
+Remove or comment out the old PyJWT functions (around lines 99-121):
+
+```python
+# REMOVE THESE:
+# JWT_SECRET = os.environ.get('JWT_SECRET', app.config['SECRET_KEY'])
+# JWT_ALGORITHM = 'HS256'
+# JWT_EXPIRATION_HOURS = 24 * 7
+
+# def generate_jwt_token(user_id):
+#     ...
+
+# def verify_jwt_token(token):
+#     ...
+```
+
+#### 3.3 Update Authentication Decorator
+
+Replace `require_session` decorator (around line 697) with flask-jwt-extended:
+
+```python
+# REMOVE OLD:
+# def require_session(f):
+#     ...
+
+# REPLACE WITH:
+# Use @jwt_required() directly on routes, or create a helper:
+def get_current_user_id():
+    """Get current user ID from JWT token"""
+    return get_jwt_identity()
+```
+
+---
+
+### Phase 4: Refactor Authentication Endpoints
+
+**File**: `backend-python/app.py`
+
+#### 4.1 Registration Endpoint (`/api/auth/register`)
+
+Update to use flask-jwt-extended:
+
+```python
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not username or not email or not password:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Check if user exists
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already exists'}), 400
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already exists'}), 400
+    
+    # Create new user
+    user = User(
+        username=username,
+        email=email,
+        membership_paid=False  # Updated field name
+    )
+    user.set_password(password)
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    # Create JWT token
+    access_token = create_access_token(identity=str(user.id))
+    
+    # Set JWT in httpOnly cookie
+    response = jsonify({
+        'message': 'Registration successful',
+        'user': user.to_dict()
+    })
+    set_access_cookies(response, access_token)
+    
+    return response, 201
+```
+
+#### 4.2 Login Endpoint (`/api/auth/login`)
+
+Update to use flask-jwt-extended:
+
+```python
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'error': 'Missing username or password'}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.check_password(password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+    
+    # Create JWT token
+    access_token = create_access_token(identity=str(user.id))
+    
+    # Set JWT in httpOnly cookie
+    response = jsonify({
+        'message': 'Login successful',
+        'user': user.to_dict()
+    })
+    set_access_cookies(response, access_token)
+    
+    return response
+```
+
+#### 4.3 `/api/auth/me` Endpoint
+
+Update to use JWT only (remove session fallback):
+
+```python
+@app.route('/api/auth/me', methods=['GET'])
+@jwt_required()
+def auth_me():
+    """Get current user information from JWT token"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload.get('user_id')
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        
+        # Find user by ID (could be integer ID, username, or patreon_id)
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Also sync with UserProfile if it exists
+        profile_data = {}
+        try:
+            profile = UserProfile.query.get(user.patreon_id or user.id)
+            if profile:
+                profile_data = profile.to_dict()
+        except Exception as e:
+            print(f"Warning: Failed to fetch profile: {e}")
+        
+        # Return combined user data
+        user_data = user.to_dict()
+        user_data.update({
+            'name': profile_data.get('name', ''),
+            'avatarUrl': profile_data.get('avatarUrl', ''),
+            'membershipTier': profile_data.get('membershipTier'),
+            'isPaidMember': user.membership_paid,  # Updated field name
+            'isTeamMember': profile_data.get('isTeamMember', False)
+        })
+        
+        return jsonify(user_data)
+        
+    except Exception as e:
+        print(f"Error in /api/auth/me: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 ```
 
-#### 2.2 Update Authentication Decorator
-**File**: `backend-python/app.py`
+#### 4.4 `/api/auth/logout` Endpoint
 
-Replace `require_session` with JWT-based decorator:
+Update to clear JWT cookie:
+
 ```python
-def require_auth(f):
-    """Decorator to require JWT authentication"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({'error': 'Authentication required'}), 401
-        
-        token = auth_header.split(' ')[1]
-        user_id = verify_jwt_token(token)
-        if not user_id:
-            return jsonify({'error': 'Invalid or expired token'}), 401
-        
-        # Optionally attach user to request context
-        request.current_user_id = user_id
-        return f(*args, **kwargs)
-    return decorated_function
+@app.route('/api/auth/logout', methods=['POST'])
+@jwt_required()
+def auth_logout():
+    """Logout user by clearing JWT cookie"""
+    response = jsonify({'message': 'Logged out successfully'})
+    unset_jwt_cookies(response)
+    return response
 ```
 
----
+#### 4.5 `/api/auth/verify-patreon` Endpoint
 
-### Phase 3: Update Patreon OAuth Callback
+Keep for admin/internal use but mark as deprecated:
 
-#### 3.1 Modify `/api/auth/patreon/callback`
-**File**: `backend-python/app.py`
+```python
+@app.route('/api/auth/verify-patreon', methods=['POST'])
+@jwt_required()
+def verify_patreon():
+    """
+    DEPRECATED: Manual Patreon verification endpoint.
+    Membership verification is now handled automatically by cron job.
+    Kept for admin/internal use only.
+    """
+    # ... existing verification logic ...
+    # Update field references: membership_active → membership_paid
+    user.membership_paid = is_active  # Updated field name
+    # ...
+```
 
-Replace session storage with database storage:
+#### 4.6 Patreon OAuth Callback (`/api/auth/patreon/callback`)
+
+Update to use flask-jwt-extended:
+
 ```python
 @app.route('/api/auth/patreon/callback')
 def patreon_callback():
@@ -162,10 +360,10 @@ def patreon_callback():
     token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
     
     # Parse membership status from API response
-    is_active = False
+    is_paid = False
     if memberships:
         # Check membership status (existing logic)
-        is_active = is_paid_member  # From existing parsing logic
+        is_paid = is_paid_member  # From existing parsing logic
     
     # Store/update user in database
     user = User.query.filter_by(patreon_id=user_id).first()
@@ -175,9 +373,10 @@ def patreon_callback():
             email=user_email,
             access_token=access_token,
             refresh_token=refresh_token,
-            membership_active=is_active,
+            membership_paid=is_paid,  # Updated field name
             last_checked=datetime.utcnow(),
-            token_expires_at=token_expires_at
+            token_expires_at=token_expires_at,
+            patreon_connected=True
         )
         db.session.add(user)
         print(f"✓ Created new user in database: {user_id}")
@@ -186,186 +385,109 @@ def patreon_callback():
         user.access_token = access_token
         if refresh_token:
             user.refresh_token = refresh_token
-        user.membership_active = is_active
+        user.membership_paid = is_paid  # Updated field name
         user.last_checked = datetime.utcnow()
         user.token_expires_at = token_expires_at
+        user.patreon_connected = True
         print(f"✓ Updated existing user in database: {user_id}")
     
     db.session.commit()
     
-    # Generate JWT token
-    jwt_token = generate_jwt_token(user_id)
+    # Generate JWT token using flask-jwt-extended
+    jwt_token = create_access_token(identity=str(user.id))
     
-    # Redirect with token in URL (or use httpOnly cookie)
-    return redirect(f'{get_frontend_url()}/labs/?auth=success&token={jwt_token}', code=302)
-```
-
-**Alternative**: Store JWT in httpOnly cookie instead of URL:
-```python
+    # Redirect with JWT in httpOnly cookie
     response = redirect(f'{get_frontend_url()}/labs/?auth=success', code=302)
-    response.set_cookie(
-        'auth_token',
-        jwt_token,
-        httponly=True,
-        secure=True,
-        samesite='None',
-        max_age=JWT_EXPIRATION_HOURS * 3600,
-        domain='.ventures.isharehow.app'
-    )
+    set_access_cookies(response, jwt_token)
     return response
 ```
 
 ---
 
-### Phase 4: Update Authentication Endpoints
+### Phase 5: Update All Field References
 
-#### 4.1 Update `/api/auth/me`
-**File**: `backend-python/app.py`
+**Files to update**:
 
-Replace session check with database query:
+1. **`backend-python/app.py`** - Search and replace:
+   - `membership_active` → `membership_paid` (all occurrences)
+   - `membershipActive` → `membershipPaid` (in JSON responses)
+
+2. **`backend-python/verify_members.py`** - Update field references:
+
 ```python
-@app.route('/api/auth/me', methods=['GET'])
-def auth_me():
-    # Get token from Authorization header or cookie
-    token = None
-    auth_header = request.headers.get('Authorization')
-    if auth_header and auth_header.startswith('Bearer '):
-        token = auth_header.split(' ')[1]
-    else:
-        token = request.cookies.get('auth_token')
-    
-    if not token:
-        return jsonify({'error': 'Not authenticated', 'message': 'No token provided'}), 401
-    
-    user_id = verify_jwt_token(token)
-    if not user_id:
-        return jsonify({'error': 'Not authenticated', 'message': 'Invalid or expired token'}), 401
-    
-    # Query database for user
-    user = User.query.filter_by(patreon_id=user_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    # Also sync with UserProfile if it exists
-    profile_data = {}
-    if DB_AVAILABLE:
-        try:
-            profile = UserProfile.query.get(user_id)
-            if profile:
-                profile_data = profile.to_dict()
-        except Exception as e:
-            print(f"Warning: Failed to fetch profile: {e}")
-    
-    # Return combined user data
-    user_data = user.to_dict()
-    user_data.update({
-        'name': profile_data.get('name', ''),
-        'avatarUrl': profile_data.get('avatarUrl', ''),
-        'membershipTier': profile_data.get('membershipTier'),
-        'isPaidMember': user.membership_active,  # Use database value
-        'isTeamMember': profile_data.get('isTeamMember', False)
-    })
-    
-    return jsonify(user_data)
+# Around line 86:
+user.membership_paid = is_active  # Changed from membership_active
+
+# Around line 91:
+print(f"{status} User {user.patreon_id}: membership_paid={is_active}")  # Updated print statement
 ```
 
-#### 4.2 Update `/api/auth/logout`
-**File**: `backend-python/app.py`
+3. **`backend-python/migrate_sessions_to_db.py`** - Update field references:
 
 ```python
-@app.route('/api/auth/logout', methods=['POST'])
-def auth_logout():
-    response = jsonify({'message': 'Logged out successfully'})
-    # Clear cookie if using cookie-based auth
-    response.set_cookie('auth_token', '', expires=0, httponly=True, secure=True, samesite='None', domain='.ventures.isharehow.app')
-    return response
+# Around line 36:
+membership_paid=profile.is_paid_member or False,  # Changed from membership_active
+
+# Around line 46:
+if user.membership_paid != (profile.is_paid_member or False):  # Updated field name
+    user.membership_paid = profile.is_paid_member or False
+```
+
+**Search Command**:
+```bash
+cd backend-python
+grep -r "membership_active" . --include="*.py"
+grep -r "membershipActive" . --include="*.py"
 ```
 
 ---
 
-### Phase 5: Token Refresh Implementation
+### Phase 6: Remove Session Configuration
 
-#### 5.1 Add Token Refresh Endpoint
 **File**: `backend-python/app.py`
 
-```python
-def refresh_patreon_token(refresh_token):
-    """Refresh Patreon access token using refresh token"""
-    token_url = "https://www.patreon.com/api/oauth2/token"
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-        "client_id": os.environ.get('PATREON_CLIENT_ID'),
-        "client_secret": os.environ.get('PATREON_CLIENT_SECRET')
-    }
-    response = requests.post(token_url, data=data, timeout=10)
-    if response.ok:
-        return response.json()
-    return None
+#### 6.1 Remove Session Cookie Configuration
 
-@app.route('/api/auth/refresh', methods=['POST'])
-def refresh_token():
-    """Refresh Patreon access token if expired"""
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({'error': 'Authentication required'}), 401
-    
-    token = auth_header.split(' ')[1]
-    user_id = verify_jwt_token(token)
-    if not user_id:
-        return jsonify({'error': 'Invalid token'}), 401
-    
-    user = User.query.filter_by(patreon_id=user_id).first()
-    if not user or not user.refresh_token:
-        return jsonify({'error': 'No refresh token available'}), 400
-    
-    # Check if token is expired or expiring soon
-    if user.token_expires_at and user.token_expires_at > datetime.utcnow() + timedelta(minutes=5):
-        return jsonify({'message': 'Token still valid', 'token': token})
-    
-    # Refresh Patreon token
-    new_token_data = refresh_patreon_token(user.refresh_token)
-    if not new_token_data:
-        return jsonify({'error': 'Failed to refresh token'}), 500
-    
-    # Update user with new tokens
-    user.access_token = new_token_data.get('access_token')
-    if new_token_data.get('refresh_token'):
-        user.refresh_token = new_token_data.get('refresh_token')
-    expires_in = new_token_data.get('expires_in', 3600)
-    user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-    db.session.commit()
-    
-    # Generate new JWT
-    new_jwt = generate_jwt_token(user_id)
-    return jsonify({'token': new_jwt, 'message': 'Token refreshed'})
+Remove or comment out session configuration (around lines 38-44):
+
+```python
+# REMOVE THESE:
+# app.config['SESSION_COOKIE_HTTPONLY'] = True
+# app.config['SESSION_COOKIE_SECURE'] = True
+# app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+# app.config['SESSION_COOKIE_DOMAIN'] = '.ventures.isharehow.app'
+# app.config['SESSION_COOKIE_PATH'] = '/'
+# app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+```
+
+#### 6.2 Remove Session Imports (if not used elsewhere)
+
+Keep `session` import only if needed for other features (like flash messages):
+
+```python
+# Keep if needed: from flask import Flask, request, jsonify, redirect, session, url_for
+# Or remove session: from flask import Flask, request, jsonify, redirect, url_for
 ```
 
 ---
 
-### Phase 6: Automated Membership Verification
+### Phase 7: Update Cron Job Script
 
-#### 6.1 Create Verification Script
 **File**: `backend-python/verify_members.py`
 
+Update all field references:
+
 ```python
-"""
-Scheduled script to verify Patreon membership status for all users.
-Run twice monthly via Render Cron Job.
-"""
-import os
-import sys
-from datetime import datetime
-import requests
-from dotenv import load_dotenv
+# Around line 86:
+user.membership_paid = is_active  # Changed from membership_active
 
-# Add parent directory to path to import app
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Around line 91:
+print(f"{status} User {user.patreon_id}: membership_paid={is_active}")  # Updated
+```
 
-from app import app, db, User
+**Complete updated function**:
 
-load_dotenv()
-
+```python
 def verify_user_membership(user):
     """Verify a single user's membership status"""
     if not user.access_token:
@@ -380,8 +502,6 @@ def verify_user_membership(user):
     # Check if token is expired
     if user.token_expires_at and user.token_expires_at < datetime.utcnow():
         print(f"⚠ Token expired for {user.patreon_id}, attempting refresh...")
-        # Try to refresh token
-        from app import refresh_patreon_token
         if user.refresh_token:
             new_token_data = refresh_patreon_token(user.refresh_token)
             if new_token_data:
@@ -391,6 +511,7 @@ def verify_user_membership(user):
                 expires_in = new_token_data.get('expires_in', 3600)
                 user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
                 headers['Authorization'] = f'Bearer {user.access_token}'
+                print(f"✓ Token refreshed for {user.patreon_id}")
             else:
                 print(f"✗ Failed to refresh token for {user.patreon_id}")
                 return False
@@ -411,7 +532,7 @@ def verify_user_membership(user):
         data = response.json()
         
         # Parse membership status
-        is_active = False
+        is_paid = False
         user_data = data.get('data', {})
         relationships = user_data.get('relationships', {})
         memberships = relationships.get('memberships', {}).get('data', [])
@@ -425,16 +546,20 @@ def verify_user_membership(user):
                         member_attrs = item.get('attributes', {})
                         patron_status = member_attrs.get('patron_status')
                         if patron_status == 'active_patron':
-                            is_active = True
+                            is_paid = True
                             break
         
+        # Special handling for creator/admin
+        if user.patreon_id == '56776112':
+            is_paid = False
+        
         # Update user
-        user.membership_active = is_active
+        user.membership_paid = is_paid  # Updated field name
         user.last_checked = datetime.utcnow()
         db.session.commit()
         
-        status = "✓" if is_active else "✗"
-        print(f"{status} User {user.patreon_id}: membership_active={is_active}")
+        status = "✓" if is_paid else "✗"
+        print(f"{status} User {user.patreon_id}: membership_paid={is_paid}")  # Updated
         return True
         
     except requests.exceptions.HTTPError as e:
@@ -446,124 +571,82 @@ def verify_user_membership(user):
     except Exception as e:
         print(f"✗ Error verifying {user.patreon_id}: {e}")
         return False
-
-def main():
-    """Main verification function"""
-    with app.app_context():
-        users = User.query.all()
-        print(f"Verifying {len(users)} users...")
-        
-        success_count = 0
-        for user in users:
-            if verify_user_membership(user):
-                success_count += 1
-        
-        print(f"\n✓ Verified {success_count}/{len(users)} users successfully")
-        return 0 if success_count == len(users) else 1
-
-if __name__ == '__main__':
-    sys.exit(main())
-```
-
-#### 6.2 Configure Render Cron Job
-**File**: `render.yaml` (add new service)
-
-```yaml
-services:
-  # ... existing web service ...
-  
-  - type: cron
-    name: verify-patreon-memberships
-    runtime: python
-    rootDir: backend-python
-    plan: free
-    schedule: "0 0 1,15 * *"  # 1st and 15th of each month at midnight
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: python verify_members.py
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: PATREON_CLIENT_ID
-        sync: false
-      - key: PATREON_CLIENT_SECRET
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: FLASK_SECRET_KEY
-        sync: false
 ```
 
 ---
 
-### Phase 7: Webhook Support
+### Phase 8: Frontend Updates - Remove Patreon Verification UI
 
-#### 7.1 Add Webhook Endpoint
-**File**: `backend-python/app.py`
+#### 8.1 Update PatreonAuth Component
 
-```python
-@app.route('/api/patreon/webhook', methods=['POST'])
-def patreon_webhook():
-    """Handle Patreon webhook events for real-time membership updates"""
-    # Verify webhook signature (Patreon provides this)
-    signature = request.headers.get('X-Patreon-Signature')
-    # TODO: Implement signature verification
-    
-    event_data = request.json
-    event_type = event_data.get('data', {}).get('type')
-    
-    if event_type == 'member':
-        # Member status changed (pledge created/updated/deleted)
-        member_id = event_data.get('data', {}).get('id')
-        attributes = event_data.get('data', {}).get('attributes', {})
-        patron_status = attributes.get('patron_status')
-        
-        # Find user by member_id (you may need to store member_id separately)
-        # For now, we'll need to query Patreon API to get user_id from member_id
-        # Or store member_id in User model
-        
-        is_active = patron_status == 'active_patron'
-        
-        # Update membership status
-        # Note: You'll need to map member_id to user.patreon_id
-        # This may require an additional API call or storing member_id
-        
-        return jsonify({'message': 'Webhook processed'}), 200
-    
-    return jsonify({'message': 'Event type not handled'}), 200
-```
+**File**: `src/components/auth/PatreonAuth.tsx`
 
-**Note**: Full webhook implementation requires:
-1. Storing `member_id` in User model
-2. Webhook signature verification
-3. Registering webhook URL in Patreon dashboard
+Remove Patreon verification step logic:
 
----
-
-### Phase 8: Frontend Updates
-
-#### 8.1 Update useAuth Hook
-**File**: `src/hooks/useAuth.ts`
-
-Update to use JWT token:
 ```typescript
+// Remove Patreon verification step (lines 42-44, 56-72)
+// Remove needsPatreonVerification checks
+// Simplify flow: login/register → success (no verification step)
+
+<Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+  Access the co-working space dashboard by signing in with your Patreon account.
+  Your membership status will be verified automatically.
+</Typography>
+
+{/* Remove the "Note: You must be an active paid member" line */}
+{/* Remove any Patreon verification UI components */}
+```
+
+#### 8.2 Update PatreonVerification Component
+
+**File**: `src/components/auth/PatreonVerification.tsx`
+
+Mark as deprecated or remove entirely:
+
+```typescript
+/**
+ * @deprecated Patreon verification is now handled automatically by backend cron job.
+ * This component is kept for backward compatibility but should not be used.
+ */
+// Or remove the file entirely if not needed
+```
+
+#### 8.3 Update ProtectedRoute Component
+
+**File**: `src/components/auth/ProtectedRoute.tsx`
+
+Remove Patreon membership checks:
+
+```typescript
+// Remove Patreon membership checks (around line 127)
+// Remove any Patreon-related messaging
+// Simplify to just check authentication status
+```
+
+#### 8.4 Update useAuth Hook
+
+**File**: `src/hooks/useAuth.ts` (if exists)
+
+Remove Patreon verification logic:
+
+```typescript
+// Remove needsPatreonVerification from auth state
+// Remove Patreon verification logic
+// Update to use JWT from cookies:
+
 const checkAuth = async () => {
   try {
     const backendUrl = getBackendUrl();
-    const token = localStorage.getItem('auth_token') || getCookie('auth_token');
     
     const response = await fetch(`${backendUrl}/api/auth/me`, {
-      credentials: 'include',
-      headers: token ? {
-        'Authorization': `Bearer ${token}`
-      } : {}
+      credentials: 'include',  // Important: include cookies
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
     
     if (response.ok) {
       const userData = await response.json();
-      // Store token if returned in response
-      if (userData.token) {
-        localStorage.setItem('auth_token', userData.token);
-      }
       setAuthState({
         user: userData,
         isAuthenticated: true,
@@ -571,8 +654,6 @@ const checkAuth = async () => {
         error: null,
       });
     } else {
-      // Clear invalid token
-      localStorage.removeItem('auth_token');
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -581,29 +662,25 @@ const checkAuth = async () => {
       });
     }
   } catch (error) {
-    // ... error handling
+    setAuthState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: error.message,
+    });
   }
 };
-```
 
-#### 8.2 Update Login Flow
-**File**: `src/hooks/useAuth.ts`
-
-After redirect from Patreon, extract token:
-```typescript
+// Handle auth success redirect
 useEffect(() => {
   checkAuth();
   
-  // Check for auth success and token
+  // Check for auth success
   if (typeof window !== 'undefined') {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auth') === 'success') {
-      const token = urlParams.get('token');
-      if (token) {
-        localStorage.setItem('auth_token', token);
-        // Clean URL
-        window.history.replaceState({}, '', window.location.pathname);
-      }
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
       // Retry auth check
       setTimeout(() => checkAuth(), 500);
     }
@@ -611,141 +688,341 @@ useEffect(() => {
 }, []);
 ```
 
-#### 8.3 Update PatreonAuth Component
-**File**: `src/components/auth/PatreonAuth.tsx`
+---
 
-Remove user-facing membership check messaging since verification is backend-only:
-```typescript
-<Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-  Access the co-working space dashboard by signing in with your Patreon account.
-  Your membership status will be verified automatically.
-</Typography>
+### Phase 9: Update Helper Functions
 
-{/* Remove the "Note: You must be an active paid member" line */}
+**File**: `backend-python/app.py`
+
+#### 9.1 Remove Session-Dependent Helpers
+
+Remove or update helper functions that use sessions:
+
+```python
+# REMOVE if they use sessions:
+# def get_user_id():
+#     """Get user ID from session"""
+#     return session.get('user', {}).get('id')
+
+# def get_user_info():
+#     """Get user info from session"""
+#     return session.get('user')
+
+# REPLACE with JWT-based helpers:
+def get_current_user():
+    """Get current user from JWT token"""
+    from flask_jwt_extended import get_jwt_identity
+    user_id = get_jwt_identity()
+    if not user_id:
+        return None
+    
+    # Find user by ID
+    user = None
+    if user_id.isdigit():
+        user = User.query.get(int(user_id))
+    if not user:
+        user = User.query.filter_by(username=user_id).first()
+    if not user:
+        user = User.query.filter_by(patreon_id=user_id).first()
+    return user
+```
+
+#### 9.2 Update Protected Route Decorators
+
+Replace all `@require_session` with `@jwt_required()`:
+
+```python
+# OLD:
+# @app.route('/api/some-protected-route')
+# @require_session
+# def protected_route():
+#     user_id = get_user_id()
+#     ...
+
+# NEW:
+@app.route('/api/some-protected-route')
+@jwt_required()
+def protected_route():
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    ...
 ```
 
 ---
 
-### Phase 9: Migration & Testing
+### Phase 10: Testing & Validation
 
-#### 9.1 Data Migration Script
-**File**: `backend-python/migrate_sessions_to_db.py`
+#### 10.1 Testing Checklist
+
+- [ ] **Dependencies**: Verify flask-jwt-extended is installed
+- [ ] **Database Migration**: Verify `membership_paid` field exists in database
+- [ ] **Registration Flow**: Test user registration with JWT in cookies
+- [ ] **Login Flow**: Test user login with JWT in cookies
+- [ ] **Patreon OAuth**: Test Patreon login flow with JWT in cookies
+- [ ] **Auth Endpoint**: Test `/api/auth/me` with JWT authentication
+- [ ] **Protected Routes**: Test protected routes require valid JWT
+- [ ] **Logout**: Test logout clears JWT cookie
+- [ ] **Field References**: Verify all `membership_paid` references work
+- [ ] **Cron Job**: Verify cron job updates `membership_paid` field correctly
+- [ ] **No Sessions**: Verify no session errors occur
+- [ ] **Frontend**: Verify frontend works with cookie-based JWT
+- [ ] **Backward Compatibility**: Verify existing users can still access after migration
+
+#### 10.2 Test Scripts
+
+Create test script `backend-python/test_auth.py`:
 
 ```python
 """
-One-time script to migrate existing session users to database.
-Run this after deploying the new User model.
+Test script for authentication endpoints
 """
-from app import app, db, User, UserProfile
-from datetime import datetime
+import requests
+import json
 
-def migrate_sessions():
-    """Migrate users from UserProfile to User table"""
-    with app.app_context():
-        profiles = UserProfile.query.all()
-        
-        for profile in profiles:
-            # Check if User already exists
-            user = User.query.filter_by(patreon_id=profile.id).first()
-            if not user:
-                # Create User from UserProfile
-                user = User(
-                    patreon_id=profile.id,
-                    email=profile.email,
-                    membership_active=profile.is_paid_member or False,
-                    last_checked=datetime.utcnow() if profile.is_paid_member else None
-                )
-                db.session.add(user)
-                print(f"Migrated user: {profile.id}")
-            else:
-                print(f"User already exists: {profile.id}")
-        
-        db.session.commit()
-        print("Migration complete!")
+BASE_URL = "http://localhost:5000"  # Adjust for your environment
+
+def test_register():
+    """Test user registration"""
+    response = requests.post(
+        f"{BASE_URL}/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpass123"
+        }
+    )
+    print(f"Register: {response.status_code} - {response.json()}")
+    return response.cookies.get('access_token_cookie')
+
+def test_login():
+    """Test user login"""
+    response = requests.post(
+        f"{BASE_URL}/api/auth/login",
+        json={
+            "username": "testuser",
+            "password": "testpass123"
+        }
+    )
+    print(f"Login: {response.status_code} - {response.json()}")
+    return response.cookies.get('access_token_cookie')
+
+def test_me(cookies):
+    """Test /api/auth/me endpoint"""
+    response = requests.get(
+        f"{BASE_URL}/api/auth/me",
+        cookies=cookies
+    )
+    print(f"Me: {response.status_code} - {response.json()}")
+
+def test_logout(cookies):
+    """Test logout"""
+    response = requests.post(
+        f"{BASE_URL}/api/auth/logout",
+        cookies=cookies
+    )
+    print(f"Logout: {response.status_code} - {response.json()}")
 
 if __name__ == '__main__':
-    migrate_sessions()
+    # Test flow
+    cookies = test_register()
+    if cookies:
+        test_me(cookies)
+        test_logout(cookies)
 ```
-
-#### 9.2 Testing Checklist
-
-- [ ] User can log in via Patreon OAuth
-- [ ] JWT token is generated and stored
-- [ ] `/api/auth/me` returns user data from database
-- [ ] Protected routes require valid JWT
-- [ ] Token refresh works when expired
-- [ ] Cron job verifies memberships successfully
-- [ ] Webhook updates membership status (if implemented)
-- [ ] Frontend displays user data correctly
-- [ ] Logout clears token
-- [ ] Existing users can still access after migration
 
 ---
 
 ## Environment Variables
 
-Add to Render dashboard:
+Add to Render dashboard (or `.env` file for local development):
 
 ```
 JWT_SECRET=<generate_secure_random_string>
+FLASK_SECRET_KEY=<generate_secure_random_string>
+DATABASE_URL=<your_postgresql_url>
+PATREON_CLIENT_ID=<your_patreon_client_id>
+PATREON_CLIENT_SECRET=<your_patreon_client_secret>
 ```
 
-Generate with:
+**Generate JWT_SECRET**:
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+**Note**: Use the same value for both `JWT_SECRET` and `FLASK_SECRET_KEY` if you want, or generate separate values for better security.
 
 ---
 
 ## Rollback Plan
 
-If issues occur:
+If issues occur during migration:
 
-1. **Temporary Rollback**: Keep session-based auth as fallback
-   - Check for JWT token first, fall back to session if not present
-   - Allows gradual migration
+### 1. Temporary Rollback (Keep Both Systems)
 
-2. **Full Rollback**: Revert to session-based auth
-   - Remove JWT decorators, restore `require_session`
-   - Keep User model for future use but don't use for auth
+Keep session-based auth as fallback temporarily:
 
-3. **Database Rollback**: 
+```python
+# In /api/auth/me, keep session fallback temporarily:
+@app.route('/api/auth/me', methods=['GET'])
+def auth_me():
+    # Try JWT first
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        user_id = verify_jwt_token(token)  # Keep old function temporarily
+        if user_id:
+            # ... JWT logic ...
+    
+    # Fallback to session
+    user = session.get('user')
+    if user:
+        return jsonify(user)
+    
+    return jsonify({'error': 'Not authenticated'}), 401
+```
+
+### 2. Full Rollback
+
+Revert to session-based auth:
+
+1. **Code Changes**:
+   - Restore `require_session` decorator
+   - Restore session configuration
+   - Remove `@jwt_required()` decorators
+   - Restore `generate_jwt_token()` and `verify_jwt_token()` functions
+
+2. **Database Rollback**:
    ```bash
    flask db downgrade -1  # Revert last migration
    ```
+
+3. **Dependencies**:
+   - Keep flask-jwt-extended installed but don't use it
+   - Or remove it: `pip uninstall flask-jwt-extended`
+
+### 3. Field Name Rollback
+
+If `membership_paid` causes issues:
+
+```bash
+flask db migrate -m "Revert membership_paid to membership_active"
+# Edit migration file to rename back
+flask db upgrade
+```
 
 ---
 
 ## Timeline Estimate
 
-- **Phase 1-2**: Database & JWT setup (2-3 hours)
-- **Phase 3-4**: OAuth & endpoint updates (2-3 hours)
-- **Phase 5**: Token refresh (1 hour)
-- **Phase 6**: Cron job setup (2-3 hours)
-- **Phase 7**: Webhook (optional, 2-3 hours)
-- **Phase 8**: Frontend updates (1-2 hours)
-- **Phase 9**: Testing & migration (2-3 hours)
+- **Phase 1**: Update Dependencies (15 minutes)
+- **Phase 2**: Database Model Updates (30 minutes)
+- **Phase 3**: Replace PyJWT with flask-jwt-extended (1-2 hours)
+- **Phase 4**: Refactor Authentication Endpoints (2-3 hours)
+- **Phase 5**: Update All Field References (1 hour)
+- **Phase 6**: Remove Session Configuration (30 minutes)
+- **Phase 7**: Update Cron Job Script (30 minutes)
+- **Phase 8**: Frontend Updates (1-2 hours)
+- **Phase 9**: Update Helper Functions (1 hour)
+- **Phase 10**: Testing & Validation (2-3 hours)
 
-**Total**: ~12-18 hours
+**Total**: ~10-15 hours
+
+---
+
+## Key Changes Summary
+
+1. **Dependencies**: Add `flask-jwt-extended==4.5.0`, keep `PyJWT` temporarily
+2. **Model**: `membership_active` → `membership_paid` (with migration)
+3. **Authentication**: Pure JWT via flask-jwt-extended, no sessions
+4. **Frontend**: Remove Patreon verification UI components
+5. **Cron**: Update field references in `verify_members.py`
+6. **Endpoints**: All auth endpoints use `@jwt_required()` decorator
+7. **Cookies**: JWT stored in httpOnly cookies for security
+
+---
+
+## Files to Modify
+
+### Backend
+
+- `backend-python/requirements.txt`
+- `backend-python/app.py` (major refactor)
+- `backend-python/verify_members.py`
+- `backend-python/migrate_sessions_to_db.py`
+- New migration file (auto-generated)
+
+### Frontend
+
+- `src/components/auth/PatreonAuth.tsx`
+- `src/components/auth/PatreonVerification.tsx` (deprecate/remove)
+- `src/components/auth/ProtectedRoute.tsx`
+- `src/hooks/useAuth.ts` (if exists)
+
+---
+
+## Post-Migration Tasks
+
+1. **Monitor Logs**:
+   - Monitor cron job logs for verification success/failures
+   - Check for JWT-related errors
+   - Monitor token expiration patterns
+
+2. **Set Up Alerts**:
+   - Alert on failed token refreshes
+   - Alert on authentication failures
+   - Alert on cron job failures
+
+3. **Documentation**:
+   - Document new authentication flow for team
+   - Update API documentation
+   - Update deployment guide
+
+4. **Cleanup**:
+   - Remove `PyJWT` from requirements.txt after migration complete
+   - Remove deprecated `PatreonVerification` component
+   - Remove old session-based code comments
+
+5. **Enhancements** (Optional):
+   - Add admin dashboard for viewing user membership status
+   - Add refresh token rotation
+   - Add CSRF protection for JWT cookies
+   - Add rate limiting on auth endpoints
 
 ---
 
 ## Notes
 
 - User model is separate from UserProfile to maintain separation of concerns
-- JWT tokens can be stored in localStorage or httpOnly cookies (cookies are more secure)
+- JWT tokens stored in httpOnly cookies are more secure than localStorage
 - Cron job runs on Render's free tier (may have limitations)
-- Webhook implementation is optional but recommended for real-time updates
 - Consider rate limiting on verification endpoints
 - Monitor token expiration and refresh patterns
+- All field references must be updated consistently across codebase
+- Test thoroughly in staging environment before production deployment
 
 ---
 
-## Post-Migration Tasks
+## Troubleshooting
 
-1. Monitor cron job logs for verification success/failures
-2. Set up alerts for failed token refreshes
-3. Document new authentication flow for team
-4. Update API documentation
-5. Consider adding admin dashboard for viewing user membership status
+### Issue: JWT cookie not being set
 
+- **Solution**: Check CORS configuration, ensure `supports_credentials=True`
+- **Solution**: Verify cookie domain matches your frontend domain
+
+### Issue: Token not found in requests
+
+- **Solution**: Ensure frontend sends requests with `credentials: 'include'`
+- **Solution**: Check JWT_TOKEN_LOCATION configuration
+
+### Issue: Migration fails
+
+- **Solution**: Backup database before migration
+- **Solution**: Test migration on staging first
+- **Solution**: Review generated migration file before applying
+
+### Issue: Cron job fails
+
+- **Solution**: Check environment variables are set in Render
+- **Solution**: Verify database connection in cron job
+- **Solution**: Check cron job logs for specific errors

@@ -83,12 +83,12 @@ def verify_user_membership(user):
             is_active = False
         
         # Update user
-        user.membership_active = is_active
+        user.membership_paid = is_active  # Updated field name
         user.last_checked = datetime.utcnow()
         db.session.commit()
         
         status = "✓" if is_active else "✗"
-        print(f"{status} User {user.patreon_id}: membership_active={is_active}")
+        print(f"{status} User {user.patreon_id}: membership_paid={is_active}")  # Updated field name
         return True
         
     except requests.exceptions.HTTPError as e:
