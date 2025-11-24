@@ -68,12 +68,17 @@ try:
     db = SQLAlchemy(app)
     DB_AVAILABLE = True
     migrate = Migrate(app, db)
+    print(f"✓ SQLAlchemy initialized")
+    print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
 except Exception as e:
-    print(f"Warning: Database initialization failed: {e}")
+    print(f"✗ Warning: Database initialization failed: {e}")
     print("Database features will be disabled. This may be due to:")
     print("1. Missing psycopg2 package or Python 3.13 compatibility issue")
     print("2. Invalid DATABASE_URL")
     print("3. Database server not accessible")
+    print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
+    if os.environ.get('DATABASE_URL'):
+        print(f"  DATABASE_URL value: {os.environ.get('DATABASE_URL')[:50]}...")
     # Create a dummy db object to prevent crashes
     db = None
     DB_AVAILABLE = False
@@ -311,14 +316,26 @@ else:
 if DB_AVAILABLE:
     with app.app_context():
         try:
+            # Test database connection
+            db.engine.connect()
+            print("✓ Database connection successful")
             db.create_all()
-            print("Database tables created successfully")
+            print("✓ Database tables created/verified successfully")
         except Exception as e:
-            print(f"Database connection failed: {e}")
-            print("Tables will be created when database is available")
+            print(f"✗ Database connection failed: {e}")
+            print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
+            print("  Tables will be created when database is available")
             DB_AVAILABLE = False
 else:
-    print("Database not available - skipping table creation")
+    print("✗ Database not available - skipping table creation")
+    print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
+    if os.environ.get('DATABASE_URL'):
+        print("  Warning: DATABASE_URL is set but database initialization failed")
+        print("  This may be due to:")
+        print("  1. Invalid connection string format")
+        print("  2. Database server not accessible")
+        print("  3. Missing psycopg2-binary package")
+        print("  4. Network/firewall issues")
 
 # Shopify configuration
 SHOPIFY_STORE_URL = os.environ.get('SHOPIFY_STORE_URL')
@@ -1169,7 +1186,41 @@ def handle_general_exception(e):
 def register():
     """Register a new user with username and password"""
     if not DB_AVAILABLE:
-        return jsonify({'error': 'Database not available'}), 500
+        # Try to reinitialize database connection if db object exists
+        if db is not None:
+            try:
+                db_uri = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
+                print(f"Attempting to reconnect to database: {db_uri[:50]}...")
+                with app.app_context():
+                    db.engine.connect()
+                    global DB_AVAILABLE
+                    DB_AVAILABLE = True
+                    print("✓ Database reconnection successful")
+            except Exception as reconnect_error:
+                error_msg = 'Database not available. Please check your DATABASE_URL environment variable and ensure the database is accessible.'
+                print(f"Registration failed: {error_msg}")
+                print(f"  DATABASE_URL is set: {bool(os.environ.get('DATABASE_URL'))}")
+                print(f"  Reconnection error: {reconnect_error}")
+                return jsonify({
+                    'error': 'Database not available',
+                    'message': error_msg,
+                    'details': str(reconnect_error) if reconnect_error else 'Check server logs for database connection errors'
+                }), 500
+        else:
+            error_msg = 'Database not available. DATABASE_URL environment variable may not be set or database connection failed during initialization.'
+            print(f"Registration failed: {error_msg}")
+            print(f"  DATABASE_URL is set: {bool(os.environ.get('DATABASE_URL'))}")
+            return jsonify({
+                'error': 'Database not available',
+                'message': error_msg,
+                'details': 'Please ensure DATABASE_URL is set in your environment variables (Render dashboard)'
+            }), 500
+    
+    if not DB_AVAILABLE:
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database connection failed. Please contact support.'
+        }), 500
     
     data = request.json
     username = data.get('username', '').strip()
@@ -1223,7 +1274,18 @@ def register():
 def login():
     """Login with username/email and password"""
     if not DB_AVAILABLE:
-        return jsonify({'error': 'Database not available'}), 500
+        # Try to reinitialize database connection
+        try:
+            with app.app_context():
+                db.engine.connect()
+                global DB_AVAILABLE
+                DB_AVAILABLE = True
+                print("✓ Database reconnection successful")
+        except Exception as reconnect_error:
+            return jsonify({
+                'error': 'Database not available',
+                'message': 'Database connection failed. Please check your DATABASE_URL environment variable.'
+            }), 500
     
     data = request.json
     username_or_email = data.get('username', '').strip()
