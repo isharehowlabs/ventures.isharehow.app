@@ -11,6 +11,7 @@ import json
 from dotenv import load_dotenv
 import requests
 import jwt
+import bcrypt
 
 # Load environment variables
 load_dotenv()
@@ -147,22 +148,37 @@ if DB_AVAILABLE:
         __tablename__ = 'users'
         
         id = db.Column(db.Integer, primary_key=True)
-        patreon_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
-        email = db.Column(db.String(120), unique=True, nullable=True)
+        username = db.Column(db.String(80), unique=True, nullable=True, index=True)
+        email = db.Column(db.String(120), unique=True, nullable=True, index=True)
+        password_hash = db.Column(db.String(255), nullable=True)
+        patreon_id = db.Column(db.String(50), unique=True, nullable=True, index=True)
         access_token = db.Column(db.String(500), nullable=True)  # Increased length for tokens
         refresh_token = db.Column(db.String(500), nullable=True)
         membership_active = db.Column(db.Boolean, default=False, nullable=False)
         last_checked = db.Column(db.DateTime, nullable=True)
         token_expires_at = db.Column(db.DateTime, nullable=True)
+        patreon_connected = db.Column(db.Boolean, default=False, nullable=False)
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
         
+        def set_password(self, password):
+            """Hash and set password"""
+            self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        def check_password(self, password):
+            """Check if provided password matches hash"""
+            if not self.password_hash:
+                return False
+            return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+        
         def to_dict(self):
             return {
-                'id': self.patreon_id,  # Use patreon_id as external ID
+                'id': self.patreon_id or self.username or str(self.id),  # Use patreon_id, username, or id
                 'patreonId': self.patreon_id,
+                'username': self.username,
                 'email': self.email,
                 'membershipActive': self.membership_active,
+                'patreonConnected': self.patreon_connected,
                 'lastChecked': self.last_checked.isoformat() if self.last_checked else None
             }
 
@@ -1149,6 +1165,227 @@ def handle_general_exception(e):
     }), 500
 
 # --- Auth Endpoints (JWT-based) ---
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new user with username and password"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    data = request.json
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+    
+    # Validation
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+    if not password or len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    if email and '@' not in email:
+        return jsonify({'error': 'Invalid email address'}), 400
+    
+    try:
+        # Check if username already exists
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already exists'}), 400
+        
+        # Check if email already exists
+        if email and User.query.filter_by(email=email).first():
+            return jsonify({'error': 'Email already exists'}), 400
+        
+        # Create new user
+        user = User(
+            username=username,
+            email=email or None,
+            patreon_connected=False
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        
+        # Generate JWT token
+        jwt_token = generate_jwt_token(user.username or str(user.id))
+        
+        return jsonify({
+            'success': True,
+            'message': 'User registered successfully',
+            'token': jwt_token,
+            'user': user.to_dict()
+        }), 201
+        
+    except Exception as e:
+        print(f"Error in registration: {e}")
+        app.logger.error(f"Error in registration: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Registration failed'}), 500
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login with username/email and password"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    data = request.json
+    username_or_email = data.get('username', '').strip()
+    password = data.get('password', '')
+    
+    if not username_or_email or not password:
+        return jsonify({'error': 'Username/email and password are required'}), 400
+    
+    try:
+        # Find user by username or email
+        user = User.query.filter(
+            (User.username == username_or_email) | (User.email == username_or_email)
+        ).first()
+        
+        if not user or not user.check_password(password):
+            return jsonify({'error': 'Invalid username/email or password'}), 401
+        
+        # Generate JWT token
+        jwt_token = generate_jwt_token(user.username or str(user.id))
+        
+        user_data = user.to_dict()
+        user_data['needsPatreonVerification'] = not user.patreon_connected
+        
+        return jsonify({
+            'success': True,
+            'message': 'Login successful',
+            'token': jwt_token,
+            'user': user_data
+        })
+        
+    except Exception as e:
+        print(f"Error in login: {e}")
+        app.logger.error(f"Error in login: {e}")
+        return jsonify({'error': 'Login failed'}), 500
+
+@app.route('/api/auth/verify-patreon', methods=['POST'])
+def verify_patreon():
+    """Verify Patreon membership status using stored token"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    # Get user from JWT token
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Authentication required'}), 401
+    
+    token = auth_header.split(' ')[1]
+    user_identifier = verify_jwt_token(token)
+    if not user_identifier:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+    
+    try:
+        # Find user by username or ID
+        user = User.query.filter(
+            (User.username == user_identifier) | (User.id == int(user_identifier) if user_identifier.isdigit() else None)
+        ).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if not user.patreon_connected or not user.access_token:
+            return jsonify({
+                'error': 'Patreon not connected',
+                'message': 'Please connect your Patreon account first',
+                'needsConnection': True
+            }), 400
+        
+        # Check if token is expired
+        if user.token_expires_at and user.token_expires_at < datetime.utcnow():
+            # Try to refresh token
+            if user.refresh_token:
+                new_token_data = refresh_patreon_token(user.refresh_token)
+                if new_token_data:
+                    user.access_token = new_token_data.get('access_token')
+                    if new_token_data.get('refresh_token'):
+                        user.refresh_token = new_token_data.get('refresh_token')
+                    expires_in = new_token_data.get('expires_in', 3600)
+                    user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+                    db.session.commit()
+                else:
+                    return jsonify({
+                        'error': 'Patreon token expired',
+                        'message': 'Please reconnect your Patreon account',
+                        'needsConnection': True
+                    }), 401
+            else:
+                return jsonify({
+                    'error': 'Patreon token expired',
+                    'message': 'Please reconnect your Patreon account',
+                    'needsConnection': True
+                }), 401
+        
+        # Verify membership status with Patreon API
+        headers = {
+            "Authorization": f"Bearer {user.access_token}",
+            "User-Agent": "VenturesApp/1.0 (+https://ventures.isharehow.app)"
+        }
+        
+        identity_url = (
+            "https://www.patreon.com/api/oauth2/v2/identity"
+            "?fields[user]=id,email,full_name,image_url"
+            "&include=memberships"
+            "&fields[member]=patron_status,currently_entitled_amount_cents,last_charge_date,pledge_start"
+        )
+        
+        user_res = requests.get(identity_url, headers=headers, timeout=10)
+        
+        if not user_res.ok:
+            if user_res.status_code == 401:
+                return jsonify({
+                    'error': 'Patreon token invalid',
+                    'message': 'Please reconnect your Patreon account',
+                    'needsConnection': True
+                }), 401
+            return jsonify({'error': f'Patreon API error: {user_res.status_code}'}), 500
+        
+        user_data = user_res.json()
+        data_obj = user_data.get('data', {})
+        relationships = data_obj.get('relationships', {})
+        
+        # Check membership status
+        is_paid_member = False
+        memberships = relationships.get('memberships', {}).get('data', [])
+        
+        if memberships:
+            included = user_data.get('included', [])
+            for membership in memberships:
+                membership_id = membership.get('id')
+                for item in included:
+                    if item.get('id') == membership_id and item.get('type') == 'member':
+                        member_attrs = item.get('attributes', {})
+                        patron_status = member_attrs.get('patron_status')
+                        if patron_status == 'active_patron':
+                            is_paid_member = True
+                            break
+        
+        # Special handling for creator/admin
+        patreon_user_id = data_obj.get('id', '')
+        if patreon_user_id == '56776112':
+            is_paid_member = False
+        
+        # Update user membership status
+        user.membership_active = is_paid_member
+        user.last_checked = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Patreon status verified',
+            'membershipActive': is_paid_member,
+            'user': user.to_dict()
+        })
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error verifying Patreon: {e}")
+        return jsonify({'error': f'Failed to verify with Patreon: {str(e)}'}), 500
+    except Exception as e:
+        print(f"Error in verify_patreon: {e}")
+        app.logger.error(f"Error in verify_patreon: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route('/api/auth/me', methods=['GET'])
 def auth_me():
     # Get token from Authorization header or cookie
@@ -1187,7 +1424,11 @@ def auth_me():
         return jsonify({'error': 'Database not available'}), 500
     
     try:
-        user = User.query.filter_by(patreon_id=user_id).first()
+        # Find user by username or patreon_id (user_id from JWT could be either)
+        user = User.query.filter(
+            (User.username == user_id) | (User.patreon_id == user_id) | (User.id == int(user_id) if user_id.isdigit() else None)
+        ).first()
+        
         if not user:
             # Fallback to session if user not in database
             user_session = session.get('user')
@@ -1196,10 +1437,11 @@ def auth_me():
                 return jsonify(user_session)
             return jsonify({'error': 'User not found'}), 404
         
-        # Also sync with UserProfile if it exists
+        # Also sync with UserProfile if it exists (use patreon_id or username as ID)
         profile_data = {}
         try:
-            profile = UserProfile.query.get(user_id)
+            profile_id = user.patreon_id or user.username or str(user.id)
+            profile = UserProfile.query.get(profile_id)
             if profile:
                 profile_data = profile.to_dict()
         except Exception as e:
@@ -1208,11 +1450,12 @@ def auth_me():
         # Return combined user data
         user_data = user.to_dict()
         user_data.update({
-            'name': profile_data.get('name', ''),
+            'name': profile_data.get('name', user.username or user.email or 'User'),
             'avatarUrl': profile_data.get('avatarUrl', ''),
             'membershipTier': profile_data.get('membershipTier'),
             'isPaidMember': user.membership_active,  # Use database value
-            'isTeamMember': profile_data.get('isTeamMember', False)
+            'isTeamMember': profile_data.get('isTeamMember', False),
+            'needsPatreonVerification': not user.patreon_connected
         })
         
         print(f"✓ User authenticated via JWT: {user_id}")
@@ -2776,32 +3019,59 @@ def patreon_callback():
             print(f"✓ Creator {user_id} - overriding paid membership status to False")
         
         # Store/update user in database (User model for authentication)
+        # Check if there's a logged-in user to link Patreon account to
+        linked_user = None
         if DB_AVAILABLE:
             try:
+                # Check if user is already logged in (via state parameter or session)
+                # For now, we'll check if a user with this email exists and link to them
+                # Or create a new user if none exists
                 user = User.query.filter_by(patreon_id=user_id).first()
+                
                 if not user:
-                    user = User(
-                        patreon_id=user_id,
-                        email=user_email,
-                        access_token=access_token,
-                        refresh_token=refresh_token,
-                        membership_active=is_paid_member,
-                        last_checked=datetime.utcnow(),
-                        token_expires_at=token_expires_at
-                    )
-                    db.session.add(user)
-                    print(f"✓ Created new user in database: {user_id}")
+                    # Check if user with same email exists (to link accounts)
+                    if user_email:
+                        user = User.query.filter_by(email=user_email).first()
+                    
+                    if not user:
+                        # Create new user account
+                        user = User(
+                            patreon_id=user_id,
+                            email=user_email,
+                            access_token=access_token,
+                            refresh_token=refresh_token,
+                            membership_active=is_paid_member,
+                            last_checked=datetime.utcnow(),
+                            token_expires_at=token_expires_at,
+                            patreon_connected=True
+                        )
+                        db.session.add(user)
+                        print(f"✓ Created new user in database: {user_id}")
+                    else:
+                        # Link Patreon to existing user account
+                        user.patreon_id = user_id
+                        user.access_token = access_token
+                        if refresh_token:
+                            user.refresh_token = refresh_token
+                        user.membership_active = is_paid_member
+                        user.last_checked = datetime.utcnow()
+                        user.token_expires_at = token_expires_at
+                        user.patreon_connected = True
+                        print(f"✓ Linked Patreon account to existing user: {user.username or user.email}")
                 else:
-                    user.email = user_email
+                    # Update existing Patreon-linked user
+                    user.email = user_email or user.email
                     user.access_token = access_token
                     if refresh_token:
                         user.refresh_token = refresh_token
                     user.membership_active = is_paid_member
                     user.last_checked = datetime.utcnow()
                     user.token_expires_at = token_expires_at
+                    user.patreon_connected = True
                     print(f"✓ Updated existing user in database: {user_id}")
                 
                 db.session.commit()
+                linked_user = user
             except Exception as db_error:
                 print(f"Warning: Failed to store user in database: {db_error}")
                 db.session.rollback()
@@ -2825,8 +3095,12 @@ def patreon_callback():
         session['user'] = user_session_data
         app.logger.info(f"Session data after login: {session}")
         
-        # Generate JWT token
-        jwt_token = generate_jwt_token(user_id)
+        # Generate JWT token for the linked user
+        if linked_user:
+            user_identifier = linked_user.username or str(linked_user.id)
+            jwt_token = generate_jwt_token(user_identifier)
+        else:
+            jwt_token = generate_jwt_token(user_id)
         
         # Sync user profile to database (UserProfile for wellness features)
         if DB_AVAILABLE:
@@ -2872,9 +3146,8 @@ def patreon_callback():
         print(f"Session user stored: {session.get('user', 'NOT FOUND')}")
         
         # Redirect to labs page with auth success and JWT token
-        # Use external redirect to ensure browser follows to frontend domain
-        # Token is passed in URL for frontend to extract and store
-        redirect_url = f'{get_frontend_url()}/labs/?auth=success&token={jwt_token}'
+        # If user was linked, indicate Patreon connection success
+        redirect_url = f'{get_frontend_url()}/labs/?auth=success&token={jwt_token}&patreon_connected=true'
         response = redirect(redirect_url, code=302)
         
         # Also set JWT as httpOnly cookie for more secure access
