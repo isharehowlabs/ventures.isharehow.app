@@ -84,7 +84,8 @@ export default function FloatingAIChat() {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
-          const errorMsg = errorData.error || errorData.message || `Server error: ${response.status}`;
+          // Use the 'text' field from error response if available (more user-friendly)
+          const errorMsg = errorData.text || errorData.error || errorData.message || `Server error: ${response.status}`;
           const errorDetails = errorData.details ? ` (${errorData.details})` : '';
           throw new Error(`${errorMsg}${errorDetails}`);
         } else {
@@ -104,9 +105,19 @@ export default function FloatingAIChat() {
 
     } catch (err: any) {
       const errorMessage = err?.message || 'An unexpected error occurred';
-      console.error('Error sending message:', err);
+      // Only log unexpected errors to console (not configuration errors)
+      const isConfigError = errorMessage.toLowerCase().includes('not configured') || 
+                           errorMessage.toLowerCase().includes('api key') ||
+                           errorMessage.toLowerCase().includes('configuration');
+      if (!isConfigError) {
+        console.error('Error sending message:', err);
+      }
       setError(errorMessage);
-      setMessages((prevMessages) => [...prevMessages, { role: 'model', text: `Sorry, I encountered an error: ${errorMessage}` }]);
+      // Show user-friendly error message in chat
+      const userFriendlyMessage = isConfigError 
+        ? 'The AI chat feature is not yet configured. Please contact an administrator to set up the Gemini API key.'
+        : `Sorry, I encountered an error: ${errorMessage}`;
+      setMessages((prevMessages) => [...prevMessages, { role: 'model', text: userFriendlyMessage }]);
     } finally {
       setIsLoading(false);
     }
