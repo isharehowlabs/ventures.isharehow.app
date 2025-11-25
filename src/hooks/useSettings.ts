@@ -16,6 +16,7 @@ export interface PanelSettings {
   learning: { visible: boolean; order: number };
   aiJournal: { visible: boolean; order: number };
   web3: { visible: boolean; order: number };
+  focus: { visible: boolean; order: number };
 }
 
 export interface UserSettings {
@@ -39,6 +40,7 @@ const DEFAULT_PANEL_SETTINGS: PanelSettings = {
   learning: { visible: true, order: 3 },
   aiJournal: { visible: true, order: 4 },
   web3: { visible: true, order: 5 },
+  focus: { visible: true, order: 6 },
 };
 
 const STORAGE_KEY = 'user_dashboard_settings';

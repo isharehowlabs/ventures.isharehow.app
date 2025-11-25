@@ -6,6 +6,8 @@ import DocsPanel from './DocsPanel';
 import LearningPanel from './LearningPanel';
 import OpportunityPanel from './OpportunityPanel';
 import Web3Panel from './Web3Panel';
+import FocusPanel from './FocusPanel';
+import AIJournalPanel from './AIJournalPanel';
 import { useSettings } from '../../hooks/useSettings';
 
 interface TabPanelProps {
@@ -55,6 +57,8 @@ export default function DashboardLayout({ children, taskList, liveUpdates, commu
     learning: { component: <LearningPanel />, label: 'Learning Hub' },
     communityQA: { component: communityQA, label: 'Community Q&A' },
     web3: { component: <Web3Panel />, label: 'Web3' },
+    focus: { component: <FocusPanel />, label: 'Focus Timer' },
+    aiJournal: { component: <AIJournalPanel />, label: 'Mindset Journal' },
   };
 
   // Filter tabs to only show visible panels
