@@ -186,7 +186,7 @@ if DB_AVAILABLE:
         title = db.Column(db.String(255), nullable=False)
         message = db.Column(db.Text, nullable=False)
         read = db.Column(db.Boolean, default=False, nullable=False, index=True)
-        metadata = db.Column(db.Text, nullable=True)  # JSON stored as text
+        notification_metadata = db.Column(db.Text, nullable=True)  # JSON stored as text (renamed from metadata to avoid SQLAlchemy conflict)
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
         
@@ -195,9 +195,9 @@ if DB_AVAILABLE:
         
         def to_dict(self):
             metadata_dict = {}
-            if self.metadata:
+            if self.notification_metadata:
                 try:
-                    metadata_dict = json.loads(self.metadata)
+                    metadata_dict = json.loads(self.notification_metadata)
                 except:
                     pass
             return {
@@ -800,9 +800,9 @@ def send_push_notification(user_id: int, notification: Notification):
         
         # Parse metadata
         metadata_dict = {}
-        if notification.metadata:
+        if notification.notification_metadata:
             try:
-                metadata_dict = json.loads(notification.metadata)
+                metadata_dict = json.loads(notification.notification_metadata)
             except:
                 pass
         
@@ -2277,7 +2277,7 @@ def create_notification():
             title=data['title'],
             message=data['message'],
             read=False,
-            metadata=json.dumps(data.get('metadata', {})) if data.get('metadata') else None
+            notification_metadata=json.dumps(data.get('metadata', {})) if data.get('metadata') else None
         )
         db.session.add(notification)
         db.session.commit()
