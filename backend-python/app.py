@@ -39,7 +39,11 @@ if app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
 # Session-based auth removed to eliminate conflicts and errors
 
 # Database configuration - make it optional to handle import errors
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
+# Convert postgresql:// to postgresql+psycopg:// for psycopg3 support
+database_url = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
+if database_url.startswith('postgresql://'):
+    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Use engine options compatible with the chosen driver
@@ -1272,9 +1276,20 @@ def register():
         
     except Exception as e:
         print(f"Error in registration: {e}")
+        import traceback
+        traceback.print_exc()
         app.logger.error(f"Error in registration: {e}")
-        db.session.rollback()
-        return jsonify({'error': 'Registration failed'}), 500
+        app.logger.error(traceback.format_exc())
+        if db and hasattr(db, 'session'):
+            try:
+                db.session.rollback()
+            except:
+                pass
+        return jsonify({
+            'error': 'Registration failed',
+            'message': str(e),
+            'details': 'Check server logs for more information'
+        }), 500
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -1464,15 +1479,19 @@ def verify_patreon():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/auth/me', methods=['GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def auth_me():
     """Get current user information from JWT token"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
     try:
-        # Get user ID from JWT
+        # Get user ID from JWT (optional - returns None if no token)
         user_id = get_jwt_identity()
+        
+        if not user_id:
+            # No JWT token - user is not authenticated
+            return jsonify({'error': 'Not authenticated', 'message': 'No valid token found'}), 401
         
         # Find user by ID (could be integer ID, username, or patreon_id)
         user = None
