@@ -6,6 +6,7 @@ interface User {
   name: string;
   email?: string;
   avatar?: string;
+  avatarUrl?: string;
   patreonId?: string;
   isPaidMember?: boolean;
   membershipTier?: string;
@@ -14,6 +15,11 @@ interface User {
   membershipPaymentDate?: string;
   membershipRenewalDate?: string;
   isTeamMember?: boolean;
+  createdAt?: string;
+  patreonConnected?: boolean;
+  lastChecked?: string;
+  lastChargeDate?: string;
+  pledgeStart?: string;
 }
 
 interface AuthState {

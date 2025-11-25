@@ -184,8 +184,21 @@ function ProfilePage() {
     );
   }
 
-  // Use profileData if available, otherwise fall back to authUser
-  const user = profileData || authUser;
+  // Merge profileData and authUser to ensure all fields are available
+  const user: any = {
+    ...authUser,
+    ...profileData,
+    // Ensure these critical fields are always available
+    id: profileData?.id || authUser?.id,
+    patreonId: profileData?.patreonId || authUser?.patreonId,
+    createdAt: profileData?.createdAt || authUser?.createdAt,
+    email: profileData?.email || authUser?.email,
+    name: profileData?.name || authUser?.name,
+    avatar: profileData?.avatar || profileData?.avatarUrl || authUser?.avatar,
+    isPaidMember: profileData?.isPaidMember ?? authUser?.isPaidMember,
+    patreonConnected: profileData?.patreonConnected ?? authUser?.patreonConnected,
+    isTeamMember: profileData?.isTeamMember ?? authUser?.isTeamMember,
+  };
 
   return (
     <AppShell active="about">
@@ -285,29 +298,27 @@ function ProfilePage() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       User ID
                     </Typography>
-                    <Typography variant="body1">{user.id}</Typography>
+                    <Typography variant="body1">{user.id || 'Not available'}</Typography>
                   </Box>
-                  {user.patreonId && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Patreon ID
-                      </Typography>
-                      <Typography variant="body1">{user.patreonId}</Typography>
-                    </Box>
-                  )}
-                  {user.createdAt && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Member Since
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {new Date(user.createdAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long'
-                        })}
-                      </Typography>
-                    </Box>
-                  )}
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Patreon ID
+                    </Typography>
+                    <Typography variant="body1">{user.patreonId || 'Not connected'}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Member Since
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {user.createdAt 
+                        ? new Date(user.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long'
+                          })
+                        : 'Not available'}
+                    </Typography>
+                  </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Role
