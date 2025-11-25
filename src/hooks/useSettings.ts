@@ -17,11 +17,17 @@ export interface PanelSettings {
   aiJournal: { visible: boolean; order: number };
   web3: { visible: boolean; order: number };
   focus: { visible: boolean; order: number };
+  aiAgent: { visible: boolean; order: number };
+}
+
+export interface ApiKeys {
+  revidApiKey?: string;
 }
 
 export interface UserSettings {
   dashboard: DashboardSettings;
   panels: PanelSettings;
+  apiKeys?: ApiKeys;
 }
 
 const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
@@ -41,6 +47,7 @@ const DEFAULT_PANEL_SETTINGS: PanelSettings = {
   aiJournal: { visible: true, order: 4 },
   web3: { visible: true, order: 5 },
   focus: { visible: true, order: 6 },
+  aiAgent: { visible: true, order: 7 },
 };
 
 const STORAGE_KEY = 'user_dashboard_settings';
@@ -51,6 +58,7 @@ export function useSettings() {
       return {
         dashboard: DEFAULT_DASHBOARD_SETTINGS,
         panels: DEFAULT_PANEL_SETTINGS,
+        apiKeys: {},
       };
     }
 
@@ -61,6 +69,7 @@ export function useSettings() {
         return {
           dashboard: { ...DEFAULT_DASHBOARD_SETTINGS, ...parsed.dashboard },
           panels: { ...DEFAULT_PANEL_SETTINGS, ...parsed.panels },
+          apiKeys: parsed.apiKeys || {},
         };
       }
     } catch (error) {
@@ -70,6 +79,7 @@ export function useSettings() {
     return {
       dashboard: DEFAULT_DASHBOARD_SETTINGS,
       panels: DEFAULT_PANEL_SETTINGS,
+      apiKeys: {},
     };
   });
 
@@ -114,10 +124,30 @@ export function useSettings() {
     });
   }, []);
 
+  const updateApiKeys = useCallback((updates: Partial<ApiKeys>) => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        apiKeys: { ...prev.apiKeys, ...updates },
+      };
+      
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
+        } catch (error) {
+          console.error('Error saving settings:', error);
+        }
+      }
+      
+      return newSettings;
+    });
+  }, []);
+
   const resetSettings = useCallback(() => {
     const defaultSettings = {
       dashboard: DEFAULT_DASHBOARD_SETTINGS,
       panels: DEFAULT_PANEL_SETTINGS,
+      apiKeys: {},
     };
     
     setSettings(defaultSettings);
@@ -142,6 +172,7 @@ export function useSettings() {
     settings,
     updateDashboardSettings,
     updatePanelSettings,
+    updateApiKeys,
     resetSettings,
     getVisiblePanels,
   };

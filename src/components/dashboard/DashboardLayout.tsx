@@ -8,6 +8,7 @@ import OpportunityPanel from './OpportunityPanel';
 import Web3Panel from './Web3Panel';
 import FocusPanel from './FocusPanel';
 import AIJournalPanel from './AIJournalPanel';
+import AiAgentPanel from './AiAgentPanel';
 import { useSettings } from '../../hooks/useSettings';
 
 interface TabPanelProps {
@@ -58,6 +59,7 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
     web3: { component: <Web3Panel />, label: 'Web3' },
     focus: { component: <FocusPanel />, label: 'Focus Timer' },
     aiJournal: { component: <AIJournalPanel />, label: 'Mindset Journal' },
+    aiAgent: { component: <AiAgentPanel />, label: 'AI Agent' },
   };
 
   // Filter tabs to only show visible panels

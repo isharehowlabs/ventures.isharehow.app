@@ -44,10 +44,11 @@ const PANEL_LABELS: Record<string, string> = {
   learning: 'Learning Hub Panel',
   aiJournal: 'AI Journal Panel',
   web3: 'Web3 Panel',
+  aiAgent: 'AI Agent Panel',
 };
 
 function SettingsPage() {
-  const { settings, updateDashboardSettings, updatePanelSettings, resetSettings } = useSettings();
+  const { settings, updateDashboardSettings, updatePanelSettings, updateApiKeys, resetSettings } = useSettings();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -297,6 +298,28 @@ function SettingsPage() {
                 <MenuItem value="list">List</MenuItem>
               </Select>
             </FormControl>
+          </Stack>
+        </Paper>
+
+        {/* API Keys Settings */}
+        <Paper elevation={2} sx={{ p: 4, mb: 3 }}>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+            <SettingsIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              API Keys
+            </Typography>
+          </Stack>
+          <Divider sx={{ mb: 3 }} />
+          <Stack spacing={3}>
+            <TextField
+              fullWidth
+              label="Revid.ai API Key"
+              type="password"
+              value={settings.apiKeys?.revidApiKey || ''}
+              onChange={(e) => updateApiKeys({ revidApiKey: e.target.value })}
+              placeholder="Enter your Revid.ai API key"
+              helperText="Required for AI Agent panel to generate and auto-post videos"
+            />
           </Stack>
         </Paper>
 
