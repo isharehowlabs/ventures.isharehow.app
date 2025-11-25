@@ -207,13 +207,17 @@ function SettingsPage() {
     }
   };
 
-  // Admin check: Super Admin if Patreon ID 56776112, user.isAdmin, or username/id is 'isharehow'
+  // Admin check: Super Admin if Patreon ID 56776112, user.isAdmin, username/id is 'isharehow' or 'admin', or email is 'jeliyah@isharehowlabs.com'
   const isAdmin = user?.isAdmin || 
                   user?.patreonId === 56776112 || 
                   user?.username === 'isharehow' || 
                   user?.id === 'isharehow' ||
+                  user?.id === 'admin' ||
+                  user?.username === 'admin' ||
+                  user?.email === 'jeliyah@isharehowlabs.com' ||
                   (user?.username && user.username.toLowerCase() === 'isharehow') ||
-                  (user?.id && String(user.id).toLowerCase() === 'isharehow');
+                  (user?.id && String(user.id).toLowerCase() === 'isharehow') ||
+                  (user?.id && String(user.id).toLowerCase() === 'admin');
   
   // Tab state
   const [activeTab, setActiveTab] = useState(0);

@@ -1,11 +1,47 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+// Get API key from environment variable
+const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
+
+// Validate API key at module load time
+if (!GOOGLE_AI_API_KEY) {
+  console.error('ERROR: GOOGLE_AI_API_KEY is not set in environment variables');
+  console.error('Please set GOOGLE_AI_API_KEY in your .env.local file or environment variables');
+}
+
+// Initialize Gemini client only if API key is available
+let genAI: GoogleGenerativeAI | null = null;
+if (GOOGLE_AI_API_KEY) {
+  try {
+    genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY);
+    console.log('Gemini API client initialized successfully');
+  } catch (error) {
+    console.error('ERROR: Failed to initialize Gemini API client:', error);
+  }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  // Check if API key is configured
+  if (!GOOGLE_AI_API_KEY) {
+    return res.status(500).json({ 
+      message: 'Gemini API not configured',
+      error: 'GOOGLE_AI_API_KEY environment variable is not set. Please configure it in your environment variables.',
+      text: 'Gemini chat integration is not yet configured. Please configure GOOGLE_AI_API_KEY in your environment variables.'
+    });
+  }
+
+  // Check if client is initialized
+  if (!genAI) {
+    return res.status(500).json({ 
+      message: 'Gemini API client initialization failed',
+      error: 'Failed to initialize Gemini API client. Please check your API key configuration.',
+      text: 'Gemini API client could not be initialized. Please check your configuration.'
+    });
   }
 
   try {
@@ -34,6 +70,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json({ text });
   } catch (error: any) {
     console.error('Error in Gemini API:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Internal server error';
+    let statusCode = 500;
+    
+    if (error.message?.includes('API key')) {
+      errorMessage = 'Invalid or missing Gemini API key. Please check your GOOGLE_AI_API_KEY configuration.';
+      statusCode = 500;
+    } else if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
+      errorMessage = 'Gemini API rate limit exceeded. Please try again later.';
+      statusCode = 429;
+    } else if (error.message?.includes('model')) {
+      errorMessage = 'Gemini model not available. Please check your model configuration.';
+      statusCode = 400;
+    } else {
+      errorMessage = error.message || 'An unexpected error occurred while processing your request.';
+    }
+    
+    res.status(statusCode).json({ 
+      message: errorMessage,
+      error: error.message || 'Unknown error',
+      text: `Sorry, I encountered an error: ${errorMessage}`
+    });
   }
 }

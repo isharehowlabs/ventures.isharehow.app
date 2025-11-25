@@ -27,8 +27,23 @@ load_dotenv()
 # Configure Gemini API
 GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY')
 
-# Debugging: Log the GOOGLE_AI_API_KEY to verify it's being loaded
-print(f"GOOGLE_AI_API_KEY (from os.environ): {os.environ.get('GOOGLE_AI_API_KEY')}")
+# Validate Gemini API key configuration at startup
+if not GOOGLE_AI_API_KEY:
+    print("=" * 80)
+    print("WARNING: GOOGLE_AI_API_KEY is not set in environment variables!")
+    print("Gemini chat functionality will be disabled.")
+    print("To enable Gemini chat, set GOOGLE_AI_API_KEY in your environment variables.")
+    print("=" * 80)
+else:
+    # Validate API key format (basic check - should start with AIza)
+    if not GOOGLE_AI_API_KEY.startswith('AIza'):
+        print("=" * 80)
+        print("WARNING: GOOGLE_AI_API_KEY format may be incorrect!")
+        print("Google AI API keys typically start with 'AIza'.")
+        print("Please verify your API key is correct.")
+        print("=" * 80)
+    else:
+        print("✓ Gemini API key loaded successfully")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -2450,8 +2465,12 @@ def broadcast_notification():
         if not admin_user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Check if user is admin (Patreon ID 56776112 or username 'isharehow')
-        is_admin = admin_user.patreon_id == 56776112 or admin_user.username == 'isharehow'
+        # Check if user is admin (Patreon ID 56776112, username 'isharehow' or 'admin', or email 'jeliyah@isharehowlabs.com')
+        is_admin = (admin_user.patreon_id == 56776112 or 
+                   admin_user.username == 'isharehow' or 
+                   admin_user.username == 'admin' or
+                   admin_user.email == 'jeliyah@isharehowlabs.com' or
+                   str(admin_user.id) == 'admin')
         if not is_admin:
             return jsonify({'error': 'Unauthorized: Admin access required'}), 403
         
@@ -3205,7 +3224,10 @@ def admin_update():
             return jsonify({'error': 'Not authenticated'}), 401
         
         # Check if user is admin (paid member or specific email)
-        is_admin = user.get('isPaidMember', False) or user.get('email') in ['soc@isharehowlabs.com', 'admin@isharehowlabs.com']
+        is_admin = (user.get('isPaidMember', False) or 
+                   user.get('email') in ['soc@isharehowlabs.com', 'admin@isharehowlabs.com', 'jeliyah@isharehowlabs.com'] or
+                   user.get('username') == 'admin' or
+                   user.get('id') == 'admin')
         
         if not is_admin:
             return jsonify({'error': 'Unauthorized: Admin access required'}), 403
@@ -3414,11 +3436,19 @@ def gemini_chat():
         if not isinstance(messages, list) or len(messages) == 0:
             return jsonify({'error': 'Invalid or empty messages array'}), 400
         
+        # Validate API key before processing
         if not GOOGLE_AI_API_KEY:
+            app.logger.error('Gemini API key not configured')
             return jsonify({
                 'error': 'Gemini API not configured',
+                'message': 'GOOGLE_AI_API_KEY environment variable is not set. Please configure it in your environment variables.',
                 'text': 'Gemini chat integration is not yet configured. Please configure GOOGLE_AI_API_KEY in your environment variables.'
             }), 500
+        
+        # Validate API key format
+        if not GOOGLE_AI_API_KEY.startswith('AIza'):
+            app.logger.warning('Gemini API key format may be incorrect')
+            # Still proceed, but log warning
         
         # Convert messages to Gemini format
         contents = []

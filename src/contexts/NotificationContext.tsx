@@ -36,24 +36,83 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 const DB_NAME = 'ventures_notifications';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Must match notificationSync.ts version
 const STORE_NAME = 'notifications';
+const SYNC_QUEUE_STORE = 'sync_queue';
 
-// Initialize IndexedDB
+// Initialize IndexedDB with proper version handling
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    // First check if database exists and get its version
+    const checkRequest = indexedDB.open(DB_NAME);
     
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    checkRequest.onsuccess = () => {
+      const existingDb = checkRequest.result;
+      const currentVersion = existingDb.version;
+      existingDb.close();
+      
+      // Use the maximum of current version or our target version to avoid downgrade errors
+      const targetVersion = Math.max(currentVersion, DB_VERSION);
+      
+      // If we need to upgrade, use a higher version
+      const finalVersion = currentVersion < DB_VERSION ? DB_VERSION : targetVersion;
+      
+      const request = indexedDB.open(DB_NAME, finalVersion);
+      
+      request.onerror = () => {
+        console.error('IndexedDB open error:', request.error);
+        reject(request.error);
+      };
+      
+      request.onsuccess = () => resolve(request.result);
+      
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        
+        // Notifications store
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          store.createIndex('timestamp', 'timestamp', { unique: false });
+          store.createIndex('read', 'read', { unique: false });
+        }
+        
+        // Sync queue store for offline actions
+        if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+          const queueStore = db.createObjectStore(SYNC_QUEUE_STORE, { keyPath: 'id', autoIncrement: true });
+          queueStore.createIndex('type', 'type', { unique: false });
+          queueStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+      };
+    };
     
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        store.createIndex('timestamp', 'timestamp', { unique: false });
-        store.createIndex('read', 'read', { unique: false });
-      }
+    checkRequest.onerror = () => {
+      // Database doesn't exist, create it
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      
+      request.onerror = () => {
+        console.error('IndexedDB open error:', request.error);
+        reject(request.error);
+      };
+      
+      request.onsuccess = () => resolve(request.result);
+      
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        
+        // Notifications store
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          store.createIndex('timestamp', 'timestamp', { unique: false });
+          store.createIndex('read', 'read', { unique: false });
+        }
+        
+        // Sync queue store for offline actions
+        if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+          const queueStore = db.createObjectStore(SYNC_QUEUE_STORE, { keyPath: 'id', autoIncrement: true });
+          queueStore.createIndex('type', 'type', { unique: false });
+          queueStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+      };
     };
   });
 };
