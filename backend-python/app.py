@@ -59,11 +59,11 @@ try:
     print(f"✓ SQLAlchemy initialized")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
 except Exception as e:
-        print(f"✗ Warning: Database initialization failed: {e}")
-        print("Database features will be disabled. This may be due to:")
-        print("1. Missing psycopg package or Python 3.13 compatibility issue")
-        print("2. Invalid DATABASE_URL")
-        print("3. Database server not accessible")
+    print(f"✗ Warning: Database initialization failed: {e}")
+    print("Database features will be disabled. This may be due to:")
+    print("1. Missing psycopg package or Python 3.13 compatibility issue")
+    print("2. Invalid DATABASE_URL")
+    print("3. Database server not accessible")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
     if os.environ.get('DATABASE_URL'):
         print(f"  DATABASE_URL value: {os.environ.get('DATABASE_URL')[:50]}...")
