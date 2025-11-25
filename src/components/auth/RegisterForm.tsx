@@ -79,6 +79,9 @@ export default function RegisterForm({ onSuccess, onLoginClick }: RegisterFormPr
         <TextField
           fullWidth
           label="Username"
+          name="username"
+          id="username"
+          autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           margin="normal"
@@ -90,7 +93,10 @@ export default function RegisterForm({ onSuccess, onLoginClick }: RegisterFormPr
         <TextField
           fullWidth
           label="Email (Optional)"
+          name="email"
+          id="email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           margin="normal"
@@ -100,7 +106,10 @@ export default function RegisterForm({ onSuccess, onLoginClick }: RegisterFormPr
         <TextField
           fullWidth
           label="Password"
+          name="new-password"
+          id="new-password"
           type="password"
+          autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           margin="normal"
@@ -112,7 +121,10 @@ export default function RegisterForm({ onSuccess, onLoginClick }: RegisterFormPr
         <TextField
           fullWidth
           label="Confirm Password"
+          name="confirm-password"
+          id="confirm-password"
           type="password"
+          autoComplete="new-password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           margin="normal"

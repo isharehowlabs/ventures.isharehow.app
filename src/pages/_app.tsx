@@ -9,6 +9,46 @@ import { initAnalytics, trackPageView } from '../utils/analytics';
 function AppContent({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
+  // Fix browser password manager autocomplete issues
+  useEffect(() => {
+    // Ensure browser password manager globals are properly initialized
+    // This prevents errors when browser-injected code tries to access undefined controls
+    if (typeof window !== 'undefined') {
+      // Initialize browser password manager globals if they don't exist
+      const initBrowserPasswordManager = () => {
+        // Ensure g_usernameControls and g_passwordControls exist
+        if (!(window as any).g_usernameControls) {
+          (window as any).g_usernameControls = {};
+        }
+        if (!(window as any).g_passwordControls) {
+          (window as any).g_passwordControls = {};
+        }
+        
+        // Ensure ForCompletionList arrays exist and filter out undefined values
+        const ForCompletionList = 'ForCompletionList';
+        if (!(window as any).g_usernameControls[ForCompletionList]) {
+          (window as any).g_usernameControls[ForCompletionList] = [];
+        }
+        if (!(window as any).g_passwordControls[ForCompletionList]) {
+          (window as any).g_passwordControls[ForCompletionList] = [];
+        }
+        
+        // Filter out undefined values from arrays to prevent .some() errors
+        (window as any).g_usernameControls[ForCompletionList] = 
+          (window as any).g_usernameControls[ForCompletionList].filter((item: any) => item != null);
+        (window as any).g_passwordControls[ForCompletionList] = 
+          (window as any).g_passwordControls[ForCompletionList].filter((item: any) => item != null);
+      };
+      
+      initBrowserPasswordManager();
+      
+      // Re-initialize after a short delay to catch any late browser injections
+      const timeout = setTimeout(initBrowserPasswordManager, 100);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, []);
+
   // Initialize Google Analytics
   useEffect(() => {
     const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;

@@ -66,6 +66,9 @@ export default function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps
         <TextField
           fullWidth
           label="Username or Email"
+          name="username"
+          id="username"
+          autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           margin="normal"
@@ -77,7 +80,10 @@ export default function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps
         <TextField
           fullWidth
           label="Password"
+          name="password"
+          id="password"
           type="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           margin="normal"
