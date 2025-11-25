@@ -213,7 +213,7 @@ const HomePage = () => (
           <Button
             variant="contained"
             size="large"
-            href="#contact"
+            href="/demo"
             sx={{
               bgcolor: 'white',
               color: '#6366F1',
@@ -722,7 +722,7 @@ const HomePage = () => (
               >
                 <Button
                   component="a"
-                  href="mailto:soc@isharehowlabs.com?subject=Project Inquiry"
+                  href="/demo"
                   variant="contained"
                   size="large"
                   sx={{
