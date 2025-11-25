@@ -1865,16 +1865,29 @@ def get_profile():
         
         # Return combined user data (accessible regardless of payment status)
         user_data = user.to_dict()
+        # Get createdAt from UserProfile or fall back to User model's created_at
+        created_at = profile_data.get('createdAt')
+        if not created_at and user.created_at:
+            created_at = user.created_at.isoformat()
+        
         user_data.update({
             'name': profile_data.get('name', user.username or user.email or 'User'),
-            'avatarUrl': profile_data.get('avatarUrl', ''),
+            'avatar': profile_data.get('avatarUrl', ''),  # Map avatarUrl to avatar for frontend
+            'avatarUrl': profile_data.get('avatarUrl', ''),  # Keep both for compatibility
             'membershipTier': profile_data.get('membershipTier'),
             'isPaidMember': user.membership_paid,  # Show current payment status
             'isTeamMember': profile_data.get('isTeamMember', False),
             'lastChecked': user.last_checked.isoformat() if user.last_checked else None,
             'patreonConnected': user.patreon_connected,
-            'lastChargeDate': profile_data.get('membershipPaymentDate'),
-            'pledgeStart': profile_data.get('membershipRenewalDate')
+            'createdAt': created_at,  # Include createdAt from UserProfile or User model
+            'membershipPaymentDate': profile_data.get('membershipPaymentDate'),
+            'membershipRenewalDate': profile_data.get('membershipRenewalDate'),
+            'lastChargeDate': profile_data.get('membershipPaymentDate'),  # Alias for frontend
+            'pledgeStart': profile_data.get('membershipRenewalDate'),  # Alias for frontend
+            # Membership amount fields - these would need to be stored in UserProfile or calculated
+            # For now, return None/0 if not available
+            'membershipAmount': None,  # Would need to be stored in UserProfile
+            'lifetimeSupportAmount': None  # Would need to be stored in UserProfile
         })
         
         return jsonify(user_data)
@@ -1963,15 +1976,37 @@ def update_profile():
         
         db.session.commit()
         
-        # Return updated profile
-        profile_dict = profile.to_dict()
-        profile_dict.update({
+        # Refresh profile data to get updated values
+        db.session.refresh(profile)
+        profile_data = profile.to_dict()
+        
+        # Return updated profile with all fields (matching GET endpoint format)
+        user_data = user.to_dict()
+        # Get createdAt from UserProfile or fall back to User model's created_at
+        created_at = profile_data.get('createdAt')
+        if not created_at and user.created_at:
+            created_at = user.created_at.isoformat()
+        
+        user_data.update({
+            'name': profile_data.get('name', user.username or user.email or 'User'),
+            'avatar': profile_data.get('avatarUrl', ''),  # Map avatarUrl to avatar for frontend
+            'avatarUrl': profile_data.get('avatarUrl', ''),  # Keep both for compatibility
+            'membershipTier': profile_data.get('membershipTier'),
             'isPaidMember': user.membership_paid,
+            'isTeamMember': profile_data.get('isTeamMember', False),
             'lastChecked': user.last_checked.isoformat() if user.last_checked else None,
-            'patreonConnected': user.patreon_connected
+            'patreonConnected': user.patreon_connected,
+            'createdAt': created_at,  # Include createdAt from UserProfile or User model
+            'membershipPaymentDate': profile_data.get('membershipPaymentDate'),
+            'membershipRenewalDate': profile_data.get('membershipRenewalDate'),
+            'lastChargeDate': profile_data.get('membershipPaymentDate'),  # Alias for frontend
+            'pledgeStart': profile_data.get('membershipRenewalDate'),  # Alias for frontend
+            # Membership amount fields - these would need to be stored in UserProfile or calculated
+            'membershipAmount': None,  # Would need to be stored in UserProfile
+            'lifetimeSupportAmount': None  # Would need to be stored in UserProfile
         })
         
-        return jsonify(profile_dict)
+        return jsonify(user_data)
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error updating profile: {e}")
