@@ -2,6 +2,8 @@ import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { ThemeProviderWrapper as ThemeProvider } from '../ThemeContext';
+import { NotificationProvider } from '../contexts/NotificationContext';
+import { TimerProvider } from '../contexts/TimerContext';
 import { initAnalytics, trackPageView } from '../utils/analytics';
 
 function AppContent({ Component, pageProps }: AppProps) {
@@ -33,7 +35,11 @@ function AppContent({ Component, pageProps }: AppProps) {
 export default function App(props: AppProps) {
   return (
     <ThemeProvider>
-      <AppContent {...props} />
+      <NotificationProvider>
+        <TimerProvider>
+          <AppContent {...props} />
+        </TimerProvider>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

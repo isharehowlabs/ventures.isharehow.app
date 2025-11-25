@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   IconButton,
   Badge,
@@ -13,48 +13,50 @@ import {
   ListItemText,
   ListItemAvatar,
   Avatar,
+  Chip,
+  Link,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
-  Circle as CircleIcon,
-  CheckCircle as CheckCircleIcon,
+  AccessTime as TimerIcon,
+  LiveTv as LiveIcon,
+  Group as BoardIcon,
+  Timer as PomodoroIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  read: boolean;
-  timestamp: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-}
-
-// Mock notifications - in production, these would come from an API
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Welcome!',
-    message: 'Explore the RISE Dashboard to track your progress',
-    read: false,
-    timestamp: new Date().toISOString(),
-    type: 'info',
-  },
-  {
-    id: '2',
-    title: 'New Feature',
-    message: 'Check out the new Pomodoro Timer in Focus mode',
-    read: false,
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    type: 'success',
-  },
-];
+import { useNotifications, Notification } from '../contexts/NotificationContext';
+import { useTimer } from '../contexts/TimerContext';
+import { useRouter } from 'next/router';
 
 export default function NotificationMenu() {
+  const { notifications, unreadCount, markAsRead, markAllRead, deleteNotification } = useNotifications();
+  const { timerState } = useTimer();
+  const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [timerDisplay, setTimerDisplay] = useState<string>('');
   
-  const unreadCount = notifications.filter(n => !n.read).length;
   const open = Boolean(anchorEl);
+
+  // Update timer display every second
+  useEffect(() => {
+    if (timerState && timerState.isRunning) {
+      const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+
+      const updateTimer = () => {
+        setTimerDisplay(formatTime(timerState.timeLeft));
+      };
+
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setTimerDisplay('');
+    }
+  }, [timerState]);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -64,27 +66,51 @@ export default function NotificationMenu() {
     setAnchorEl(null);
   };
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+    if (notification.metadata?.link) {
+      router.push(notification.metadata.link);
+      handleClose();
+    }
   };
 
   const handleMarkAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    markAllRead();
   };
 
-  const handleClearAll = () => {
-    setNotifications([]);
-    handleClose();
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'timer':
+        return <PomodoroIcon fontSize="small" />;
+      case 'live-update':
+      case 'twitch':
+        return <LiveIcon fontSize="small" />;
+      case 'board':
+        return <BoardIcon fontSize="small" />;
+      default:
+        return <NotificationsIcon fontSize="small" />;
+    }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'success': return 'success.main';
-      case 'warning': return 'warning.main';
-      case 'error': return 'error.main';
-      default: return 'info.main';
+      case 'timer':
+        return 'primary.main';
+      case 'success':
+      case 'twitch':
+        return 'success.main';
+      case 'warning':
+        return 'warning.main';
+      case 'error':
+        return 'error.main';
+      case 'live-update':
+        return 'info.main';
+      case 'board':
+        return 'secondary.main';
+      default:
+        return 'info.main';
     }
   };
 
@@ -100,6 +126,21 @@ export default function NotificationMenu() {
     if (diffHours < 24) return `${diffHours}h ago`;
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
+  };
+
+  const formatTimerTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleTimerClick = () => {
+    if (timerState?.location === 'rise') {
+      router.push('/rise');
+    } else if (timerState?.location === 'cowork') {
+      router.push('/labs');
+    }
+    handleClose();
   };
 
   return (
@@ -139,6 +180,40 @@ export default function NotificationMenu() {
 
         <Divider />
 
+        {/* Timer Status Section */}
+        {timerState && timerState.isRunning && (
+          <>
+            <Box
+              sx={{
+                px: 2,
+                py: 1.5,
+                bgcolor: timerState.isBreak ? 'secondary.light' : 'primary.light',
+                cursor: 'pointer',
+                '&:hover': { bgcolor: timerState.isBreak ? 'secondary.main' : 'primary.main', color: 'white' },
+              }}
+              onClick={handleTimerClick}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TimerIcon />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    {timerState.isBreak ? '☕ Break Timer' : '⏱️ Focus Timer'}
+                  </Typography>
+                  <Typography variant="body2">
+                    {formatTimerTime(timerState.timeLeft)} remaining
+                  </Typography>
+                </Box>
+                <Chip
+                  label={timerState.location === 'rise' ? 'RISE' : 'Co-Work'}
+                  size="small"
+                  color={timerState.isBreak ? 'secondary' : 'primary'}
+                />
+              </Box>
+            </Box>
+            <Divider />
+          </>
+        )}
+
         {notifications.length === 0 ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="text.secondary">
@@ -146,26 +221,32 @@ export default function NotificationMenu() {
             </Typography>
           </Box>
         ) : (
-          <List sx={{ p: 0 }}>
+          <List sx={{ p: 0, maxHeight: 400, overflow: 'auto' }}>
             {notifications.map((notification) => (
               <ListItem
                 key={notification.id}
                 alignItems="flex-start"
                 sx={{
                   bgcolor: notification.read ? 'transparent' : 'action.hover',
-                  '&:hover': { bgcolor: 'action.selected' },
+                  '&:hover': { bgcolor: 'action.selected', cursor: 'pointer' },
                 }}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: getTypeColor(notification.type) }}>
-                    {notification.read ? <CheckCircleIcon /> : <CircleIcon />}
+                    {getTypeIcon(notification.type)}
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
                   primary={
-                    <Typography variant="subtitle2" fontWeight={notification.read ? 400 : 600}>
-                      {notification.title}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="subtitle2" fontWeight={notification.read ? 400 : 600}>
+                        {notification.title}
+                      </Typography>
+                      {!notification.read && (
+                        <Chip label="New" size="small" color="error" sx={{ height: 16, fontSize: '0.65rem' }} />
+                      )}
+                    </Box>
                   }
                   secondary={
                     <>
@@ -177,23 +258,21 @@ export default function NotificationMenu() {
                       </Typography>
                     </>
                   }
-                  onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-                  sx={{ cursor: notification.read ? 'default' : 'pointer' }}
                 />
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNotification(notification.id);
+                  }}
+                  sx={{ ml: 1 }}
+                  color="error"
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
               </ListItem>
             ))}
           </List>
-        )}
-
-        {notifications.length > 0 && (
-          <>
-            <Divider />
-            <Box sx={{ p: 1 }}>
-              <Button fullWidth size="small" color="error" onClick={handleClearAll}>
-                Clear all
-              </Button>
-            </Box>
-          </>
         )}
       </Menu>
     </>

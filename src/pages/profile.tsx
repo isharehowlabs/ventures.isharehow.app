@@ -448,14 +448,14 @@ function ProfilePage() {
                       </Box>
                     )}
                   </Box>
-                  {user.membershipTier && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Membership Tier
-                      </Typography>
-                      <Typography variant="body1">{user.membershipTier}</Typography>
-                    </Box>
-                  )}
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Membership Tier
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: user.membershipTier ? 500 : 400 }}>
+                      {user.membershipTier ? user.membershipTier.charAt(0).toUpperCase() + user.membershipTier.slice(1) : 'Not set'}
+                    </Typography>
+                  </Box>
                   {user.membershipAmount && (
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
@@ -464,20 +464,22 @@ function ProfilePage() {
                       <Typography variant="body1">${user.membershipAmount.toFixed(2)}/month</Typography>
                     </Box>
                   )}
-                  {user.isPaidMember && user.membershipPaymentDate && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Payment Date
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {new Date(user.membershipPaymentDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </Typography>
-                    </Box>
-                  )}
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Date Paid
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: user.membershipPaymentDate ? 500 : 400 }}>
+                      {user.membershipPaymentDate 
+                        ? new Date(user.membershipPaymentDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : user.isPaidMember 
+                          ? 'Payment date not available'
+                          : 'No payment recorded'}
+                    </Typography>
+                  </Box>
                   {user.isPaidMember && user.membershipRenewalDate && (
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>

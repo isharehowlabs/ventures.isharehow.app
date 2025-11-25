@@ -21,6 +21,7 @@ import { Notifications, NotificationsOff, Add as AddIcon } from '@mui/icons-mate
 import { getSocket } from '../../utils/socket';
 import { getBackendUrl } from '../../utils/backendUrl';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 interface Update {
   id: string;
@@ -32,6 +33,7 @@ interface Update {
 
 export default function LiveUpdates() {
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [updates, setUpdates] = useState<Update[]>([]);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isLive, setIsLive] = useState(false);
@@ -177,6 +179,14 @@ export default function LiveUpdates() {
         timestamp: new Date(),
       };
       setUpdates((prev) => [update, ...prev.slice(0, 9)]);
+      
+      // Add to unified notification system
+      addNotification({
+        type: 'live-update',
+        title: 'Component Linked',
+        message: `Component "${data.componentName}" linked to ${data.filePath}`,
+        metadata: { link: '/labs' },
+      }).catch(err => console.error('Failed to add notification:', err));
     });
 
     socket.on('document:updated', (data: any) => {
@@ -187,6 +197,14 @@ export default function LiveUpdates() {
         timestamp: new Date(),
       };
       setUpdates((prev) => [update, ...prev.slice(0, 9)]);
+      
+      // Add to unified notification system
+      addNotification({
+        type: 'live-update',
+        title: 'Document Updated',
+        message: `Document "${data.title}" has been updated`,
+        metadata: { link: '/labs' },
+      }).catch(err => console.error('Failed to add notification:', err));
     });
 
     // Listen for Twitch live events from backend
@@ -198,6 +216,16 @@ export default function LiveUpdates() {
         timestamp: new Date(),
       };
       setUpdates((prev) => [update, ...prev.slice(0, 9)]);
+      
+      // Add to unified notification system
+      addNotification({
+        type: 'twitch',
+        title: '🔴 Live on Twitch!',
+        message: data.message || 'Your stream is now live. Join the co-work session!',
+        metadata: { link: '/labs' },
+      }).catch(err => console.error('Failed to add notification:', err));
+      
+      // Also send browser notification
       sendNotification('🔴 Live on Twitch!', {
         body: data.message || 'Your stream is now live. Join the co-work session!',
         tag: 'twitch-live',
@@ -220,7 +248,18 @@ export default function LiveUpdates() {
       };
       setUpdates((prev) => [update, ...prev.slice(0, 9)]);
       
-      // Send notification to all users who have permission
+      // Add to unified notification system
+      addNotification({
+        type: data.type === 'twitch' ? 'twitch' : data.type === 'cowork' ? 'live-update' : 'admin',
+        title: data.title || '📢 Admin Update',
+        message: data.message || 'New update from admin',
+        metadata: { 
+          link: data.link || '/labs',
+          actor: data.author ? { id: 'admin', name: data.author } : undefined,
+        },
+      }).catch(err => console.error('Failed to add notification:', err));
+      
+      // Also send browser notification
       sendNotification(data.title || '📢 Admin Update', {
         body: data.message || 'New update from admin',
         tag: `admin-update-${Date.now()}`,

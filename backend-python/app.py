@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect, session, url_for
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -12,6 +12,14 @@ import json
 from dotenv import load_dotenv
 import requests
 import bcrypt
+
+# Try to import pywebpush for push notifications (optional)
+try:
+    from pywebpush import webpush, WebPushException
+    WEBPUSH_AVAILABLE = True
+except ImportError:
+    WEBPUSH_AVAILABLE = False
+    print("Warning: pywebpush not available. Push notifications will be disabled.")
 
 # Load environment variables
 load_dotenv()
@@ -166,6 +174,65 @@ if DB_AVAILABLE:
                 'membershipPaid': self.membership_paid,  # Updated field name
                 'patreonConnected': self.patreon_connected,
                 'lastChecked': self.last_checked.isoformat() if self.last_checked else None
+            }
+
+    # Notification Model
+    class Notification(db.Model):
+        __tablename__ = 'notifications'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+        type = db.Column(db.String(50), nullable=False, index=True)  # live-update, board, timer, admin, twitch, system
+        title = db.Column(db.String(255), nullable=False)
+        message = db.Column(db.Text, nullable=False)
+        read = db.Column(db.Boolean, default=False, nullable=False, index=True)
+        metadata = db.Column(db.Text, nullable=True)  # JSON stored as text
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        
+        # Relationship
+        user = db.relationship('User', backref='notifications')
+        
+        def to_dict(self):
+            metadata_dict = {}
+            if self.metadata:
+                try:
+                    metadata_dict = json.loads(self.metadata)
+                except:
+                    pass
+            return {
+                'id': str(self.id),
+                'userId': str(self.user_id),
+                'type': self.type,
+                'title': self.title,
+                'message': self.message,
+                'read': self.read,
+                'timestamp': self.created_at.isoformat() if self.created_at else None,
+                'metadata': metadata_dict
+            }
+
+    # Push Subscription Model
+    class PushSubscription(db.Model):
+        __tablename__ = 'push_subscriptions'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+        endpoint = db.Column(db.Text, nullable=False)
+        p256dh = db.Column(db.Text, nullable=False)
+        auth = db.Column(db.Text, nullable=False)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        
+        # Relationship
+        user = db.relationship('User', backref='push_subscriptions')
+        
+        def to_dict(self):
+            return {
+                'endpoint': self.endpoint,
+                'keys': {
+                    'p256dh': self.p256dh,
+                    'auth': self.auth,
+                }
             }
 
     # Wellness Models
@@ -710,6 +777,75 @@ def require_session(f):
     def decorated_function(*args, **kwargs):
         return f(*args, **kwargs)
     return decorated_function
+
+def send_push_notification(user_id: int, notification: Notification):
+    """Send push notification to user's devices"""
+    if not WEBPUSH_AVAILABLE or not DB_AVAILABLE:
+        return
+    
+    try:
+        # Get user's push subscriptions
+        subscriptions = PushSubscription.query.filter_by(user_id=user_id).all()
+        if not subscriptions:
+            return
+        
+        # Get VAPID keys from environment
+        vapid_private_key = os.environ.get('VAPID_PRIVATE_KEY')
+        vapid_public_key = os.environ.get('VAPID_PUBLIC_KEY')
+        vapid_email = os.environ.get('VAPID_EMAIL', 'mailto:noreply@ventures.isharehow.app')
+        
+        if not vapid_private_key or not vapid_public_key:
+            app.logger.warning("VAPID keys not configured. Push notifications disabled.")
+            return
+        
+        # Parse metadata
+        metadata_dict = {}
+        if notification.metadata:
+            try:
+                metadata_dict = json.loads(notification.metadata)
+            except:
+                pass
+        
+        # Prepare notification payload
+        payload = {
+            'title': notification.title,
+            'message': notification.message,
+            'id': str(notification.id),
+            'type': notification.type,
+            'data': {
+                'url': metadata_dict.get('link', '/') if metadata_dict else '/',
+            }
+        }
+        
+        # Send to all user's subscriptions
+        for subscription in subscriptions:
+            try:
+                subscription_info = {
+                    'endpoint': subscription.endpoint,
+                    'keys': {
+                        'p256dh': subscription.p256dh,
+                        'auth': subscription.auth
+                    }
+                }
+                
+                webpush(
+                    subscription_info=subscription_info,
+                    data=json.dumps(payload),
+                    vapid_private_key=vapid_private_key,
+                    vapid_claims={
+                        'sub': vapid_email
+                    }
+                )
+            except WebPushException as e:
+                app.logger.error(f"WebPush error for subscription {subscription.id}: {e}")
+                # Remove invalid subscriptions
+                if hasattr(e, 'response') and e.response and e.response.status_code == 410:  # Gone
+                    db.session.delete(subscription)
+                    db.session.commit()
+            except Exception as e:
+                app.logger.error(f"Error sending push to subscription {subscription.id}: {e}")
+    except Exception as e:
+        app.logger.error(f"Error in send_push_notification: {e}")
 
 def get_user_info():
     """Get user info from JWT token including id and role"""
@@ -2044,6 +2180,351 @@ def update_profile():
         traceback.print_exc()
         return jsonify({'error': 'Failed to update profile', 'message': str(e)}), 500
 
+# Notification Management Endpoints
+@app.route('/api/notifications', methods=['GET'])
+@jwt_required()
+def get_notifications():
+    """Get user's notifications (paginated)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get query parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+        
+        # Build query
+        query = Notification.query.filter_by(user_id=user.id)
+        if unread_only:
+            query = query.filter_by(read=False)
+        query = query.order_by(Notification.created_at.desc())
+        
+        # Paginate
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        notifications = pagination.items
+        
+        return jsonify({
+            'notifications': [n.to_dict() for n in notifications],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': pagination.total,
+                'pages': pagination.pages
+            },
+            'unreadCount': Notification.query.filter_by(user_id=user.id, read=False).count()
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching notifications: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch notifications', 'message': str(e)}), 500
+
+@app.route('/api/notifications', methods=['POST'])
+@jwt_required()
+def create_notification():
+    """Create a new notification"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        if not data.get('type') or not data.get('title') or not data.get('message'):
+            return jsonify({'error': 'Missing required fields: type, title, message'}), 400
+        
+        # Create notification
+        notification = Notification(
+            user_id=user.id,
+            type=data['type'],
+            title=data['title'],
+            message=data['message'],
+            read=False,
+            metadata=json.dumps(data.get('metadata', {})) if data.get('metadata') else None
+        )
+        db.session.add(notification)
+        db.session.commit()
+        
+        # Emit socket.io event
+        socketio.emit('notification:new', notification.to_dict(), room=f'user_{user.id}')
+        
+        # Send push notification if available (async, don't block)
+        try:
+            if WEBPUSH_AVAILABLE:
+                send_push_notification(user.id, notification)
+        except Exception as push_error:
+            app.logger.warning(f"Failed to send push notification: {push_error}")
+        
+        return jsonify(notification.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error creating notification: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to create notification', 'message': str(e)}), 500
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
+@jwt_required()
+def mark_notification_read(notification_id):
+    """Mark a notification as read"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Find notification
+        notification = Notification.query.filter_by(id=notification_id, user_id=user.id).first()
+        if not notification:
+            return jsonify({'error': 'Notification not found'}), 404
+        
+        # Mark as read
+        notification.read = True
+        notification.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        # Emit socket.io event
+        socketio.emit('notification:read', {'id': str(notification.id), 'userId': str(user.id)}, room=f'user_{user.id}')
+        
+        return jsonify(notification.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error marking notification as read: {e}")
+        return jsonify({'error': 'Failed to mark notification as read', 'message': str(e)}), 500
+
+@app.route('/api/notifications/read-all', methods=['PUT'])
+@jwt_required()
+def mark_all_notifications_read():
+    """Mark all user's notifications as read"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Mark all as read
+        updated = Notification.query.filter_by(user_id=user.id, read=False).update({'read': True, 'updated_at': datetime.utcnow()})
+        db.session.commit()
+        
+        # Emit socket.io event
+        socketio.emit('notification:read-all', {'userId': str(user.id), 'count': updated}, room=f'user_{user.id}')
+        
+        return jsonify({'message': f'Marked {updated} notifications as read', 'count': updated})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error marking all notifications as read: {e}")
+        return jsonify({'error': 'Failed to mark all notifications as read', 'message': str(e)}), 500
+
+@app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
+@jwt_required()
+def delete_notification(notification_id):
+    """Delete a notification"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Find notification
+        notification = Notification.query.filter_by(id=notification_id, user_id=user.id).first()
+        if not notification:
+            return jsonify({'error': 'Notification not found'}), 404
+        
+        # Delete notification
+        db.session.delete(notification)
+        db.session.commit()
+        
+        # Emit socket.io event
+        socketio.emit('notification:deleted', {'id': str(notification.id), 'userId': str(user.id)}, room=f'user_{user.id}')
+        
+        return jsonify({'message': 'Notification deleted'})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting notification: {e}")
+        return jsonify({'error': 'Failed to delete notification', 'message': str(e)}), 500
+
+# Push Notification Endpoints
+@app.route('/api/notifications/push/subscribe', methods=['POST'])
+@jwt_required()
+def subscribe_push():
+    """Subscribe user to push notifications"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        if not data or not data.get('endpoint') or not data.get('keys'):
+            return jsonify({'error': 'Missing required fields: endpoint, keys'}), 400
+        
+        # Check if subscription already exists
+        existing = PushSubscription.query.filter_by(
+            user_id=user.id,
+            endpoint=data['endpoint']
+        ).first()
+        
+        if existing:
+            # Update existing subscription
+            existing.p256dh = data['keys']['p256dh']
+            existing.auth = data['keys']['auth']
+            existing.updated_at = datetime.utcnow()
+        else:
+            # Create new subscription
+            subscription = PushSubscription(
+                user_id=user.id,
+                endpoint=data['endpoint'],
+                p256dh=data['keys']['p256dh'],
+                auth=data['keys']['auth']
+            )
+            db.session.add(subscription)
+        
+        db.session.commit()
+        return jsonify({'message': 'Push subscription saved'}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error subscribing to push: {e}")
+        return jsonify({'error': 'Failed to subscribe', 'message': str(e)}), 500
+
+@app.route('/api/notifications/push/unsubscribe', methods=['POST'])
+@jwt_required()
+def unsubscribe_push():
+    """Unsubscribe user from push notifications"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        endpoint = data.get('endpoint') if data else None
+        
+        if endpoint:
+            # Delete specific subscription
+            PushSubscription.query.filter_by(user_id=user.id, endpoint=endpoint).delete()
+        else:
+            # Delete all subscriptions for user
+            PushSubscription.query.filter_by(user_id=user.id).delete()
+        
+        db.session.commit()
+        return jsonify({'message': 'Push subscription removed'}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error unsubscribing from push: {e}")
+        return jsonify({'error': 'Failed to unsubscribe', 'message': str(e)}), 500
+
 
 @require_session
 @app.route('/api/tasks', methods=['GET'])
@@ -2966,6 +3447,15 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
+
+@socketio.on('join_notifications')
+def handle_join_notifications(data):
+    """Join user's notification room for real-time updates"""
+    user_id = data.get('userId')
+    if user_id:
+        room = f'user_{user_id}'
+        join_room(room)
+        print(f'User {user_id} joined notification room: {room}')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

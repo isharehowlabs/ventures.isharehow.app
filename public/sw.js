@@ -97,3 +97,87 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Push notification event - handle incoming push notifications
+self.addEventListener('push', (event) => {
+  let notificationData = {
+    title: 'New Notification',
+    body: 'You have a new notification',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'notification',
+    data: {},
+  };
+
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      notificationData = {
+        title: data.title || notificationData.title,
+        body: data.message || data.body || notificationData.body,
+        icon: data.icon || '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: data.tag || data.id || 'notification',
+        data: data.data || {},
+        requireInteraction: data.requireInteraction || false,
+      };
+    } catch (e) {
+      console.error('Error parsing push data:', e);
+      notificationData.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      tag: notificationData.tag,
+      data: notificationData.data,
+      requireInteraction: notificationData.requireInteraction,
+      actions: notificationData.data.actions || [],
+    })
+  );
+});
+
+// Notification click event - focus app when notification is clicked
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const notificationData = event.notification.data || {};
+  const urlToOpen = notificationData.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    }).then((clientList) => {
+      // Check if app is already open
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Open new window if app is not open
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// Background sync for offline notification sync
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-notifications') {
+    event.waitUntil(
+      // This will be handled by the notification sync service
+      fetch('/api/notifications/sync', {
+        method: 'POST',
+        credentials: 'include',
+      }).catch((error) => {
+        console.error('Background sync failed:', error);
+      })
+    );
+  }
+});
+

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { trackFocusSession } from '../../utils/analytics';
 import { logActivity } from '../wellness/api';
 import { useAuth } from '../../hooks/useAuth';
+import { useTimer } from '../../contexts/TimerContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import {
   Box,
   Typography,
@@ -26,10 +28,32 @@ export default function PomodoroTimer({ location = 'rise' }: PomodoroTimerProps)
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const { isAuthenticated } = useAuth();
+  const { setTimerState } = useTimer();
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     setTimeLeft(duration * 60);
   }, [duration]);
+
+  // Update timer context for notification bell - update every second when running
+  useEffect(() => {
+    if (isRunning && timeLeft > 0) {
+      setTimerState({
+        isRunning: true,
+        timeLeft,
+        duration,
+        isBreak,
+        location: location as 'rise' | 'cowork',
+      });
+    } else if (!isRunning && timeLeft === 0) {
+      // Timer completed, clear state after a brief delay
+      setTimeout(() => {
+        setTimerState(null);
+      }, 1000);
+    } else if (!isRunning) {
+      setTimerState(null);
+    }
+  }, [isRunning, timeLeft, duration, isBreak, location, setTimerState]);
 
   useEffect(() => {
     if (!isRunning || timeLeft === 0) return;
@@ -51,6 +75,46 @@ export default function PomodoroTimer({ location = 'rise' }: PomodoroTimerProps)
                 `${duration} minutes`
               ).catch(err => console.error('Failed to log focus session:', err));
             }
+
+            // Create notification for completed focus session
+            addNotification({
+              type: 'timer',
+              title: 'Focus Session Complete! 🎉',
+              message: `You completed a ${duration}-minute focus session. Great work!`,
+              metadata: {
+                timerDuration: duration,
+                timerType: 'focus',
+                link: location === 'rise' ? '/rise' : '/labs',
+              },
+            }).catch(err => console.error('Failed to add notification:', err));
+          } else {
+            // Create notification for break completion
+            addNotification({
+              type: 'timer',
+              title: 'Break Time Over',
+              message: 'Your break is complete. Ready to focus again?',
+              metadata: {
+                timerDuration: duration,
+                timerType: 'break',
+                link: location === 'rise' ? '/rise' : '/labs',
+              },
+            }).catch(err => console.error('Failed to add notification:', err));
+          }
+          
+          // Send browser notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification(
+              !isBreak ? 'Focus Session Complete! 🎉' : 'Break Time Over',
+              {
+                body: !isBreak 
+                  ? `You completed a ${duration}-minute focus session. Great work!`
+                  : 'Your break is complete. Ready to focus again?',
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+                tag: `timer-${isBreak ? 'break' : 'focus'}-${Date.now()}`,
+              }
+            );
+            setTimeout(() => notification.close(), 5000);
           }
           
           // Auto-switch between work and break
@@ -75,10 +139,27 @@ export default function PomodoroTimer({ location = 'rise' }: PomodoroTimerProps)
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft, isBreak, duration, location, isAuthenticated]);
+  }, [isRunning, timeLeft, isBreak, duration, location, isAuthenticated, addNotification]);
 
   const handlePlayPause = () => {
-    setIsRunning(!isRunning);
+    const newRunningState = !isRunning;
+    setIsRunning(newRunningState);
+    
+    // Create notification when timer starts
+    if (newRunningState) {
+      addNotification({
+        type: 'timer',
+        title: isBreak ? 'Break Timer Started' : 'Focus Timer Started',
+        message: isBreak 
+          ? `Take a ${duration}-minute break. You've earned it!`
+          : `Starting a ${duration}-minute focus session. Let's get productive!`,
+        metadata: {
+          timerDuration: duration,
+          timerType: isBreak ? 'break' : 'focus',
+          link: location === 'rise' ? '/rise' : '/labs',
+        },
+      }).catch(err => console.error('Failed to add notification:', err));
+    }
   };
 
   const handleReset = () => {
