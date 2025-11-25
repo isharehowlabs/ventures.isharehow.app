@@ -183,8 +183,13 @@ function SettingsPage() {
     }
   };
 
-  // Admin check: Super Admin if Patreon ID 56776112, user.isAdmin, or username is 'isharehow'
-  const isAdmin = user?.isAdmin || user?.patreonId === 56776112 || user?.username === 'isharehow';
+  // Admin check: Super Admin if Patreon ID 56776112, user.isAdmin, or username/id is 'isharehow'
+  const isAdmin = user?.isAdmin || 
+                  user?.patreonId === 56776112 || 
+                  user?.username === 'isharehow' || 
+                  user?.id === 'isharehow' ||
+                  (user?.username && user.username.toLowerCase() === 'isharehow') ||
+                  (user?.id && String(user.id).toLowerCase() === 'isharehow');
   
   // Tab state
   const [activeTab, setActiveTab] = useState(0);
