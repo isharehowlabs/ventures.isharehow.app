@@ -1839,19 +1839,49 @@ def get_profile():
         user_id = get_jwt_identity()
         
         if not user_id:
+            app.logger.warning("Profile endpoint: No JWT identity found")
             return jsonify({'error': 'Not authenticated', 'message': 'No valid token found'}), 401
         
-        # Find user by ID
+        app.logger.info(f"Profile endpoint: Looking up user with identity: {user_id} (type: {type(user_id).__name__})")
+        
+        # Find user by ID - JWT identity is typically str(user.id) from create_access_token
         user = None
-        if user_id and user_id.isdigit():
-            user = User.query.get(int(user_id))
-        if not user and user_id:
-            user = User.query.filter_by(username=user_id).first()
-        if not user and user_id:
-            user = User.query.filter_by(patreon_id=user_id).first()
+        user_id_str = str(user_id) if user_id else None
+        
+        # Try integer ID lookup first (most common case)
+        if user_id_str and user_id_str.isdigit():
+            try:
+                user = User.query.get(int(user_id_str))
+                app.logger.info(f"Profile endpoint: Looked up by integer ID: {user_id_str}, found: {user is not None}")
+                if user:
+                    app.logger.info(f"Profile endpoint: Found user - ID: {user.id}, patreon_id: {user.patreon_id}, username: {user.username}")
+            except Exception as e:
+                app.logger.error(f"Profile endpoint: Error looking up by integer ID: {e}")
+        
+        # Try username lookup
+        if not user and user_id_str:
+            try:
+                user = User.query.filter_by(username=user_id_str).first()
+                app.logger.info(f"Profile endpoint: Looked up by username: {user_id_str}, found: {user is not None}")
+            except Exception as e:
+                app.logger.error(f"Profile endpoint: Error looking up by username: {e}")
+        
+        # Try patreon_id lookup
+        if not user and user_id_str:
+            try:
+                user = User.query.filter_by(patreon_id=user_id_str).first()
+                app.logger.info(f"Profile endpoint: Looked up by patreon_id: {user_id_str}, found: {user is not None}")
+            except Exception as e:
+                app.logger.error(f"Profile endpoint: Error looking up by patreon_id: {e}")
         
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            app.logger.error(f"Profile endpoint: User not found for identity: {user_id}")
+            # Return more helpful error message
+            return jsonify({
+                'error': 'User not found',
+                'message': f'No user found with identity: {user_id}',
+                'identity': str(user_id)
+            }), 404
         
         # Get UserProfile if it exists
         profile_data = {}

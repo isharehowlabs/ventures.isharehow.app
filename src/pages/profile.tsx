@@ -21,22 +21,42 @@ function ProfilePage() {
     const fetchProfile = async () => {
       try {
         const backendUrl = getBackendUrl();
+        console.log('[Profile] Fetching profile from:', `${backendUrl}/api/profile`);
         const response = await fetch(`${backendUrl}/api/profile`, { credentials: 'include' });
+        console.log('[Profile] Response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('[Profile] Profile data received:', data);
           setProfileData(data);
         } else {
-          console.error('Failed to fetch profile:', response.status);
+          // Try to get error message from response
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+            console.error('[Profile] Failed to fetch profile:', response.status, errorData);
+          } catch (e) {
+            const text = await response.text();
+            console.error('[Profile] Failed to fetch profile (non-JSON response):', response.status, text.substring(0, 200));
+          }
+          // Don't set loading to false on error - let user see the error
+          // But still set it so UI doesn't hang
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
+      } catch (error: any) {
+        console.error('[Profile] Error fetching profile:', error);
         setLoading(false);
+      } finally {
+        // Only set loading to false if we haven't already
+        // (to avoid race conditions)
       }
     };
 
     if (authUser) {
       fetchProfile();
+    } else {
+      setLoading(false);
     }
   }, [authUser]);
 
@@ -185,10 +205,11 @@ function ProfilePage() {
   }
 
   // Merge profileData and authUser to ensure all fields are available
+  // If profileData fetch failed, use authUser as fallback
   const user: any = {
     ...authUser,
-    ...profileData,
-    // Ensure these critical fields are always available
+    ...(profileData || {}),
+    // Ensure these critical fields are always available, prefer profileData
     id: profileData?.id || authUser?.id,
     patreonId: profileData?.patreonId || authUser?.patreonId,
     createdAt: profileData?.createdAt || authUser?.createdAt,
