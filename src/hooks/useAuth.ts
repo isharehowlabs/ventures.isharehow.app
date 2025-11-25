@@ -31,28 +31,16 @@ export function useAuth() {
     error: null,
   });
 
-  // Helper function to get token from various sources
-  const getAuthToken = useCallback((): string | null => {
-    if (typeof window === 'undefined') return null;
-    
-    // First check localStorage
-    const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) return storedToken;
-    
-    // Token might be in cookie (httpOnly), but we can't access it from JS
-    // The backend will check cookies automatically
-    return null;
-  }, []);
+  // JWT tokens are now stored in httpOnly cookies (set by backend)
+  // We don't need to access tokens from JavaScript - backend handles it automatically
 
   const checkAuth = useCallback(async () => {
     try {
       const backendUrl = getBackendUrl();
-      const token = getAuthToken();
       
       // Debug: Log auth check attempt
       console.log('[Auth] Checking authentication...', {
         backendUrl,
-        hasToken: !!token,
         timestamp: new Date().toISOString(),
       });
       
@@ -66,13 +54,10 @@ export function useAuth() {
 
       console.log('[Auth] About to start Promise.race...');
 
-      // Build headers with token if available
+      // JWT token is in httpOnly cookie, backend will read it automatically
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
 
       // Race the fetch against the timeout
       console.log('[Auth] Starting fetch request...');
@@ -105,11 +90,7 @@ export function useAuth() {
           isPaidMember: user.isPaidMember,
         });
         
-        // Store token if returned in response (shouldn't normally happen, but handle it)
-        if (user.token && typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', user.token);
-        }
-        
+        // JWT token is in httpOnly cookie, no need to store in localStorage
         setAuthState({
           user,
           isAuthenticated: true,
@@ -123,14 +104,8 @@ export function useAuth() {
           status: response.status,
           statusText: response.statusText,
           error: errorData,
-          // Check if cookies are being sent (can't access directly but can infer)
           credentialsMode: 'include',
         });
-        
-        // Clear invalid token
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('auth_token');
-        }
         
         setAuthState({
           user: null,
@@ -147,11 +122,6 @@ export function useAuth() {
       });
       const isTimeout = error.message === 'Request timeout';
       
-      // Clear token on error
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-      }
-      
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -159,48 +129,30 @@ export function useAuth() {
         error: isTimeout ? 'Request timeout' : error.message,
       });
     }
-  }, [getAuthToken]);
+  }, []);
 
   useEffect(() => {
     checkAuth();
     
-    // Check for auth success parameter in URL and extract JWT token
+    // Check for auth success parameter in URL (JWT is in httpOnly cookie now)
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('auth') === 'success') {
-        const token = urlParams.get('token');
-        if (token) {
-          console.log('[Auth] Detected auth=success with token in URL, storing token...');
-          localStorage.setItem('auth_token', token);
-          
-          // Clean URL immediately
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, '', newUrl);
-          console.log('[Auth] Cleaned up URL parameter');
-          
-          // Retry auth check with new token
+        console.log('[Auth] Detected auth=success in URL, JWT should be in httpOnly cookie');
+        
+        // Clean URL immediately
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+        console.log('[Auth] Cleaned up URL parameter');
+        
+        // Multiple attempts to check auth (cookie might need a moment to be available)
+        const attempts = [500, 1000, 2000];
+        attempts.forEach((delay, index) => {
           setTimeout(() => {
+            console.log(`[Auth] Retry attempt ${index + 1}/${attempts.length} after ${delay}ms`);
             checkAuth();
-          }, 100);
-        } else {
-          console.log('[Auth] Detected auth=success in URL, will retry auth checks...');
-          
-          // Multiple attempts to check auth (cookie might be available)
-          const attempts = [500, 1000, 2000];
-          attempts.forEach((delay, index) => {
-            setTimeout(() => {
-              console.log(`[Auth] Retry attempt ${index + 1}/${attempts.length} after ${delay}ms`);
-              checkAuth();
-            }, delay);
-          });
-          
-          // Clean up URL parameter after last attempt
-          setTimeout(() => {
-            const newUrl = window.location.pathname;
-            window.history.replaceState({}, '', newUrl);
-            console.log('[Auth] Cleaned up URL parameter');
-          }, 2500);
-        }
+          }, delay);
+        });
       }
     }
   }, [checkAuth]);
@@ -214,29 +166,21 @@ export function useAuth() {
   const logout = async () => {
     try {
       const backendUrl = getBackendUrl();
-      const token = getAuthToken();
       
       console.log('[Auth] Logging out...');
       
-      // Build headers with token if available
+      // JWT token is in httpOnly cookie, backend will read it automatically
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
       
       await fetch(`${backendUrl}/api/auth/logout`, {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'include', // Include cookies so backend can clear JWT cookie
         headers,
       });
       
-      // Clear token from localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-      }
-      
+      // Backend clears the JWT cookie, no need to clear localStorage
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -246,10 +190,13 @@ export function useAuth() {
       console.log('[Auth] ✓ Logged out successfully');
     } catch (error: any) {
       console.error('[Auth] Logout error:', error);
-      // Clear token even on error
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-      }
+      // Clear state even on error
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
     }
   };
 

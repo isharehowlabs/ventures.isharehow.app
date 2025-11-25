@@ -1,3 +1,8 @@
+/**
+ * @deprecated Patreon verification is now handled automatically by backend cron job.
+ * This component is kept for backward compatibility but should not be used.
+ * Membership verification happens twice monthly via scheduled cron job.
+ */
 import { useState, useEffect } from 'react';
 import { Box, Button, Typography, Alert, CircularProgress } from '@mui/material';
 import { getBackendUrl } from '../../utils/backendUrl';

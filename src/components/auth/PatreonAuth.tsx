@@ -1,72 +1,42 @@
 import { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import LoginForm from './LoginForm';
-import PatreonVerification from './PatreonVerification';
 import RegisterForm from './RegisterForm';
+// PatreonVerification removed - verification handled automatically by backend cron job
 
 interface PatreonAuthProps {
   onSuccess?: () => void;
 }
 
-type AuthStep = 'login' | 'register' | 'verify';
+type AuthStep = 'login' | 'register';
 
 export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
   const [step, setStep] = useState<AuthStep>('login');
-  const [authToken, setAuthToken] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
 
   // Check for Patreon connection success from OAuth callback
+  // JWT is now in httpOnly cookie, no need to extract from URL
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('patreon_connected') === 'true') {
-        const token = urlParams.get('token');
-        if (token) {
-          localStorage.setItem('auth_token', token);
-          setAuthToken(token);
-          // Clean URL
-          window.history.replaceState({}, '', window.location.pathname);
-          // Refresh to get updated user data
-          setTimeout(() => {
-            window.location.reload();
-          }, 500);
-        }
+      if (urlParams.get('patreon_connected') === 'true' || urlParams.get('auth') === 'success') {
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+        // Refresh to get updated user data (JWT is in cookie)
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       }
     }
   }, []);
 
   const handleLoginSuccess = (token: string, userData: any) => {
-    setAuthToken(token);
-    setUser(userData);
-    
-    // Check if user needs Patreon verification
-    if (userData.needsPatreonVerification || !userData.patreonConnected) {
-      setStep('verify');
-    } else {
-      // User is fully authenticated
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        // Refresh the page to update auth state
-        window.location.reload();
-      }
-    }
-  };
-
-  const handleVerificationSuccess = () => {
+    // JWT is in httpOnly cookie now, no need to store token
+    // Patreon verification is handled automatically by cron job
+    // User is fully authenticated after login/register
     if (onSuccess) {
       onSuccess();
     } else {
       // Refresh the page to update auth state
-      window.location.reload();
-    }
-  };
-
-  const handleSkipVerification = () => {
-    // Allow access but with limited features
-    if (onSuccess) {
-      onSuccess();
-    } else {
       window.location.reload();
     }
   };
@@ -80,15 +50,8 @@ export default function PatreonAuth({ onSuccess }: PatreonAuthProps) {
     );
   }
 
-  if (step === 'verify' && authToken) {
-    return (
-      <PatreonVerification
-        token={authToken}
-        onSuccess={handleVerificationSuccess}
-        onSkip={handleSkipVerification}
-      />
-    );
-  }
+  // Patreon verification step removed - handled automatically by backend cron job
+  // No need for user-facing verification UI
 
   return (
     <LoginForm

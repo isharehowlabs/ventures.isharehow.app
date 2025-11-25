@@ -5,6 +5,7 @@ services:
     rootDir: backend-python
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: python app.py
+    postDeployCommand: export FLASK_APP=app.py && flask db upgrade
     plan: free
     envVars:
       - key: PYTHON_VERSION
