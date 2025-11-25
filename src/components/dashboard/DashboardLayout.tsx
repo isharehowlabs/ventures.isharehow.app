@@ -36,11 +36,10 @@ function TabPanel(props: TabPanelProps) {
 interface DashboardLayoutProps {
   children?: ReactNode;
   taskList?: ReactNode;
-  liveUpdates?: ReactNode;
   communityQA?: ReactNode;
 }
 
-export default function DashboardLayout({ children, taskList, liveUpdates, communityQA }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, taskList, communityQA }: DashboardLayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { settings, getVisiblePanels } = useSettings();
@@ -166,8 +165,6 @@ export default function DashboardLayout({ children, taskList, liveUpdates, commu
           </Box>
           {/* Session Tasks on the left side with work tabs */}
           {settings.dashboard.showTaskList && taskList}
-          {/* Live Updates below Session Tasks */}
-          {settings.dashboard.showLiveUpdates && liveUpdates}
         </Box>
         <Box 
           sx={{ 

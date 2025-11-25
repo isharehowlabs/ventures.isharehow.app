@@ -2425,6 +2425,85 @@ def delete_notification(notification_id):
         app.logger.error(f"Error deleting notification: {e}")
         return jsonify({'error': 'Failed to delete notification', 'message': str(e)}), 500
 
+@app.route('/api/notifications/broadcast', methods=['POST'])
+@jwt_required()
+def broadcast_notification():
+    """Broadcast a notification to all users (admin only)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        admin_user = None
+        if user_id and str(user_id).isdigit():
+            admin_user = User.query.get(int(user_id))
+        if not admin_user and user_id:
+            admin_user = User.query.filter_by(username=str(user_id)).first()
+        if not admin_user and user_id:
+            admin_user = User.query.filter_by(patreon_id=str(user_id)).first()
+        
+        if not admin_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Check if user is admin (Patreon ID 56776112 or username 'isharehow')
+        is_admin = admin_user.patreon_id == 56776112 or admin_user.username == 'isharehow'
+        if not is_admin:
+            return jsonify({'error': 'Unauthorized: Admin access required'}), 403
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        if not data.get('type') or not data.get('title') or not data.get('message'):
+            return jsonify({'error': 'Missing required fields: type, title, message'}), 400
+        
+        # Get all users
+        all_users = User.query.all()
+        created_notifications = []
+        
+        # Create notification for each user
+        for user in all_users:
+            notification = Notification(
+                user_id=user.id,
+                type=data['type'],
+                title=data['title'],
+                message=data['message'],
+                read=False,
+                notification_metadata=json.dumps(data.get('metadata', {})) if data.get('metadata') else None
+            )
+            db.session.add(notification)
+            created_notifications.append(notification)
+            
+            # Emit socket.io event
+            socketio.emit('notification:new', notification.to_dict(), room=f'user_{user.id}')
+        
+        db.session.commit()
+        
+        # Send push notifications (async, don't block)
+        if WEBPUSH_AVAILABLE:
+            for notification in created_notifications:
+                try:
+                    send_push_notification(notification.user_id, notification)
+                except Exception as push_error:
+                    app.logger.warning(f"Failed to send push notification to user {notification.user_id}: {push_error}")
+        
+        return jsonify({
+            'message': f'Notification broadcasted to {len(created_notifications)} users',
+            'count': len(created_notifications)
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error broadcasting notification: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to broadcast notification', 'message': str(e)}), 500
+
 # Push Notification Endpoints
 @app.route('/api/notifications/push/subscribe', methods=['POST'])
 @jwt_required()

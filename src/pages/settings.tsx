@@ -19,6 +19,8 @@ import {
   AccordionDetails,
   IconButton,
   TextField,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -27,10 +29,13 @@ import {
   ExpandMore,
   Refresh,
   RestartAlt,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useSettings } from '../hooks/useSettings';
+import { getBackendUrl } from '../utils/backendUrl';
 
 const PANEL_LABELS: Record<string, string> = {
   streaming: 'Streaming Panel',
@@ -102,8 +107,96 @@ function SettingsPage() {
     updatePanelSettings(panelKey as any, { order: newOrder });
   };
 
-  // Admin check: Super Admin if Patreon ID 56776112 or user.isAdmin
-  const isAdmin = user?.isAdmin || user?.patreonId === 56776112;
+  const handleSendNotification = async () => {
+    if (!notificationTitle.trim() || !notificationMessage.trim()) {
+      setNotificationError('Title and message are required');
+      return;
+    }
+
+    setNotificationSending(true);
+    setNotificationError(null);
+    setNotificationSuccess(null);
+
+    try {
+      const backendUrl = getBackendUrl();
+      
+      if (notificationTarget === 'all') {
+        // For now, send to all users by making a request to a special endpoint
+        // We'll need to create this endpoint in the backend
+        const response = await fetch(`${backendUrl}/api/notifications/broadcast`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: notificationType,
+            title: notificationTitle,
+            message: notificationMessage,
+            metadata: {
+              admin: true,
+              sentBy: user?.username || 'admin',
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to send notification' }));
+          throw new Error(errorData.error || 'Failed to send notification');
+        }
+
+        setNotificationSuccess('Notification sent to all users successfully!');
+      } else {
+        // Send to current user
+        const response = await fetch(`${backendUrl}/api/notifications`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: notificationType,
+            title: notificationTitle,
+            message: notificationMessage,
+            metadata: {
+              admin: true,
+              sentBy: user?.username || 'admin',
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to send notification' }));
+          throw new Error(errorData.error || 'Failed to send notification');
+        }
+
+        setNotificationSuccess('Notification sent successfully!');
+      }
+
+      // Clear form
+      setNotificationTitle('');
+      setNotificationMessage('');
+    } catch (error: any) {
+      setNotificationError(error.message || 'Failed to send notification');
+    } finally {
+      setNotificationSending(false);
+    }
+  };
+
+  // Admin check: Super Admin if Patreon ID 56776112, user.isAdmin, or username is 'isharehow'
+  const isAdmin = user?.isAdmin || user?.patreonId === 56776112 || user?.username === 'isharehow';
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState(0);
+  
+  // Admin notification form state
+  const [notificationType, setNotificationType] = useState<string>('admin');
+  const [notificationTitle, setNotificationTitle] = useState<string>('');
+  const [notificationMessage, setNotificationMessage] = useState<string>('');
+  const [notificationTarget, setNotificationTarget] = useState<string>('self'); // 'self' or 'all'
+  const [notificationSending, setNotificationSending] = useState<boolean>(false);
+  const [notificationSuccess, setNotificationSuccess] = useState<string | null>(null);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
 
   return (
     <AppShell active="about">
@@ -129,6 +222,18 @@ function SettingsPage() {
             Settings have been reset to default values.
           </Alert>
         )}
+
+        {/* Tabs */}
+        <Paper elevation={2} sx={{ mb: 3 }}>
+          <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+            <Tab label="General" icon={<SettingsIcon />} iconPosition="start" />
+            {isAdmin && <Tab label="Admin" icon={<AdminPanelSettingsIcon />} iconPosition="start" />}
+          </Tabs>
+        </Paper>
+
+        {/* General Settings Tab */}
+        {activeTab === 0 && (
+          <Box>
 
         {/* Dashboard Settings */}
         <Paper elevation={2} sx={{ p: 4, mb: 3 }}>
@@ -274,53 +379,142 @@ function SettingsPage() {
             </Button>
           </Stack>
         </Paper>
+          </Box>
+        )}
 
-        {/* Admin Section: Q&A Moderation Only */}
-        {isAdmin && (
-          <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-              <SettingsIcon sx={{ color: 'gold', fontSize: 32 }} />
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
-                Admin Section
-              </Typography>
-            </Stack>
-            <Divider sx={{ mb: 3, borderColor: 'gold' }} />
-            {/* Q&A Moderation Controls */}
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              <b>Community Q&A Moderation</b>: Review, approve, or remove questions and answers. Set question visibility duration. Manage categories and highlight featured questions. Bulk moderation and audit logging supported.
-            </Typography>
-            <Stack spacing={2}>
-              <Button variant="contained" color="primary">Review Pending Questions</Button>
-              <Button variant="contained" color="secondary">Manage Answers</Button>
-              <Button variant="contained" color="info">Bulk Moderation</Button>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Typography variant="body2" sx={{ color: 'gold', minWidth: 180 }}>
-                  Set Question Visibility (hours):
+        {/* Admin Tab */}
+        {activeTab === 1 && isAdmin && (
+          <Box>
+            {/* Notification System */}
+            <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <NotificationsIcon sx={{ color: 'gold', fontSize: 32 }} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
+                  Send Notification
                 </Typography>
-                <TextField type="number" size="small" defaultValue={48} inputProps={{ min: 1, max: 168 }} sx={{ width: 100 }} />
-                <Button variant="outlined" color="success">Update</Button>
               </Stack>
-              <Button variant="outlined" color="warning">Manage Categories</Button>
-              <Button variant="outlined" color="secondary">Bulk Category Management</Button>
-            </Stack>
-            <Divider sx={{ my: 3, borderColor: 'gold' }} />
-            {/* Audit Logging Section */}
-            <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold', mb: 2 }}>
-              Audit Log (Render)
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              All admin actions are logged for review and compliance. Logs are available in the Render dashboard.
-            </Typography>
-            <Paper variant="outlined" sx={{ p: 2, background: 'rgba(255,255,224,0.15)', border: '1px solid gold' }}>
-              <Typography variant="body2" color="gold">
-                {/* Example log entries - replace with real log data */}
-                [2025-11-22 10:15] Admin Jane approved question #123<br />
-                [2025-11-22 10:16] Admin Jane removed answer #456<br />
-                [2025-11-22 10:17] Admin Jane updated category "Streaming"<br />
-                [2025-11-22 10:18] Admin Jane performed bulk moderation<br />
-              </Typography>
+              <Divider sx={{ mb: 3, borderColor: 'gold' }} />
+              
+              {notificationSuccess && (
+                <Alert severity="success" sx={{ mb: 3 }} onClose={() => setNotificationSuccess(null)}>
+                  {notificationSuccess}
+                </Alert>
+              )}
+              
+              {notificationError && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setNotificationError(null)}>
+                  {notificationError}
+                </Alert>
+              )}
+
+              <Stack spacing={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Notification Type</InputLabel>
+                  <Select
+                    value={notificationType}
+                    label="Notification Type"
+                    onChange={(e) => setNotificationType(e.target.value)}
+                  >
+                    <MenuItem value="admin">Admin</MenuItem>
+                    <MenuItem value="system">System</MenuItem>
+                    <MenuItem value="live-update">Live Update</MenuItem>
+                    <MenuItem value="board">Board</MenuItem>
+                    <MenuItem value="timer">Timer</MenuItem>
+                    <MenuItem value="twitch">Twitch</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel>Target</InputLabel>
+                  <Select
+                    value={notificationTarget}
+                    label="Target"
+                    onChange={(e) => setNotificationTarget(e.target.value)}
+                  >
+                    <MenuItem value="self">Send to Myself (Test)</MenuItem>
+                    <MenuItem value="all">Send to All Users</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  fullWidth
+                  label="Title"
+                  value={notificationTitle}
+                  onChange={(e) => setNotificationTitle(e.target.value)}
+                  placeholder="Enter notification title"
+                  required
+                />
+
+                <TextField
+                  fullWidth
+                  label="Message"
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
+                  placeholder="Enter notification message"
+                  multiline
+                  rows={4}
+                  required
+                />
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  startIcon={<NotificationsIcon />}
+                  onClick={handleSendNotification}
+                  disabled={notificationSending || !notificationTitle.trim() || !notificationMessage.trim()}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  {notificationSending ? 'Sending...' : 'Send Notification'}
+                </Button>
+              </Stack>
             </Paper>
-          </Paper>
+
+            {/* Q&A Moderation Section */}
+            <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <SettingsIcon sx={{ color: 'gold', fontSize: 32 }} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
+                  Community Q&A Moderation
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 3, borderColor: 'gold' }} />
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Review, approve, or remove questions and answers. Set question visibility duration. Manage categories and highlight featured questions. Bulk moderation and audit logging supported.
+              </Typography>
+              <Stack spacing={2}>
+                <Button variant="contained" color="primary">Review Pending Questions</Button>
+                <Button variant="contained" color="secondary">Manage Answers</Button>
+                <Button variant="contained" color="info">Bulk Moderation</Button>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Typography variant="body2" sx={{ color: 'gold', minWidth: 180 }}>
+                    Set Question Visibility (hours):
+                  </Typography>
+                  <TextField type="number" size="small" defaultValue={48} inputProps={{ min: 1, max: 168 }} sx={{ width: 100 }} />
+                  <Button variant="outlined" color="success">Update</Button>
+                </Stack>
+                <Button variant="outlined" color="warning">Manage Categories</Button>
+                <Button variant="outlined" color="secondary">Bulk Category Management</Button>
+              </Stack>
+              <Divider sx={{ my: 3, borderColor: 'gold' }} />
+              {/* Audit Logging Section */}
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold', mb: 2 }}>
+                Audit Log (Render)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                All admin actions are logged for review and compliance. Logs are available in the Render dashboard.
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 2, background: 'rgba(255,255,224,0.15)', border: '1px solid gold' }}>
+                <Typography variant="body2" color="gold">
+                  {/* Example log entries - replace with real log data */}
+                  [2025-11-22 10:15] Admin Jane approved question #123<br />
+                  [2025-11-22 10:16] Admin Jane removed answer #456<br />
+                  [2025-11-22 10:17] Admin Jane updated category "Streaming"<br />
+                  [2025-11-22 10:18] Admin Jane performed bulk moderation<br />
+                </Typography>
+              </Paper>
+            </Paper>
+          </Box>
         )}
       </Box>
     </AppShell>

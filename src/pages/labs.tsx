@@ -17,7 +17,6 @@ import {
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import LiveUpdates from '../components/mcp/LiveUpdates';
 import FloatingAIChat from '../components/dashboard/FloatingAIChat';
 import CryptoIncentivesPanel from '../components/dashboard/CryptoIncentivesPanel';
 import { getBackendUrl } from '../utils/backendUrl';
@@ -183,7 +182,6 @@ function LabsDashboard() {
 
       <DashboardLayout
         taskList={<TaskListPlaceholder />}
-        liveUpdates={<LiveUpdates />}
         communityQA={
           <Paper elevation={4} sx={{ p: 4, mb: 4, border: '2px solid gold', background: 'rgba(255, 255, 224, 0.15)' }}>
             <Typography variant="h4" sx={{ fontWeight: 900, color: 'gold', mb: 2 }}>
