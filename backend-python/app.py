@@ -1972,6 +1972,12 @@ def update_profile():
         })
         
         return jsonify(profile_dict)
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error updating profile: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to update profile', 'message': str(e)}), 500
 
 
 @require_session
