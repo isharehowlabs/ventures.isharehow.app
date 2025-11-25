@@ -54,15 +54,27 @@ function SettingsPage() {
     const fetchProfile = async () => {
       try {
         const backendUrl = getBackendUrl();
+        console.log('[Settings] Fetching profile from:', `${backendUrl}/api/profile`);
         const response = await fetch(`${backendUrl}/api/profile`, { credentials: 'include' });
+        console.log('[Settings] Profile response status:', response.status);
         if (response.ok) {
           const data = await response.json();
+          console.log('[Settings] Profile data received:', data);
           setUser(data);
         } else {
-          console.error('Failed to fetch user profile:', response.status);
+          // Try to get error message
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch (e) {
+            const text = await response.text();
+            console.error('[Settings] Failed to fetch profile (non-JSON):', response.status, text.substring(0, 200));
+          }
+          console.error('[Settings] Failed to fetch user profile:', errorMessage);
         }
       } catch (err) {
-        console.error('Failed to fetch user profile:', err);
+        console.error('[Settings] Error fetching user profile:', err);
       }
     };
     fetchProfile();

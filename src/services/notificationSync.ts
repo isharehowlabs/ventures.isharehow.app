@@ -6,13 +6,48 @@ const DB_VERSION = 2; // Incremented to trigger upgrade for sync_queue store
 const STORE_NAME = 'notifications';
 const SYNC_QUEUE_STORE = 'sync_queue';
 
-// Initialize IndexedDB
+// Initialize IndexedDB with proper upgrade handling
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => {
+      console.error('IndexedDB open error:', request.error);
+      reject(request.error);
+    };
+    
+    request.onsuccess = () => {
+      const db = request.result;
+      // Check if stores exist, if not, we need to upgrade
+      if (!db.objectStoreNames.contains(STORE_NAME) || !db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+        console.warn('IndexedDB stores missing, closing and reopening to trigger upgrade...');
+        db.close();
+        // Force upgrade by opening with a higher version
+        const upgradeRequest = indexedDB.open(DB_NAME, DB_VERSION + 1);
+        upgradeRequest.onupgradeneeded = (event) => {
+          const upgradeDb = (event.target as IDBOpenDBRequest).result;
+          // Notifications store
+          if (!upgradeDb.objectStoreNames.contains(STORE_NAME)) {
+            const store = upgradeDb.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            store.createIndex('timestamp', 'timestamp', { unique: false });
+            store.createIndex('read', 'read', { unique: false });
+          }
+          // Sync queue store
+          if (!upgradeDb.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+            const queueStore = upgradeDb.createObjectStore(SYNC_QUEUE_STORE, { keyPath: 'id', autoIncrement: true });
+            queueStore.createIndex('type', 'type', { unique: false });
+            queueStore.createIndex('timestamp', 'timestamp', { unique: false });
+          }
+        };
+        upgradeRequest.onsuccess = () => resolve(upgradeRequest.result);
+        upgradeRequest.onerror = () => {
+          console.error('IndexedDB upgrade error:', upgradeRequest.error);
+          reject(upgradeRequest.error);
+        };
+      } else {
+        resolve(db);
+      }
+    };
     
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
@@ -45,6 +80,11 @@ interface SyncAction {
 export async function queueSyncAction(action: Omit<SyncAction, 'id' | 'timestamp'>): Promise<void> {
   try {
     const db = await initDB();
+    // Check if store exists before accessing
+    if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+      console.warn('Sync queue store does not exist, skipping queue action');
+      return;
+    }
     const tx = db.transaction(SYNC_QUEUE_STORE, 'readwrite');
     const store = tx.objectStore(SYNC_QUEUE_STORE);
     
@@ -93,6 +133,11 @@ export async function getQueuedActions(): Promise<SyncAction[]> {
 export async function removeQueuedAction(actionId: number): Promise<void> {
   try {
     const db = await initDB();
+    // Check if store exists before accessing
+    if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+      console.warn('Sync queue store does not exist, skipping remove action');
+      return;
+    }
     const tx = db.transaction(SYNC_QUEUE_STORE, 'readwrite');
     const store = tx.objectStore(SYNC_QUEUE_STORE);
     await store.delete(actionId);
