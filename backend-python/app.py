@@ -59,11 +59,11 @@ try:
     print(f"✓ SQLAlchemy initialized")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
 except Exception as e:
-    print(f"✗ Warning: Database initialization failed: {e}")
-    print("Database features will be disabled. This may be due to:")
-    print("1. Missing psycopg2 package or Python 3.13 compatibility issue")
-    print("2. Invalid DATABASE_URL")
-    print("3. Database server not accessible")
+        print(f"✗ Warning: Database initialization failed: {e}")
+        print("Database features will be disabled. This may be due to:")
+        print("1. Missing psycopg package or Python 3.13 compatibility issue")
+        print("2. Invalid DATABASE_URL")
+        print("3. Database server not accessible")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
     if os.environ.get('DATABASE_URL'):
         print(f"  DATABASE_URL value: {os.environ.get('DATABASE_URL')[:50]}...")
@@ -311,7 +311,7 @@ else:
         print("  This may be due to:")
         print("  1. Invalid connection string format")
         print("  2. Database server not accessible")
-        print("  3. Missing psycopg2-binary package")
+        print("  3. Missing psycopg package")
         print("  4. Network/firewall issues")
 
 # Shopify configuration
@@ -1996,7 +1996,7 @@ def create_task():
     if not DB_AVAILABLE:
         return jsonify({
             'error': 'Database not available',
-            'message': 'Database is not configured or unavailable. Please check your database configuration and ensure psycopg2 is properly installed for Python 3.13.'
+            'message': 'Database is not configured or unavailable. Please check your database configuration and ensure psycopg is properly installed.'
         }), 503
     try:
         data = request.get_json()
@@ -2033,7 +2033,7 @@ def create_task():
             if 'connection' in error_str or 'database' in error_str or 'operational' in error_str or 'import' in error_str or 'psycopg' in error_str:
                 return jsonify({
                     'error': 'Database unavailable', 
-                    'message': 'Database connection failed. Please check your database configuration and ensure psycopg2-binary is compatible with Python 3.13.'
+                    'message': 'Database connection failed. Please check your database configuration and ensure psycopg is properly installed.'
                 }), 503
             raise db_error
         
