@@ -15,6 +15,7 @@ function ProfilePage() {
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailValue, setEmailValue] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
+  const [verifyingMembership, setVerifyingMembership] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -122,6 +123,45 @@ function ProfilePage() {
   const handleLogout = async () => {
     await logout();
     router.push('/');
+  };
+
+  const handleVerifyMembership = async () => {
+    setVerifyingMembership(true);
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/auth/verify-patreon`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Refresh profile data
+        const profileResponse = await fetch(`${backendUrl}/api/profile`, {
+          credentials: 'include',
+        });
+        if (profileResponse.ok) {
+          const updatedProfile = await profileResponse.json();
+          setProfileData(updatedProfile);
+        }
+        alert('Membership status updated successfully!');
+      } else {
+        const error = await response.json();
+        if (error.needsConnection) {
+          alert('Please connect your Patreon account first to verify membership status.');
+        } else {
+          alert(`Failed to verify membership: ${error.error || error.message || 'Unknown error'}`);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error verifying membership:', error);
+      alert(`Error: ${error.message || 'Failed to verify membership status'}`);
+    } finally {
+      setVerifyingMembership(false);
+    }
   };
 
   if (!authUser) {
@@ -315,9 +355,22 @@ function ProfilePage() {
               <Box sx={{ pl: 5 }}>
                 <Stack spacing={2}>
                   <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Membership Status
-                    </Typography>
+                    <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Membership Status
+                      </Typography>
+                      {user.patreonConnected && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={handleVerifyMembership}
+                          disabled={verifyingMembership}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          {verifyingMembership ? 'Verifying...' : 'Refresh Status'}
+                        </Button>
+                      )}
+                    </Stack>
                     <Stack direction="row" spacing={1} alignItems="center">
                       {user.isTeamMember && (
                         <Chip
@@ -333,6 +386,16 @@ function ProfilePage() {
                         size="small"
                       />
                     </Stack>
+                    {user.lastChecked && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        Last checked: {new Date(user.lastChecked).toLocaleString()}
+                      </Typography>
+                    )}
+                    {!user.patreonConnected && (
+                      <Alert severity="info" sx={{ mt: 1 }}>
+                        Connect your Patreon account to verify membership status automatically.
+                      </Alert>
+                    )}
                   </Box>
                   {user.membershipTier && (
                     <Box>

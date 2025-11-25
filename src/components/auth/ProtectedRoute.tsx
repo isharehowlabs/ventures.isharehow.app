@@ -123,8 +123,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Check if user is a paid member
-  if (!user?.isPaidMember) {
+  // Check if user is a paid member - but allow profile page access
+  const isProfilePage = typeof window !== 'undefined' && window.location.pathname === '/profile';
+  
+  if (!user?.isPaidMember && !isProfilePage) {
     return (
       <Box
         sx={{

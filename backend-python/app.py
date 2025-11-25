@@ -1354,7 +1354,7 @@ def login():
 @app.route('/api/auth/verify-patreon', methods=['POST'])
 @jwt_required()
 def verify_patreon():
-    """DEPRECATED: Verify Patreon membership status - Use cron job for automatic verification"""
+    """Manually verify Patreon membership status - Can be triggered by user from profile page"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
@@ -1828,45 +1828,63 @@ def verify_and_create_user():
 
 # Profile Management Endpoints
 @app.route('/api/profile', methods=['GET'])
+@jwt_required(optional=True)
 def get_profile():
-    """Get current user's profile"""
-    if 'user' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
+    """Get current user's profile - accessible to all authenticated users regardless of payment status"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
     
-    user_data = session['user']
-    user_id = user_data.get('id')
-    
-    if not user_id:
-        return jsonify({'error': 'Invalid session data'}), 400
-    
-    # Try to get profile from database if available
-    if DB_AVAILABLE:
+    try:
+        # Get user ID from JWT (optional - returns None if no token)
+        user_id = get_jwt_identity()
+        
+        if not user_id:
+            return jsonify({'error': 'Not authenticated', 'message': 'No valid token found'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=user_id).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get UserProfile if it exists
+        profile_data = {}
         try:
-            profile = UserProfile.query.get(user_id)
+            profile_id = user.patreon_id or user.username or str(user.id)
+            profile = UserProfile.query.get(profile_id)
             if profile:
-                profile_dict = profile.to_dict()
-                # Add last_charge_date and pledge_start from session if present
-                profile_dict['lastChargeDate'] = user_data.get('lastChargeDate')
-                profile_dict['pledgeStart'] = user_data.get('pledgeStart')
-                return jsonify(profile_dict)
+                profile_data = profile.to_dict()
         except Exception as e:
-            print(f"Warning: Failed to fetch profile from database: {e}")
-            # Fall through to return session data
-    
-    # Return session data as fallback
-    return jsonify({
-        'id': user_data.get('id'),
-        'email': user_data.get('email'),
-        'name': user_data.get('name'),
-        'avatarUrl': user_data.get('avatar'),
-        'patreonId': user_data.get('patreonId'),
-        'membershipTier': user_data.get('membershipTier'),
-        'isPaidMember': user_data.get('isPaidMember', False),
-        'lastChargeDate': user_data.get('lastChargeDate'),
-        'pledgeStart': user_data.get('pledgeStart'),
-    })
+            print(f"Warning: Failed to fetch profile: {e}")
+        
+        # Return combined user data (accessible regardless of payment status)
+        user_data = user.to_dict()
+        user_data.update({
+            'name': profile_data.get('name', user.username or user.email or 'User'),
+            'avatarUrl': profile_data.get('avatarUrl', ''),
+            'membershipTier': profile_data.get('membershipTier'),
+            'isPaidMember': user.membership_paid,  # Show current payment status
+            'isTeamMember': profile_data.get('isTeamMember', False),
+            'lastChecked': user.last_checked.isoformat() if user.last_checked else None,
+            'patreonConnected': user.patreon_connected,
+            'lastChargeDate': profile_data.get('membershipPaymentDate'),
+            'pledgeStart': profile_data.get('membershipRenewalDate')
+        })
+        
+        return jsonify(user_data)
+    except Exception as e:
+        print(f"Error fetching profile: {e}")
+        app.logger.error(f"Error fetching profile: {e}")
+        return jsonify({'error': 'Database error'}), 500
 
 @app.route('/api/profile', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)
 def update_profile():
     # Handle CORS preflight
     if request.method == 'OPTIONS':
@@ -1876,122 +1894,84 @@ def update_profile():
         response.headers.add('Access-Control-Allow-Methods', 'PUT, OPTIONS')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         return response
-    """Update user's profile (email and name)"""
-    print("=" * 80)
-    print("PROFILE UPDATE REQUEST:")
-    print(f"  Method: {request.method}")
-    print(f"  Content-Type: {request.headers.get('Content-Type')}")
-    print(f"  Origin: {request.headers.get('Origin')}")
-    print(f"  Cookie present: {'Cookie' in request.headers}")
     
-    if 'user' not in session:
-        print("✗ No user in session - not authenticated")
-        print("=" * 80)
-        return jsonify({'error': 'Not authenticated'}), 401
+    """Update user's profile (email and name) - accessible to all authenticated users"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
     
-    user_data = session['user']
-    user_id = user_data.get('id')
-    print(f"✓ User authenticated: {user_id}")
-    print(f"  - Is Paid Member: {user_data.get('isPaidMember', False)}")
-    print(f"  - Membership Tier: {user_data.get('membershipTier')}")
-    print(f"  - Membership Amount: ${user_data.get('membershipAmount', 0)}")
-    print(f"  - Is Team Member: {user_data.get('isTeamMember', False)}")
-    
-    if not user_id:
-        print("✗ Invalid session data - no user ID")
-        print("=" * 80)
-        return jsonify({'error': 'Invalid session data'}), 400
-    
-    # Get request data
-    data = request.get_json()
-    print(f"  Request data: {data}")
-    
-    if not data:
-        print("✗ No data provided in request")
-        print("=" * 80)
-        return jsonify({'error': 'No data provided'}), 400
-    
-    new_email = data.get('email')
-    new_name = data.get('name')
-    print(f"  New email: {new_email}")
-    print(f"  New name: {new_name}")
-    
-    # Validate email if provided
-    if new_email is not None:
-        if not new_email or '@' not in new_email:
-            print("✗ Invalid email format")
-            print("=" * 80)
-            return jsonify({'error': 'Invalid email format'}), 400
-    
-    # Validate name if provided
-    if new_name is not None:
-        if not new_name or len(new_name.strip()) == 0:
-            print("✗ Invalid name")
-            print("=" * 80)
-            return jsonify({'error': 'Name cannot be empty'}), 400
-    
-    # Update database if available
-    if DB_AVAILABLE:
-        try:
-            profile = UserProfile.query.get(user_id)
-            if not profile:
-                # Create profile if it doesn't exist
-                profile = UserProfile(
-                    id=user_id,
-                    email=new_email if new_email is not None else user_data.get('email'),
-                    name=new_name if new_name is not None else user_data.get('name'),
-                    avatar_url=user_data.get('avatar'),
-                    patreon_id=user_data.get('patreonId'),
-                    membership_tier=user_data.get('membershipTier'),
-                    is_paid_member=user_data.get('isPaidMember', False)
-                )
-                db.session.add(profile)
-                print(f"✓ Created user profile during update: {user_id}")
-            else:
-                # Update existing profile
-                if new_email is not None:
-                    profile.email = new_email
-                if new_name is not None:
-                    profile.name = new_name
-                profile.updated_at = datetime.utcnow()
-                print(f"✓ Updated user profile: {user_id}")
-            
-            db.session.commit()
-            
-            # Update session data to match
-            if new_email is not None:
-                session['user']['email'] = new_email
-            if new_name is not None:
-                session['user']['name'] = new_name
-            
-            session.modified = True
-            
-            return jsonify(profile.to_dict())
-            
-        except Exception as e:
-            print(f"Error updating profile in database: {e}")
-            import traceback
-            traceback.print_exc()
-            db.session.rollback()
-            return jsonify({'error': 'Failed to update profile in database'}), 503
-    else:
-        # Update session only if database not available
+    try:
+        # Get user ID from JWT
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Find user by ID
+        user = None
+        if user_id and user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=user_id).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        profile_id = user.patreon_id or user.username or str(user.id)
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        new_email = data.get('email')
+        new_name = data.get('name')
+        
+        # Validate email if provided
         if new_email is not None:
-            session['user']['email'] = new_email
+            if not new_email or '@' not in new_email:
+                return jsonify({'error': 'Invalid email format'}), 400
+        
+        # Validate name if provided
         if new_name is not None:
-            session['user']['name'] = new_name
+            if not new_name or len(new_name.strip()) == 0:
+                return jsonify({'error': 'Name cannot be empty'}), 400
         
-        session.modified = True
+        # Update User model
+        if new_email is not None:
+            user.email = new_email
         
-        return jsonify({
-            'id': user_data.get('id'),
-            'email': session['user'].get('email'),
-            'name': session['user'].get('name'),
-            'avatarUrl': user_data.get('avatar'),
-            'patreonId': user_data.get('patreonId'),
-            'membershipTier': user_data.get('membershipTier'),
-            'isPaidMember': user_data.get('isPaidMember', False)
+        # Update UserProfile if it exists
+        profile = UserProfile.query.get(profile_id)
+        if not profile:
+            # Create profile if it doesn't exist
+            profile = UserProfile(
+                id=profile_id,
+                email=new_email if new_email is not None else user.email,
+                name=new_name if new_name is not None else user.username or user.email,
+                patreon_id=user.patreon_id,
+                is_paid_member=user.membership_paid
+            )
+            db.session.add(profile)
+        else:
+            # Update existing profile
+            if new_email is not None:
+                profile.email = new_email
+            if new_name is not None:
+                profile.name = new_name
+            profile.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Return updated profile
+        profile_dict = profile.to_dict()
+        profile_dict.update({
+            'isPaidMember': user.membership_paid,
+            'lastChecked': user.last_checked.isoformat() if user.last_checked else None,
+            'patreonConnected': user.patreon_connected
         })
+        
+        return jsonify(profile_dict)
 
 
 @require_session
