@@ -2,7 +2,7 @@ import { getBackendUrl } from '../utils/backendUrl';
 import { Notification } from '../contexts/NotificationContext';
 
 const DB_NAME = 'ventures_notifications';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented to trigger upgrade for sync_queue store
 const STORE_NAME = 'notifications';
 const SYNC_QUEUE_STORE = 'sync_queue';
 
@@ -67,13 +67,21 @@ export async function queueSyncAction(action: Omit<SyncAction, 'id' | 'timestamp
 export async function getQueuedActions(): Promise<SyncAction[]> {
   try {
     const db = await initDB();
+    // Check if store exists before accessing
+    if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+      console.warn('Sync queue store does not exist, returning empty array');
+      return [];
+    }
     const tx = db.transaction(SYNC_QUEUE_STORE, 'readonly');
     const store = tx.objectStore(SYNC_QUEUE_STORE);
     const request = store.getAll();
     
     return new Promise((resolve, reject) => {
       request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        console.error('Error getting queued actions:', request.error);
+        resolve([]); // Return empty array instead of rejecting
+      };
     });
   } catch (error) {
     console.error('Error getting queued actions:', error);

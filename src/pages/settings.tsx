@@ -51,10 +51,21 @@ function SettingsPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/profile', { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => setUser(data))
-      .catch((err) => console.error('Failed to fetch user profile:', err));
+    const fetchProfile = async () => {
+      try {
+        const backendUrl = getBackendUrl();
+        const response = await fetch(`${backendUrl}/api/profile`, { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data);
+        } else {
+          console.error('Failed to fetch user profile:', response.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user profile:', err);
+      }
+    };
+    fetchProfile();
   }, []);
   const [showResetAlert, setShowResetAlert] = useState(false);
   const [panelOrders, setPanelOrders] = useState<Record<string, number>>(() => {
