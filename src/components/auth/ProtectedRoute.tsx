@@ -123,10 +123,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Check if user is a paid member - but allow profile page access
-  const isProfilePage = typeof window !== 'undefined' && window.location.pathname === '/profile';
+  // Only block dashboard pages (/labs and /rise) for unpaid members
+  // All other pages (including profile) are accessible to authenticated users
+  const isDashboardPage = typeof window !== 'undefined' && 
+    (window.location.pathname === '/labs' || window.location.pathname === '/rise');
   
-  if (!user?.isPaidMember && !isProfilePage) {
+  if (!user?.isPaidMember && isDashboardPage) {
     return (
       <Box
         sx={{

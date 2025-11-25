@@ -392,9 +392,28 @@ function ProfilePage() {
                       </Typography>
                     )}
                     {!user.patreonConnected && (
-                      <Alert severity="info" sx={{ mt: 1 }}>
-                        Connect your Patreon account to verify membership status automatically.
-                      </Alert>
+                      <Box sx={{ mt: 2 }}>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          Connect your Patreon account to verify membership status automatically.
+                        </Alert>
+                        <Button
+                          variant="contained"
+                          onClick={() => {
+                            const backendUrl = getBackendUrl();
+                            window.location.href = `${backendUrl}/api/auth/patreon`;
+                          }}
+                          sx={{
+                            bgcolor: '#FF424D',
+                            '&:hover': {
+                              bgcolor: '#E63946',
+                            },
+                            textTransform: 'none',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Connect Patreon Account
+                        </Button>
+                      </Box>
                     )}
                   </Box>
                   {user.membershipTier && (
