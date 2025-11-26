@@ -1,10 +1,11 @@
 // src/components/dashboard/AIJournalPanel.tsx
 import { useState, FormEvent, useRef, useEffect } from 'react';
-import { Box, Typography, Stack, Paper, TextField, Fab, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, Stack, Paper, TextField, Fab, IconButton, Tooltip, Button } from '@mui/material';
 import {
   Send as SendIcon,
   Psychology as PsychologyIcon,
   Refresh as RefreshIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { getBackendUrl } from '../../utils/backendUrl';
 
@@ -34,6 +35,27 @@ export default function AIJournalPanel() {
     setError(null);
     setInput('');
     setIsLoading(false);
+  };
+
+  const handleExport = () => {
+    if (messages.length === 0) return;
+    
+    const exportData = messages.map((msg, index) => ({
+      index: index + 1,
+      role: msg.role === 'user' ? 'You' : 'AI',
+      text: msg.text,
+      timestamp: new Date().toISOString(),
+    }));
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-journal-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleSendMessage = async (e: FormEvent) => {
@@ -125,6 +147,17 @@ export default function AIJournalPanel() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {messages.length > 0 && (
+              <Tooltip title="Export conversation">
+                <IconButton
+                  onClick={handleExport}
+                  size="small"
+                  sx={{ color: 'text.secondary' }}
+                >
+                  <DownloadIcon />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title="Refresh chat">
               <IconButton
                 onClick={handleRefresh}

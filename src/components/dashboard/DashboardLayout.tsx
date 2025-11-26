@@ -9,6 +9,9 @@ import Web3Panel from './Web3Panel';
 import FocusPanel from './FocusPanel';
 import AIJournalPanel from './AIJournalPanel';
 import AiAgentPanel from './AiAgentPanel';
+import DashboardHeader from './DashboardHeader';
+import DashboardMetrics from './DashboardMetrics';
+import ProfileCard from './ProfileCard';
 import { useSettings } from '../../hooks/useSettings';
 
 interface TabPanelProps {
@@ -119,6 +122,10 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ p: { xs: 2, sm: 3 }, pb: 0 }}>
+        <DashboardHeader />
+        <DashboardMetrics />
+      </Box>
       <Tabs
         value={activeTab}
         onChange={handleTabChange}
@@ -127,6 +134,7 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
           borderColor: 'divider', 
           minHeight: 48,
           flexShrink: 0,
+          px: { xs: 2, sm: 3 },
         }}
       >
         {visibleTabs.map((tab) => (
@@ -172,14 +180,14 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
           sx={{ 
             p: { xs: 1, sm: 2 }, 
             height: '100%', 
-            overflow: 'hidden', 
+            overflow: 'auto', 
             display: 'flex', 
             flexDirection: 'column', 
             gap: { xs: 1, sm: 2 },
             minHeight: 0,
           }}
         >
-          {children}
+          {children || <ProfileCard />}
         </Box>
       </Box>
     </Box>

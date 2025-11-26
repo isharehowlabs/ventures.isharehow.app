@@ -1,6 +1,7 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
-const getTheme = (mode: 'light' | 'dark') => createTheme({
+const getTheme = (mode: 'light' | 'dark') => {
+  const baseTheme = createTheme({
   palette: {
     mode,
     primary: {
@@ -251,6 +252,28 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       },
     },
   },
-});
+  });
+
+  // Add dashboard-specific theme extensions
+  const dashboardTheme = {
+    ...baseTheme,
+    dashboard: {
+      spacing: {
+        card: baseTheme.spacing(2),
+        section: baseTheme.spacing(4),
+        widget: baseTheme.spacing(1.5),
+      },
+      colors: {
+        dataHighlight: mode === 'light' ? '#6366F1' : '#818CF8',
+        metricPrimary: mode === 'light' ? '#4ECDC4' : '#7EDDD6',
+        metricSecondary: mode === 'light' ? '#FF6B6B' : '#FF9393',
+        chartGrid: mode === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
+      },
+    },
+  };
+
+  // Apply responsive font sizes
+  return responsiveFontSizes(dashboardTheme);
+};
 
 export default getTheme;

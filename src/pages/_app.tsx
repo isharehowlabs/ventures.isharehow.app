@@ -5,6 +5,7 @@ import { ThemeProviderWrapper as ThemeProvider } from '../ThemeContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import { TimerProvider } from '../contexts/TimerContext';
 import { initAnalytics, trackPageView } from '../utils/analytics';
+import '../styles/dashboard.css';
 
 function AppContent({ Component, pageProps }: AppProps) {
   const router = useRouter();

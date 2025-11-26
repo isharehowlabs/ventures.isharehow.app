@@ -150,35 +150,6 @@ function LabsDashboard() {
           </Alert>
         </Box>
       )}
-      <Box sx={{ mb: { xs: 2, sm: 4 }, textAlign: 'center', px: { xs: 1, sm: 2 } }}>
-        <Typography
-          variant="h3"
-          sx={{
-            fontWeight: 900,
-            mb: { xs: 1, sm: 2 },
-            fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' },
-            background: 'linear-gradient(45deg, #9146FF, #ff6b6b, #4ecdc4)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          Co-Work Dashboard
-        </Typography>
-        <Typography 
-          variant="body1" 
-          color="text.secondary" 
-          sx={{ 
-            maxWidth: 600, 
-            mx: 'auto', 
-            mb: { xs: 2, sm: 3 },
-            px: { xs: 1, sm: 0 },
-            fontSize: { xs: '0.875rem', sm: '1rem' },
-          }}
-        >
-          Your hub for streaming, design collaboration, document management, and code handoff.
-        </Typography>
-      </Box>
 
       <DashboardLayout
         taskList={<TaskListPlaceholder />}
