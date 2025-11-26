@@ -232,7 +232,7 @@ function SettingsPage() {
   const [notificationError, setNotificationError] = useState<string | null>(null);
 
   return (
-    <AppShell active="about">
+    <AppShell active="settings">
       <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
           <SettingsIcon sx={{ fontSize: 40, color: 'primary.main' }} />

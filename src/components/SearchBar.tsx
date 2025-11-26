@@ -31,7 +31,6 @@ interface SearchResult {
 
 const searchableItems: SearchResult[] = [
   { title: 'Home', type: 'page', href: '/', icon: <ArticleIcon /> },
-  { title: 'About', type: 'page', href: '/about', icon: <ArticleIcon /> },
   { title: 'Portfolio', type: 'content', href: '/content', icon: <ArticleIcon /> },
   { title: 'Products', type: 'product', href: '/products', icon: <ProductIcon /> },
   { title: 'Co-Work Dashboard', type: 'page', href: '/labs', icon: <LabsIcon /> },

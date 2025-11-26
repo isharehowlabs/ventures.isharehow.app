@@ -16,13 +16,12 @@ import {
   TrendingUp as RiseIcon,
   Person as PersonIcon,
   Settings as SettingsIcon,
-  Info as InfoIcon,
   Login as LoginIcon,
   VideoCall as DemoIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'profile' | 'settings' | 'about' | 'web3' | 'demo';
+type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'profile' | 'settings' | 'web3' | 'demo';
 
 interface NavigationItem {
   key: NavKey;
@@ -39,12 +38,6 @@ const navigationItems: NavigationItem[] = [
     label: 'Home',
     href: '/',
     icon: <HomeIcon />,
-  },
-  {
-    key: 'about',
-    label: 'About',
-    href: '/about',
-    icon: <InfoIcon />,
   },
   {
     key: 'demo',

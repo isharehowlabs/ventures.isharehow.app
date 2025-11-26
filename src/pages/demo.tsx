@@ -1,445 +1,309 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Grid,
-  Stack,
   Paper,
-  TextField,
+  Stack,
   Alert,
-  Divider,
-  Chip,
-  useTheme,
-  useMediaQuery,
+  CircularProgress,
 } from '@mui/material';
 import {
-  CloudQueue as CloudIcon,
-  Security as SecurityIcon,
-  Analytics as AnalyticsIcon,
-  Dashboard as DashboardIcon,
-  Brush as BrushIcon,
-  Web as WebIcon,
-  VideoLibrary as VideoIcon,
-  School as SchoolIcon,
-  AutoAwesome as AutoAwesomeIcon,
-  RocketLaunch as RocketLaunchIcon,
+  ArrowBack as ArrowBackIcon,
+  ArrowForward as ArrowForwardIcon,
   CheckCircle as CheckCircleIcon,
-  TrendingUp as TrendingUpIcon,
-  Speed as SpeedIcon,
-  Shield as ShieldIcon,
-  Schedule as ScheduleIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  Business as BusinessIcon,
 } from '@mui/icons-material';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import AppShell from '../components/AppShell';
+import ProgressIndicator from '../components/signup/ProgressIndicator';
+import PlanSelector from '../components/signup/PlanSelector';
+import AccountForm from '../components/signup/AccountForm';
+import PaymentForm from '../components/signup/PaymentForm';
+import { PricingTier } from '../components/pricing/PricingTierCard';
 
-interface Feature {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  benefits: string[];
+const pricingTiers: PricingTier[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: 399,
+    priceAnnual: 3830,
+    description: 'Perfect for small businesses, startups, and individual creators',
+    color: '#22D3EE',
+    features: [
+      '10-20 requests per month',
+      'Standard turnaround (48-72 hours)',
+      'Email support',
+      'Basic design services',
+      'Access to Co-Work Dashboard',
+      'Access to Rise Dashboard',
+      'Basic CaaS features',
+    ],
+    ctaText: 'Select Plan',
+  },
+  {
+    id: 'professional',
+    name: 'Professional',
+    price: 1499,
+    priceAnnual: 14390,
+    description: 'Ideal for growing businesses, agencies, and projects',
+    color: '#8b5cf6',
+    popular: true,
+    features: [
+      'Unlimited requests',
+      'Priority turnaround (24-48 hours)',
+      'Dedicated project manager',
+      'Advanced design services',
+      'Full CaaS access',
+      'API integrations',
+      'Analytics dashboard',
+      'Priority support',
+    ],
+    ctaText: 'Select Plan',
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 9000,
+    priceAnnual: 86400,
+    description: 'For large enterprises and agencies with high volume needs',
+    color: '#f59e0b',
+    features: [
+      'Unlimited requests and revisions',
+      'Same-day turnaround',
+      'Dedicated team',
+      'Custom integrations',
+      'White-label options',
+      'Advanced security features',
+      'SLA guarantees',
+      'Custom contract terms',
+      'Platform/service fee included',
+    ],
+    ctaText: 'Contact Sales',
+  },
+];
+
+const steps = ['Select Plan', 'Create Account', 'Payment', 'Confirmation'];
+
+interface AccountFormData {
+  email: string;
+  password: string;
+  fullName: string;
+  companyName: string;
+  phone: string;
+  referralCode: string;
 }
 
-const mbbaaSFeatures: Feature[] = [
-  {
-    icon: <CloudIcon sx={{ fontSize: 40 }} />,
-    title: 'Infrastructure Management',
-    description: 'Complete server provisioning, network configuration, and security management.',
-    benefits: [
-      'Optimal performance and scalability',
-      'Enterprise-grade security',
-      '24/7 monitoring and support',
-      'Automated backups and disaster recovery',
-    ],
-  },
-  {
-    icon: <AnalyticsIcon sx={{ fontSize: 40 }} />,
-    title: 'Data Analysis & Business Intelligence',
-    description: 'Transform raw data into actionable insights with custom dashboards and predictive analytics.',
-    benefits: [
-      'Real-time data visualization',
-      'Predictive analytics',
-      'Custom reporting tools',
-      'Trend identification and forecasting',
-    ],
-  },
-  {
-    icon: <SecurityIcon sx={{ fontSize: 40 }} />,
-    title: 'Essential Services',
-    description: 'Database administration, API management, and cloud service integration.',
-    benefits: [
-      'Database optimization',
-      'API gateway management',
-      'Cloud service integration',
-      'Continuous monitoring',
-    ],
-  },
-];
-
-const creativeFeatures: Feature[] = [
-  {
-    icon: <BrushIcon sx={{ fontSize: 40 }} />,
-    title: 'Brand Experience & UX/UI',
-    description: 'Comprehensive branding, web design, and mobile app development services.',
-    benefits: [
-      'Brand identity development',
-      'User experience optimization',
-      'Mobile app design',
-      'Content creation and strategy',
-    ],
-  },
-  {
-    icon: <AutoAwesomeIcon sx={{ fontSize: 40 }} />,
-    title: 'Experience Strategy',
-    description: 'Long-term planning to align digital experience with business objectives.',
-    benefits: [
-      'Strategic roadmapping',
-      'User journey mapping',
-      'Conversion optimization',
-      'Brand alignment',
-    ],
-  },
-  {
-    icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
-    title: 'UX/UI Audits & Optimization',
-    description: 'Continuous analysis and data-driven recommendations to improve user experience.',
-    benefits: [
-      'Comprehensive UX audits',
-      'User testing and research',
-      'Data-driven recommendations',
-      'Performance optimization',
-    ],
-  },
-];
-
-const whyChooseUs = [
-  {
-    icon: <SpeedIcon />,
-    title: 'Fast Implementation',
-    description: 'Get up and running quickly with our streamlined processes.',
-  },
-  {
-    icon: <ShieldIcon />,
-    title: 'Enterprise Security',
-    description: 'Bank-level security and compliance standards.',
-  },
-  {
-    icon: <CheckCircleIcon />,
-    title: 'Proven Track Record',
-    description: 'Successfully delivered projects for diverse industries.',
-  },
-  {
-    icon: <RocketLaunchIcon />,
-    title: 'Scalable Solutions',
-    description: 'Built to grow with your business needs.',
-  },
-];
+interface PaymentFormData {
+  paymentMethod: 'card' | 'paypal' | 'bank';
+  cardNumber: string;
+  cardExpiry: string;
+  cardCVC: string;
+  cardName: string;
+  billingAddress: string;
+  billingCity: string;
+  billingState: string;
+  billingZip: string;
+  billingCountry: string;
+  taxId: string;
+  acceptTerms: boolean;
+  acceptPrivacy: boolean;
+}
 
 export default function DemoPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    company: '',
-    phone: '',
-    message: '',
-  });
-  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
+  const [activeStep, setActiveStep] = useState(0);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const [isAnnual, setIsAnnual] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [accountData, setAccountData] = useState<AccountFormData>({
+    email: '',
+    password: '',
+    fullName: '',
+    companyName: '',
+    phone: '',
+    referralCode: '',
+  });
+
+  const [paymentData, setPaymentData] = useState<PaymentFormData>({
+    paymentMethod: 'card',
+    cardNumber: '',
+    cardExpiry: '',
+    cardCVC: '',
+    cardName: '',
+    billingAddress: '',
+    billingCity: '',
+    billingState: '',
+    billingZip: '',
+    billingCountry: '',
+    taxId: '',
+    acceptTerms: false,
+    acceptPrivacy: false,
+  });
+
+  // Load tier from URL query params
+  useEffect(() => {
+    const { tier, annual } = router.query;
+    if (tier && typeof tier === 'string') {
+      setSelectedTier(tier);
+    }
+    if (annual === 'true') {
+      setIsAnnual(true);
+    }
+  }, [router.query]);
+
+  const validateAccountForm = (): boolean => {
+    if (!accountData.fullName.trim()) {
+      setError('Full name is required');
+      return false;
+    }
+    if (!accountData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountData.email)) {
+      setError('Valid email address is required');
+      return false;
+    }
+    if (!accountData.password || accountData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return false;
+    }
+    const selectedTierData = pricingTiers.find((t) => t.id === selectedTier);
+    if (selectedTierData?.id !== 'starter' && !accountData.companyName.trim()) {
+      setError('Company name is required for this plan');
+      return false;
+    }
+    return true;
+  };
+
+  const validatePaymentForm = (): boolean => {
+    if (!paymentData.acceptTerms) {
+      setError('You must accept the Terms & Conditions');
+      return false;
+    }
+    if (!paymentData.acceptPrivacy) {
+      setError('You must accept the Privacy Policy');
+      return false;
+    }
+    if (paymentData.paymentMethod === 'card') {
+      if (!paymentData.cardName.trim() || !paymentData.cardNumber.trim() || 
+          !paymentData.cardExpiry.trim() || !paymentData.cardCVC.trim()) {
+        setError('Please fill in all card details');
+        return false;
+      }
+    }
+    if (!paymentData.billingAddress.trim() || !paymentData.billingCity.trim() || 
+        !paymentData.billingState.trim() || !paymentData.billingZip.trim() || 
+        !paymentData.billingCountry.trim()) {
+      setError('Please fill in all billing address fields');
+      return false;
+    }
+    return true;
+  };
+
+  const handleNext = async () => {
+    setError(null);
+    
+    if (activeStep === 0) {
+      if (!selectedTier) {
+        setError('Please select a plan');
+        return;
+      }
+      setActiveStep(1);
+    } else if (activeStep === 1) {
+      if (!validateAccountForm()) {
+        return;
+      }
+      setActiveStep(2);
+    } else if (activeStep === 2) {
+      if (!validatePaymentForm()) {
+        return;
+      }
+      // Process payment and create account
+      await handleSubmit();
+    }
+  };
+
+  const handleBack = () => {
+    setError(null);
+    setActiveStep(activeStep - 1);
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
     setError(null);
 
-    // Basic validation
-    if (!formData.name || !formData.email || !formData.company) {
-      setError('Please fill in all required fields.');
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-
     try {
-      // TODO: Integrate with backend API or email service
-      // For now, we'll just show success message
-      console.log('Demo request submitted:', formData);
-      setSubmitted(true);
-      
-      // Reset form after 3 seconds
-      setTimeout(() => {
-        setFormData({
-          name: '',
-          email: '',
-          company: '',
-          phone: '',
-          message: '',
-        });
-        setSubmitted(false);
-      }, 5000);
-    } catch (err) {
-      setError('Failed to submit request. Please try again or contact us directly.');
+      // Create subscription
+      const subscriptionData = {
+        tier: selectedTier,
+        billingCycle: isAnnual ? 'annual' : 'monthly',
+        accountData,
+        paymentData,
+      };
+
+      const response = await fetch('/api/subscriptions/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscriptionData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create subscription');
+      }
+
+      // Store subscription ID for future use
+      if (data.subscription?.id) {
+        localStorage.setItem('subscription_id', data.subscription.id);
+      }
+
+      setActiveStep(3);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create subscription. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  const handleAccountChange = (field: keyof AccountFormData, value: string) => {
+    setAccountData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handlePaymentChange = (field: keyof PaymentFormData, value: string | boolean) => {
+    setPaymentData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const selectedTierData = pricingTiers.find((t) => t.id === selectedTier);
+  const isEnterprise = selectedTier === 'enterprise';
 
   return (
     <>
       <Head>
-        <title>Book Your Demo - iShareHow Ventures</title>
+        <title>Sign Up - iShareHow Ventures</title>
         <meta
           name="description"
-          content="Schedule a demo to see how iShareHow Ventures can transform your business with our mBaaS and creative services."
+          content="Join iShareHow Ventures and start your journey with our flexible pricing plans."
         />
       </Head>
       <AppShell active="demo">
         <Box
           sx={{
             minHeight: '100vh',
-            background: isMobile
-              ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.05) 0%, rgba(255, 255, 255, 0) 100%)'
-              : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 50%, rgba(236, 72, 153, 0.05) 100%)',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            py: 8,
           }}
         >
-          {/* Hero Section */}
-          <Container maxWidth="lg" sx={{ pt: 8, pb: 4 }}>
-            <Box sx={{ textAlign: 'center', mb: 6 }}>
-              <Chip
-                label="Schedule Your Demo"
-                color="primary"
-                sx={{ mb: 3, fontSize: '0.875rem', fontWeight: 600, py: 2.5, px: 1 }}
-                icon={<ScheduleIcon />}
-              />
-              <Typography
-                variant={isMobile ? 'h3' : 'h2'}
-                component="h1"
-                sx={{
-                  fontWeight: 800,
-                  mb: 2,
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                See iShareHow in Action
-              </Typography>
-              <Typography
-                variant="h6"
-                color="text.secondary"
-                sx={{ maxWidth: 800, mx: 'auto', mb: 4 }}
-              >
-                Discover how our mBaaS platform and creative services can transform your business.
-                Book a personalized demo to explore features, benefits, and see real results.
-              </Typography>
-            </Box>
-
-            {/* Quick Stats */}
-            <Grid container spacing={3} sx={{ mb: 8 }}>
-              <Grid item xs={12} sm={4}>
-                <Paper sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                  <Typography variant="h3" color="primary" fontWeight={700}>
-                    100+
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Projects Delivered
-                  </Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Paper sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                  <Typography variant="h3" color="primary" fontWeight={700}>
-                    24/7
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Support Available
-                  </Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Paper sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                  <Typography variant="h3" color="primary" fontWeight={700}>
-                    99.9%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Uptime Guarantee
-                  </Typography>
-                </Paper>
-              </Grid>
-            </Grid>
-          </Container>
-
-          {/* Features Section */}
-          <Container maxWidth="lg" sx={{ py: 6 }}>
-            <Typography variant="h4" component="h2" sx={{ fontWeight: 700, mb: 1, textAlign: 'center' }}>
-              Mobile Backend as a Service (mBaaS)
-            </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ mb: 6, textAlign: 'center', maxWidth: 700, mx: 'auto' }}
-            >
-              Complete infrastructure and data management solutions for modern applications
-            </Typography>
-
-            <Grid container spacing={4} sx={{ mb: 8 }}>
-              {mbbaaSFeatures.map((feature, index) => (
-                <Grid item xs={12} md={4} key={index}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 4,
-                      },
-                    }}
-                  >
-                    <CardContent sx={{ p: 3 }}>
-                      <Box sx={{ color: 'primary.main', mb: 2 }}>{feature.icon}</Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {feature.description}
-                      </Typography>
-                      <Divider sx={{ my: 2 }} />
-                      <Stack spacing={1}>
-                        {feature.benefits.map((benefit, i) => (
-                          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                            <Typography variant="body2" fontSize="0.875rem">
-                              {benefit}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-
-            <Typography variant="h4" component="h2" sx={{ fontWeight: 700, mb: 1, textAlign: 'center', mt: 8 }}>
-              Creative Services
-            </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ mb: 6, textAlign: 'center', maxWidth: 700, mx: 'auto' }}
-            >
-              Brand experience, UX/UI design, and digital strategy services
-            </Typography>
-
-            <Grid container spacing={4} sx={{ mb: 8 }}>
-              {creativeFeatures.map((feature, index) => (
-                <Grid item xs={12} md={4} key={index}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 4,
-                      },
-                    }}
-                  >
-                    <CardContent sx={{ p: 3 }}>
-                      <Box sx={{ color: 'primary.main', mb: 2 }}>{feature.icon}</Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {feature.description}
-                      </Typography>
-                      <Divider sx={{ my: 2 }} />
-                      <Stack spacing={1}>
-                        {feature.benefits.map((benefit, i) => (
-                          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                            <Typography variant="body2" fontSize="0.875rem">
-                              {benefit}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
-
-          {/* Why Choose Us */}
-          <Box
-            sx={{
-              bgcolor: 'primary.main',
-              color: 'white',
-              py: 8,
-            }}
-          >
-            <Container maxWidth="lg">
-              <Typography variant="h4" component="h2" sx={{ fontWeight: 700, mb: 6, textAlign: 'center' }}>
-                Why Choose iShareHow Ventures?
-              </Typography>
-              <Grid container spacing={4}>
-                {whyChooseUs.map((item, index) => (
-                  <Grid item xs={12} sm={6} md={3} key={index}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center', color: 'white' }}>
-                        <Box sx={{ fontSize: 48, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {item.icon}
-                        </Box>
-                      </Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        {item.title}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                        {item.description}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </Container>
-          </Box>
-
-          {/* Booking Form */}
-          <Container maxWidth="md" sx={{ py: 8 }}>
+          <Container maxWidth="lg">
             <Paper
               elevation={4}
               sx={{
-                p: 4,
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+                p: { xs: 3, md: 6 },
+                borderRadius: 3,
               }}
             >
-              <Typography variant="h4" component="h2" sx={{ fontWeight: 700, mb: 1, textAlign: 'center' }}>
-                Book Your Demo
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
-                Fill out the form below and we'll contact you to schedule a personalized demo
-              </Typography>
-
-              {submitted && (
-                <Alert severity="success" sx={{ mb: 3 }}>
-                  Thank you! We've received your request. Our team will contact you within 24 hours to schedule your
-                  demo.
-                </Alert>
-              )}
+              <ProgressIndicator activeStep={activeStep} steps={steps} />
 
               {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
@@ -447,75 +311,87 @@ export default function DemoPage() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit}>
-                <Stack spacing={3}>
-                  <TextField
-                    fullWidth
-                    label="Full Name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange('name')}
-                    placeholder="John Doe"
-                    InputProps={{
-                      startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Email Address"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange('email')}
-                    placeholder="john@company.com"
-                    InputProps={{
-                      startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Company Name"
-                    required
-                    value={formData.company}
-                    onChange={handleChange('company')}
-                    placeholder="Your Company Inc."
-                    InputProps={{
-                      startAdornment: <BusinessIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange('phone')}
-                    placeholder="+1 (555) 123-4567"
-                    InputProps={{
-                      startAdornment: <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Message (Optional)"
-                    multiline
-                    rows={4}
-                    value={formData.message}
-                    onChange={handleChange('message')}
-                    placeholder="Tell us about your project or any specific features you'd like to see..."
-                  />
+              {activeStep === 0 && (
+                <PlanSelector
+                  tiers={pricingTiers}
+                  selectedTier={selectedTier}
+                  isAnnual={isAnnual}
+                  onTierSelect={setSelectedTier}
+                  onBillingChange={setIsAnnual}
+                />
+              )}
+
+              {activeStep === 1 && (
+                <AccountForm
+                  data={accountData}
+                  onChange={handleAccountChange}
+                  companyRequired={selectedTier !== 'starter'}
+                />
+              )}
+
+              {activeStep === 2 && (
+                <PaymentForm
+                  data={paymentData}
+                  onChange={handlePaymentChange}
+                  isEnterprise={isEnterprise}
+                />
+              )}
+
+              {activeStep === 3 && (
+                <Box sx={{ textAlign: 'center', py: 6 }}>
+                  <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 3 }} />
+                  <Typography variant="h4" fontWeight={700} gutterBottom>
+                    Welcome to iShareHow Ventures!
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                    Your account has been created successfully. We've sent a confirmation email to{' '}
+                    <strong>{accountData.email}</strong>.
+                  </Typography>
+                  <Stack spacing={2} sx={{ maxWidth: 400, mx: 'auto', mb: 4 }}>
+                    <Typography variant="h6" fontWeight={600}>
+                      Next Steps:
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      ✓ Check your email to verify your account
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      ✓ Access your dashboard to get started
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      ✓ Set up your first project
+                    </Typography>
+                  </Stack>
                   <Button
-                    type="submit"
                     variant="contained"
                     size="large"
-                    fullWidth
-                    sx={{ py: 1.5, fontSize: '1.1rem', fontWeight: 600 }}
-                    startIcon={<ScheduleIcon />}
-                    disabled={submitted}
+                    onClick={() => router.push('/dashboard')}
+                    sx={{ px: 4, py: 1.5 }}
                   >
-                    {submitted ? 'Request Submitted!' : 'Schedule Demo'}
+                    Go to Dashboard
+                  </Button>
+                </Box>
+              )}
+
+              {activeStep < 3 && (
+                <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+                  <Button
+                    disabled={activeStep === 0 || loading}
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
+                  >
+                    Back
+                  </Button>
+                  <Box sx={{ flexGrow: 1 }} />
+                  <Button
+                    variant="contained"
+                    onClick={handleNext}
+                    disabled={loading}
+                    endIcon={loading ? <CircularProgress size={20} /> : <ArrowForwardIcon />}
+                  >
+                    {activeStep === 2 ? (loading ? 'Processing...' : 'Complete Sign Up') : 'Next'}
                   </Button>
                 </Stack>
-              </form>
+              )}
             </Paper>
           </Container>
         </Box>
@@ -523,4 +399,3 @@ export default function DemoPage() {
     </>
   );
 }
-

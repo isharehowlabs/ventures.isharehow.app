@@ -186,7 +186,7 @@ function ProfilePage() {
 
   if (!authUser) {
     return (
-      <AppShell active="about">
+      <AppShell active="profile">
         <Box sx={{ p: 4, textAlign: 'center' }}>
           <Alert severity="info">Please log in to view your profile.</Alert>
         </Box>
@@ -196,7 +196,7 @@ function ProfilePage() {
 
   if (loading) {
     return (
-      <AppShell active="about">
+      <AppShell active="profile">
         <Box sx={{ p: 4, textAlign: 'center' }}>
           <Typography>Loading profile...</Typography>
         </Box>
@@ -222,7 +222,7 @@ function ProfilePage() {
   };
 
   return (
-    <AppShell active="about">
+    <AppShell active="profile">
       <Box sx={{ maxWidth: 800, mx: 'auto' }}>
         <Typography
           variant="h4"
