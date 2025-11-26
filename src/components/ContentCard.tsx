@@ -40,7 +40,11 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
   const { title, description, channelName, channelIcon, timestamp, category, color, mediaType, mediaUrl, externalUrl, isVenturePartnership } = content;
   const [isHovered, setIsHovered] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const theme = useTheme();
+  
+  // Check if this is a TikTok link
+  const isTikTok = externalUrl?.includes('tiktok.com');
 
   const handleShareClose = () => {
     setShareMessage(null);
@@ -178,17 +182,77 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
             
             {content.mediaType === 'image' && (
               <Box
-                component="img"
-                src={content.mediaUrl}
-                alt={content.title}
                 sx={{
+                  position: 'relative',
                   width: '100%',
                   height: 240,
-                  objectFit: 'cover',
-                  transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                  overflow: 'hidden',
+                  bgcolor: 'grey.200',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-              />
+              >
+                {!imageError ? (
+                  <Box
+                    component="img"
+                    src={content.mediaUrl}
+                    alt={content.title}
+                    onError={() => setImageError(true)}
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'grey.300',
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Image unavailable
+                    </Typography>
+                  </Box>
+                )}
+                {/* Play button overlay for TikTok links */}
+                {isTikTok && !imageError && (
+                  <Fade in={isHovered}>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        bgcolor: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(4px)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          bgcolor: 'rgba(0, 0, 0, 0.9)',
+                          transform: 'translate(-50%, -50%) scale(1.1)',
+                        },
+                      }}
+                    >
+                      <PlayIcon sx={{ color: 'white', fontSize: 32, ml: 0.5 }} />
+                    </Box>
+                  </Fade>
+                )}
+              </Box>
             )}
 
             {content.mediaType === 'iframe' && (
