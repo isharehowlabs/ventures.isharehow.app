@@ -126,7 +126,17 @@ export function useAuth() {
         }
       } else {
         // Log error details for debugging
-        const errorData = await response.json().catch(() => ({}));
+        let errorData: any = {};
+        try {
+          const text = await response.text();
+          if (text) {
+            errorData = JSON.parse(text);
+          }
+        } catch (e) {
+          // Response might not be JSON
+          errorData = { message: `Server error: ${response.status} ${response.statusText}` };
+        }
+        
         console.warn('[Auth] ✗ Auth check failed:', {
           status: response.status,
           statusText: response.statusText,
@@ -134,12 +144,30 @@ export function useAuth() {
           credentialsMode: 'include',
         });
         
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          error: errorData.message || 'Authentication failed',
-        });
+        // If it's a 500 error with migration_required, show helpful message
+        if (response.status === 500 && errorData.migration_required) {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: 'Database migration required. Please contact support.',
+          });
+        } else if (response.status === 500) {
+          // For other 500 errors, treat as not authenticated (graceful degradation)
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null, // Don't show error for server issues, just treat as not authenticated
+          });
+        } else {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: errorData.message || 'Authentication failed',
+          });
+        }
       }
     } catch (error: any) {
       console.error('[Auth] ✗ Auth check error:', {

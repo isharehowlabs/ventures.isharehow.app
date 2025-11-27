@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Password AutoFill Completion List</title>
+        <link rel="stylesheet" href="style.css">
+        <style>
+            /* Fallback styles if style.css is missing */
+            body.completionList {
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+            .box {
+                padding: 8px;
+            }
+            .credential-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body class="completionList">
+        <div id="divICs" class="box">
+            <ul class="credential-list" id="credentialList"></ul>
+        </div>
+
+        <!-- Load scripts with error handling -->
+        <script>
+            // Helper function to load scripts safely
+            function loadScript(src, onError) {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = resolve;
+                    script.onerror = () => {
+                        console.warn(`Script ${src} failed to load - this is normal for browser extensions`);
+                        if (onError) onError();
+                        resolve(); // Resolve anyway to not break the page
+                    };
+                    document.body.appendChild(script);
+                });
+            }
+
+            // Load scripts with error handling
+            Promise.all([
+                loadScript('utils.js', () => {
+                    // Provide minimal fallback if utils.js is missing
+                    window.utils = window.utils || {};
+                }),
+                loadScript('extensionState.js', () => {
+                    // Provide minimal fallback if extensionState.js is missing
+                    window.extensionState = window.extensionState || { getState: () => ({}), setState: () => {} };
+                }),
+                loadScript('heuristicsRedefinitions.js', () => {
+                    // Provide minimal fallback if heuristicsRedefinitions.js is missing
+                    window.heuristicsRedefinitions = window.heuristicsRedefinitions || {};
+                }),
+                loadScript('completion_list.js', () => {
+                    console.warn('completion_list.js failed to load - completion list may not function');
+                })
+            ]).catch(err => {
+                console.warn('Some extension scripts failed to load - this is normal:', err);
+            });
+        </script>
+    </body>
+</html>

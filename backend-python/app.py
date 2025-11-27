@@ -941,18 +941,19 @@ def check_is_employee_column_exists():
         return False
     
     try:
-        with app.app_context():
-            # Try to query the column to see if it exists
-            with db.engine.connect() as conn:
-                result = conn.execute(db.text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'users' AND column_name = 'is_employee'
-                """))
-                _IS_EMPLOYEE_COLUMN_EXISTS = result.fetchone() is not None
-            return _IS_EMPLOYEE_COLUMN_EXISTS
+        # Try to query the column to see if it exists
+        with db.engine.connect() as conn:
+            result = conn.execute(db.text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'users' AND column_name = 'is_employee'
+            """))
+            _IS_EMPLOYEE_COLUMN_EXISTS = result.fetchone() is not None
+        return _IS_EMPLOYEE_COLUMN_EXISTS
     except Exception as e:
         print(f"Error checking is_employee column: {e}")
+        app.logger.warning(f"Error checking is_employee column: {e}")
+        # If we can't check, assume it doesn't exist (safer fallback)
         _IS_EMPLOYEE_COLUMN_EXISTS = False
         return False
 
@@ -1994,71 +1995,113 @@ def auth_me():
             }), 200
         
         # Find user by ID (could be integer ID, username, or patreon_id)
-        # Handle missing is_employee column gracefully
+        # Handle missing is_employee column gracefully - check first, then use appropriate method
         user = None
-        try:
-            if user_id and user_id.isdigit():
-                user = User.query.get(int(user_id))
-            if not user and user_id:
-                user = User.query.filter_by(username=user_id).first()
-            if not user and user_id:
-                user = User.query.filter_by(patreon_id=user_id).first()
-        except Exception as query_error:
-            error_str = str(query_error).lower()
-            if 'is_employee' in error_str and 'column' in error_str:
-                # Column doesn't exist - use raw SQL fallback
-                print(f"Warning: is_employee column missing in auth/me, using raw SQL fallback")
-                try:
-                    with db.engine.connect() as conn:
-                        result = conn.execute(db.text("""
-                            SELECT id, username, email, password_hash, patreon_id, 
-                                   access_token, refresh_token, membership_paid,
-                                   last_checked, token_expires_at, patreon_connected,
-                                   created_at, updated_at
-                            FROM users 
-                            WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
-                            LIMIT 1
-                        """), {'user_id': user_id})
-                        row = result.fetchone()
-                        if row:
-                            from types import SimpleNamespace
-                            user = SimpleNamespace(
-                                id=row[0],
-                                username=row[1],
-                                email=row[2],
-                                password_hash=row[3],
-                                patreon_id=row[4],
-                                access_token=row[5],
-                                refresh_token=row[6],
-                                membership_paid=row[7],
-                                last_checked=row[8],
-                                token_expires_at=row[9],
-                                patreon_connected=row[10],
-                                created_at=row[11],
-                                updated_at=row[12]
-                            )
-                            def to_dict():
-                                return {
-                                    'id': user.patreon_id or user.username or str(user.id),
-                                    'patreonId': user.patreon_id,
-                                    'username': user.username,
-                                    'email': user.email,
-                                    'membershipPaid': user.membership_paid,
-                                    'patreonConnected': user.patreon_connected,
-                                    'lastChecked': user.last_checked.isoformat() if user.last_checked else None
-                                }
-                            user.to_dict = to_dict
-                except Exception as raw_error:
-                    print(f"Error in raw SQL fallback for auth/me: {raw_error}")
-                    app.logger.error(f"Error fetching user from database: {raw_error}")
-                    return jsonify({
-                        'error': 'Database error',
-                        'message': 'Unable to fetch user information. Database migration may be required.',
-                        'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)'
-                    }), 500
-            else:
-                # Some other error, re-raise
-                raise
+        
+        # First, try to check if is_employee column exists
+        column_exists = check_is_employee_column_exists()
+        
+        if not column_exists:
+            # Column doesn't exist - use raw SQL directly
+            print(f"Warning: is_employee column missing in auth/me, using raw SQL fallback")
+            try:
+                with db.engine.connect() as conn:
+                    result = conn.execute(db.text("""
+                        SELECT id, username, email, password_hash, patreon_id, 
+                               access_token, refresh_token, membership_paid,
+                               last_checked, token_expires_at, patreon_connected,
+                               created_at, updated_at
+                        FROM users 
+                        WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                        LIMIT 1
+                    """), {'user_id': user_id})
+                    row = result.fetchone()
+                    if row:
+                        from types import SimpleNamespace
+                        user = SimpleNamespace(
+                            id=row[0],
+                            username=row[1],
+                            email=row[2],
+                            password_hash=row[3],
+                            patreon_id=row[4],
+                            access_token=row[5],
+                            refresh_token=row[6],
+                            membership_paid=row[7],
+                            last_checked=row[8],
+                            token_expires_at=row[9],
+                            patreon_connected=row[10],
+                            created_at=row[11],
+                            updated_at=row[12]
+                        )
+                        def to_dict():
+                            return {
+                                'id': user.patreon_id or user.username or str(user.id),
+                                'patreonId': user.patreon_id,
+                                'username': user.username,
+                                'email': user.email,
+                                'membershipPaid': user.membership_paid,
+                                'patreonConnected': user.patreon_connected,
+                                'lastChecked': user.last_checked.isoformat() if user.last_checked else None
+                            }
+                        user.to_dict = to_dict
+            except Exception as raw_error:
+                print(f"Error in raw SQL fallback for auth/me: {raw_error}")
+                app.logger.error(f"Error fetching user from database: {raw_error}")
+                return jsonify({
+                    'error': 'Database error',
+                    'message': 'Unable to fetch user information. Database migration may be required.',
+                    'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)'
+                }), 500
+        else:
+            # Column exists - use normal SQLAlchemy queries
+            try:
+                if user_id and user_id.isdigit():
+                    user = User.query.get(int(user_id))
+                if not user and user_id:
+                    user = User.query.filter_by(username=user_id).first()
+                if not user and user_id:
+                    user = User.query.filter_by(patreon_id=user_id).first()
+            except Exception as query_error:
+                error_str = str(query_error).lower()
+                # If we still get an is_employee error (shouldn't happen if check worked), use fallback
+                if 'is_employee' in error_str and 'column' in error_str:
+                    print(f"Unexpected: is_employee error despite check, using raw SQL fallback")
+                    # Use the same raw SQL fallback as above
+                    try:
+                        with db.engine.connect() as conn:
+                            result = conn.execute(db.text("""
+                                SELECT id, username, email, password_hash, patreon_id, 
+                                       access_token, refresh_token, membership_paid,
+                                       last_checked, token_expires_at, patreon_connected,
+                                       created_at, updated_at
+                                FROM users 
+                                WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                                LIMIT 1
+                            """), {'user_id': user_id})
+                            row = result.fetchone()
+                            if row:
+                                from types import SimpleNamespace
+                                user = SimpleNamespace(
+                                    id=row[0], username=row[1], email=row[2], password_hash=row[3],
+                                    patreon_id=row[4], access_token=row[5], refresh_token=row[6],
+                                    membership_paid=row[7], last_checked=row[8], token_expires_at=row[9],
+                                    patreon_connected=row[10], created_at=row[11], updated_at=row[12]
+                                )
+                                def to_dict():
+                                    return {
+                                        'id': user.patreon_id or user.username or str(user.id),
+                                        'patreonId': user.patreon_id, 'username': user.username,
+                                        'email': user.email, 'membershipPaid': user.membership_paid,
+                                        'patreonConnected': user.patreon_connected,
+                                        'lastChecked': user.last_checked.isoformat() if user.last_checked else None
+                                    }
+                                user.to_dict = to_dict
+                    except Exception as raw_error2:
+                        print(f"Error in secondary raw SQL fallback: {raw_error2}")
+                        raise query_error  # Re-raise original error
+                else:
+                    # Some other error, re-raise
+                    raise
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -2073,19 +2116,44 @@ def auth_me():
         except Exception as e:
             print(f"Warning: Failed to fetch profile: {e}")
         
-        # Return combined user data
-        user_data = user.to_dict()
-        user_data.update({
-            'name': profile_data.get('name', user.username or user.email or 'User'),
-            'avatarUrl': profile_data.get('avatarUrl', ''),
-            'membershipTier': profile_data.get('membershipTier'),
-            'isPaidMember': user.membership_paid,  # Updated field name
-            'isTeamMember': profile_data.get('isTeamMember', False)
-            # Removed needsPatreonVerification - handled by cron job
-        })
-        
-        print(f"✓ User authenticated via JWT: {user_id}")
-        return jsonify(user_data)
+        # Return combined user data - handle both regular User objects and SimpleNamespace fallback
+        try:
+            if hasattr(user, 'to_dict'):
+                user_data = user.to_dict()
+            else:
+                # Fallback for SimpleNamespace objects
+                user_data = {
+                    'id': getattr(user, 'patreon_id', None) or getattr(user, 'username', None) or str(getattr(user, 'id', '')),
+                    'patreonId': getattr(user, 'patreon_id', None),
+                    'username': getattr(user, 'username', None),
+                    'email': getattr(user, 'email', None),
+                    'membershipPaid': getattr(user, 'membership_paid', False),
+                    'patreonConnected': getattr(user, 'patreon_connected', False),
+                    'lastChecked': getattr(user, 'last_checked', None).isoformat() if getattr(user, 'last_checked', None) else None
+                }
+            
+            user_data.update({
+                'name': profile_data.get('name', getattr(user, 'username', None) or getattr(user, 'email', None) or 'User'),
+                'avatarUrl': profile_data.get('avatarUrl', ''),
+                'membershipTier': profile_data.get('membershipTier'),
+                'isPaidMember': getattr(user, 'membership_paid', False),  # Updated field name
+                'isTeamMember': profile_data.get('isTeamMember', False),
+                'authenticated': True  # Explicitly mark as authenticated
+            })
+            
+            print(f"✓ User authenticated via JWT: {user_id}")
+            return jsonify(user_data)
+        except Exception as dict_error:
+            print(f"Error creating user dict: {dict_error}")
+            app.logger.error(f"Error creating user dict: {dict_error}")
+            # Return minimal user data
+            return jsonify({
+                'id': getattr(user, 'patreon_id', None) or getattr(user, 'username', None) or str(getattr(user, 'id', '')),
+                'username': getattr(user, 'username', None),
+                'email': getattr(user, 'email', None),
+                'authenticated': True,
+                'name': getattr(user, 'username', None) or getattr(user, 'email', None) or 'User'
+            })
     except Exception as e:
         error_str = str(e).lower()
         print(f"Error fetching user from database: {e}")

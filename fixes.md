@@ -120,6 +120,7 @@
 - Firebase configuration warnings - Missing NEXT_PUBLIC_FIREBASE_* environment variables
 - IndexedDB errors in notification sync - Potential IndexedDB compatibility issues
 - "Allow attribute will take precedence" warnings - iframe allow/allowfullscreen conflicts
+- **Browser Extension Errors** (Harmless): `chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/*.js` - These are from a third-party browser extension (password manager) and can be safely ignored. They don't affect the application.
 
 ## 📝 Notes
 
