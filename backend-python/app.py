@@ -1481,10 +1481,20 @@ def login():
         ).first()
         
         if not user:
+            print(f"Login attempt failed: User not found for {username_or_email}")
             return jsonify({'error': 'Invalid username/email or password'}), 401
+        
+        # Check if user has a password set (users created via Patreon OAuth might not have passwords)
+        if not user.password_hash:
+            print(f"Login attempt failed: User {username_or_email} has no password set (Patreon-only account)")
+            return jsonify({
+                'error': 'This account was created via Patreon. Please use Patreon login instead.',
+                'needsPatreonLogin': True
+            }), 401
         
         # Check password
         if not user.check_password(password):
+            print(f"Login attempt failed: Invalid password for user {username_or_email}")
             return jsonify({'error': 'Invalid username/email or password'}), 401
         
         # Generate JWT token using flask-jwt-extended

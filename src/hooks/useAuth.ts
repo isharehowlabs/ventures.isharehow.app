@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getBackendUrl } from '../utils/backendUrl';
 
 interface User {
@@ -37,10 +37,20 @@ export function useAuth() {
     error: null,
   });
 
+  // Track if auth check is in progress to prevent duplicate concurrent checks
+  const authCheckInProgress = useRef(false);
+
   // JWT tokens are now stored in httpOnly cookies (set by backend)
   // We don't need to access tokens from JavaScript - backend handles it automatically
 
   const checkAuth = useCallback(async () => {
+    // Prevent duplicate concurrent auth checks
+    if (authCheckInProgress.current) {
+      console.log('[Auth] Auth check already in progress, skipping...');
+      return;
+    }
+    
+    authCheckInProgress.current = true;
     try {
       const backendUrl = getBackendUrl();
       
@@ -50,12 +60,12 @@ export function useAuth() {
         timestamp: new Date().toISOString(),
       });
       
-      // Create a timeout promise
+      // Create a timeout promise (increased to 15 seconds for slower networks)
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          console.log('[Auth] Request timed out after 10 seconds');
+          console.log('[Auth] Request timed out after 15 seconds');
           reject(new Error('Request timeout'));
-        }, 10000);
+        }, 15000);
       });
 
       console.log('[Auth] About to start Promise.race...');
@@ -145,6 +155,8 @@ export function useAuth() {
         isLoading: false,
         error: isTimeout ? 'Request timeout' : error.message,
       });
+    } finally {
+      authCheckInProgress.current = false;
     }
   }, []);
 
