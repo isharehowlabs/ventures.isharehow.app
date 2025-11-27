@@ -773,16 +773,80 @@ def get_current_user():
         if not user_id or not DB_AVAILABLE:
             return None
         
-        # Find user by ID
+        # Find user by ID - handle missing is_employee column
         user = None
-        if user_id.isdigit():
-            user = User.query.get(int(user_id))
-        if not user:
-            user = User.query.filter_by(username=user_id).first()
-        if not user:
-            user = User.query.filter_by(patreon_id=user_id).first()
+        try:
+            if user_id.isdigit():
+                user = User.query.get(int(user_id))
+            if not user:
+                user = User.query.filter_by(username=user_id).first()
+            if not user:
+                user = User.query.filter_by(patreon_id=user_id).first()
+        except Exception as query_error:
+            error_str = str(query_error).lower()
+            if 'is_employee' in error_str and 'column' in error_str:
+                # Column doesn't exist - log warning but don't crash
+                print(f"Warning: is_employee column missing when querying user {user_id}")
+                print("Please run: flask db upgrade")
+                # Try to work around by using raw SQL (excluding is_employee column)
+                try:
+                    with db.engine.connect() as conn:
+                        result = conn.execute(db.text("""
+                            SELECT id, username, email, password_hash, patreon_id, 
+                                   access_token, refresh_token, membership_paid,
+                                   last_checked, token_expires_at, patreon_connected,
+                                   created_at, updated_at
+                            FROM users 
+                            WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                            LIMIT 1
+                        """), {'user_id': user_id})
+                        row = result.fetchone()
+                        if row:
+                            # Create a minimal user object (won't have is_employee)
+                            # This is a workaround - migration should be run
+                            from types import SimpleNamespace
+                            user = SimpleNamespace(
+                                id=row[0],
+                                username=row[1],
+                                email=row[2],
+                                password_hash=row[3],
+                                patreon_id=row[4],
+                                access_token=row[5],
+                                refresh_token=row[6],
+                                membership_paid=row[7],
+                                last_checked=row[8],
+                                token_expires_at=row[9],
+                                patreon_connected=row[10],
+                                created_at=row[11],
+                                updated_at=row[12]
+                            )
+                            # Add methods that might be called
+                            def check_password(pwd):
+                                if not user.password_hash:
+                                    return False
+                                return bcrypt.checkpw(pwd.encode('utf-8'), user.password_hash.encode('utf-8'))
+                            user.check_password = check_password
+                            def to_dict():
+                                return {
+                                    'id': user.patreon_id or user.username or str(user.id),
+                                    'patreonId': user.patreon_id,
+                                    'username': user.username,
+                                    'email': user.email,
+                                    'membershipPaid': user.membership_paid,
+                                    'patreonConnected': user.patreon_connected,
+                                    'lastChecked': user.last_checked.isoformat() if user.last_checked else None
+                                }
+                            user.to_dict = to_dict
+                except Exception as raw_error:
+                    print(f"Error in raw SQL fallback: {raw_error}")
+                    return None
+            else:
+                # Some other error, re-raise
+                raise
+        
         return user
-    except Exception:
+    except Exception as e:
+        print(f"Error in get_current_user: {e}")
         return None
 
 # Authentication decorator - DEPRECATED: Use @jwt_required() instead
@@ -862,6 +926,56 @@ def send_push_notification(user_id: int, notification: Notification):
                 app.logger.error(f"Error sending push to subscription {subscription.id}: {e}")
     except Exception as e:
         app.logger.error(f"Error in send_push_notification: {e}")
+
+# Global flag to track if is_employee column exists
+_IS_EMPLOYEE_COLUMN_EXISTS = None
+
+def check_is_employee_column_exists():
+    """Check if is_employee column exists in the users table"""
+    global _IS_EMPLOYEE_COLUMN_EXISTS
+    if _IS_EMPLOYEE_COLUMN_EXISTS is not None:
+        return _IS_EMPLOYEE_COLUMN_EXISTS
+    
+    if not DB_AVAILABLE:
+        _IS_EMPLOYEE_COLUMN_EXISTS = False
+        return False
+    
+    try:
+        with app.app_context():
+            # Try to query the column to see if it exists
+            with db.engine.connect() as conn:
+                result = conn.execute(db.text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name = 'is_employee'
+                """))
+                _IS_EMPLOYEE_COLUMN_EXISTS = result.fetchone() is not None
+            return _IS_EMPLOYEE_COLUMN_EXISTS
+    except Exception as e:
+        print(f"Error checking is_employee column: {e}")
+        _IS_EMPLOYEE_COLUMN_EXISTS = False
+        return False
+
+def safe_query_user(query_func):
+    """Safely execute a User query, handling missing is_employee column"""
+    try:
+        return query_func()
+    except Exception as e:
+        error_str = str(e)
+        # Check if error is due to missing is_employee column
+        if 'is_employee' in error_str.lower() and 'column' in error_str.lower():
+            # Column doesn't exist - need to run migration
+            print(f"Warning: is_employee column missing. Error: {e}")
+            print("Please run: flask db upgrade")
+            # Try to work around by using raw SQL or excluding the column
+            # For now, re-raise with a helpful message
+            raise Exception(
+                "Database migration required: The is_employee column is missing. "
+                "Please run 'flask db upgrade' in the backend-python directory. "
+                "See RUN_MIGRATION.md for details."
+            ) from e
+        # Some other error, re-raise it
+        raise
 
 def safe_get_is_employee(user):
     """Safely get is_employee flag, handling missing column gracefully"""
@@ -1474,13 +1588,35 @@ def register():
         return jsonify({'error': 'Invalid email address'}), 400
     
     try:
-        # Check if username already exists
-        if User.query.filter_by(username=username).first():
-            return jsonify({'error': 'Username already exists'}), 400
+        # Check if username already exists - handle missing is_employee column
+        try:
+            if User.query.filter_by(username=username).first():
+                return jsonify({'error': 'Username already exists'}), 400
+        except Exception as query_error:
+            error_str = str(query_error).lower()
+            if 'is_employee' in error_str and 'column' in error_str:
+                return jsonify({
+                    'error': 'Database migration required',
+                    'message': 'The is_employee column is missing. Please run the database migration.',
+                    'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)',
+                    'migration_required': True
+                }), 500
+            raise
         
-        # Check if email already exists
-        if email and User.query.filter_by(email=email).first():
-            return jsonify({'error': 'Email already exists'}), 400
+        # Check if email already exists - handle missing is_employee column
+        try:
+            if email and User.query.filter_by(email=email).first():
+                return jsonify({'error': 'Email already exists'}), 400
+        except Exception as query_error:
+            error_str = str(query_error).lower()
+            if 'is_employee' in error_str and 'column' in error_str:
+                return jsonify({
+                    'error': 'Database migration required',
+                    'message': 'The is_employee column is missing. Please run the database migration.',
+                    'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)',
+                    'migration_required': True
+                }), 500
+            raise
         
         # Create new user
         user = User(
@@ -1568,27 +1704,110 @@ def login():
         return jsonify({'error': 'Username/email and password are required'}), 400
     
     try:
-        # Find user by username or email
-        user = User.query.filter(
-            (User.username == username_or_email) | (User.email == username_or_email)
-        ).first()
+        # Find user by username or email - handle missing is_employee column
+        def find_user():
+            return User.query.filter(
+                (User.username == username_or_email) | (User.email == username_or_email)
+            ).first()
+        
+        try:
+            user = find_user()
+        except Exception as query_error:
+            error_str = str(query_error).lower()
+            if 'is_employee' in error_str and 'column' in error_str:
+                # Column doesn't exist - try raw SQL fallback
+                print(f"Warning: is_employee column missing, using raw SQL fallback for login")
+                try:
+                    with db.engine.connect() as conn:
+                        result = conn.execute(db.text("""
+                            SELECT id, username, email, password_hash, patreon_id, 
+                                   access_token, refresh_token, membership_paid,
+                                   last_checked, token_expires_at, patreon_connected,
+                                   created_at, updated_at
+                            FROM users 
+                            WHERE username = :username OR email = :username
+                            LIMIT 1
+                        """), {'username': username_or_email})
+                        row = result.fetchone()
+                        if row:
+                            # Create a minimal user object
+                            from types import SimpleNamespace
+                            user = SimpleNamespace(
+                                id=row[0],
+                                username=row[1],
+                                email=row[2],
+                                password_hash=row[3],
+                                patreon_id=row[4],
+                                access_token=row[5],
+                                refresh_token=row[6],
+                                membership_paid=row[7],
+                                last_checked=row[8],
+                                token_expires_at=row[9],
+                                patreon_connected=row[10],
+                                created_at=row[11],
+                                updated_at=row[12]
+                            )
+                            # Add methods
+                            def check_password(pwd):
+                                if not user.password_hash:
+                                    return False
+                                return bcrypt.checkpw(pwd.encode('utf-8'), user.password_hash.encode('utf-8'))
+                            user.check_password = check_password
+                            def to_dict():
+                                return {
+                                    'id': user.patreon_id or user.username or str(user.id),
+                                    'patreonId': user.patreon_id,
+                                    'username': user.username,
+                                    'email': user.email,
+                                    'membershipPaid': user.membership_paid,
+                                    'patreonConnected': user.patreon_connected,
+                                    'lastChecked': user.last_checked.isoformat() if user.last_checked else None
+                                }
+                            user.to_dict = to_dict
+                        else:
+                            user = None
+                except Exception as raw_error:
+                    print(f"Error in raw SQL fallback for login: {raw_error}")
+                    return jsonify({
+                        'error': 'Database migration required',
+                        'message': 'The is_employee column is missing from the users table. Please run the database migration.',
+                        'details': 'Run: flask db upgrade (see RUN_MIGRATION.md for details)',
+                        'migration_required': True
+                    }), 500
+            else:
+                # Some other error, re-raise
+                raise
         
         if not user:
             print(f"Login attempt failed: User not found for {username_or_email}")
-            return jsonify({'error': 'Invalid username/email or password'}), 401
+            app.logger.warning(f"Login failed: User '{username_or_email}' not found in database")
+            return jsonify({
+                'error': 'Invalid username/email or password',
+                'message': 'No user found with that username or email'
+            }), 401
         
         # Check if user has a password set (users created via Patreon OAuth might not have passwords)
         if not user.password_hash:
-            print(f"Login attempt failed: User {username_or_email} has no password set (Patreon-only account)")
+            print(f"Login attempt failed: User {username_or_email} (ID: {user.id}) has no password set (Patreon-only account)")
+            app.logger.warning(f"Login failed: User '{username_or_email}' has no password_hash - Patreon-only account")
             return jsonify({
                 'error': 'This account was created via Patreon. Please use Patreon login instead.',
-                'needsPatreonLogin': True
+                'needsPatreonLogin': True,
+                'message': 'This account does not have a password. Use Patreon login instead.'
             }), 401
         
         # Check password
-        if not user.check_password(password):
-            print(f"Login attempt failed: Invalid password for user {username_or_email}")
-            return jsonify({'error': 'Invalid username/email or password'}), 401
+        password_valid = user.check_password(password)
+        if not password_valid:
+            print(f"Login attempt failed: Invalid password for user {username_or_email} (ID: {user.id})")
+            app.logger.warning(f"Login failed: Invalid password for user '{username_or_email}'")
+            return jsonify({
+                'error': 'Invalid username/email or password',
+                'message': 'The password you entered is incorrect'
+            }), 401
+        
+        print(f"Login successful for user {username_or_email} (ID: {user.id})")
+        app.logger.info(f"Login successful for user '{username_or_email}' (ID: {user.id})")
         
         # Generate JWT token using flask-jwt-extended
         access_token = create_access_token(identity=str(user.id))

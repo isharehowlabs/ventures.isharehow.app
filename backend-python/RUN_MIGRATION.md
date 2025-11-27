@@ -3,6 +3,12 @@
 ## Problem
 The application code uses the `is_employee` column in the `users` table, but this column may not exist in your database yet. This causes 500 Internal Server Errors when trying to access user data.
 
+## Important: If You Get "Table Already Exists" Errors
+
+If you see errors like `relation "task" already exists` or `relation "clients" already exists`, this means your database already has some tables. The migrations have been updated to handle this gracefully - they will skip creating tables that already exist.
+
+**Solution**: Just run the migration again. The updated migration will skip existing tables and only create/add what's missing.
+
 ## Solution: Run the Migration
 
 The migration file `migrations/versions/33_add_is_employee_and_support_subscription.py` adds the `is_employee` column to the `users` table.
