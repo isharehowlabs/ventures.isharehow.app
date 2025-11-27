@@ -11,9 +11,37 @@ If you see errors like `relation "task" already exists` or `relation "clients" a
 
 ## Solution: Run the Migration
 
-The migration file `migrations/versions/33_add_is_employee_and_support_subscription.py` adds the `is_employee` column to the `users` table.
+The migration adds the `is_employee` column to the `users` table and creates `support_requests` and `subscriptions` tables.
 
-### Option 1: Using Flask-Migrate (Recommended)
+**Note**: If you get import errors with `flask db upgrade`, use the direct migration script (`run_migration_direct.py`) which doesn't require Flask app dependencies.
+
+### Option 1: Using Direct Migration Script (Recommended - No Flask dependencies)
+
+1. **SSH into your server** or access your deployment environment (e.g., Render.com shell)
+
+2. **Set your DATABASE_URL** (if not already set):
+   ```bash
+   export DATABASE_URL="postgresql://user:password@host:port/database"
+   ```
+
+3. **Navigate to the backend-python directory**:
+   ```bash
+   cd backend-python
+   ```
+
+4. **Run the direct migration script**:
+   ```bash
+   python3 run_migration_direct.py
+   ```
+
+   This script:
+   - Checks if the column already exists (skips if present)
+   - Adds the `is_employee` column to the `users` table
+   - Creates the index
+   - Creates `support_requests` and `subscriptions` tables if they don't exist
+   - Verifies the migration was successful
+
+### Option 1b: Using Flask-Migrate (If dependencies are installed)
 
 1. **SSH into your server** or access your deployment environment (e.g., Render.com shell)
 
