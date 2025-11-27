@@ -12,7 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Get query parameters
 $queryString = $_SERVER['QUERY_STRING'] ?? '';
-$backendUrl = 'http://localhost:5000/api/products' . ($queryString ? '?' . $queryString : '');
+
+// Use environment variable or default to production backend
+$backendHost = getenv('BACKEND_URL') ?: 'https://api.ventures.isharehow.app';
+$backendUrl = rtrim($backendHost, '/') . '/api/products' . ($queryString ? '?' . $queryString : '');
 
 // Forward request to backend
 $ch = curl_init($backendUrl);
