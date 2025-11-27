@@ -19,7 +19,7 @@ def upgrade():
     # Add is_employee field to users table
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.add_column(sa.Column('is_employee', sa.Boolean(), nullable=False, server_default='false'))
-        batch_op.create_index('ix_users_is_employee', 'users', ['is_employee'])
+        batch_op.create_index('ix_users_is_employee', ['is_employee'])
 
     # Create support_requests table
     op.create_table('support_requests',
