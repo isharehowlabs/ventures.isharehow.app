@@ -6,7 +6,7 @@
 - [x] **Fixed**: Creative Dashboard API endpoints returning 401 errors - Changed to `@jwt_required(optional=True)`
 - [ ] **Add stricter authentication checks** - Currently using optional auth, should enforce proper JWT validation
 - [ ] **Implement role-based access control** - Add `is_employee` flag to User model and enforce employee/client permissions
-- [ ] **Fix authentication timeout issues** - Multiple "Request timed out after 10 seconds" errors in console
+- [x] **Fixed**: Authentication timeout issues - Updated `/api/auth/me` to return 200 with `{authenticated: false}` instead of 401, improved error handling in login endpoint
 
 ### Broken Routes & Links
 - [x] **Fixed**: `/dashboard` route - Changed redirect in `demo.tsx` from `/dashboard` to `/labs`

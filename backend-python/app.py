@@ -1480,7 +1480,11 @@ def login():
             (User.username == username_or_email) | (User.email == username_or_email)
         ).first()
         
-        if not user or not user.check_password(password):
+        if not user:
+            return jsonify({'error': 'Invalid username/email or password'}), 401
+        
+        # Check password
+        if not user.check_password(password):
             return jsonify({'error': 'Invalid username/email or password'}), 401
         
         # Generate JWT token using flask-jwt-extended
@@ -1500,8 +1504,26 @@ def login():
         
     except Exception as e:
         print(f"Error in login: {e}")
+        import traceback
+        traceback.print_exc()
         app.logger.error(f"Error in login: {e}")
-        return jsonify({'error': 'Login failed'}), 500
+        error_message = str(e)
+        # Provide more specific error messages
+        if 'Database' in error_message or 'connection' in error_message.lower():
+            return jsonify({
+                'error': 'Database connection failed',
+                'message': 'Unable to connect to database. Please try again later.'
+            }), 500
+        elif 'password' in error_message.lower():
+            return jsonify({
+                'error': 'Authentication failed',
+                'message': 'Invalid username/email or password'
+            }), 401
+        else:
+            return jsonify({
+                'error': 'Login failed',
+                'message': error_message
+            }), 500
 
 @app.route('/api/auth/verify-patreon', methods=['POST'])
 @jwt_required()
@@ -1642,8 +1664,12 @@ def auth_me():
         user_id = get_jwt_identity()
         
         if not user_id:
-            # No JWT token - user is not authenticated
-            return jsonify({'error': 'Not authenticated', 'message': 'No valid token found'}), 401
+            # No JWT token - user is not authenticated, but return 200 with authenticated: false
+            # This allows frontend to handle gracefully without treating it as an error
+            return jsonify({
+                'authenticated': False,
+                'message': 'No valid token found'
+            }), 200
         
         # Find user by ID (could be integer ID, username, or patreon_id)
         user = None

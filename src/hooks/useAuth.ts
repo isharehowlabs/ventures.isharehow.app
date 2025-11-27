@@ -89,20 +89,31 @@ export function useAuth() {
       });
 
       if (response.ok) {
-        const user = await response.json();
-        console.log('[Auth] ✓ Authentication successful:', {
-          userId: user.id,
-          userName: user.name,
-          isPaidMember: user.isPaidMember,
-        });
+        const data = await response.json();
         
-        // JWT token is in httpOnly cookie, no need to store in localStorage
-        setAuthState({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
+        // Check if user is authenticated (backend returns {authenticated: false} when no token)
+        if (data.authenticated === false || !data.id) {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null,
+          });
+        } else {
+          console.log('[Auth] ✓ Authentication successful:', {
+            userId: data.id,
+            userName: data.name,
+            isPaidMember: data.isPaidMember,
+          });
+          
+          // JWT token is in httpOnly cookie, no need to store in localStorage
+          setAuthState({
+            user: data,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
+        }
       } else {
         // Log error details for debugging
         const errorData = await response.json().catch(() => ({}));
