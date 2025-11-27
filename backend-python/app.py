@@ -164,6 +164,7 @@ if DB_AVAILABLE:
         access_token = db.Column(db.String(500), nullable=True)  # Increased length for tokens
         refresh_token = db.Column(db.String(500), nullable=True)
         membership_paid = db.Column(db.Boolean, default=False, nullable=False)  # Renamed from membership_active
+        is_employee = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Employee flag for Creative Dashboard
         last_checked = db.Column(db.DateTime, nullable=True)
         token_expires_at = db.Column(db.DateTime, nullable=True)
         patreon_connected = db.Column(db.Boolean, default=False, nullable=False)
@@ -3884,8 +3885,12 @@ def get_employees():
     try:
         user_info = get_user_info()
         
-        # Get all users (you may want to filter by role or add an is_employee flag)
-        users = User.query.all()
+        # Get all users with is_employee flag set to True
+        users = User.query.filter_by(is_employee=True).all()
+        
+        # If no employees found, include all users (for backward compatibility)
+        if not users:
+            users = User.query.all()
         
         employees = []
         for user in users:
@@ -3899,6 +3904,215 @@ def get_employees():
     except Exception as e:
         print(f"Error fetching employees: {e}")
         return jsonify({'error': 'Failed to fetch employees'}), 500
+
+# Creative Dashboard - Support Requests API Endpoints
+
+@jwt_required(optional=True)
+@app.route('/api/creative/support-requests', methods=['GET'])
+def get_support_requests():
+    """Get all support requests with optional filtering"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        
+        # Get query parameters
+        status = request.args.get('status', 'all')
+        client_id = request.args.get('client_id', None)
+        priority = request.args.get('priority', None)
+        
+        # Build query
+        query = SupportRequest.query
+        
+        if status != 'all':
+            query = query.filter(SupportRequest.status == status)
+        
+        if client_id:
+            query = query.filter(SupportRequest.client_id == client_id)
+        
+        if priority:
+            query = query.filter(SupportRequest.priority == priority)
+        
+        requests = query.order_by(SupportRequest.created_at.desc()).all()
+        
+        return jsonify({
+            'requests': [req.to_dict() for req in requests]
+        }), 200
+    except Exception as e:
+        print(f"Error fetching support requests: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch support requests'}), 500
+
+@jwt_required(optional=True)
+@app.route('/api/creative/support-requests', methods=['POST'])
+def create_support_request():
+    """Create a new support request"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('subject') or not data.get('description'):
+            return jsonify({'error': 'Subject and description are required'}), 400
+        
+        # Create support request
+        request_obj = SupportRequest(
+            client_id=data.get('clientId'),
+            client_name=data.get('client'),
+            subject=data['subject'],
+            description=data['description'],
+            priority=data.get('priority', 'medium'),
+            status='open',
+            assigned_to=data.get('assignedTo')
+        )
+        
+        db.session.add(request_obj)
+        db.session.commit()
+        
+        return jsonify(request_obj.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating support request: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to create support request'}), 500
+
+@jwt_required(optional=True)
+@app.route('/api/creative/support-requests/<request_id>', methods=['PUT'])
+def update_support_request(request_id):
+    """Update a support request"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        
+        request_obj = SupportRequest.query.get(request_id)
+        if not request_obj:
+            return jsonify({'error': 'Support request not found'}), 404
+        
+        data = request.get_json()
+        
+        # Update fields
+        if 'status' in data:
+            request_obj.status = data['status']
+        if 'priority' in data:
+            request_obj.priority = data['priority']
+        if 'assignedTo' in data:
+            request_obj.assigned_to = data['assignedTo']
+        if 'subject' in data:
+            request_obj.subject = data['subject']
+        if 'description' in data:
+            request_obj.description = data['description']
+        
+        request_obj.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify(request_obj.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating support request: {e}")
+        return jsonify({'error': 'Failed to update support request'}), 500
+
+# Subscription Management API Endpoints
+
+@jwt_required(optional=True)
+@app.route('/api/subscriptions', methods=['POST'])
+def create_subscription():
+    """Create a new subscription"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        user_id = user_info['id'] if user_info else request.get_json().get('userId') or 'anonymous'
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('tier') or not data.get('billingCycle'):
+            return jsonify({'error': 'Tier and billing cycle are required'}), 400
+        
+        # Calculate amount based on tier and billing cycle
+        tier_prices = {
+            'starter': {'monthly': 399, 'annual': 3830},
+            'professional': {'monthly': 1499, 'annual': 14390},
+            'enterprise': {'monthly': 9000, 'annual': 86400}
+        }
+        
+        amount = tier_prices.get(data['tier'], {}).get(data['billingCycle'], 0)
+        if amount == 0:
+            amount = data.get('amount', 0)
+        
+        # Calculate expiry date
+        expires_at = None
+        if data['billingCycle'] == 'monthly':
+            expires_at = datetime.utcnow() + timedelta(days=30)
+        elif data['billingCycle'] == 'annual':
+            expires_at = datetime.utcnow() + timedelta(days=365)
+        
+        # Create subscription
+        subscription = Subscription(
+            user_id=user_id,
+            tier=data['tier'],
+            billing_cycle=data['billingCycle'],
+            status='pending',  # Will be set to 'active' after payment confirmation
+            amount=amount,
+            currency=data.get('currency', 'USD'),
+            payment_method=data.get('paymentMethod'),
+            payment_method_id=data.get('paymentMethodId'),
+            expires_at=expires_at
+        )
+        
+        db.session.add(subscription)
+        db.session.commit()
+        
+        return jsonify({
+            'subscription': subscription.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating subscription: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to create subscription'}), 500
+
+@jwt_required(optional=True)
+@app.route('/api/subscriptions/current', methods=['GET'])
+def get_current_subscription():
+    """Get current subscription for user"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        user_id = user_info['id'] if user_info else request.args.get('userId')
+        
+        if not user_id:
+            return jsonify({'subscription': None}), 200
+        
+        # Get most recent active or pending subscription
+        subscription = Subscription.query.filter_by(
+            user_id=user_id
+        ).filter(
+            Subscription.status.in_(['active', 'pending'])
+        ).order_by(Subscription.created_at.desc()).first()
+        
+        if not subscription:
+            return jsonify({'subscription': None}), 200
+        
+        return jsonify({
+            'subscription': subscription.to_dict()
+        }), 200
+    except Exception as e:
+        print(f"Error fetching subscription: {e}")
+        return jsonify({'error': 'Failed to fetch subscription'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
@@ -4882,6 +5096,67 @@ if DB_AVAILABLE:
                 'dashboardType': self.dashboard_type,
                 'enabled': self.enabled,
                 'connectedAt': self.connected_at.isoformat() if self.connected_at else None
+            }
+    
+    class SupportRequest(db.Model):
+        __tablename__ = 'support_requests'
+        
+        id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        client_id = db.Column(db.String(36), db.ForeignKey('clients.id'), nullable=True, index=True)
+        client_name = db.Column(db.String(200), nullable=True)  # Store name for flexibility
+        subject = db.Column(db.String(255), nullable=False)
+        description = db.Column(db.Text, nullable=False)
+        priority = db.Column(db.String(20), default='medium', nullable=False)  # low, medium, high, urgent
+        status = db.Column(db.String(20), default='open', nullable=False)  # open, in-progress, resolved, closed
+        assigned_to = db.Column(db.String(200), nullable=True)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'client': self.client_name or (self.client_id if self.client_id else 'N/A'),
+                'subject': self.subject,
+                'description': self.description,
+                'priority': self.priority,
+                'status': self.status,
+                'assignedTo': self.assigned_to,
+                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+            }
+    
+    class Subscription(db.Model):
+        __tablename__ = 'subscriptions'
+        
+        id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        user_id = db.Column(db.String(36), nullable=False, index=True)  # Can be user ID or email
+        tier = db.Column(db.String(50), nullable=False)  # starter, professional, enterprise
+        billing_cycle = db.Column(db.String(20), nullable=False)  # monthly, annual
+        status = db.Column(db.String(20), default='active', nullable=False)  # active, cancelled, pending, expired
+        amount = db.Column(db.Float, nullable=False)
+        currency = db.Column(db.String(10), default='USD', nullable=False)
+        payment_method = db.Column(db.String(50), nullable=True)  # card, paypal, bank, wire
+        payment_method_id = db.Column(db.String(255), nullable=True)  # External payment method ID
+        started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        expires_at = db.Column(db.DateTime, nullable=True)
+        cancelled_at = db.Column(db.DateTime, nullable=True)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'tier': self.tier,
+                'billingCycle': self.billing_cycle,
+                'status': self.status,
+                'amount': self.amount,
+                'currency': self.currency,
+                'paymentMethod': self.payment_method,
+                'startedAt': self.started_at.isoformat() if self.started_at else None,
+                'expiresAt': self.expires_at.isoformat() if self.expires_at else None,
+                'cancelledAt': self.cancelled_at.isoformat() if self.cancelled_at else None,
+                'createdAt': self.created_at.isoformat() if self.created_at else None
             }
 
 # Crypto Transaction API Endpoints

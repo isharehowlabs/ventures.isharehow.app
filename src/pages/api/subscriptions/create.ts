@@ -42,16 +42,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Try to call backend API
     try {
-      const response = await fetch(`${backendUrl}/api/subscriptions/create`, {
+      const response = await fetch(`${backendUrl}/api/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           tier,
-          billing_cycle: billingCycle,
-          account_data: accountData,
-          payment_data: paymentData,
+          billingCycle,
+          amount: tier === 'starter' ? (billingCycle === 'annual' ? 3830 : 399) :
+                 tier === 'professional' ? (billingCycle === 'annual' ? 14390 : 1499) :
+                 tier === 'enterprise' ? (billingCycle === 'annual' ? 86400 : 9000) : 0,
+          currency: 'USD',
+          paymentMethod: paymentData.paymentMethod,
         }),
       });
 

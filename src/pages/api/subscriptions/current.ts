@@ -7,21 +7,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // TODO: Get user ID from JWT token or session
-    const userId = req.headers['x-user-id'] || req.query.userId;
-
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
     const backendUrl = getBackendUrl();
 
     try {
-      const response = await fetch(`${backendUrl}/api/subscriptions/current?user_id=${userId}`, {
+      const response = await fetch(`${backendUrl}/api/subscriptions/current`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies for JWT authentication
       });
 
       if (response.ok) {

@@ -18,11 +18,11 @@
 ## 🟡 High Priority Features
 
 ### Creative Dashboard
-- [ ] **Implement Employee Assignment Dialog** - Currently just closes menu, needs full dialog with employee selection
-- [ ] **Add employee role management** - Add `is_employee` boolean field to User model and migration
+- [x] **Fixed**: Employee Assignment Dialog - Created full dialog with employee selection and custom name option
+- [x] **Fixed**: Employee role management - Added `is_employee` boolean field to User model and migration
 - [ ] **Enforce employee-client relationships** - Only employees can manage assigned clients
 - [ ] **Implement employee sorting** - Allow employees to sort their own projects/creative accounts
-- [ ] **Complete Support Request creation** - Currently has TODO, needs backend API integration
+- [x] **Fixed**: Support Request creation - Backend API integration completed
 
 ### Analytics & Integration
 - [ ] **Implement Google Analytics integration** - Add OAuth flow and API connection in AnalyticsActivity component
@@ -32,15 +32,15 @@
 
 ### Payment & Subscriptions
 - [ ] **Integrate payment processing** - PayPal SDK integration for actual payment processing
-- [ ] **Complete subscription creation** - Backend API integration for subscription management
-- [ ] **Add subscription status tracking** - Track active/cancelled/pending subscriptions
+- [x] **Fixed**: Subscription creation - Backend API integration completed with Subscription model
+- [x] **Fixed**: Subscription status tracking - Added status field (active/cancelled/pending/expired)
 - [ ] **Implement payment method management** - Store and manage payment methods securely
 
 ## 🟢 Medium Priority Improvements
 
 ### Database & Backend
-- [ ] **Run database migration** - Apply `32_add_creative_dashboard_models.py` migration
-- [ ] **Add employee flag to User model** - Create migration to add `is_employee` boolean field
+- [ ] **Run database migration** - Apply `32_add_creative_dashboard_models.py` and `33_add_is_employee_support.py` migrations
+- [x] **Fixed**: Employee flag to User model - Added `is_employee` field and migration created
 - [ ] **Add client-user relationship enforcement** - Database constraints for employee-client assignments
 - [ ] **Implement proper error handling** - Better error messages and logging throughout backend
 
@@ -80,13 +80,13 @@
 ## 📋 Specific TODO Items Found
 
 ### Creative Dashboard
-- [ ] Employee assignment dialog implementation (`ClientList.tsx:162`)
+- [x] **Fixed**: Employee assignment dialog implementation (`ClientList.tsx:162`) - Created AssignEmployeeDialog component
 - [ ] Google Analytics API integration (`AnalyticsActivity.tsx:32, 44, 97`)
-- [ ] Support request creation backend integration (`SupportRequests.tsx:85`)
+- [x] **Fixed**: Support request creation backend integration (`SupportRequests.tsx:85`) - Backend API endpoints created
 
 ### Subscriptions
-- [ ] Backend API integration (`subscriptions/create.ts:32`)
-- [ ] User ID extraction from JWT (`subscriptions/current.ts:10`)
+- [x] **Fixed**: Backend API integration (`subscriptions/create.ts:32`) - Backend endpoints created and integrated
+- [x] **Fixed**: User ID extraction from JWT (`subscriptions/current.ts:10`) - Updated to use credentials for JWT
 
 ### AI Features
 - [ ] Revid.ai API call implementation (`AiAgentPanel.tsx:139`)

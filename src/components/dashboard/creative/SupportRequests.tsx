@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getBackendUrl } from '../../../utils/backendUrl';
 import {
   Box,
   Paper,
@@ -43,30 +44,11 @@ interface SupportRequest {
   description: string;
 }
 
-// Mock data
-const mockRequests: SupportRequest[] = [
-  {
-    id: '1',
-    client: 'Example Inc.',
-    subject: 'Dashboard access issue',
-    status: 'open',
-    priority: 'high',
-    createdAt: '2024-11-20',
-    description: 'Client unable to access Co-Work dashboard',
-  },
-  {
-    id: '2',
-    client: 'Kabloom LLC.',
-    subject: 'Feature request',
-    status: 'in-progress',
-    priority: 'medium',
-    createdAt: '2024-11-18',
-    description: 'Request for custom analytics dashboard',
-  },
-];
 
 export default function SupportRequests() {
-  const [requests, setRequests] = useState<SupportRequest[]>(mockRequests);
+  const [requests, setRequests] = useState<SupportRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [newRequest, setNewRequest] = useState({
@@ -76,27 +58,82 @@ export default function SupportRequests() {
     priority: 'medium' as 'low' | 'medium' | 'high',
   });
 
+  // Fetch support requests on mount
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/support-requests`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch support requests');
+      }
+
+      const data = await response.json();
+      setRequests(data.requests || []);
+    } catch (err: any) {
+      console.error('Error fetching support requests:', err);
+      setError(err.message || 'Failed to load support requests');
+      // Fallback to empty array on error
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleView = (request: SupportRequest) => {
     setSelectedRequest(request);
     setDialogOpen(true);
   };
 
-  const handleCreate = () => {
-    // TODO: Create new support request
-    const request: SupportRequest = {
-      id: Date.now().toString(),
-      ...newRequest,
-      status: 'open',
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setRequests([...requests, request]);
-    setNewRequest({
-      client: '',
-      subject: '',
-      description: '',
-      priority: 'medium',
-    });
-    setDialogOpen(false);
+  const handleCreate = async () => {
+    if (!newRequest.subject || !newRequest.description) {
+      setError('Subject and description are required');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/support-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          client: newRequest.client,
+          subject: newRequest.subject,
+          description: newRequest.description,
+          priority: newRequest.priority,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create support request');
+      }
+
+      const data = await response.json();
+      setRequests([...requests, data]);
+      setNewRequest({
+        client: '',
+        subject: '',
+        description: '',
+        priority: 'medium',
+      });
+      setDialogOpen(false);
+    } catch (err: any) {
+      console.error('Error creating support request:', err);
+      setError(err.message || 'Failed to create support request');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusColor = (status: string) => {

@@ -50,6 +50,7 @@ export interface Client {
 
 import { getBackendUrl } from '../../../utils/backendUrl';
 import { useEffect } from 'react';
+import AssignEmployeeDialog from './AssignEmployeeDialog';
 
 interface ClientListProps {
   onAddClient: () => void;
@@ -64,6 +65,7 @@ export default function ClientList({ onAddClient }: ClientListProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   // Fetch clients from API
   useEffect(() => {
@@ -159,9 +161,35 @@ export default function ClientList({ onAddClient }: ClientListProps) {
   };
 
   const handleAssignEmployee = async () => {
-    // TODO: Open employee assignment dialog
-    // For now, just close the menu
     handleMenuClose();
+    setAssignDialogOpen(true);
+  };
+
+  const handleEmployeeAssign = async (employeeId: number | null, employeeName: string | null) => {
+    if (!selectedClient) return;
+
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/clients/${selectedClient.id}/assign-employee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employeeId,
+          employeeName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to assign employee');
+      }
+
+      // Refresh client list
+      await fetchClients();
+    } catch (err: any) {
+      console.error('Error assigning employee:', err);
+      throw err;
+    }
   };
 
   // Clients are already filtered by API, but we can do additional client-side filtering if needed
@@ -349,6 +377,19 @@ export default function ClientList({ onAddClient }: ClientListProps) {
           Delete
         </MenuItem>
       </Menu>
+
+      {/* Assign Employee Dialog */}
+      <AssignEmployeeDialog
+        open={assignDialogOpen}
+        onClose={() => {
+          setAssignDialogOpen(false);
+          setSelectedClient(null);
+        }}
+        clientId={selectedClient?.id || ''}
+        clientName={selectedClient?.name || ''}
+        currentEmployee={selectedClient?.assignedEmployee}
+        onAssign={handleEmployeeAssign}
+      />
     </Box>
   );
 }
