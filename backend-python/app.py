@@ -863,6 +863,19 @@ def send_push_notification(user_id: int, notification: Notification):
     except Exception as e:
         app.logger.error(f"Error in send_push_notification: {e}")
 
+def safe_get_is_employee(user):
+    """Safely get is_employee flag, handling missing column gracefully"""
+    if not user:
+        return False
+    try:
+        # Check if column exists by trying to access it
+        if hasattr(user, 'is_employee'):
+            return bool(user.is_employee)
+    except (AttributeError, KeyError):
+        # Column doesn't exist in database yet
+        pass
+    return False
+
 def get_user_info():
     """Get user info from JWT token including id and role"""
     user = get_current_user()
@@ -870,9 +883,74 @@ def get_user_info():
         return None
     return {
         'id': user.patreon_id or user.username or str(user.id),
+        'user_id': user.id,  # Add database user ID
         'role': 'mentee',  # default to mentee (can be extended later)
+        'is_employee': safe_get_is_employee(user),
         'name': user.username or user.email or 'Unknown'
     }
+
+def require_employee(f):
+    """Decorator to require user to be an employee"""
+    @wraps(f)
+    @jwt_required()
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        if not safe_get_is_employee(user):
+            return jsonify({'error': 'Employee access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_employee_or_assigned(f):
+    """Decorator to require user to be an employee OR assigned to the client"""
+    @wraps(f)
+    @jwt_required()
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Check if user is an employee
+        is_employee = safe_get_is_employee(user)
+        
+        # If not employee, check if they're assigned to the client
+        if not is_employee and 'client_id' in kwargs:
+            client_id = kwargs['client_id']
+            client = Client.query.get(client_id)
+            if client:
+                # Check if user is assigned to this client
+                assignment = ClientEmployeeAssignment.query.filter_by(
+                    client_id=client_id,
+                    employee_id=user.id
+                ).first()
+                if not assignment:
+                    return jsonify({'error': 'Access denied. You must be assigned to this client or be an employee.'}), 403
+            else:
+                return jsonify({'error': 'Client not found'}), 404
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def check_employee_client_access(user, client_id):
+    """Helper function to check if user can access a client"""
+    if not user:
+        return False, 'Authentication required'
+    
+    # Employees can access all clients
+    if safe_get_is_employee(user):
+        return True, None
+    
+    # Check if user is assigned to this client
+    assignment = ClientEmployeeAssignment.query.filter_by(
+        client_id=client_id,
+        employee_id=user.id
+    ).first()
+    
+    if assignment:
+        return True, None
+    
+    return False, 'Access denied. You must be assigned to this client or be an employee.'
 
 @app.route('/api/figma/component/like', methods=['POST'])
 def figma_component_like():
@@ -1412,7 +1490,22 @@ def register():
         )
         user.set_password(password)
         db.session.add(user)
-        db.session.commit()
+        
+        try:
+            db.session.commit()
+        except Exception as commit_error:
+            # Check if error is due to missing is_employee column
+            error_str = str(commit_error).lower()
+            if 'is_employee' in error_str or 'column' in error_str:
+                # Column doesn't exist - need to run migration
+                db.session.rollback()
+                return jsonify({
+                    'error': 'Database migration required',
+                    'message': 'The is_employee column is missing from the users table. Please run the database migration.',
+                    'details': 'See RUN_MIGRATION.md for instructions on how to run: flask db upgrade'
+                }), 500
+            # Some other error, re-raise it
+            raise
         
         # Generate JWT token using flask-jwt-extended
         access_token = create_access_token(identity=str(user.id))
@@ -3605,17 +3698,20 @@ def handle_join_notifications(data):
 
 # Creative Dashboard - Client Management API Endpoints
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/clients', methods=['GET'])
 def get_clients():
-    """Get all clients with optional filtering"""
+    """Get all clients with optional filtering - requires authentication"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        # Try to get user info, but don't require it for now (can be made required later)
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        
         user_info = get_user_info()
-        # Allow access even if user_info is None for now
+        is_employee = hasattr(user, 'is_employee') and user.is_employee
         
         # Get query parameters
         status = request.args.get('status', 'all')
@@ -3639,8 +3735,15 @@ def get_clients():
         
         clients = query.order_by(Client.created_at.desc()).all()
         
-        # Filter by employee if specified
-        if employee_id:
+        # If not an employee, filter to only show clients assigned to this user
+        if not is_employee:
+            clients = [
+                c for c in clients 
+                if c.employee_assignments and 
+                any(a.employee_id == user.id for a in c.employee_assignments)
+            ]
+        # Filter by employee if specified (only employees can filter by other employees)
+        elif employee_id:
             clients = [c for c in clients if c.employee_assignments and 
                       any(a.employee_id == int(employee_id) for a in c.employee_assignments)]
         
@@ -3653,16 +3756,17 @@ def get_clients():
         traceback.print_exc()
         return jsonify({'error': 'Failed to fetch clients'}), 500
 
-@jwt_required(optional=True)
+@require_employee
 @app.route('/api/creative/clients', methods=['POST'])
 def create_client():
-    """Create a new client"""
+    """Create a new client - requires employee access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        # Try to get user info for logging, but allow creation without auth for now
         user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
         
         data = request.get_json()
         
@@ -3719,38 +3823,52 @@ def create_client():
         traceback.print_exc()
         return jsonify({'error': 'Failed to create client'}), 500
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/clients/<client_id>', methods=['GET'])
 def get_client(client_id):
-    """Get a specific client by ID"""
+    """Get a specific client by ID - requires authentication and access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
         
         client = Client.query.get(client_id)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
+        
+        # Check access
+        has_access, error_msg = check_employee_client_access(user, client_id)
+        if not has_access:
+            return jsonify({'error': error_msg}), 403
         
         return jsonify(client.to_dict()), 200
     except Exception as e:
         print(f"Error fetching client: {e}")
         return jsonify({'error': 'Failed to fetch client'}), 500
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/clients/<client_id>', methods=['PUT'])
 def update_client(client_id):
-    """Update a client"""
+    """Update a client - requires authentication and access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
         
         client = Client.query.get(client_id)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
+        
+        # Check access - only employees or assigned employees can update
+        has_access, error_msg = check_employee_client_access(user, client_id)
+        if not has_access:
+            return jsonify({'error': error_msg}), 403
         
         data = request.get_json()
         
@@ -3785,16 +3903,14 @@ def update_client(client_id):
         print(f"Error updating client: {e}")
         return jsonify({'error': 'Failed to update client'}), 500
 
-@jwt_required(optional=True)
+@require_employee
 @app.route('/api/creative/clients/<client_id>', methods=['DELETE'])
 def delete_client(client_id):
-    """Delete a client"""
+    """Delete a client - requires employee access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
-        
         client = Client.query.get(client_id)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
@@ -3808,16 +3924,14 @@ def delete_client(client_id):
         print(f"Error deleting client: {e}")
         return jsonify({'error': 'Failed to delete client'}), 500
 
-@jwt_required(optional=True)
+@require_employee
 @app.route('/api/creative/clients/<client_id>/assign-employee', methods=['POST'])
 def assign_employee(client_id):
-    """Assign or update employee assignment for a client"""
+    """Assign or update employee assignment for a client - requires employee access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
-        
         client = Client.query.get(client_id)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
@@ -3825,6 +3939,16 @@ def assign_employee(client_id):
         data = request.get_json()
         employee_id = data.get('employeeId')
         employee_name = data.get('employeeName')
+        
+        # Validate that employee_id exists and is an employee
+        if employee_id:
+            employee = User.query.get(employee_id)
+            if not employee:
+                return jsonify({'error': 'Employee not found'}), 404
+            if not safe_get_is_employee(employee):
+                return jsonify({'error': 'User is not an employee'}), 400
+            # Get the employee name from the database
+            employee_name = employee.username or employee.email or employee_name
         
         # Remove existing assignments
         ClientEmployeeAssignment.query.filter_by(client_id=client_id).delete()
@@ -3846,15 +3970,22 @@ def assign_employee(client_id):
         print(f"Error assigning employee: {e}")
         return jsonify({'error': 'Failed to assign employee'}), 500
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/clients/<client_id>/dashboard-connections', methods=['GET'])
 def get_client_dashboard_connections(client_id):
-    """Get dashboard connections for a client"""
+    """Get dashboard connections for a client - requires authentication and access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Check access
+        has_access, error_msg = check_employee_client_access(user, client_id)
+        if not has_access:
+            return jsonify({'error': error_msg}), 403
         
         connections = ClientDashboardConnection.query.filter_by(client_id=client_id).all()
         return jsonify({
@@ -3864,19 +3995,26 @@ def get_client_dashboard_connections(client_id):
         print(f"Error fetching dashboard connections: {e}")
         return jsonify({'error': 'Failed to fetch connections'}), 500
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/clients/<client_id>/dashboard-connections', methods=['POST'])
 def update_dashboard_connections(client_id):
-    """Update dashboard connections for a client"""
+    """Update dashboard connections for a client - requires authentication and access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
         
         client = Client.query.get(client_id)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
+        
+        # Check access - only employees or assigned employees can update
+        has_access, error_msg = check_employee_client_access(user, client_id)
+        if not has_access:
+            return jsonify({'error': error_msg}), 403
         
         data = request.get_json()
         dashboard_types = data.get('dashboardTypes', [])
@@ -3943,15 +4081,20 @@ def get_employees():
 
 # Creative Dashboard - Support Requests API Endpoints
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/support-requests', methods=['GET'])
 def get_support_requests():
-    """Get all support requests with optional filtering"""
+    """Get all support requests with optional filtering - requires authentication"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        
         user_info = get_user_info()
+        is_employee = hasattr(user, 'is_employee') and user.is_employee
         
         # Get query parameters
         status = request.args.get('status', 'all')
@@ -3972,6 +4115,18 @@ def get_support_requests():
         
         requests = query.order_by(SupportRequest.created_at.desc()).all()
         
+        # If not an employee, filter to only show requests for clients assigned to this user
+        if not is_employee:
+            # Get client IDs assigned to this user
+            assigned_clients = [
+                a.client_id for a in ClientEmployeeAssignment.query.filter_by(employee_id=user.id).all()
+            ]
+            requests = [
+                r for r in requests 
+                if (r.client_id and r.client_id in assigned_clients) or 
+                   (not r.client_id and r.client_name)  # Allow requests without client_id
+            ]
+        
         return jsonify({
             'requests': [req.to_dict() for req in requests]
         }), 200
@@ -3981,14 +4136,18 @@ def get_support_requests():
         traceback.print_exc()
         return jsonify({'error': 'Failed to fetch support requests'}), 500
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/support-requests', methods=['POST'])
 def create_support_request():
-    """Create a new support request"""
+    """Create a new support request - requires authentication"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        
         user_info = get_user_info()
         
         data = request.get_json()
@@ -4019,19 +4178,32 @@ def create_support_request():
         traceback.print_exc()
         return jsonify({'error': 'Failed to create support request'}), 500
 
-@jwt_required(optional=True)
+@jwt_required()
 @app.route('/api/creative/support-requests/<request_id>', methods=['PUT'])
 def update_support_request(request_id):
-    """Update a support request"""
+    """Update a support request - requires authentication and access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
         
         request_obj = SupportRequest.query.get(request_id)
         if not request_obj:
             return jsonify({'error': 'Support request not found'}), 404
+        
+        # Check access - employees can update any request, assigned employees can update their client's requests
+        is_employee = hasattr(user, 'is_employee') and user.is_employee
+        if not is_employee and request_obj.client_id:
+            # Check if user is assigned to this client
+            assignment = ClientEmployeeAssignment.query.filter_by(
+                client_id=request_obj.client_id,
+                employee_id=user.id
+            ).first()
+            if not assignment:
+                return jsonify({'error': 'Access denied. You must be assigned to this client or be an employee.'}), 403
         
         data = request.get_json()
         

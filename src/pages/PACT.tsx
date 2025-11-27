@@ -1,7 +1,54 @@
 import { Box, Typography, Container, Button, Card, CardContent, TextField, Link as MuiLink } from '@mui/material';
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 export default function PACT() {
+  // Handle smooth scrolling for anchor links
+  useEffect(() => {
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a[href^="#"]') as HTMLAnchorElement;
+      if (anchor) {
+        e.preventDefault();
+        const href = anchor.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          const id = href.substring(1);
+          const element = document.getElementById(id);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }
+    };
+
+    // Handle initial hash in URL
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      setTimeout(() => {
+        const element = document.getElementById(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+
+    document.addEventListener('click', handleAnchorClick);
+    return () => {
+      document.removeEventListener('click', handleAnchorClick);
+    };
+  }, []);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const id = href.substring(1);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Update URL without scrolling
+      window.history.pushState(null, '', href);
+    }
+  };
+
   return (
     <Box sx={{ fontFamily: "'Montserrat', Arial, sans-serif", background: 'linear-gradient(135deg, #2c5aa0 0%, #1e2a47 100%)', color: '#f4f4f4' }}>
       {/* Header */}
@@ -45,11 +92,11 @@ export default function PACT() {
 
       {/* Navigation */}
       <Box component="nav" sx={{ background: '#1e2a47', padding: '12px 0', textAlign: 'center', boxShadow: '0 2px 8px rgba(44,90,160,0.10)' }}>
-        <Link href="#home" passHref><Button component="a" sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Home</Button></Link>
-        <Link href="#about" passHref><Button component="a" sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>About</Button></Link>
-        <Link href="#services" passHref><Button component="a" sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Services</Button></Link>
-        <Link href="#videos" passHref><Button component="a" sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Videos</Button></Link>
-        <Link href="#contact" passHref><Button component="a" sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Contact</Button></Link>
+        <Button component="a" href="#home" onClick={(e) => handleNavClick(e as any, '#home')} sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Home</Button>
+        <Button component="a" href="#about" onClick={(e) => handleNavClick(e as any, '#about')} sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>About</Button>
+        <Button component="a" href="#services" onClick={(e) => handleNavClick(e as any, '#services')} sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Services</Button>
+        <Button component="a" href="#videos" onClick={(e) => handleNavClick(e as any, '#videos')} sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Videos</Button>
+        <Button component="a" href="#contact" onClick={(e) => handleNavClick(e as any, '#contact')} sx={{ color: '#ffd700', margin: '0 18px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.08em', '&:hover': { color: '#ff6b35' } }}>Contact</Button>
       </Box>
 
       {/* Hero Section */}
@@ -61,24 +108,24 @@ export default function PACT() {
           <Typography variant="h5" sx={{ fontSize: '1.3em', color: '#e0e0e0', mb: 4 }}>
             Empowering lives through training and employment in maintenance, lawn care, cleaning, and more.
           </Typography>
-          <Link href="#contact" passHref>
-            <Button
-              component="a"
-              variant="contained"
-              sx={{
-                backgroundColor: '#ffd700',
-                color: '#2c5aa0',
-                padding: '15px 36px',
-                borderRadius: '30px',
-                fontWeight: 'bold',
-                fontSize: '1.1em',
-                boxShadow: '0 2px 8px rgba(44,90,160,0.10)',
-                '&:hover': { backgroundColor: '#ff6b35', color: '#fff' },
-              }}
-            >
-              Contact Us Today
-            </Button>
-          </Link>
+          <Button
+            component="a"
+            href="#contact"
+            onClick={(e) => handleNavClick(e as any, '#contact')}
+            variant="contained"
+            sx={{
+              backgroundColor: '#ffd700',
+              color: '#2c5aa0',
+              padding: '15px 36px',
+              borderRadius: '30px',
+              fontWeight: 'bold',
+              fontSize: '1.1em',
+              boxShadow: '0 2px 8px rgba(44,90,160,0.10)',
+              '&:hover': { backgroundColor: '#ff6b35', color: '#fff' },
+            }}
+          >
+            Contact Us Today
+          </Button>
         </Container>
       </Box>
 
