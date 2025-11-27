@@ -23,6 +23,8 @@ import {
   Button,
   Stack,
   Tooltip,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -46,53 +48,68 @@ export interface Client {
   createdAt: string;
 }
 
-// Mock data - replace with API call
-const mockClients: Client[] = [
-  {
-    id: '1',
-    name: 'Example Inc.',
-    email: 'info@example.com',
-    company: 'Example Inc.',
-    status: 'active',
-    systemsConnected: ['CRM', 'Analytics'],
-    assignedEmployee: 'John Doe',
-    tags: ['Enterprise'],
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    name: 'Beta Corp.',
-    email: 'hello@beta.com',
-    company: 'Beta Corp.',
-    status: 'inactive',
-    systemsConnected: ['Marketing'],
-    tags: ['SMB'],
-    createdAt: '2024-02-20',
-  },
-  {
-    id: '3',
-    name: 'Kabloom LLC.',
-    email: 'kabloomplants@gmail.com',
-    company: 'Kabloom LLC.',
-    status: 'active',
-    systemsConnected: ['CRM', 'Dashboards', 'Analytics'],
-    assignedEmployee: 'Jane Smith',
-    tags: ['Venture Partnership'],
-    createdAt: '2024-03-10',
-  },
-];
+import { getBackendUrl } from '../../../utils/backendUrl';
+import { useEffect } from 'react';
 
 interface ClientListProps {
   onAddClient: () => void;
 }
 
 export default function ClientList({ onAddClient }: ClientListProps) {
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [employeeFilter, setEmployeeFilter] = useState<string>('all');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch clients from API
+  useEffect(() => {
+    fetchClients();
+  }, [statusFilter, employeeFilter, searchQuery]);
+
+  const fetchClients = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const backendUrl = getBackendUrl();
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
+      if (employeeFilter !== 'all' && employeeFilter !== 'unassigned') {
+        params.append('employee_id', employeeFilter);
+      }
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+
+      const response = await fetch(`${backendUrl}/api/creative/clients?${params.toString()}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch clients');
+      }
+
+      const data = await response.json();
+      
+      // Filter unassigned clients if needed
+      let filteredClients = data.clients || [];
+      if (employeeFilter === 'unassigned') {
+        filteredClients = filteredClients.filter((c: Client) => !c.assignedEmployee);
+      }
+
+      setClients(filteredClients);
+    } catch (err: any) {
+      console.error('Error fetching clients:', err);
+      setError(err.message || 'Failed to load clients');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, client: Client) => {
     setAnchorEl(event.currentTarget);
@@ -114,33 +131,41 @@ export default function ClientList({ onAddClient }: ClientListProps) {
     handleMenuClose();
   };
 
-  const handleDelete = () => {
-    if (selectedClient) {
-      setClients(clients.filter(c => c.id !== selectedClient.id));
+  const handleDelete = async () => {
+    if (!selectedClient) {
+      handleMenuClose();
+      return;
     }
+
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/clients/${selectedClient.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete client');
+      }
+
+      // Refresh client list
+      await fetchClients();
+    } catch (err: any) {
+      console.error('Error deleting client:', err);
+      alert(err.message || 'Failed to delete client');
+    }
+
     handleMenuClose();
   };
 
-  const handleAssignEmployee = () => {
-    // Open employee assignment dialog
+  const handleAssignEmployee = async () => {
+    // TODO: Open employee assignment dialog
+    // For now, just close the menu
     handleMenuClose();
   };
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch =
-      !searchQuery ||
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.company.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
-    const matchesEmployee =
-      employeeFilter === 'all' ||
-      (employeeFilter === 'unassigned' && !client.assignedEmployee) ||
-      client.assignedEmployee === employeeFilter;
-
-    return matchesSearch && matchesStatus && matchesEmployee;
-  });
+  // Clients are already filtered by API, but we can do additional client-side filtering if needed
+  const filteredClients = clients;
 
   const uniqueEmployees = Array.from(
     new Set(clients.filter(c => c.assignedEmployee).map(c => c.assignedEmployee))
@@ -210,6 +235,12 @@ export default function ClientList({ onAddClient }: ClientListProps) {
         </Stack>
       </Paper>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
       {/* Client Table */}
       <TableContainer component={Paper}>
         <Table>
@@ -224,7 +255,13 @@ export default function ClientList({ onAddClient }: ClientListProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredClients.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <CircularProgress />
+                </TableCell>
+              </TableRow>
+            ) : filteredClients.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">

@@ -19,6 +19,7 @@ import {
   Alert,
 } from '@mui/material';
 import { useRouter } from 'next/router';
+import { getBackendUrl } from '../../../utils/backendUrl';
 
 interface AddClientDialogProps {
   open: boolean;
@@ -65,18 +66,47 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
     setError(null);
 
     try {
-      // TODO: Save client lead to backend
-      // For now, redirect to signup page with client info
-      const params = new URLSearchParams({
-        name: formData.name,
-        email: formData.email,
-        company: formData.company,
-        ...(formData.tier && { tier: formData.tier }),
+      const backendUrl = getBackendUrl();
+      
+      // Save client to backend
+      const response = await fetch(`${backendUrl}/api/creative/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          phone: formData.phone || undefined,
+          tier: formData.tier || undefined,
+          notes: formData.notes || undefined,
+          status: 'pending',
+        }),
       });
 
-      // Close dialog and navigate to signup
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to create client' }));
+        throw new Error(errorData.error || 'Failed to create client');
+      }
+
+      // Close dialog and optionally redirect to signup
       onClose();
-      router.push(`/demo?${params.toString()}`);
+      
+      // Optionally redirect to signup page with client info
+      if (formData.tier) {
+        const params = new URLSearchParams({
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          tier: formData.tier,
+        });
+        router.push(`/demo?${params.toString()}`);
+      } else {
+        // Just refresh the page or show success message
+        window.location.reload();
+      }
 
       // Reset form
       setFormData({

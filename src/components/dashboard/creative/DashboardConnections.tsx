@@ -20,6 +20,7 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -36,35 +37,129 @@ interface DashboardConnection {
   clients: string[];
 }
 
-// Mock data
-const mockConnections: DashboardConnection[] = [
-  {
-    id: '1',
-    name: 'Co-Work Dashboard',
-    type: 'cowork',
-    enabled: true,
-    clients: ['Example Inc.', 'Kabloom LLC.'],
-  },
-  {
-    id: '2',
-    name: 'RISE Dashboard',
-    type: 'rise',
-    enabled: true,
-    clients: ['Kabloom LLC.'],
-  },
-];
+import { getBackendUrl } from '../../../utils/backendUrl';
+import { useEffect } from 'react';
 
 export default function DashboardConnections() {
-  const [connections, setConnections] = useState<DashboardConnection[]>(mockConnections);
+  const [connections, setConnections] = useState<DashboardConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch all clients and their dashboard connections
+  useEffect(() => {
+    fetchConnections();
+  }, []);
+
+  const fetchConnections = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/clients`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch clients');
+      }
+
+      const data = await response.json();
+      const clients = data.clients || [];
+
+      // Group clients by dashboard type
+      const dashboardMap: Record<string, { clients: string[]; enabled: boolean }> = {
+        cowork: { clients: [], enabled: true },
+        rise: { clients: [], enabled: true },
+      };
+
+      clients.forEach((client: any) => {
+        const systems = client.systemsConnected || [];
+        systems.forEach((system: string) => {
+          const type = system.toLowerCase().includes('cowork') ? 'cowork' : 
+                      system.toLowerCase().includes('rise') ? 'rise' : null;
+          if (type && dashboardMap[type]) {
+            dashboardMap[type].clients.push(client.name);
+          }
+        });
+      });
+
+      setConnections([
+        {
+          id: '1',
+          name: 'Co-Work Dashboard',
+          type: 'cowork',
+          enabled: dashboardMap.cowork.enabled,
+          clients: dashboardMap.cowork.clients,
+        },
+        {
+          id: '2',
+          name: 'RISE Dashboard',
+          type: 'rise',
+          enabled: dashboardMap.rise.enabled,
+          clients: dashboardMap.rise.clients,
+        },
+      ]);
+    } catch (err: any) {
+      console.error('Error fetching connections:', err);
+      setError(err.message || 'Failed to load dashboard connections');
+    } finally {
+      setLoading(false);
+    }
+  };
   const [selectedConnection, setSelectedConnection] = useState<DashboardConnection | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
-  const handleToggle = (id: string) => {
-    setConnections((prev) =>
-      prev.map((conn) =>
-        conn.id === id ? { ...conn, enabled: !conn.enabled } : conn
-      )
-    );
+  const handleToggle = async (id: string, connection: DashboardConnection) => {
+    const newEnabled = !connection.enabled;
+    
+    try {
+      // Update all clients with this dashboard type
+      const backendUrl = getBackendUrl();
+      const clientsResponse = await fetch(`${backendUrl}/api/creative/clients`, {
+        credentials: 'include',
+      });
+
+      if (!clientsResponse.ok) {
+        throw new Error('Failed to fetch clients');
+      }
+
+      const clientsData = await clientsResponse.json();
+      const clients = clientsData.clients || [];
+
+      // Update each client's dashboard connection
+      for (const client of clients) {
+        const systems = client.systemsConnected || [];
+        if (systems.includes(connection.name) || systems.some((s: string) => 
+          s.toLowerCase().includes(connection.type))) {
+          
+          const dashboardTypes = [...new Set([...systems, connection.type])];
+          const enabledMap: Record<string, boolean> = {};
+          dashboardTypes.forEach((type: string) => {
+            enabledMap[type] = type === connection.type ? newEnabled : true;
+          });
+
+          await fetch(`${backendUrl}/api/creative/clients/${client.id}/dashboard-connections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              dashboardTypes: dashboardTypes,
+              enabled: enabledMap,
+            }),
+          });
+        }
+      }
+
+      // Update local state
+      setConnections((prev) =>
+        prev.map((conn) =>
+          conn.id === id ? { ...conn, enabled: newEnabled } : conn
+        )
+      );
+    } catch (err: any) {
+      console.error('Error toggling connection:', err);
+      alert(err.message || 'Failed to update dashboard connection');
+    }
   };
 
   const handleConfigure = (connection: DashboardConnection) => {
@@ -90,7 +185,18 @@ export default function DashboardConnections() {
         dashboard access and manage client permissions.
       </Alert>
 
-      <Stack spacing={2}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Stack spacing={2}>
         {connections.map((connection) => (
           <Paper key={connection.id} sx={{ p: 3 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -124,7 +230,8 @@ export default function DashboardConnections() {
                   control={
                     <Switch
                       checked={connection.enabled}
-                      onChange={() => handleToggle(connection.id)}
+                      onChange={() => handleToggle(connection.id, connection)}
+                      disabled={loading}
                     />
                   }
                   label={connection.enabled ? 'Enabled' : 'Disabled'}
@@ -140,7 +247,8 @@ export default function DashboardConnections() {
             </Stack>
           </Paper>
         ))}
-      </Stack>
+        </Stack>
+      )}
 
       {/* Configuration Dialog */}
       <Dialog

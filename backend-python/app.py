@@ -3566,6 +3566,355 @@ def handle_join_notifications(data):
         join_room(room)
         print(f'User {user_id} joined notification room: {room}')
 
+# Creative Dashboard - Client Management API Endpoints
+
+@require_session
+@app.route('/api/creative/clients', methods=['GET'])
+def get_clients():
+    """Get all clients with optional filtering"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Get query parameters
+        status = request.args.get('status', 'all')
+        employee_id = request.args.get('employee_id', None)
+        search = request.args.get('search', '')
+        
+        # Build query
+        query = Client.query
+        
+        if status != 'all':
+            query = query.filter(Client.status == status)
+        
+        if search:
+            query = query.filter(
+                db.or_(
+                    Client.name.ilike(f'%{search}%'),
+                    Client.email.ilike(f'%{search}%'),
+                    Client.company.ilike(f'%{search}%')
+                )
+            )
+        
+        clients = query.order_by(Client.created_at.desc()).all()
+        
+        # Filter by employee if specified
+        if employee_id:
+            clients = [c for c in clients if c.employee_assignments and 
+                      any(a.employee_id == int(employee_id) for a in c.employee_assignments)]
+        
+        return jsonify({
+            'clients': [client.to_dict() for client in clients]
+        }), 200
+    except Exception as e:
+        print(f"Error fetching clients: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch clients'}), 500
+
+@require_session
+@app.route('/api/creative/clients', methods=['POST'])
+def create_client():
+    """Create a new client"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('name') or not data.get('email') or not data.get('company'):
+            return jsonify({'error': 'Name, email, and company are required'}), 400
+        
+        # Check if email already exists
+        existing = Client.query.filter_by(email=data['email']).first()
+        if existing:
+            return jsonify({'error': 'Client with this email already exists'}), 409
+        
+        # Create client
+        client = Client(
+            name=data['name'],
+            email=data['email'],
+            company=data['company'],
+            phone=data.get('phone'),
+            status=data.get('status', 'pending'),
+            tier=data.get('tier'),
+            notes=data.get('notes'),
+            tags=json.dumps(data.get('tags', [])) if data.get('tags') else None
+        )
+        
+        db.session.add(client)
+        db.session.commit()
+        
+        # Create dashboard connections if specified
+        dashboard_types = data.get('dashboardTypes', [])
+        for dashboard_type in dashboard_types:
+            connection = ClientDashboardConnection(
+                client_id=client.id,
+                dashboard_type=dashboard_type,
+                enabled=True
+            )
+            db.session.add(connection)
+        
+        # Assign employee if specified
+        if data.get('employeeId') or data.get('employeeName'):
+            assignment = ClientEmployeeAssignment(
+                client_id=client.id,
+                employee_id=data.get('employeeId'),
+                employee_name=data.get('employeeName')
+            )
+            db.session.add(assignment)
+        
+        db.session.commit()
+        
+        return jsonify(client.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating client: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to create client'}), 500
+
+@require_session
+@app.route('/api/creative/clients/<client_id>', methods=['GET'])
+def get_client(client_id):
+    """Get a specific client by ID"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        client = Client.query.get(client_id)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        return jsonify(client.to_dict()), 200
+    except Exception as e:
+        print(f"Error fetching client: {e}")
+        return jsonify({'error': 'Failed to fetch client'}), 500
+
+@require_session
+@app.route('/api/creative/clients/<client_id>', methods=['PUT'])
+def update_client(client_id):
+    """Update a client"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        client = Client.query.get(client_id)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        data = request.get_json()
+        
+        # Update fields
+        if 'name' in data:
+            client.name = data['name']
+        if 'email' in data:
+            # Check if email is already taken by another client
+            existing = Client.query.filter_by(email=data['email']).first()
+            if existing and existing.id != client_id:
+                return jsonify({'error': 'Email already in use'}), 409
+            client.email = data['email']
+        if 'company' in data:
+            client.company = data['company']
+        if 'phone' in data:
+            client.phone = data['phone']
+        if 'status' in data:
+            client.status = data['status']
+        if 'tier' in data:
+            client.tier = data['tier']
+        if 'notes' in data:
+            client.notes = data['notes']
+        if 'tags' in data:
+            client.tags = json.dumps(data['tags']) if data['tags'] else None
+        
+        client.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify(client.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating client: {e}")
+        return jsonify({'error': 'Failed to update client'}), 500
+
+@require_session
+@app.route('/api/creative/clients/<client_id>', methods=['DELETE'])
+def delete_client(client_id):
+    """Delete a client"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        client = Client.query.get(client_id)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        db.session.delete(client)
+        db.session.commit()
+        
+        return jsonify({'message': 'Client deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting client: {e}")
+        return jsonify({'error': 'Failed to delete client'}), 500
+
+@require_session
+@app.route('/api/creative/clients/<client_id>/assign-employee', methods=['POST'])
+def assign_employee(client_id):
+    """Assign or update employee assignment for a client"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        client = Client.query.get(client_id)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        data = request.get_json()
+        employee_id = data.get('employeeId')
+        employee_name = data.get('employeeName')
+        
+        # Remove existing assignments
+        ClientEmployeeAssignment.query.filter_by(client_id=client_id).delete()
+        
+        # Create new assignment if provided
+        if employee_id or employee_name:
+            assignment = ClientEmployeeAssignment(
+                client_id=client_id,
+                employee_id=employee_id,
+                employee_name=employee_name
+            )
+            db.session.add(assignment)
+        
+        db.session.commit()
+        
+        return jsonify(client.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error assigning employee: {e}")
+        return jsonify({'error': 'Failed to assign employee'}), 500
+
+@require_session
+@app.route('/api/creative/clients/<client_id>/dashboard-connections', methods=['GET'])
+def get_client_dashboard_connections(client_id):
+    """Get dashboard connections for a client"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        connections = ClientDashboardConnection.query.filter_by(client_id=client_id).all()
+        return jsonify({
+            'connections': [conn.to_dict() for conn in connections]
+        }), 200
+    except Exception as e:
+        print(f"Error fetching dashboard connections: {e}")
+        return jsonify({'error': 'Failed to fetch connections'}), 500
+
+@require_session
+@app.route('/api/creative/clients/<client_id>/dashboard-connections', methods=['POST'])
+def update_dashboard_connections(client_id):
+    """Update dashboard connections for a client"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        client = Client.query.get(client_id)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        data = request.get_json()
+        dashboard_types = data.get('dashboardTypes', [])
+        enabled_map = data.get('enabled', {})  # { 'cowork': true, 'rise': false }
+        
+        # Get existing connections
+        existing = {conn.dashboard_type: conn for conn in client.dashboard_connections}
+        
+        # Update or create connections
+        for dashboard_type in dashboard_types:
+            enabled = enabled_map.get(dashboard_type, True)
+            if dashboard_type in existing:
+                existing[dashboard_type].enabled = enabled
+            else:
+                connection = ClientDashboardConnection(
+                    client_id=client_id,
+                    dashboard_type=dashboard_type,
+                    enabled=enabled
+                )
+                db.session.add(connection)
+        
+        # Disable connections not in the list
+        for dashboard_type, connection in existing.items():
+            if dashboard_type not in dashboard_types:
+                connection.enabled = False
+        
+        db.session.commit()
+        
+        return jsonify(client.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating dashboard connections: {e}")
+        return jsonify({'error': 'Failed to update connections'}), 500
+
+@require_session
+@app.route('/api/creative/employees', methods=['GET'])
+def get_employees():
+    """Get list of employees (users) for assignment"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Get all users (you may want to filter by role or add an is_employee flag)
+        users = User.query.all()
+        
+        employees = []
+        for user in users:
+            employees.append({
+                'id': user.id,
+                'name': user.username or user.email or f'User {user.id}',
+                'email': user.email
+            })
+        
+        return jsonify({'employees': employees}), 200
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
+        return jsonify({'error': 'Failed to fetch employees'}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     # Allow Werkzeug for development/production (or use gunicorn for true production)
@@ -4473,6 +4822,81 @@ if DB_AVAILABLE:
                 'lastActiveAt': self.last_active_at.isoformat() if self.last_active_at else None,
                 'tasksCompleted': self.tasks_completed,
                 'retentionDays': self.retention_days
+            }
+    
+    # Creative Dashboard - Client Management Models
+    class Client(db.Model):
+        __tablename__ = 'clients'
+        
+        id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        name = db.Column(db.String(200), nullable=False)
+        email = db.Column(db.String(255), nullable=False, unique=True, index=True)
+        company = db.Column(db.String(200), nullable=False)
+        phone = db.Column(db.String(50), nullable=True)
+        status = db.Column(db.String(20), default='pending', nullable=False)  # pending, active, inactive
+        tier = db.Column(db.String(50), nullable=True)  # starter, professional, enterprise
+        notes = db.Column(db.Text, nullable=True)
+        tags = db.Column(db.Text, nullable=True)  # JSON array of tags
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        
+        # Relationships
+        employee_assignments = db.relationship('ClientEmployeeAssignment', backref='client', lazy=True, cascade='all, delete-orphan')
+        dashboard_connections = db.relationship('ClientDashboardConnection', backref='client', lazy=True, cascade='all, delete-orphan')
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'name': self.name,
+                'email': self.email,
+                'company': self.company,
+                'phone': self.phone,
+                'status': self.status,
+                'tier': self.tier,
+                'notes': self.notes,
+                'tags': json.loads(self.tags) if self.tags else [],
+                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
+                'assignedEmployee': self.employee_assignments[0].employee_name if self.employee_assignments else None,
+                'systemsConnected': [conn.dashboard_type for conn in self.dashboard_connections if conn.enabled]
+            }
+    
+    class ClientEmployeeAssignment(db.Model):
+        __tablename__ = 'client_employee_assignments'
+        
+        id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        client_id = db.Column(db.String(36), db.ForeignKey('clients.id'), nullable=False, index=True)
+        employee_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+        employee_name = db.Column(db.String(200), nullable=True)  # Store name for flexibility
+        assigned_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'clientId': self.client_id,
+                'employeeId': self.employee_id,
+                'employeeName': self.employee_name,
+                'assignedAt': self.assigned_at.isoformat() if self.assigned_at else None
+            }
+    
+    class ClientDashboardConnection(db.Model):
+        __tablename__ = 'client_dashboard_connections'
+        
+        id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        client_id = db.Column(db.String(36), db.ForeignKey('clients.id'), nullable=False, index=True)
+        dashboard_type = db.Column(db.String(50), nullable=False)  # cowork, rise, crm, analytics, marketing
+        enabled = db.Column(db.Boolean, default=True, nullable=False)
+        connected_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'clientId': self.client_id,
+                'dashboardType': self.dashboard_type,
+                'enabled': self.enabled,
+                'connectedAt': self.connected_at.isoformat() if self.connected_at else None
             }
 
 # Crypto Transaction API Endpoints
