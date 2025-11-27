@@ -205,6 +205,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
                       transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                       transform: isHovered ? 'scale(1.05)' : 'scale(1)',
                     }}
+                    loading="lazy"
                   />
                 ) : (
                   <Box
@@ -212,12 +213,29 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
                       width: '100%',
                       height: '100%',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      bgcolor: 'grey.300',
+                      bgcolor: 'grey.200',
+                      gap: 1,
                     }}
                   >
-                    <Typography variant="body2" color="text.secondary">
+                    <Box
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        bgcolor: 'grey.400',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="h4" color="text.secondary">
+                        {content.channelIcon || '📷'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', px: 2 }}>
                       Image unavailable
                     </Typography>
                   </Box>
