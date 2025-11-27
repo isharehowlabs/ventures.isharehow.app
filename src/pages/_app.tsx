@@ -5,6 +5,7 @@ import { ThemeProviderWrapper as ThemeProvider } from '../ThemeContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import { TimerProvider } from '../contexts/TimerContext';
 import { initAnalytics, trackPageView } from '../utils/analytics';
+import ErrorBoundary from '../components/ErrorBoundary';
 import '../styles/dashboard.css';
 
 function AppContent({ Component, pageProps }: AppProps) {
@@ -75,12 +76,14 @@ function AppContent({ Component, pageProps }: AppProps) {
 
 export default function App(props: AppProps) {
   return (
-    <ThemeProvider>
-      <NotificationProvider>
-        <TimerProvider>
-          <AppContent {...props} />
-        </TimerProvider>
-      </NotificationProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <NotificationProvider>
+          <TimerProvider>
+            <AppContent {...props} />
+          </TimerProvider>
+        </NotificationProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

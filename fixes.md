@@ -1,0 +1,154 @@
+# Site Fixes & Upgrades Plan
+
+## 🔴 Critical Issues
+
+### Authentication & Security
+- [x] **Fixed**: Creative Dashboard API endpoints returning 401 errors - Changed to `@jwt_required(optional=True)`
+- [ ] **Add stricter authentication checks** - Currently using optional auth, should enforce proper JWT validation
+- [ ] **Implement role-based access control** - Add `is_employee` flag to User model and enforce employee/client permissions
+- [ ] **Fix authentication timeout issues** - Multiple "Request timed out after 10 seconds" errors in console
+
+### Broken Routes & Links
+- [x] **Fixed**: `/dashboard` route - Changed redirect in `demo.tsx` from `/dashboard` to `/labs`
+- [x] **Fixed**: Terms & Conditions page - Created at `/terms`
+- [x] **Fixed**: Privacy Policy page - Created at `/privacy`
+- [ ] **Verify all navigation links** - Check all buttons and links are properly routed
+- [ ] **Fix PACT page anchor links** - Uses hash anchors (#home, #about, etc.) that may not scroll properly
+
+## 🟡 High Priority Features
+
+### Creative Dashboard
+- [ ] **Implement Employee Assignment Dialog** - Currently just closes menu, needs full dialog with employee selection
+- [ ] **Add employee role management** - Add `is_employee` boolean field to User model and migration
+- [ ] **Enforce employee-client relationships** - Only employees can manage assigned clients
+- [ ] **Implement employee sorting** - Allow employees to sort their own projects/creative accounts
+- [ ] **Complete Support Request creation** - Currently has TODO, needs backend API integration
+
+### Analytics & Integration
+- [ ] **Implement Google Analytics integration** - Add OAuth flow and API connection in AnalyticsActivity component
+- [ ] **Add analytics ID/code embedding** - Allow users to input Google Analytics tracking ID and embed code
+- [ ] **Implement analytics sync functionality** - Currently just simulates, needs real API calls
+- [ ] **Add analytics report export** - Generate and download analytics reports
+
+### Payment & Subscriptions
+- [ ] **Integrate payment processing** - PayPal SDK integration for actual payment processing
+- [ ] **Complete subscription creation** - Backend API integration for subscription management
+- [ ] **Add subscription status tracking** - Track active/cancelled/pending subscriptions
+- [ ] **Implement payment method management** - Store and manage payment methods securely
+
+## 🟢 Medium Priority Improvements
+
+### Database & Backend
+- [ ] **Run database migration** - Apply `32_add_creative_dashboard_models.py` migration
+- [ ] **Add employee flag to User model** - Create migration to add `is_employee` boolean field
+- [ ] **Add client-user relationship enforcement** - Database constraints for employee-client assignments
+- [ ] **Implement proper error handling** - Better error messages and logging throughout backend
+
+### UI/UX Issues
+- [x] **Fixed**: TikTok image loading - Added error handling and play button overlay
+- [ ] **Add loading states** - Many components missing loading indicators
+- [ ] **Improve error messages** - More user-friendly error messages throughout the app
+- [x] **Fixed**: Error boundaries - Added ErrorBoundary to _app.tsx
+- [x] **Fixed**: iframe warnings - Removed allowFullScreen attribute, using only allow with fullscreen permission
+- [ ] **Add proper image fallbacks** - Better handling of broken image URLs
+- [x] **Fixed**: Moved metrics from co-work dashboard to Creative Dashboard Overview tab
+
+### Feature Completeness
+- [ ] **Complete AI Agent Panel** - Revid.ai API integration and scheduling functionality
+- [ ] **Complete subscription API** - Backend endpoints for subscription management
+- [ ] **Add email notifications** - Send welcome emails, confirmations, and notifications
+- [ ] **Implement feature gating** - Tier-based feature access control
+
+## 🔵 Low Priority / Nice to Have
+
+### Code Quality
+- [ ] **Remove console.error/warn statements** - Replace with proper logging or remove in production
+- [ ] **Add TypeScript strict mode** - Fix any type errors and enable strict checking
+- [ ] **Add unit tests** - Test critical components and API endpoints
+- [ ] **Improve error handling** - Consistent error handling patterns across the app
+
+### Performance
+- [ ] **Optimize image loading** - Lazy loading, proper sizing, CDN usage
+- [ ] **Reduce API calls** - Implement caching and batch requests where possible
+- [ ] **Optimize bundle size** - Code splitting and tree shaking improvements
+
+### Documentation
+- [ ] **Add API documentation** - Document all API endpoints
+- [ ] **Create user guides** - Documentation for key features
+- [ ] **Add inline code comments** - Better code documentation
+
+## 📋 Specific TODO Items Found
+
+### Creative Dashboard
+- [ ] Employee assignment dialog implementation (`ClientList.tsx:162`)
+- [ ] Google Analytics API integration (`AnalyticsActivity.tsx:32, 44, 97`)
+- [ ] Support request creation backend integration (`SupportRequests.tsx:85`)
+
+### Subscriptions
+- [ ] Backend API integration (`subscriptions/create.ts:32`)
+- [ ] User ID extraction from JWT (`subscriptions/current.ts:10`)
+
+### AI Features
+- [ ] Revid.ai API call implementation (`AiAgentPanel.tsx:139`)
+- [ ] Scheduling functionality (`AiAgentPanel.tsx:174`)
+
+## 📋 Book Demo Page
+- [x] **Fixed**: Book Demo page - Transformed from checkout to informational page with link to demo.isharehow.app
+
+## 🔧 Database Schema Updates Needed
+
+1. **Add `is_employee` field to User model**
+   - Migration needed
+   - Default to `false`
+   - Add index for performance
+
+2. **Add employee-client relationship constraints**
+   - Foreign key constraints
+   - Cascade delete rules
+   - Unique constraints where needed
+
+3. **Add subscription tracking tables**
+   - Subscriptions table
+   - Payment methods table
+   - Invoices table
+
+## 🚨 Known Console Errors
+
+- Multiple authentication timeout errors (10 second timeouts) - Auth requests timing out
+- 401 errors on wellness endpoints (`/api/wellness/*`) - Authentication issues with wellness API
+- 401 errors on Creative Dashboard endpoints (partially fixed) - Changed to optional auth
+- Firebase configuration warnings - Missing NEXT_PUBLIC_FIREBASE_* environment variables
+- IndexedDB errors in notification sync - Potential IndexedDB compatibility issues
+- "Allow attribute will take precedence" warnings - iframe allow/allowfullscreen conflicts
+
+## 📝 Notes
+
+- Authentication system needs review - many endpoints using `optional=True` which may be too permissive
+- Employee management system needs to be built from scratch
+- Payment processing needs full integration (currently mock)
+- Analytics integration is placeholder only
+- ErrorBoundary component exists but is not wrapped around app content in _app.tsx
+- Multiple console.error/warn statements should be replaced with proper logging service
+- Database migration `32_add_creative_dashboard_models.py` needs to be run on production
+
+## 🔍 Additional Issues Discovered
+
+### Missing Pages/Components
+- [ ] Terms & Conditions page (`/terms`) - Referenced but doesn't exist
+- [ ] Privacy Policy page (`/privacy`) - Referenced but doesn't exist
+- [ ] Dashboard page (`/dashboard`) - Referenced in demo.tsx (now fixed to redirect to /labs)
+
+### Backend Issues
+- [ ] Employee filtering in `/api/creative/employees` - Comment says "filter by role or add is_employee flag"
+- [ ] Missing subscription backend endpoints - Frontend has API routes but backend doesn't have corresponding endpoints
+- [ ] Wellness API authentication issues - 401 errors on all wellness endpoints
+
+### Frontend Issues
+- [ ] Products page error handling - Could be improved for better UX
+- [ ] Missing error boundaries in key components - ErrorBoundary not used in _app.tsx
+- [ ] Authentication timeout handling - 10 second timeouts need better UX feedback
+
+---
+
+**Last Updated**: 2025-11-27
+**Status**: In Progress

@@ -23,6 +23,7 @@ import AddClientDialog from './creative/AddClientDialog';
 import DashboardConnections from './creative/DashboardConnections';
 import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
+import DashboardMetrics from './DashboardMetrics';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -162,6 +163,14 @@ export default function CreativeDashboardPanel() {
 
 // Overview Tab Component
 function OverviewTab({ onAddClient }: { onAddClient: () => void }) {
+  // Fetch metrics from backend (placeholder for now)
+  const metrics = {
+    clients: 12, // Active Clients
+    projects: 24, // This month Projects
+    tasks: 48, // Tasks Completed today
+    completion: 75, // Overall completion
+  };
+
   return (
     <Box>
       <Typography variant="h5" fontWeight={700} gutterBottom>
@@ -170,6 +179,11 @@ function OverviewTab({ onAddClient }: { onAddClient: () => void }) {
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Welcome to your mission control for managing clients across all your dashboards and systems.
       </Typography>
+
+      {/* Dashboard Metrics */}
+      <Box sx={{ mb: 4 }}>
+        <DashboardMetrics metrics={metrics} />
+      </Box>
 
       {/* Key Features Grid */}
       <Box sx={{ mb: 4 }}>
