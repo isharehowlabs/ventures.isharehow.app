@@ -18,10 +18,11 @@ import {
   Settings as SettingsIcon,
   Login as LoginIcon,
   VideoCall as DemoIcon,
+  Brush as CreativeIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'profile' | 'settings' | 'web3' | 'demo';
+type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative';
 
 interface NavigationItem {
   key: NavKey;
@@ -72,6 +73,14 @@ const navigationItems: NavigationItem[] = [
     href: '/rise',
     icon: <RiseIcon />,
     authRequired: false, // Public but enhanced when authenticated
+    dividerAfter: true,
+  },
+  {
+    key: 'creative',
+    label: 'Creative Dashboard',
+    href: '/creative',
+    icon: <CreativeIcon />,
+    authRequired: true,
     dividerAfter: true,
   },
   {

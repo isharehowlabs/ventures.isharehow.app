@@ -31,6 +31,7 @@ import {
   RestartAlt,
   AdminPanelSettings as AdminPanelSettingsIcon,
   Notifications as NotificationsIcon,
+  Brush as CreativeIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -260,6 +261,7 @@ function SettingsPage() {
         <Paper elevation={2} sx={{ mb: 3 }}>
           <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
             <Tab label="General" icon={<SettingsIcon />} iconPosition="start" />
+            <Tab label="Creative" icon={<CreativeIcon />} iconPosition="start" />
             {isAdmin && <Tab label="Admin" icon={<AdminPanelSettingsIcon />} iconPosition="start" />}
           </Tabs>
         </Paper>
@@ -437,8 +439,13 @@ function SettingsPage() {
           </Box>
         )}
 
+        {/* Creative Settings Tab */}
+        {activeTab === 1 && (
+          <CreativeSettingsTab />
+        )}
+
         {/* Admin Tab */}
-        {activeTab === 1 && isAdmin && (
+        {activeTab === 2 && isAdmin && (
           <Box>
             {/* Notification System */}
             <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
@@ -573,6 +580,93 @@ function SettingsPage() {
         )}
       </Box>
     </AppShell>
+  );
+}
+
+// Creative Settings Tab Component
+function CreativeSettingsTab() {
+  return (
+    <Box>
+      <Typography variant="h5" fontWeight={700} gutterBottom>
+        Creative Settings
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+        Configure default settings for the Creative Dashboard and client management
+      </Typography>
+
+      <Stack spacing={3}>
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            Default Client Permissions
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Set default permissions for new clients when they are added to the system.
+          </Typography>
+          <FormControlLabel
+            control={<Switch defaultChecked />}
+            label="Auto-enable Co-Work Dashboard access"
+          />
+          <FormControlLabel
+            control={<Switch defaultChecked />}
+            label="Auto-enable RISE Dashboard access"
+          />
+          <FormControlLabel
+            control={<Switch />}
+            label="Require email verification before activation"
+          />
+        </Paper>
+
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            Notification Preferences
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Choose what notifications you want to receive for client activities.
+          </Typography>
+          <FormControlLabel
+            control={<Switch defaultChecked />}
+            label="Notify on new client sign-ups"
+          />
+          <FormControlLabel
+            control={<Switch defaultChecked />}
+            label="Notify on support requests"
+          />
+          <FormControlLabel
+            control={<Switch />}
+            label="Notify on client dashboard activity"
+          />
+        </Paper>
+
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            Analytics Integration
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure Google Analytics integration for client project tracking.
+          </Typography>
+          <Button variant="outlined" sx={{ mt: 1 }}>
+            Connect Google Analytics
+          </Button>
+        </Paper>
+
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            Employee Assignment
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Manage default employee assignments and sorting preferences.
+          </Typography>
+          <FormControlLabel
+            control={<Switch defaultChecked />}
+            label="Auto-assign clients based on workload"
+          />
+          <FormControlLabel
+            control={<Switch defaultChecked />}
+            label="Allow employees to sort their own projects"
+          />
+        </Paper>
+      </Stack>
+    </Box>
   );
 }
 
