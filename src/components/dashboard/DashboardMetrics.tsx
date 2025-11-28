@@ -80,10 +80,10 @@ interface DashboardMetricsProps {
 
 export default function DashboardMetrics({ metrics }: DashboardMetricsProps) {
   const defaultMetrics = {
-    clients: 12,
-    projects: 24,
-    tasks: 48,
-    completion: 75,
+    clients: 0,
+    projects: 0,
+    tasks: 0,
+    completion: 0,
     ...metrics,
   };
 
@@ -102,30 +102,30 @@ export default function DashboardMetrics({ metrics }: DashboardMetricsProps) {
     >
       <MetricCard
         title="Active Clients"
-        value={defaultMetrics.clients}
+        value={defaultMetrics.clients || 0}
         subtitle="This month"
         icon={<People />}
         color="primary"
       />
       <MetricCard
         title="Projects"
-        value={defaultMetrics.projects}
+        value={defaultMetrics.projects || 0}
         subtitle="In progress"
         icon={<TrendingUp />}
         color="info"
       />
       <MetricCard
         title="Tasks"
-        value={defaultMetrics.tasks}
+        value={defaultMetrics.tasks || 0}
         subtitle="Completed today"
         icon={<CheckCircle />}
         color="success"
       />
       <MetricCard
         title="Progress"
-        value={`${defaultMetrics.completion}%`}
+        value={`${defaultMetrics.completion || 0}%`}
         subtitle="Overall completion"
-        progress={defaultMetrics.completion}
+        progress={defaultMetrics.completion || 0}
         icon={<Timer />}
         color="warning"
       />

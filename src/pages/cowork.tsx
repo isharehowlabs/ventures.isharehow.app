@@ -1,30 +1,22 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import React from 'react';
+import AppShell from '../components/AppShell';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
+import CoworkDashboardPanel from '../components/dashboard/CoworkDashboardPanel';
 
-export default function CoworkRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Redirect to /labs (Co-Work Dashboard)
-    router.replace('/labs');
-  }, [router]);
-
+function CoworkDashboard() {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        gap: 2,
-      }}
-    >
-      <CircularProgress />
-      <Typography variant="body2" color="text.secondary">
-        Redirecting to Co-Work Dashboard...
-      </Typography>
-    </Box>
+    <AppShell active="labs">
+      <CoworkDashboardPanel />
+    </AppShell>
   );
 }
+
+function App() {
+  return (
+    <ProtectedRoute>
+      <CoworkDashboard />
+    </ProtectedRoute>
+  );
+}
+
+export default App;

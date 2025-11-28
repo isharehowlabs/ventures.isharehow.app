@@ -2171,7 +2171,7 @@ def verify_patreon():
 @app.route('/api/auth/me', methods=['GET'])
 @jwt_required(optional=True)
 def auth_me():
-    """Get current user information from JWT token"""
+    """Get current authenticated user info - optimized for speed"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
@@ -2193,13 +2193,34 @@ def auth_me():
         
         # First, try to check if is_employee column exists
         # Use try-except to handle any errors in the check itself
+        # Cache the result to avoid repeated checks
+        column_exists = False
         try:
             column_exists = check_is_employee_column_exists()
         except Exception as check_error:
             print(f"Error in check_is_employee_column_exists: {check_error}")
             column_exists = False  # Default to False (use fallback)
         
-        if not column_exists:
+        # Try normal query first (faster), fallback to raw SQL only if needed
+        if column_exists:
+            try:
+                if user_id and user_id.isdigit():
+                    user = User.query.get(int(user_id))
+                if not user and user_id:
+                    user = User.query.filter_by(username=user_id).first()
+                if not user and user_id:
+                    user = User.query.filter_by(patreon_id=user_id).first()
+                if not user and user_id:
+                    user = User.query.filter_by(ens_name=user_id).first()
+            except Exception as query_error:
+                error_str = str(query_error).lower()
+                if 'is_employee' in error_str and 'column' in error_str:
+                    print(f"Unexpected: is_employee error despite check, using raw SQL fallback")
+                    column_exists = False  # Force fallback
+                else:
+                    raise
+        
+        if not column_exists and not user:
             # Column doesn't exist - use raw SQL directly
             print(f"Warning: is_employee column missing in auth/me, using raw SQL fallback")
             try:
@@ -2257,57 +2278,8 @@ def auth_me():
                     'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)',
                     'migration_required': True
                 }), 500
-        else:
-            # Column exists - use normal SQLAlchemy queries
-            try:
-                if user_id and user_id.isdigit():
-                    user = User.query.get(int(user_id))
-                if not user and user_id:
-                    user = User.query.filter_by(username=user_id).first()
-                if not user and user_id:
-                    user = User.query.filter_by(patreon_id=user_id).first()
-            except Exception as query_error:
-                error_str = str(query_error).lower()
-                # If we still get an is_employee error (shouldn't happen if check worked), use fallback
-                if 'is_employee' in error_str and 'column' in error_str:
-                    print(f"Unexpected: is_employee error despite check, using raw SQL fallback")
-                    # Use the same raw SQL fallback as above
-                    try:
-                        with db.engine.connect() as conn:
-                            result = conn.execute(db.text("""
-                                SELECT id, username, email, password_hash, patreon_id, 
-                                       access_token, refresh_token, membership_paid,
-                                       last_checked, token_expires_at, patreon_connected,
-                                       created_at, updated_at
-                                FROM users 
-                                WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
-                                LIMIT 1
-                            """), {'user_id': user_id})
-                            row = result.fetchone()
-                            if row:
-                                from types import SimpleNamespace
-                                user = SimpleNamespace(
-                                    id=row[0], username=row[1], email=row[2], password_hash=row[3],
-                                    patreon_id=row[4], access_token=row[5], refresh_token=row[6],
-                                    membership_paid=row[7], last_checked=row[8], token_expires_at=row[9],
-                                    patreon_connected=row[10], created_at=row[11], updated_at=row[12]
-                                )
-                                def to_dict():
-                                    return {
-                                        'id': user.patreon_id or user.username or str(user.id),
-                                        'patreonId': user.patreon_id, 'username': user.username,
-                                        'email': user.email, 'membershipPaid': user.membership_paid,
-                                        'patreonConnected': user.patreon_connected,
-                                        'lastChecked': user.last_checked.isoformat() if user.last_checked else None
-                                    }
-                                user.to_dict = to_dict
-                    except Exception as raw_error2:
-                        print(f"Error in secondary raw SQL fallback: {raw_error2}")
-                        raise query_error  # Re-raise original error
-                else:
-                    # Some other error, re-raise
-                    raise
         
+        # If we still don't have a user after all lookups, return 404
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
@@ -4921,9 +4893,106 @@ def get_employees():
         print(f"Error fetching employees: {e}")
         return jsonify({'error': 'Failed to fetch employees'}), 500
 
-# Creative Dashboard - Support Requests API Endpoints
+# Creative Dashboard - Metrics API Endpoint
 
-@jwt_required()
+@app.route('/api/creative/metrics', methods=['GET'])
+@require_employee
+def get_creative_metrics():
+    """Get real-time metrics for Creative Dashboard overview"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get current user (employee)
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Find user
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        if not user:
+            user = User.query.filter_by(ens_name=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get employee's database ID
+        employee_db_id = user.id
+        
+        # Count active clients assigned to this employee
+        # Active = status = 'active' and assigned to this employee
+        active_clients_query = db.session.query(Client).join(
+            ClientEmployeeAssignment,
+            Client.id == ClientEmployeeAssignment.client_id
+        ).filter(
+            ClientEmployeeAssignment.employee_id == employee_db_id,
+            Client.status == 'active'
+        )
+        active_clients_count = active_clients_query.count()
+        
+        # Count clients created this month (assigned to employee)
+        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        clients_this_month = db.session.query(Client).join(
+            ClientEmployeeAssignment,
+            Client.id == ClientEmployeeAssignment.client_id
+        ).filter(
+            ClientEmployeeAssignment.employee_id == employee_db_id,
+            Client.created_at >= first_day_of_month
+        ).count()
+        
+        # Count support requests with status 'open' or 'in-progress' (assigned to employee's clients)
+        open_support_requests = db.session.query(SupportRequest).join(
+            ClientEmployeeAssignment,
+            SupportRequest.client_id == ClientEmployeeAssignment.client_id
+        ).filter(
+            ClientEmployeeAssignment.employee_id == employee_db_id,
+            SupportRequest.status.in_(['open', 'in-progress'])
+        ).count()
+        
+        # Count total clients assigned to employee (for progress calculation)
+        total_clients = db.session.query(Client).join(
+            ClientEmployeeAssignment,
+            Client.id == ClientEmployeeAssignment.client_id
+        ).filter(
+            ClientEmployeeAssignment.employee_id == employee_db_id
+        ).count()
+        
+        # Calculate progress: percentage of active clients out of total
+        # Or use a different metric - for now, use active/total * 100
+        progress = 0
+        if total_clients > 0:
+            progress = int((active_clients_count / total_clients) * 100)
+        
+        # Count tasks completed today (from support requests resolved today)
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        tasks_completed_today = db.session.query(SupportRequest).join(
+            ClientEmployeeAssignment,
+            SupportRequest.client_id == ClientEmployeeAssignment.client_id
+        ).filter(
+            ClientEmployeeAssignment.employee_id == employee_db_id,
+            SupportRequest.status == 'resolved',
+            SupportRequest.updated_at >= today_start
+        ).count()
+        
+        return jsonify({
+            'clients': active_clients_count,
+            'clientsThisMonth': clients_this_month,
+            'projects': open_support_requests,  # Using open support requests as "projects in progress"
+            'tasks': tasks_completed_today,
+            'completion': progress,
+            'totalClients': total_clients
+        })
+    except Exception as e:
+        print(f"Error fetching creative metrics: {e}")
+        app.logger.error(f"Error fetching creative metrics: {e}")
+        return jsonify({'error': 'Failed to fetch metrics'}), 500
+
 @app.route('/api/creative/support-requests', methods=['GET'])
 def get_support_requests():
     """Get all support requests with optional filtering - requires authentication"""

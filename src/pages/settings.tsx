@@ -34,11 +34,13 @@ import {
   Notifications as NotificationsIcon,
   Brush as CreativeIcon,
   People as PeopleIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useSettings } from '../hooks/useSettings';
 import { getBackendUrl } from '../utils/backendUrl';
+import AdminClientAssignmentDialog from '../components/dashboard/creative/AdminClientAssignmentDialog';
 
 const PANEL_LABELS: Record<string, string> = {
   streaming: 'Streaming Panel',
@@ -238,6 +240,7 @@ function SettingsPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [employeeError, setEmployeeError] = useState<string | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   
   // Fetch employees list
   useEffect(() => {
@@ -703,19 +706,58 @@ function SettingsPage() {
                 </Stack>
               )}
               
+              <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<Refresh />}
+                  onClick={fetchEmployees}
+                  disabled={loadingEmployees}
+                >
+                  {loadingEmployees ? 'Loading...' : 'Refresh List'}
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<AssignmentIcon />}
+                  onClick={() => setAssignDialogOpen(true)}
+                  disabled={loadingEmployees}
+                >
+                  Manage Client Assignments
+                </Button>
+              </Stack>
+            </Paper>
+            
+            {/* Client Assignment Management Section */}
+            <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <AssignmentIcon sx={{ color: 'gold', fontSize: 32 }} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
+                  Client Assignment Management
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 3, borderColor: 'gold' }} />
+              <Typography variant="body1" sx={{ mb: 3 }}>
+                Assign clients to employees. Admins can reassign any client to any employee. Employees can view their assigned clients.
+              </Typography>
               <Button
-                variant="outlined"
-                startIcon={<Refresh />}
-                onClick={fetchEmployees}
-                sx={{ mt: 3 }}
-                disabled={loadingEmployees}
+                variant="contained"
+                startIcon={<AssignmentIcon />}
+                onClick={() => setAssignDialogOpen(true)}
+                sx={{ mb: 2 }}
               >
-                {loadingEmployees ? 'Loading...' : 'Refresh List'}
+                Open Client Assignment Manager
               </Button>
             </Paper>
           </Box>
         )}
       </Box>
+      
+      {/* Admin Client Assignment Dialog */}
+      <AdminClientAssignmentDialog
+        open={assignDialogOpen}
+        onClose={() => setAssignDialogOpen(false)}
+        currentUser={user}
+        isAdminView={isAdmin}
+      />
     </AppShell>
   );
 }

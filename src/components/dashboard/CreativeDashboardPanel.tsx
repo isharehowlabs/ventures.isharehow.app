@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Tabs,
@@ -24,6 +24,7 @@ import DashboardConnections from './creative/DashboardConnections';
 import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import DashboardMetrics from './DashboardMetrics';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -163,13 +164,60 @@ export default function CreativeDashboardPanel() {
 
 // Overview Tab Component
 function OverviewTab({ onAddClient }: { onAddClient: () => void }) {
-  // Fetch metrics from backend (placeholder for now)
-  const metrics = {
-    clients: 12, // Active Clients
-    projects: 24, // This month Projects
-    tasks: 48, // Tasks Completed today
-    completion: 75, // Overall completion
-  };
+  const [metrics, setMetrics] = useState({
+    clients: 0,
+    projects: 0,
+    tasks: 0,
+    completion: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoading(true);
+        const backendUrl = getBackendUrl();
+        const response = await fetch(`${backendUrl}/api/creative/metrics`, {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setMetrics({
+            clients: data.clients || 0,
+            projects: data.projects || 0,
+            tasks: data.tasks || 0,
+            completion: data.completion || 0,
+          });
+          setError(null);
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to fetch metrics' }));
+          setError(errorData.error || 'Failed to load metrics');
+          // Use defaults on error
+          setMetrics({
+            clients: 0,
+            projects: 0,
+            tasks: 0,
+            completion: 0,
+          });
+        }
+      } catch (err: any) {
+        console.error('Error fetching metrics:', err);
+        setError(err.message || 'Failed to load metrics');
+        setMetrics({
+          clients: 0,
+          projects: 0,
+          tasks: 0,
+          completion: 0,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
 
   return (
     <Box>
@@ -182,6 +230,17 @@ function OverviewTab({ onAddClient }: { onAddClient: () => void }) {
 
       {/* Dashboard Metrics */}
       <Box sx={{ mb: 4 }}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <Typography>Loading metrics...</Typography>
+          </Box>
+        ) : error ? (
+          <Box sx={{ p: 2, bgcolor: 'error.light', borderRadius: 1, mb: 2 }}>
+            <Typography variant="body2" color="error">
+              {error}
+            </Typography>
+          </Box>
+        ) : null}
         <DashboardMetrics metrics={metrics} />
       </Box>
 

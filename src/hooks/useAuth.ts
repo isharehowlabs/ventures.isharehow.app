@@ -74,15 +74,21 @@ export function useAuth() {
   // We don't need to access tokens from JavaScript - backend handles it automatically
 
   const checkAuth = useCallback(async () => {
-    // If there's already a global auth check in progress, wait for it
+    // If there's already a global auth check in progress, wait for it (with timeout)
     if (globalAuthCheckInProgress && globalAuthCheckPromise) {
       console.log('[Auth] Auth check already in progress globally, waiting for existing check...');
       try {
-        await globalAuthCheckPromise;
+        // Wait for existing check but with a timeout
+        await Promise.race([
+          globalAuthCheckPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Wait timeout')), 3000))
+        ]);
         return;
       } catch (e) {
-        // If the existing check failed, continue with a new check
-        console.log('[Auth] Previous check failed, starting new check...');
+        // If the existing check failed or timed out, continue with a new check
+        console.log('[Auth] Previous check failed or timed out, starting new check...');
+        globalAuthCheckInProgress = false;
+        globalAuthCheckPromise = null;
       }
     }
     
@@ -101,12 +107,12 @@ export function useAuth() {
           });
         }
         
-        // Create a timeout promise (reduced to 10 seconds for better UX)
+        // Create a timeout promise (reduced to 5 seconds for better UX)
         const timeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(() => {
-            console.log('[Auth] Request timed out after 10 seconds');
+            console.log('[Auth] Request timed out after 5 seconds');
             reject(new Error('Request timeout'));
-          }, 10000);
+          }, 5000);
         });
 
         // JWT token is in httpOnly cookie, backend will read it automatically
@@ -220,13 +226,19 @@ export function useAuth() {
         }
         const isTimeout = error.message === 'Request timeout';
         
+        // On timeout, don't set error - just treat as not authenticated (graceful degradation)
+        // This allows the app to continue functioning even if auth check is slow
         const newState: AuthState = {
           user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: isTimeout ? 'Request timeout' : error.message,
+          error: null, // Don't show timeout errors to user, just treat as not authenticated
         };
         updateGlobalAuthState(newState);
+        
+        if (isTimeout && globalAuthListeners.size === 1) {
+          console.warn('[Auth] Auth check timed out - treating as not authenticated. App will continue to function.');
+        }
       } finally {
         globalAuthCheckInProgress = false;
         globalAuthCheckPromise = null;
@@ -238,7 +250,16 @@ export function useAuth() {
   }, [updateGlobalAuthState]);
 
   useEffect(() => {
-    checkAuth();
+    // Only check auth once on mount, not on every render
+    let mounted = true;
+    
+    const performAuthCheck = async () => {
+      if (mounted) {
+        await checkAuth();
+      }
+    };
+    
+    performAuthCheck();
     
     // Check for auth success parameter in URL (JWT is in httpOnly cookie now)
     if (typeof window !== 'undefined') {
@@ -251,17 +272,20 @@ export function useAuth() {
         window.history.replaceState({}, '', newUrl);
         console.log('[Auth] Cleaned up URL parameter');
         
-        // Multiple attempts to check auth (cookie might need a moment to be available)
-        const attempts = [500, 1000, 2000];
-        attempts.forEach((delay, index) => {
-          setTimeout(() => {
-            console.log(`[Auth] Retry attempt ${index + 1}/${attempts.length} after ${delay}ms`);
+        // Single retry after a short delay (cookie might need a moment to be available)
+        setTimeout(() => {
+          if (mounted) {
+            console.log('[Auth] Retry auth check after URL cleanup');
             checkAuth();
-          }, delay);
-        });
+          }
+        }, 1000);
       }
     }
-  }, [checkAuth]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, []); // Empty deps - only run once on mount
 
   const login = () => {
     const backendUrl = getBackendUrl();

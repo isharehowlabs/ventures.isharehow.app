@@ -1,4 +1,4 @@
-import { Box, Typography, Paper, Avatar, Stack, Divider, Chip, Button, Alert, TextField, IconButton, Link } from '@mui/material';
+import { Box, Typography, Paper, Avatar, Stack, Divider, Chip, Button, Alert, TextField, IconButton, Link, Grid } from '@mui/material';
 import { Person, Email, AccountCircle, Logout, Settings, Edit, Check, Close, Refresh, OpenInNew, ContentCopy, CheckCircle } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -19,6 +19,12 @@ function ProfilePage() {
   const [verifyingMembership, setVerifyingMembership] = useState(false);
   const [verifyingENS, setVerifyingENS] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  // Web3 data state
+  const [balance, setBalance] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [loadingWeb3, setLoadingWeb3] = useState(true);
+  const [web3Error, setWeb3Error] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -73,6 +79,58 @@ function ProfilePage() {
       fetchProfile();
     } else {
       setLoading(false);
+    }
+  }, [authUser]);
+
+  // Fetch Web3 data (balance, transactions, price)
+  useEffect(() => {
+    const fetchWeb3Data = async () => {
+      setLoadingWeb3(true);
+      setWeb3Error(null);
+      const backendUrl = getBackendUrl();
+      
+      try {
+        // Fetch crypto balance
+        try {
+          const balanceRes = await fetch(`${backendUrl}/api/web3/balance`, { credentials: 'include' });
+          if (balanceRes.ok) {
+            const balanceData = await balanceRes.json();
+            setBalance(balanceData.balance);
+          }
+        } catch (e) {
+          console.error('Failed to load balance:', e);
+        }
+
+        // Fetch transactions
+        try {
+          const txRes = await fetch(`${backendUrl}/api/web3/transactions`, { credentials: 'include' });
+          if (txRes.ok) {
+            const txData = await txRes.json();
+            setTransactions(txData.transactions || []);
+          }
+        } catch (e) {
+          console.error('Failed to load transactions:', e);
+        }
+
+        // Fetch current price
+        try {
+          const priceRes = await fetch(`${backendUrl}/api/web3/price`, { credentials: 'include' });
+          if (priceRes.ok) {
+            const priceData = await priceRes.json();
+            setCurrentPrice(priceData.price);
+          }
+        } catch (e) {
+          console.error('Failed to load price:', e);
+        }
+      } catch (error: any) {
+        setWeb3Error(error.message || 'Failed to load Web3 data');
+      } finally {
+        setLoadingWeb3(false);
+      }
+    };
+
+    if (authUser) {
+      fetchWeb3Data();
     }
   }, [authUser]);
 
@@ -531,6 +589,102 @@ function ProfilePage() {
                         </Box>
                       )}
                     </Box>
+                  
+                  {/* Web3 Token Trackers */}
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'primary.main' }}>
+                      Web3 Token Trackers
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={4}>
+                        <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Current Price
+                          </Typography>
+                          {currentPrice !== null ? (
+                            <Typography variant="h5" color="primary" sx={{ fontWeight: 700 }}>
+                              ${currentPrice.toFixed(2)}
+                            </Typography>
+                          ) : loadingWeb3 ? (
+                            <Typography variant="body2" color="text.secondary">Loading...</Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">N/A</Typography>
+                          )}
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Crypto Balance
+                          </Typography>
+                          {balance !== null ? (
+                            <Typography variant="h5" color="primary" sx={{ fontWeight: 700 }}>
+                              {balance} ETH
+                            </Typography>
+                          ) : loadingWeb3 ? (
+                            <Typography variant="body2" color="text.secondary">Loading...</Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">N/A</Typography>
+                          )}
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Recent Transactions
+                          </Typography>
+                          <Typography variant="h5" color="primary" sx={{ fontWeight: 700 }}>
+                            {transactions.length}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">Total</Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+                  </Box>
+
+                  {/* Recent Transactions List */}
+                  {transactions.length > 0 && (
+                    <Box sx={{ mt: 3 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'primary.main' }}>
+                        Recent Transactions
+                      </Typography>
+                      <Stack spacing={2}>
+                        {transactions.slice(0, 5).map((tx, idx) => (
+                          <Paper key={idx} variant="outlined" sx={{ p: 2 }}>
+                            <Stack spacing={1}>
+                              {tx.hash && (
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">Hash:</Typography>
+                                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                                    {tx.hash}
+                                  </Typography>
+                                </Box>
+                              )}
+                              {tx.amount && (
+                                <Typography variant="body2">
+                                  <strong>Amount:</strong> {tx.amount} ETH
+                                </Typography>
+                              )}
+                              {tx.to && (
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">To:</Typography>
+                                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                                    {tx.to}
+                                  </Typography>
+                                </Box>
+                              )}
+                              {tx.date && (
+                                <Typography variant="body2" color="text.secondary">
+                                  <strong>Date:</strong> {new Date(tx.date).toLocaleString()}
+                                </Typography>
+                              )}
+                            </Stack>
+                          </Paper>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                  
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Patreon ID
