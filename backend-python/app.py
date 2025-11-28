@@ -6629,8 +6629,21 @@ def admin_change_password(user_id):
     """Change a user's password (admin only)"""
     # Handle CORS preflight - must be before require_admin
     if request.method == 'OPTIONS':
+        origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+        # Check if origin is in allowed list
+        allowed_origins = ['https://ventures.isharehow.app']
+        if os.environ.get('FLASK_ENV') != 'production':
+            allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+        
+        # Use specific origin if allowed, otherwise use default
+        if origin in allowed_origins:
+            cors_origin = origin
+        else:
+            cors_origin = 'https://ventures.isharehow.app'
+        
         response = jsonify({})
-        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'PUT, OPTIONS')
         return response
@@ -6642,7 +6655,21 @@ def admin_change_password(user_id):
             from flask_jwt_extended import verify_jwt_in_request
             verify_jwt_in_request()
         except Exception as e:
-            return jsonify({'error': 'Authentication required'}), 401
+            # Set CORS headers for error response
+            origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+            allowed_origins = ['https://ventures.isharehow.app']
+            if os.environ.get('FLASK_ENV') != 'production':
+                allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+            
+            if origin in allowed_origins:
+                cors_origin = origin
+            else:
+                cors_origin = 'https://ventures.isharehow.app'
+            
+            response = jsonify({'error': 'Authentication required'})
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 401
         
         # Use require_admin decorator logic inline
         user = get_current_user()
@@ -6709,7 +6736,18 @@ def admin_change_password(user_id):
         
         db.session.commit()
         
-        return jsonify({
+        # Set CORS headers for response
+        origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+        allowed_origins = ['https://ventures.isharehow.app']
+        if os.environ.get('FLASK_ENV') != 'production':
+            allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+        
+        if origin in allowed_origins:
+            cors_origin = origin
+        else:
+            cors_origin = 'https://ventures.isharehow.app'
+        
+        response = jsonify({
             'success': True,
             'message': 'Password changed successfully',
             'user': {
@@ -6718,13 +6756,31 @@ def admin_change_password(user_id):
                 'email': user.email
             }
         })
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
     except Exception as e:
         print(f"Error changing password: {e}")
         import traceback
         traceback.print_exc()
         app.logger.error(f"Error changing password: {e}")
         db.session.rollback()
-        return jsonify({'error': f'Failed to change password: {str(e)}'}), 500
+        
+        # Set CORS headers for error response
+        origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+        allowed_origins = ['https://ventures.isharehow.app']
+        if os.environ.get('FLASK_ENV') != 'production':
+            allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+        
+        if origin in allowed_origins:
+            cors_origin = origin
+        else:
+            cors_origin = 'https://ventures.isharehow.app'
+        
+        response = jsonify({'error': f'Failed to change password: {str(e)}'})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 500
 
 @app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
 @require_admin
