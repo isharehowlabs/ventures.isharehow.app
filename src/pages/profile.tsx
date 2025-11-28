@@ -1,5 +1,5 @@
-import { Box, Typography, Paper, Avatar, Stack, Divider, Chip, Button, Alert, TextField, IconButton } from '@mui/material';
-import { Person, Email, AccountCircle, Logout, Settings, Edit, Check, Close } from '@mui/icons-material';
+import { Box, Typography, Paper, Avatar, Stack, Divider, Chip, Button, Alert, TextField, IconButton, Link } from '@mui/material';
+import { Person, Email, AccountCircle, Logout, Settings, Edit, Check, Close, Refresh, OpenInNew, ContentCopy, CheckCircle } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
@@ -17,6 +17,8 @@ function ProfilePage() {
   const [emailValue, setEmailValue] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
   const [verifyingMembership, setVerifyingMembership] = useState(false);
+  const [verifyingENS, setVerifyingENS] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -157,6 +159,50 @@ function ProfilePage() {
   const handleLogout = async () => {
     await logout();
     router.push('/');
+  };
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleVerifyENS = async () => {
+    setVerifyingENS(true);
+    try {
+      const backendUrl = getBackendUrl();
+      // Call backend to refresh/resolve ENS data
+      const response = await fetch(`${backendUrl}/api/profile/verify-ens`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Refresh profile data
+        const profileResponse = await fetch(`${backendUrl}/api/profile`, { credentials: 'include' });
+        if (profileResponse.ok) {
+          const updatedProfile = await profileResponse.json();
+          setProfileData(updatedProfile);
+        }
+        alert('ENS data refreshed successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to verify ENS: ${error.error || error.message || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error verifying ENS:', error);
+      alert(`Error: ${error.message || 'Failed to verify ENS data'}`);
+    } finally {
+      setVerifyingENS(false);
+    }
   };
 
   const handleVerifyMembership = async () => {
@@ -357,43 +403,128 @@ function ProfilePage() {
               </Stack>
               <Box sx={{ pl: 5 }}>
                 <Stack spacing={2}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      ENS Domain (Web3 ID)
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                      {user.ensName || user.id || 'Not available'}
-                    </Typography>
-                    {user.ensName && (
-                      <Typography variant="caption" color="text.secondary">
-                        Your Web3 identity on the Ethereum blockchain
-                      </Typography>
-                    )}
-                  </Box>
-                  {user.cryptoAddress && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Ethereum Address
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
-                        {user.cryptoAddress}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Resolved from your ENS domain
-                      </Typography>
-                    </Box>
-                  )}
-                  {user.contentHash && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        IPFS Content Hash
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
-                        {user.contentHash}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Points to decentralized storage
-                      </Typography>
+                  {/* Web3/ENS Section */}
+                  {(user.ensName || user.cryptoAddress || user.contentHash) && (
+                    <Box sx={{ 
+                      p: 2, 
+                      borderRadius: 2, 
+                      bgcolor: 'primary.light', 
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                      border: '1px solid',
+                      borderColor: 'primary.main'
+                    }}>
+                      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          Web3 Identity
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Refresh />}
+                          onClick={handleVerifyENS}
+                          disabled={verifyingENS}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          {verifyingENS ? 'Verifying...' : 'Verify ENS'}
+                        </Button>
+                      </Stack>
+                      
+                      {user.ensName && (
+                        <Box sx={{ mb: 2 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              ENS Domain
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => copyToClipboard(user.ensName, 'ens')}
+                              sx={{ p: 0.5 }}
+                            >
+                              {copiedField === 'ens' ? <CheckCircle fontSize="small" color="success" /> : <ContentCopy fontSize="small" />}
+                            </IconButton>
+                            <Link
+                              href={`https://app.ens.domains/name/${user.ensName}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+                            >
+                              <OpenInNew fontSize="small" sx={{ ml: 0.5, color: 'primary.main' }} />
+                            </Link>
+                          </Stack>
+                          <Chip 
+                            label={user.ensName} 
+                            color="primary" 
+                            sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            Your Web3 identity on the Ethereum blockchain
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {user.cryptoAddress && (
+                        <Box sx={{ mb: 2 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              Ethereum Address
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => copyToClipboard(user.cryptoAddress, 'address')}
+                              sx={{ p: 0.5 }}
+                            >
+                              {copiedField === 'address' ? <CheckCircle fontSize="small" color="success" /> : <ContentCopy fontSize="small" />}
+                            </IconButton>
+                            <Link
+                              href={`https://etherscan.io/address/${user.cryptoAddress}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+                            >
+                              <OpenInNew fontSize="small" sx={{ ml: 0.5, color: 'primary.main' }} />
+                            </Link>
+                          </Stack>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', bgcolor: 'background.paper', p: 1, borderRadius: 1 }}>
+                            {user.cryptoAddress}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            Resolved from your ENS domain
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {user.contentHash && (
+                        <Box>
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              IPFS Content Hash
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => copyToClipboard(user.contentHash, 'hash')}
+                              sx={{ p: 0.5 }}
+                            >
+                              {copiedField === 'hash' ? <CheckCircle fontSize="small" color="success" /> : <ContentCopy fontSize="small" />}
+                            </IconButton>
+                            {user.contentHash && !user.contentHash.startsWith('ipfs://') && (
+                              <Link
+                                href={`https://ipfs.io/ipfs/${user.contentHash.replace('0x', '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+                              >
+                                <OpenInNew fontSize="small" sx={{ ml: 0.5, color: 'primary.main' }} />
+                              </Link>
+                            )}
+                          </Stack>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', bgcolor: 'background.paper', p: 1, borderRadius: 1 }}>
+                            {user.contentHash}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            Points to decentralized storage on IPFS
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                   )}
                   <Box>

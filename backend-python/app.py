@@ -2979,6 +2979,76 @@ def get_profile():
         app.logger.error(f"Error fetching profile: {e}")
         return jsonify({'error': 'Database error'}), 500
 
+@app.route('/api/profile/verify-ens', methods=['POST'])
+@jwt_required()
+def verify_ens():
+    """Verify and refresh ENS data for the current user"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Find user
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        if not user:
+            user = User.query.filter_by(ens_name=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get username for ENS resolution
+        username = user.username or user.email or str(user.id)
+        if not username:
+            return jsonify({'error': 'Username not found'}), 400
+        
+        # Resolve ENS data using web3.py
+        ens_data = resolve_or_create_ens(user.id, username)
+        
+        # Update user with resolved ENS data
+        if ens_data.get('ens_name'):
+            user.ens_name = ens_data.get('ens_name')
+        if ens_data.get('crypto_address'):
+            user.crypto_address = ens_data.get('crypto_address')
+        if ens_data.get('content_hash'):
+            user.content_hash = ens_data.get('content_hash')
+        
+        db.session.commit()
+        
+        # Also update UserProfile if it exists
+        try:
+            profile_id = user.ens_name or user.patreon_id or user.username or str(user.id)
+            profile = UserProfile.query.get(profile_id)
+            if profile:
+                if ens_data.get('ens_name'):
+                    profile.ens_name = ens_data.get('ens_name')
+                if ens_data.get('crypto_address'):
+                    profile.crypto_address = ens_data.get('crypto_address')
+                if ens_data.get('content_hash'):
+                    profile.content_hash = ens_data.get('content_hash')
+                db.session.commit()
+        except:
+            pass
+        
+        return jsonify({
+            'success': True,
+            'message': 'ENS data refreshed successfully',
+            'ensData': ens_data
+        })
+    except Exception as e:
+        print(f"Error verifying ENS: {e}")
+        app.logger.error(f"Error verifying ENS: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to verify ENS data'}), 500
+
 @app.route('/api/profile', methods=['PUT', 'OPTIONS'])
 @jwt_required(optional=True)
 def update_profile():
