@@ -232,6 +232,27 @@ export default function BookDemoPage() {
                 Launch Demo
               </Button>
             </Box>
+
+            {/* Footer Links */}
+            <Box sx={{ textAlign: 'center', mt: 8, pt: 4, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center" alignItems="center">
+                <Button
+                  variant="text"
+                  onClick={() => router.push('/privacy')}
+                  sx={{ color: 'text.secondary', textTransform: 'none' }}
+                >
+                  Privacy Policy
+                </Button>
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.secondary' }}>•</Box>
+                <Button
+                  variant="text"
+                  onClick={() => router.push('/terms')}
+                  sx={{ color: 'text.secondary', textTransform: 'none' }}
+                >
+                  Terms & Conditions
+                </Button>
+              </Stack>
+            </Box>
           </Container>
         </Box>
       </AppShell>
