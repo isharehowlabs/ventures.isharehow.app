@@ -1,5 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getBackendUrl } from '../utils/backendUrl';
+
+// Global state to prevent duplicate auth checks across all hook instances
+let globalAuthCheckInProgress = false;
+let globalAuthCheckPromise: Promise<void> | null = null;
+let globalAuthState: AuthState | null = null;
+let globalAuthListeners: Set<(state: AuthState) => void> = new Set();
 
 interface User {
   id: string;
@@ -30,163 +36,205 @@ interface AuthState {
 }
 
 export function useAuth() {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    error: null,
-  });
+  // Initialize state from global cache if available, otherwise use defaults
+  const [authState, setAuthState] = useState<AuthState>(() => 
+    globalAuthState || {
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      error: null,
+    }
+  );
 
-  // Track if auth check is in progress to prevent duplicate concurrent checks
-  const authCheckInProgress = useRef(false);
+  // Register this component as a listener for global auth state changes
+  useEffect(() => {
+    const listener = (newState: AuthState) => {
+      setAuthState(newState);
+    };
+    globalAuthListeners.add(listener);
+    
+    // If there's cached state, use it immediately
+    if (globalAuthState && !globalAuthState.isLoading) {
+      setAuthState(globalAuthState);
+    }
+    
+    return () => {
+      globalAuthListeners.delete(listener);
+    };
+  }, []);
+
+  // Helper to update all listeners
+  const updateGlobalAuthState = useCallback((newState: AuthState) => {
+    globalAuthState = newState;
+    globalAuthListeners.forEach(listener => listener(newState));
+  }, []);
 
   // JWT tokens are now stored in httpOnly cookies (set by backend)
   // We don't need to access tokens from JavaScript - backend handles it automatically
 
   const checkAuth = useCallback(async () => {
-    // Prevent duplicate concurrent auth checks
-    if (authCheckInProgress.current) {
-      console.log('[Auth] Auth check already in progress, skipping...');
-      return;
+    // If there's already a global auth check in progress, wait for it
+    if (globalAuthCheckInProgress && globalAuthCheckPromise) {
+      console.log('[Auth] Auth check already in progress globally, waiting for existing check...');
+      try {
+        await globalAuthCheckPromise;
+        return;
+      } catch (e) {
+        // If the existing check failed, continue with a new check
+        console.log('[Auth] Previous check failed, starting new check...');
+      }
     }
     
-    authCheckInProgress.current = true;
-    try {
-      const backendUrl = getBackendUrl();
-      
-      // Debug: Log auth check attempt
-      console.log('[Auth] Checking authentication...', {
-        backendUrl,
-        timestamp: new Date().toISOString(),
-      });
-      
-      // Create a timeout promise (increased to 15 seconds for slower networks)
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          console.log('[Auth] Request timed out after 15 seconds');
-          reject(new Error('Request timeout'));
-        }, 15000);
-      });
-
-      console.log('[Auth] About to start Promise.race...');
-
-      // JWT token is in httpOnly cookie, backend will read it automatically
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      // Race the fetch against the timeout
-      console.log('[Auth] Starting fetch request...');
-      const response = await Promise.race([
-        fetch(`${backendUrl}/api/auth/me`, {
-          method: 'GET',
-          credentials: 'include', // Important: include cookies (for httpOnly JWT cookie)
-          headers,
-          mode: 'cors', // Ensure CORS mode
-        }),
-        timeoutPromise
-      ]);
-      console.log('[Auth] Fetch completed, got response');
-
-      // Debug: Log response details
-      console.log('[Auth] Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: {
-          'content-type': response.headers.get('content-type'),
-          'set-cookie': response.headers.get('set-cookie') ? 'present' : 'not present',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+    // Start new global auth check
+    globalAuthCheckInProgress = true;
+    const authCheckPromise = (async () => {
+      try {
+        const backendUrl = getBackendUrl();
         
-        // Check if user is authenticated (backend returns {authenticated: false} when no token)
-        if (data.authenticated === false || !data.id) {
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: null,
-          });
-        } else {
-          console.log('[Auth] ✓ Authentication successful:', {
-            userId: data.id,
-            userName: data.name,
-            isPaidMember: data.isPaidMember,
-          });
-          
-          // JWT token is in httpOnly cookie, no need to store in localStorage
-          setAuthState({
-            user: data,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
+        // Debug: Log auth check attempt (only once per global check)
+        if (globalAuthListeners.size === 1) {
+          console.log('[Auth] Checking authentication...', {
+            backendUrl,
+            timestamp: new Date().toISOString(),
+            listeners: globalAuthListeners.size,
           });
         }
-      } else {
-        // Log error details for debugging
-        let errorData: any = {};
-        try {
-          const text = await response.text();
-          if (text) {
-            errorData = JSON.parse(text);
-          }
-        } catch (e) {
-          // Response might not be JSON
-          errorData = { message: `Server error: ${response.status} ${response.statusText}` };
-        }
         
-        console.warn('[Auth] ✗ Auth check failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-          credentialsMode: 'include',
+        // Create a timeout promise (reduced to 10 seconds for better UX)
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            console.log('[Auth] Request timed out after 10 seconds');
+            reject(new Error('Request timeout'));
+          }, 10000);
         });
-        
-        // If it's a 500 error with migration_required, show helpful message
-        if (response.status === 500 && errorData.migration_required) {
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: 'Database migration required. Please contact support.',
-          });
-        } else if (response.status === 500) {
-          // For other 500 errors, treat as not authenticated (graceful degradation)
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: null, // Don't show error for server issues, just treat as not authenticated
-          });
-        } else {
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: errorData.message || 'Authentication failed',
+
+        // JWT token is in httpOnly cookie, backend will read it automatically
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        // Race the fetch against the timeout
+        const response = await Promise.race([
+          fetch(`${backendUrl}/api/auth/me`, {
+            method: 'GET',
+            credentials: 'include', // Important: include cookies (for httpOnly JWT cookie)
+            headers,
+            mode: 'cors', // Ensure CORS mode
+          }),
+          timeoutPromise
+        ]);
+
+        // Debug: Log response details (only once)
+        if (globalAuthListeners.size === 1) {
+          console.log('[Auth] Response received:', {
+            status: response.status,
+            statusText: response.statusText,
           });
         }
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Check if user is authenticated (backend returns {authenticated: false} when no token)
+          if (data.authenticated === false || !data.id) {
+            const newState: AuthState = {
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              error: null,
+            };
+            updateGlobalAuthState(newState);
+          } else {
+            if (globalAuthListeners.size === 1) {
+              console.log('[Auth] ✓ Authentication successful:', {
+                userId: data.id,
+                userName: data.name,
+                isPaidMember: data.isPaidMember,
+              });
+            }
+            
+            // JWT token is in httpOnly cookie, no need to store in localStorage
+            const newState: AuthState = {
+              user: data,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+            };
+            updateGlobalAuthState(newState);
+          }
+        } else {
+          // Log error details for debugging
+          let errorData: any = {};
+          try {
+            const text = await response.text();
+            if (text) {
+              errorData = JSON.parse(text);
+            }
+          } catch (e) {
+            // Response might not be JSON
+            errorData = { message: `Server error: ${response.status} ${response.statusText}` };
+          }
+          
+          if (globalAuthListeners.size === 1) {
+            console.warn('[Auth] ✗ Auth check failed:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData,
+            });
+          }
+          
+          // If it's a 500 error with migration_required, show helpful message
+          let newState: AuthState;
+          if (response.status === 500 && errorData.migration_required) {
+            newState = {
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              error: 'Database migration required. Please contact support.',
+            };
+          } else if (response.status === 500) {
+            // For other 500 errors, treat as not authenticated (graceful degradation)
+            newState = {
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              error: null, // Don't show error for server issues, just treat as not authenticated
+            };
+          } else {
+            newState = {
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              error: errorData.message || 'Authentication failed',
+            };
+          }
+          updateGlobalAuthState(newState);
+        }
+      } catch (error: any) {
+        if (globalAuthListeners.size === 1) {
+          console.error('[Auth] ✗ Auth check error:', {
+            message: error.message,
+            name: error.name,
+          });
+        }
+        const isTimeout = error.message === 'Request timeout';
+        
+        const newState: AuthState = {
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: isTimeout ? 'Request timeout' : error.message,
+        };
+        updateGlobalAuthState(newState);
+      } finally {
+        globalAuthCheckInProgress = false;
+        globalAuthCheckPromise = null;
       }
-    } catch (error: any) {
-      console.error('[Auth] ✗ Auth check error:', {
-        message: error.message,
-        name: error.name,
-        stack: error.stack?.split('\n')[0],
-      });
-      const isTimeout = error.message === 'Request timeout';
-      
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: isTimeout ? 'Request timeout' : error.message,
-      });
-    } finally {
-      authCheckInProgress.current = false;
-    }
-  }, []);
+    })();
+    
+    globalAuthCheckPromise = authCheckPromise;
+    await authCheckPromise;
+  }, [updateGlobalAuthState]);
 
   useEffect(() => {
     checkAuth();
@@ -220,7 +268,7 @@ export function useAuth() {
     window.location.href = `${backendUrl}/api/auth/patreon`;
   };
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       const backendUrl = getBackendUrl();
       
@@ -238,24 +286,26 @@ export function useAuth() {
       });
       
       // Backend clears the JWT cookie, no need to clear localStorage
-      setAuthState({
+      const newState: AuthState = {
         user: null,
         isAuthenticated: false,
         isLoading: false,
         error: null,
-      });
+      };
+      updateGlobalAuthState(newState);
       console.log('[Auth] ✓ Logged out successfully');
     } catch (error: any) {
       console.error('[Auth] Logout error:', error);
       // Clear state even on error
-      setAuthState({
+      const newState: AuthState = {
         user: null,
         isAuthenticated: false,
         isLoading: false,
         error: null,
-      });
+      };
+      updateGlobalAuthState(newState);
     }
-  };
+  }, [updateGlobalAuthState]);
 
   return {
     ...authState,
