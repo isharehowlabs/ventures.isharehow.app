@@ -19,10 +19,11 @@ import {
   Login as LoginIcon,
   VideoCall as DemoIcon,
   Brush as CreativeIcon,
+  LiveTv as LiveIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative';
+type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative';
 
 interface NavigationItem {
   key: NavKey;
@@ -73,6 +74,13 @@ const navigationItems: NavigationItem[] = [
     href: '/rise',
     icon: <RiseIcon />,
     authRequired: false, // Public but enhanced when authenticated
+  },
+  {
+    key: 'live',
+    label: 'Live Stream',
+    href: '/live',
+    icon: <LiveIcon />,
+    authRequired: false, // Public
     dividerAfter: true,
   },
   {

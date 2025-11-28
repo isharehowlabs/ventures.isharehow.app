@@ -1,6 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Box, Tabs, Tab, useTheme, useMediaQuery, Paper, Typography } from '@mui/material';
-import StreamingPanel from './StreamingPanel';
 import Workspace from './Workspace';
 import LearningPanel from './LearningPanel';
 // Web3Panel removed - ENS info now displayed in profile page
@@ -51,11 +50,11 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
   
   // Map panel keys to components and labels
   const panelComponents: Record<string, { component: ReactNode; label: string }> = {
-    streaming: { component: <StreamingPanel />, label: 'Streaming' },
     workspace: { component: <Workspace />, label: 'Workspace' }, // Unified component combining docs, figma, opportunities, tasks
     learning: { component: <LearningPanel />, label: 'Learning Hub' },
     communityQA: { component: communityQA, label: 'Community Q&A' },
     // web3 panel removed - ENS info now in profile page
+    // streaming panel moved to /live page
     focus: { component: <FocusPanel />, label: 'Focus Timer' },
     aiJournal: { component: <AIJournalPanel />, label: 'Mindset Journal' },
     aiAgent: { component: <AiAgentPanel />, label: 'AI Agent' },
@@ -75,7 +74,7 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
   const getActiveTabIndex = () => {
     if (visibleTabs.length === 0) return 0;
     // Find which visible tab corresponds to the default tab
-    const defaultTabKeys = ['streaming', 'workspace', 'learning'];
+    const defaultTabKeys = ['workspace', 'learning'];
     const defaultTabKey = defaultTabKeys[settings.dashboard.defaultTab] || 'workspace';
     const visibleIndex = visibleTabs.findIndex(tab => tab.key === defaultTabKey);
     return visibleIndex >= 0 ? visibleIndex : 0;

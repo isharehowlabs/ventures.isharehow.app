@@ -10,7 +10,6 @@ export interface DashboardSettings {
 }
 
 export interface PanelSettings {
-  streaming: { visible: boolean; order: number };
   workspace: { visible: boolean; order: number }; // Unified workspace (combines docs, figma, opportunities, tasks)
   learning: { visible: boolean; order: number };
   aiJournal: { visible: boolean; order: number };
@@ -39,13 +38,13 @@ const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
 };
 
 const DEFAULT_PANEL_SETTINGS: PanelSettings = {
-  streaming: { visible: true, order: 0 },
-  workspace: { visible: true, order: 1 }, // Unified workspace (combines docs, figma, opportunities, tasks)
-  learning: { visible: true, order: 2 },
-  aiJournal: { visible: true, order: 3 },
-  // web3: { visible: false, order: 4 }, // Removed - ENS info now in profile
-  focus: { visible: true, order: 5 },
-  aiAgent: { visible: true, order: 6 },
+  workspace: { visible: true, order: 0 }, // Unified workspace (combines docs, figma, opportunities, tasks)
+  learning: { visible: true, order: 1 },
+  aiJournal: { visible: true, order: 2 },
+  // web3: { visible: false, order: 3 }, // Removed - ENS info now in profile
+  // streaming: removed - now on /live page
+  focus: { visible: true, order: 3 },
+  aiAgent: { visible: true, order: 4 },
 };
 
 const STORAGE_KEY = 'user_dashboard_settings';
@@ -164,7 +163,8 @@ export function useSettings() {
       .filter(([key, config]) => {
         // Filter out web3 panel (removed - ENS info now in profile)
         // Also filter out old panels that are now part of workspace
-        if (key === 'web3' || key === 'figma' || key === 'docs' || key === 'opportunities') return false;
+        // Filter out streaming (moved to /live page)
+        if (key === 'web3' || key === 'figma' || key === 'docs' || key === 'opportunities' || key === 'streaming') return false;
         return config.visible;
       })
       .sort(([_, a], [__, b]) => a.order - b.order)
