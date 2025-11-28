@@ -4512,8 +4512,8 @@ def handle_join_notifications(data):
 
 # Creative Dashboard - Client Management API Endpoints
 
-@jwt_required()
 @app.route('/api/creative/clients', methods=['GET'])
+@jwt_required()
 def get_clients():
     """Get all clients with optional filtering - requires authentication"""
     if not DB_AVAILABLE:
@@ -4524,8 +4524,12 @@ def get_clients():
         if not user:
             return jsonify({'error': 'Authentication required'}), 401
         
-        user_info = get_user_info()
-        is_employee = hasattr(user, 'is_employee') and user.is_employee
+        # Safely get employee status
+        is_employee = safe_get_is_employee(user)
+        user_db_id = getattr(user, 'id', None)
+        
+        if not user_db_id:
+            return jsonify({'error': 'Unable to identify user'}), 401
         
         # Get query parameters
         status = request.args.get('status', 'all')
@@ -4554,12 +4558,16 @@ def get_clients():
             clients = [
                 c for c in clients 
                 if c.employee_assignments and 
-                any(a.employee_id == user.id for a in c.employee_assignments)
+                any(a.employee_id == user_db_id for a in c.employee_assignments)
             ]
         # Filter by employee if specified (only employees can filter by other employees)
         elif employee_id:
-            clients = [c for c in clients if c.employee_assignments and 
-                      any(a.employee_id == int(employee_id) for a in c.employee_assignments)]
+            try:
+                emp_id_int = int(employee_id)
+                clients = [c for c in clients if c.employee_assignments and 
+                          any(a.employee_id == emp_id_int for a in c.employee_assignments)]
+            except (ValueError, TypeError):
+                pass  # Invalid employee_id, ignore filter
         
         return jsonify({
             'clients': [client.to_dict() for client in clients]
@@ -4568,7 +4576,7 @@ def get_clients():
         print(f"Error fetching clients: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'Failed to fetch clients'}), 500
+        return jsonify({'error': f'Failed to fetch clients: {str(e)}'}), 500
 
 @require_employee
 @app.route('/api/creative/clients', methods=['POST'])
@@ -4863,35 +4871,58 @@ def update_dashboard_connections(client_id):
         print(f"Error updating dashboard connections: {e}")
         return jsonify({'error': 'Failed to update connections'}), 500
 
-@jwt_required(optional=True)
 @app.route('/api/creative/employees', methods=['GET'])
+@jwt_required()
 def get_employees():
     """Get list of employees (users) for assignment"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
         
-        # Get all users with is_employee flag set to True
-        users = User.query.filter_by(is_employee=True).all()
-        
-        # If no employees found, include all users (for backward compatibility)
-        if not users:
-            users = User.query.all()
+        # Check if is_employee column exists
+        column_exists = check_is_employee_column_exists()
         
         employees = []
+        if column_exists:
+            # Get all users with is_employee flag set to True
+            try:
+                users = User.query.filter_by(is_employee=True).all()
+            except Exception as e:
+                error_str = str(e).lower()
+                if 'is_employee' in error_str and 'column' in error_str:
+                    # Column doesn't exist, fallback to all users
+                    users = User.query.all()
+                else:
+                    raise
+        else:
+            # Column doesn't exist, get all users
+            users = User.query.all()
+        
+        # If no employees found and column exists, include all users (for backward compatibility)
+        if not users and column_exists:
+            users = User.query.all()
+        
         for user in users:
+            # Safely check if user is employee
+            is_emp = safe_get_is_employee(user) if column_exists else True
             employees.append({
                 'id': user.id,
                 'name': user.username or user.email or f'User {user.id}',
-                'email': user.email
+                'email': user.email or '',
+                'is_admin': getattr(user, 'is_admin', False),
+                'is_employee': is_emp
             })
         
         return jsonify({'employees': employees}), 200
     except Exception as e:
         print(f"Error fetching employees: {e}")
-        return jsonify({'error': 'Failed to fetch employees'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to fetch employees: {str(e)}'}), 500
 
 # Creative Dashboard - Metrics API Endpoint
 
@@ -6435,23 +6466,51 @@ def admin_list_users():
         users = User.query.all()
         users_data = []
         for user in users:
-            user_dict = user.to_dict()
-            # Also get profile data if available
             try:
-                profile_id = user.ens_name or user.patreon_id or user.username or str(user.id)
-                profile = UserProfile.query.get(profile_id)
-                if profile:
-                    profile_dict = profile.to_dict()
-                    user_dict.update(profile_dict)
-            except:
-                pass
-            users_data.append(user_dict)
+                user_dict = user.to_dict()
+                # Also get profile data if available
+                try:
+                    profile_id = user.ens_name or user.patreon_id or user.username or str(user.id)
+                    profile = UserProfile.query.get(profile_id)
+                    if profile:
+                        profile_dict = profile.to_dict()
+                        user_dict.update(profile_dict)
+                except Exception as profile_error:
+                    print(f"Error fetching profile for user {user.id}: {profile_error}")
+                    pass
+                
+                # Ensure required fields exist
+                if 'id' not in user_dict:
+                    user_dict['id'] = user.ens_name or user.patreon_id or user.username or str(user.id)
+                if 'username' not in user_dict:
+                    user_dict['username'] = user.username or ''
+                if 'email' not in user_dict:
+                    user_dict['email'] = user.email or ''
+                if 'isEmployee' not in user_dict:
+                    user_dict['isEmployee'] = safe_get_is_employee(user)
+                if 'isAdmin' not in user_dict:
+                    user_dict['isAdmin'] = getattr(user, 'is_admin', False)
+                
+                users_data.append(user_dict)
+            except Exception as user_error:
+                print(f"Error processing user {getattr(user, 'id', 'unknown')}: {user_error}")
+                # Add minimal user data even if to_dict() fails
+                users_data.append({
+                    'id': getattr(user, 'id', 'unknown'),
+                    'username': getattr(user, 'username', ''),
+                    'email': getattr(user, 'email', ''),
+                    'isEmployee': safe_get_is_employee(user),
+                    'isAdmin': getattr(user, 'is_admin', False),
+                    'error': f'Error loading user data: {str(user_error)}'
+                })
         
         return jsonify({'users': users_data})
     except Exception as e:
         print(f"Error listing users: {e}")
+        import traceback
+        traceback.print_exc()
         app.logger.error(f"Error listing users: {e}")
-        return jsonify({'error': 'Failed to list users'}), 500
+        return jsonify({'error': f'Failed to list users: {str(e)}'}), 500
 
 @app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
 @require_admin

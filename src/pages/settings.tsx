@@ -261,9 +261,11 @@ function SettingsPage() {
         const data = await response.json();
         setEmployees(data.users || []);
       } else {
-        setEmployeeError('Failed to load users');
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        setEmployeeError(errorData.error || `Failed to load users (${response.status})`);
       }
     } catch (error: any) {
+      console.error('Error fetching employees:', error);
       setEmployeeError(error.message || 'Failed to load users');
     } finally {
       setLoadingEmployees(false);

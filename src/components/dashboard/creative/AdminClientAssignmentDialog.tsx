@@ -76,7 +76,8 @@ export default function AdminClientAssignmentDialog({
         credentials: 'include',
       });
       if (!employeesResponse.ok) {
-        throw new Error('Failed to fetch employees');
+        const errorData = await employeesResponse.json().catch(() => ({ error: `HTTP ${employeesResponse.status}` }));
+        throw new Error(errorData.error || `Failed to fetch employees (${employeesResponse.status})`);
       }
       const employeesData = await employeesResponse.json();
       setEmployees(employeesData.employees || []);
@@ -86,7 +87,8 @@ export default function AdminClientAssignmentDialog({
         credentials: 'include',
       });
       if (!clientsResponse.ok) {
-        throw new Error('Failed to fetch clients');
+        const errorData = await clientsResponse.json().catch(() => ({ error: `HTTP ${clientsResponse.status}` }));
+        throw new Error(errorData.error || `Failed to fetch clients (${clientsResponse.status})`);
       }
       const clientsData = await clientsResponse.json();
       setClients(clientsData.clients || []);
