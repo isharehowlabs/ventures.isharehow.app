@@ -6624,6 +6624,108 @@ def admin_toggle_admin(user_id):
         db.session.rollback()
         return jsonify({'error': f'Failed to update admin status: {str(e)}'}), 500
 
+@app.route('/api/admin/users/<user_id>/password', methods=['PUT', 'OPTIONS'])
+def admin_change_password(user_id):
+    """Change a user's password (admin only)"""
+    # Handle CORS preflight - must be before require_admin
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        return response
+    
+    # Apply admin check for PUT requests
+    if request.method == 'PUT':
+        # Check JWT authentication first
+        try:
+            from flask_jwt_extended import verify_jwt_in_request
+            verify_jwt_in_request()
+        except Exception as e:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Use require_admin decorator logic inline
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        # Check if user is admin (same logic as require_admin)
+        is_admin = False
+        if hasattr(user, 'is_admin'):
+            is_admin = bool(user.is_admin)
+        if not is_admin:
+            if hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
+                is_admin = True
+            elif hasattr(user, 'username') and user.username:
+                username_lower = user.username.lower()
+                if username_lower in ['isharehow', 'admin']:
+                    is_admin = True
+            elif hasattr(user, 'email') and user.email:
+                email_lower = user.email.lower()
+                if email_lower == 'jeliyah@isharehowlabs.com':
+                    is_admin = True
+        if not is_admin:
+            return jsonify({'error': 'Admin access required'}), 403
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        data = request.json or {}
+        new_password = data.get('password', '').strip()
+        
+        if not new_password:
+            return jsonify({'error': 'Password is required'}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+        
+        # Decode user_id if it was URL encoded
+        try:
+            user_id = request.view_args.get('user_id') or user_id
+        except:
+            pass
+        
+        # Find user by ID, username, patreon_id, or ens_name
+        user = None
+        if user_id and user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user and user_id:
+            user = User.query.filter_by(username=user_id).first()
+        if not user and user_id:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        if not user and user_id:
+            user = User.query.filter_by(ens_name=user_id).first()
+        
+        if not user:
+            return jsonify({'error': f'User not found: {user_id}'}), 404
+        
+        # Change password using User model's set_password method
+        if hasattr(user, 'set_password'):
+            user.set_password(new_password)
+        else:
+            # Fallback: hash password directly using bcrypt
+            password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            user.password_hash = password_hash.decode('utf-8')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password changed successfully',
+            'user': {
+                'id': str(user.id),
+                'username': user.username,
+                'email': user.email
+            }
+        })
+    except Exception as e:
+        print(f"Error changing password: {e}")
+        import traceback
+        traceback.print_exc()
+        app.logger.error(f"Error changing password: {e}")
+        db.session.rollback()
+        return jsonify({'error': f'Failed to change password: {str(e)}'}), 500
+
 @app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
 @require_admin
 def admin_toggle_employee(user_id):

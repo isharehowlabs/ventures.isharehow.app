@@ -22,6 +22,11 @@ import {
   Tabs,
   Tab,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -35,6 +40,8 @@ import {
   Brush as CreativeIcon,
   People as PeopleIcon,
   Assignment as AssignmentIcon,
+  VpnKey as VpnKeyIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -243,6 +250,12 @@ function SettingsPage() {
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [employeeError, setEmployeeError] = useState<string | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   
   // Fetch employees list
   useEffect(() => {
@@ -323,6 +336,69 @@ function SettingsPage() {
       }
     } catch (error: any) {
       setEmployeeError(error.message || 'Failed to update admin status');
+    }
+  };
+
+  const handleOpenPasswordDialog = (user: any) => {
+    setSelectedUserForPassword(user);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+    setPasswordDialogOpen(true);
+  };
+
+  const handleClosePasswordDialog = () => {
+    setPasswordDialogOpen(false);
+    setSelectedUserForPassword(null);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+  };
+
+  const handleChangePassword = async () => {
+    if (!selectedUserForPassword) return;
+
+    // Validate passwords
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setChangingPassword(true);
+    setPasswordError(null);
+
+    try {
+      const backendUrl = getBackendUrl();
+      const userId = selectedUserForPassword.id || selectedUserForPassword.username || selectedUserForPassword.user_id;
+      
+      // Encode userId to handle special characters
+      const encodedUserId = encodeURIComponent(userId);
+      
+      const response = await fetch(`${backendUrl}/api/admin/users/${encodedUserId}/password`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: newPassword }),
+      });
+
+      if (response.ok) {
+        alert(`Password changed successfully for ${selectedUserForPassword.name || selectedUserForPassword.username || selectedUserForPassword.email}`);
+        handleClosePasswordDialog();
+      } else {
+        const errorData = await response.json();
+        setPasswordError(errorData.error || 'Failed to change password');
+      }
+    } catch (error: any) {
+      setPasswordError(error.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -744,6 +820,14 @@ function SettingsPage() {
                             }
                             label={emp.isEmployee ? 'Employee' : 'Not Employee'}
                           />
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleOpenPasswordDialog(emp)}
+                            sx={{ ml: 2 }}
+                          >
+                            Change Password
+                          </Button>
                         </Stack>
                       </Stack>
                     </Paper>
@@ -810,6 +894,80 @@ function SettingsPage() {
         currentUser={user}
         isAdminView={isAdmin}
       />
+      
+      {/* Change Password Dialog */}
+      <Dialog open={passwordDialogOpen} onClose={handleClosePasswordDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <VpnKeyIcon />
+              <Typography variant="h6">Change Password</Typography>
+            </Stack>
+            <IconButton onClick={handleClosePasswordDialog} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {selectedUserForPassword && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Changing password for:
+              </Typography>
+              <Typography variant="body1" fontWeight={600}>
+                {selectedUserForPassword.name || selectedUserForPassword.username || selectedUserForPassword.email}
+              </Typography>
+              {selectedUserForPassword.email && (
+                <Typography variant="body2" color="text.secondary">
+                  {selectedUserForPassword.email}
+                </Typography>
+              )}
+            </Box>
+          )}
+
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPasswordError(null)}>
+              {passwordError}
+            </Alert>
+          )}
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              type="password"
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password (min 6 characters)"
+              disabled={changingPassword}
+              helperText="Password must be at least 6 characters long"
+            />
+            <TextField
+              fullWidth
+              type="password"
+              label="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              disabled={changingPassword}
+              error={confirmPassword !== '' && newPassword !== confirmPassword}
+              helperText={confirmPassword !== '' && newPassword !== confirmPassword ? 'Passwords do not match' : ''}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePasswordDialog} disabled={changingPassword}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleChangePassword}
+            variant="contained"
+            disabled={changingPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 6}
+            startIcon={changingPassword ? <CircularProgress size={20} /> : <VpnKeyIcon />}
+          >
+            {changingPassword ? 'Changing...' : 'Change Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AppShell>
   );
 }

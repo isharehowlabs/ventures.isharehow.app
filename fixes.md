@@ -172,13 +172,39 @@ The system recognizes admins through multiple methods:
 - Real-time updates
 - Error handling and success feedback
 
+### 9. Admin Password Change Feature ✅
+- **Status**: COMPLETED
+- **Implementation**:
+  - **Backend Endpoint**: `PUT /api/admin/users/<user_id>/password`
+    - Admin-only endpoint (protected by `@require_admin` decorator)
+    - Validates password (minimum 6 characters)
+    - Uses bcrypt to hash password securely
+    - Supports user lookup by ID, username, patreon_id, or ens_name
+    - Returns success message with user details
+  - **Frontend UI**: 
+    - Added "Change Password" button in Employee Management section (Settings → Admin tab)
+    - Password change dialog with:
+      - New password field (with validation)
+      - Confirm password field
+      - Password matching validation
+      - Error handling and success feedback
+    - Accessible from Settings page → Admin tab → Employee Management
+- **Security**:
+  - Admin-only access (requires `@require_admin` decorator)
+  - Password hashed using bcrypt (same as user registration)
+  - Minimum 6 character requirement
+  - Password confirmation required
+  - All password changes logged for audit
+
 ## Notes
 - Markdown notes are saved to browser localStorage for persistence
 - Task management uses the existing `useTasks` hook with real-time updates
 - Figma embed URL is a placeholder - replace with actual Figma file URL
 - All features are now unified in a single collaborative workspace perfect for Live Share sessions
 - Web3MQ integration provides decentralized, wallet-authenticated real-time messaging
+- Admin password changes are logged and can be audited
 - **Next Steps**: 
   - Configure Web3MQ app key and test messaging functionality
   - Ensure `isharehow` user has `is_admin = true` in database OR use admin toggle in Settings
   - Test client-employee matching workflow
+  - Test admin password change functionality
