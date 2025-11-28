@@ -1,209 +1,335 @@
-# Site Fixes & Upgrades Plan
+# Database Schema Refactoring Plan
 
-## 🔴 Critical Issues
+## ✅ Web3/ENS Integration - COMPLETED
 
-### Authentication & Security
-- [x] **Fixed**: Creative Dashboard API endpoints returning 401 errors - Changed to `@jwt_required(optional=True)`
-- [x] **Fixed**: Add stricter authentication checks - Replaced `optional=True` with proper `@jwt_required()` on creative dashboard endpoints
-- [x] **Fixed**: Implement role-based access control - Added `require_employee` decorator and `check_employee_client_access` helper function
-- [x] **Fixed**: Authentication timeout issues - Updated `/api/auth/me` to return 200 with `{authenticated: false}` instead of 401, improved error handling in login endpoint
+### Implementation Summary
+- ✅ Added `web3.py` (v6.15.1) and `eth-utils` (v2.3.1) to requirements.txt
+- ✅ Imported Web3 and ENS modules in app.py with graceful fallback
+- ✅ Added ENS fields to User model: `ens_name`, `crypto_address`, `content_hash`
+- ✅ Added ENS fields to UserProfile model: `ens_name`, `crypto_address`, `content_hash`
+- ✅ Created helper functions:
+  - `username_to_ens_name()` - Converts username to `username.isharehow.eth` format
+  - `resolve_ens_to_address()` - Resolves ENS name to Ethereum address
+  - `get_ens_content_hash()` - Gets IPFS content hash from ENS resolver
+  - `set_ens_content_hash()` - Sets IPFS content hash (requires wallet integration)
+  - `resolve_or_create_ens()` - Main function to resolve/create ENS data
+- ✅ Integrated ENS into user registration (automatic ENS name generation)
+- ✅ Integrated ENS into Patreon OAuth callback
+- ✅ Updated `to_dict()` methods to use ENS name as ID when available
+- ✅ Updated profile endpoint to include ENS data in responses
 
-### Broken Routes & Links
-- [x] **Fixed**: `/dashboard` route - Changed redirect in `demo.tsx` from `/dashboard` to `/labs`
-- [x] **Fixed**: Terms & Conditions page - Created at `/terms`
-- [x] **Fixed**: Privacy Policy page - Created at `/privacy`
-- [x] **Fixed**: Verify all navigation links - Navigation component uses Next.js router correctly
-- [x] **Fixed**: Fix PACT page anchor links - Added smooth scroll behavior and proper click handlers for hash anchors
+### Configuration
+- **ENS Domain**: `isharehow.eth`
+- **Provider URL**: Set via `ENS_PROVIDER_URL` environment variable (defaults to Infura)
+- **Private Key**: Set via `ENS_PRIVATE_KEY` environment variable (for setting records)
 
-## 🟡 High Priority Features
+### Database Fields Added
+**User Model:**
+- `ens_name` (String, unique, indexed) - e.g., "isharehow.isharehow.eth"
+- `crypto_address` (String, indexed) - Ethereum address (0x...)
+- `content_hash` (String) - IPFS content hash
 
-### Creative Dashboard
-- [x] **Fixed**: Employee Assignment Dialog - Created full dialog with employee selection and custom name option
-- [x] **Fixed**: Employee role management - Added `is_employee` boolean field to User model and migration
-- [x] **Fixed**: Enforce employee-client relationships - Added `check_employee_client_access` function and enforced in all client endpoints
-- [ ] **Implement employee sorting** - Allow employees to sort their own projects/creative accounts
-- [x] **Fixed**: Support Request creation - Backend API integration completed
+**UserProfile Model:**
+- `ens_name` (String, unique, indexed) - e.g., "isharehow.isharehow.eth"
+- `crypto_address` (String, indexed) - Ethereum address (0x...)
+- `content_hash` (String) - IPFS content hash
 
-### Analytics & Integration
-- [ ] **Implement Google Analytics integration** - Add OAuth flow and API connection in AnalyticsActivity component
-- [ ] **Add analytics ID/code embedding** - Allow users to input Google Analytics tracking ID and embed code
-- [ ] **Implement analytics sync functionality** - Currently just simulates, needs real API calls
-- [ ] **Add analytics report export** - Generate and download analytics reports
+### API Response Format
+User IDs now use ENS format when available:
+```json
+{
+  "id": "isharehow.isharehow.eth",
+  "ensName": "isharehow.isharehow.eth",
+  "cryptoAddress": "0x...",
+  "contentHash": "0x...",
+  ...
+}
+```
 
-### Payment & Subscriptions
-- [ ] **Integrate payment processing** - PayPal SDK integration for actual payment processing
-- [x] **Fixed**: Subscription creation - Backend API integration completed with Subscription model
-- [x] **Fixed**: Subscription status tracking - Added status field (active/cancelled/pending/expired)
-- [ ] **Implement payment method management** - Store and manage payment methods securely
-
-## 🟢 Medium Priority Improvements
-
-### Database & Backend
-- [ ] **Run database migration** - Apply `32_add_creative_dashboard_models.py` and `33_add_is_employee_support.py` migrations
-- [x] **Fixed**: Employee flag to User model - Added `is_employee` field and migration created
-- [ ] **Add client-user relationship enforcement** - Database constraints for employee-client assignments
-- [x] **Fixed**: Implement proper error handling - Added comprehensive error handling in login endpoint, improved error messages with specific feedback, added logging throughout backend
-
-### UI/UX Issues
-- [x] **Fixed**: TikTok image loading - Added error handling and play button overlay
-- [x] **Fixed**: Add loading states - ClientList, ProductsPage, and other key components have loading states
-- [x] **Fixed**: Improve error messages - Enhanced login error messages with specific feedback, improved backend error handling
-- [x] **Fixed**: Error boundaries - Added ErrorBoundary to _app.tsx
-- [x] **Fixed**: iframe warnings - Removed allowFullScreen attribute, using only allow with fullscreen permission
-- [x] **Fixed**: Add proper image fallbacks - Improved ContentCard with better fallback UI (shows channel icon when image fails), added lazy loading
-- [x] **Fixed**: Moved metrics from co-work dashboard to Creative Dashboard Overview tab
-
-### Feature Completeness
-- [ ] **Complete AI Agent Panel** - Revid.ai API integration and scheduling functionality
-- [ ] **Complete subscription API** - Backend endpoints for subscription management
-- [ ] **Add email notifications** - Send welcome emails, confirmations, and notifications
-- [ ] **Implement feature gating** - Tier-based feature access control
-
-## 🔵 Low Priority / Nice to Have
-
-### Code Quality
-- [ ] **Remove console.error/warn statements** - Replace with proper logging or remove in production
-- [ ] **Add TypeScript strict mode** - Fix any type errors and enable strict checking
-- [ ] **Add unit tests** - Test critical components and API endpoints
-- [ ] **Improve error handling** - Consistent error handling patterns across the app
-
-### Performance
-- [ ] **Optimize image loading** - Lazy loading, proper sizing, CDN usage
-- [ ] **Reduce API calls** - Implement caching and batch requests where possible
-- [ ] **Optimize bundle size** - Code splitting and tree shaking improvements
-
-### Documentation
-- [ ] **Add API documentation** - Document all API endpoints
-- [ ] **Create user guides** - Documentation for key features
-- [ ] **Add inline code comments** - Better code documentation
-
-## 📋 Specific TODO Items Found
-
-### Creative Dashboard
-- [x] **Fixed**: Employee assignment dialog implementation (`ClientList.tsx:162`) - Created AssignEmployeeDialog component
-- [ ] Google Analytics API integration (`AnalyticsActivity.tsx:32, 44, 97`)
-- [x] **Fixed**: Support request creation backend integration (`SupportRequests.tsx:85`) - Backend API endpoints created
-
-### Subscriptions
-- [x] **Fixed**: Backend API integration (`subscriptions/create.ts:32`) - Backend endpoints created and integrated
-- [x] **Fixed**: User ID extraction from JWT (`subscriptions/current.ts:10`) - Updated to use credentials for JWT
-
-### AI Features
-- [ ] Revid.ai API call implementation (`AiAgentPanel.tsx:139`)
-- [ ] Scheduling functionality (`AiAgentPanel.tsx:174`)
-
-## 📋 Book Demo Page
-- [x] **Fixed**: Book Demo page - Transformed from checkout to informational page with link to demo.isharehow.app
-
-## 🔧 Database Schema Updates Needed
-
-1. **Add `is_employee` field to User model**
-   - Migration needed
-   - Default to `false`
-   - Add index for performance
-
-2. **Add employee-client relationship constraints**
-   - Foreign key constraints
-   - Cascade delete rules
-   - Unique constraints where needed
-
-3. **Add subscription tracking tables**
-   - Subscriptions table
-   - Payment methods table
-   - Invoices table
-
-## 🚨 Known Console Errors
-
-- Multiple authentication timeout errors (10 second timeouts) - Auth requests timing out
-- 401 errors on wellness endpoints (`/api/wellness/*`) - Authentication issues with wellness API
-- 401 errors on Creative Dashboard endpoints (partially fixed) - Changed to optional auth
-- Firebase configuration warnings - Missing NEXT_PUBLIC_FIREBASE_* environment variables
-- IndexedDB errors in notification sync - Potential IndexedDB compatibility issues
-- "Allow attribute will take precedence" warnings - iframe allow/allowfullscreen conflicts
-- **Browser Extension Errors** (Harmless): `chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/*.js` - These are from a third-party browser extension (password manager) and can be safely ignored. They don't affect the application.
-
-## 📝 Notes
-
-- Authentication system needs review - many endpoints using `optional=True` which may be too permissive
-- Employee management system needs to be built from scratch
-- Payment processing needs full integration (currently mock)
-- Analytics integration is placeholder only
-- ErrorBoundary component exists but is not wrapped around app content in _app.tsx
-- Multiple console.error/warn statements should be replaced with proper logging service
-- Database migration `32_add_creative_dashboard_models.py` needs to be run on production
-
-## 🔍 Additional Issues Discovered
-
-### Missing Pages/Components
-- [ ] Terms & Conditions page (`/terms`) - Referenced but doesn't exist
-- [ ] Privacy Policy page (`/privacy`) - Referenced but doesn't exist
-- [ ] Dashboard page (`/dashboard`) - Referenced in demo.tsx (now fixed to redirect to /labs)
-
-### Backend Issues
-- [ ] Employee filtering in `/api/creative/employees` - Comment says "filter by role or add is_employee flag"
-- [ ] Missing subscription backend endpoints - Frontend has API routes but backend doesn't have corresponding endpoints
-- [ ] Wellness API authentication issues - 401 errors on all wellness endpoints
-
-### Frontend Issues
-- [ ] Products page error handling - Could be improved for better UX
-- [ ] Missing error boundaries in key components - ErrorBoundary not used in _app.tsx
-- [ ] Authentication timeout handling - 10 second timeouts need better UX feedback
+### Next Steps for Web3 Integration
+1. Set up Ethereum provider (Infura, Alchemy, or local node)
+2. Configure `ENS_PROVIDER_URL` environment variable in Render.com
+3. Run database migration to add ENS fields
+4. Test ENS resolution for existing users
+5. Integrate with frontend Web3 dashboard panel
+6. Add RainbowKit integration for wallet connections
 
 ---
 
-**Last Updated**: 2025-01-27
-**Status**: Excellent Progress - Critical, High Priority, and Most Medium Priority Items Completed
+## Overview
+Comprehensive refactoring of user database schema to:
+- Simplify redundant fields
+- Properly integrate Patreon API data
+- Implement Web3 domain-based IDs (✅ ENS integration complete)
+- Add admin employee management
 
-## 🚨 URGENT: Database Migration Required
+## Current Issues
+- Redundant fields (membershipPaid, membershipPaymentDate, membershipAmount, pledgeStart, lastChargeDate)
+- Missing Patreon API data integration (tier, renewal date, lifetime support)
+- ID system doesn't use Web3 domain format
+- isTeamMember should be isEmployee
+- No admin interface for managing employees
+- patreonConnected not auto-set based on patreonId
 
-**Issue**: The `is_employee` column is missing from the `users` table, causing 500 errors.
+---
 
-**Solution**: Run the database migration:
-```bash
-cd backend-python
-flask db upgrade
+## Schema Changes
+
+### 1. ID System - Web3 Domain Format
+**Change**: Convert username to `*.isharehow.eth` format
+- Example: `isharehow` → `isharehow.isharehow.eth`
+- Implementation: Create helper function `username_to_web3_id(username)`
+- Update all ID references to use this format
+- Keep integer `id` as primary key for database, but use web3 ID for API responses
+
+### 2. isPaidMember Field
+**Current**: `membership_paid` (boolean)
+**Change**: 
+- Rename to `is_paid_member` for consistency
+- Query Patreon API `patron_status` field
+- Set to `true` if `patron_status == 'active_patron'`
+- Update on every Patreon API call
+
+### 3. isTeamMember → isEmployee
+**Change**: 
+- Rename `isTeamMember` to `isEmployee` across entire codebase
+- Update User model: `is_employee` (already exists)
+- Update UserProfile model: Add `is_employee` field
+- Update all frontend references
+
+### 4. Add isAdmin Field
+**New Field**: `is_admin` (boolean, default=False)
+- Add to User model
+- Only admins can manage employees via settings.tsx
+- Check `is_admin` before allowing employee management
+
+### 5. Remove Fields
+**Delete from UserProfile**:
+- `lastChargeDate` (not needed)
+- `membershipAmount` (not necessary)
+- `membershipPaid` (redundant with isPaidMember)
+- `membershipPaymentDate` (redundant)
+- `pledgeStart` (not needed)
+
+### 6. lastChecked Field
+**Change**: 
+- Update `last_checked` timestamp when "Connect Patreon Account" API endpoint is called
+- Set to `datetime.utcnow()` in Patreon OAuth callback
+
+### 7. lifetimeSupportAmount
+**Fix**: 
+- Pull from Patreon API `lifetime_support_cents` or calculate from payment history
+- Store in UserProfile as `lifetime_support_amount` (decimal/float)
+- Update when Patreon data is synced
+
+### 8. membershipRenewalDate
+**Fix**: 
+- Pull from Patreon API membership data
+- Store in UserProfile as `membership_renewal_date` (DateTime)
+- Calculate from `next_charge_date` or membership period
+
+### 9. membershipTier
+**Fix**: 
+- Pull actual tier name from Patreon API
+- Store in UserProfile as `membership_tier` (String)
+- Update from Patreon API response
+
+### 10. patreonConnected
+**Fix**: 
+- Auto-set to `True` if `patreon_id` is not null
+- Remove manual setting, make it computed property
+- Update in `to_dict()` method
+
+### 11. patreonId
+**Ensure**: 
+- Properly saved from Patreon API OAuth response
+- Stored in both User and UserProfile models
+- Used as identifier for Patreon-related operations
+
+---
+
+## Implementation Steps
+
+### Phase 1: Database Migration
+1. Create migration script:
+   - Add `is_admin` to User model
+   - Add `lifetime_support_amount` to UserProfile
+   - Remove deprecated fields (lastChargeDate, membershipAmount, membershipPaid, membershipPaymentDate, pledgeStart)
+   - Rename `isTeamMember` references to `isEmployee` in UserProfile
+   - Add helper function for Web3 ID generation
+
+### Phase 2: Backend API Updates
+1. Update Patreon OAuth callback:
+   - Fetch full membership data from Patreon API
+   - Extract: tier, renewal date, lifetime support, patron status
+   - Update `last_checked` timestamp
+   - Auto-set `patreon_connected` based on patreon_id
+
+2. Update profile endpoint:
+   - Use Web3 ID format for response
+   - Include all Patreon data fields
+   - Remove deprecated fields from response
+
+3. Create employee management endpoint:
+   - `/api/admin/employees` - List all users
+   - `/api/admin/employees/<id>/toggle` - Toggle isEmployee status
+   - Require `is_admin` check
+
+### Phase 3: Frontend Updates
+1. Update profile.tsx:
+   - Remove references to deleted fields
+   - Display Web3 ID format
+   - Show proper Patreon data
+
+2. Update settings.tsx:
+   - Add "Employee Management" section (admin only)
+   - List all users with toggle for isEmployee
+   - Show current employees
+
+3. Update all components:
+   - Replace `isTeamMember` with `isEmployee`
+   - Remove references to deleted fields
+
+### Phase 4: Patreon API Integration
+1. Enhance Patreon API calls:
+   - Fetch membership tier name
+   - Fetch next charge date (renewal)
+   - Calculate lifetime support
+   - Update all fields on sync
+
+2. Create sync endpoint:
+   - `/api/auth/sync-patreon` - Force refresh Patreon data
+   - Update all membership-related fields
+
+---
+
+## Database Schema (After Changes)
+
+### User Model
+```python
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)  # Keep for DB
+    username = db.Column(db.String(80), unique=True, nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
+    patreon_id = db.Column(db.String(50), unique=True, nullable=True, index=True)
+    access_token = db.Column(db.String(500), nullable=True)
+    refresh_token = db.Column(db.String(500), nullable=True)
+    is_paid_member = db.Column(db.Boolean, default=False, nullable=False)  # From Patreon API
+    is_employee = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)  # NEW
+    last_checked = db.Column(db.DateTime, nullable=True)  # Updated on Patreon connect
+    token_expires_at = db.Column(db.DateTime, nullable=True)
+    patreon_connected = db.Column(db.Boolean, default=False, nullable=False)  # Auto-set from patreon_id
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 ```
 
-See `backend-python/RUN_MIGRATION.md` for detailed instructions.
+### UserProfile Model
+```python
+class UserProfile(db.Model):
+    id = db.Column(db.String(36), primary_key=True)  # Web3 ID format: username.isharehow.eth
+    email = db.Column(db.String(255), unique=True)
+    name = db.Column(db.String(200))
+    avatar_url = db.Column(db.Text)
+    patreon_id = db.Column(db.String(50), nullable=True, index=True)
+    membership_tier = db.Column(db.String(50))  # From Patreon API
+    is_paid_member = db.Column(db.Boolean, default=False)  # From Patreon API
+    is_employee = db.Column(db.Boolean, default=False)  # NEW (renamed from isTeamMember)
+    membership_renewal_date = db.Column(db.DateTime, nullable=True)  # From Patreon API
+    lifetime_support_amount = db.Column(db.Numeric(10, 2), nullable=True)  # From Patreon API (in dollars)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # REMOVED FIELDS:
+    # - lastChargeDate
+    # - membershipAmount
+    # - membershipPaid (redundant)
+    # - membershipPaymentDate (redundant)
+    # - pledgeStart
+```
 
-**Temporary Fix**: Code has been updated to handle missing column gracefully, but migration should still be run.
+---
 
-## ✅ Recently Completed (2025-01-27)
+## API Response Format (After Changes)
 
-### Critical Security & Authentication Improvements
-1. **Stricter Authentication**: Replaced `@jwt_required(optional=True)` with proper `@jwt_required()` on all creative dashboard endpoints
-2. **Role-Based Access Control**: 
-   - Added `require_employee` decorator for employee-only endpoints
-   - Added `check_employee_client_access` helper function
-   - Updated `get_user_info()` to include `user_id` and `is_employee` flag
-3. **Employee-Client Relationship Enforcement**:
-   - Non-employees can only see clients assigned to them
-   - Employees can see all clients
-   - Added validation when assigning employees (must be actual employees)
-   - Support requests filtered by employee assignments
+```json
+{
+  "id": "isharehow.isharehow.eth",
+  "username": "isharehow",
+  "email": "jamel@jameleliyah.com",
+  "name": "isharehow",
+  "avatar": "https://...",
+  "avatarUrl": "https://...",
+  "patreonId": "12345678",
+  "patreonConnected": true,
+  "isPaidMember": true,
+  "isEmployee": false,
+  "isAdmin": false,
+  "membershipTier": "Premium",
+  "membershipRenewalDate": "2025-12-25T00:00:00Z",
+  "lifetimeSupportAmount": 150.00,
+  "lastChecked": "2025-11-28T10:30:00Z",
+  "createdAt": "2025-11-25T02:52:09Z"
+}
+```
 
-### UI/UX Improvements
-1. **PACT Page Anchor Links**: Fixed smooth scrolling for hash anchors (#home, #about, etc.)
-2. **Navigation Links**: Verified all navigation links use Next.js router correctly
+---
 
-### Backend API Updates
-- `/api/creative/clients` (GET) - Now requires authentication, filters by employee assignments
-- `/api/creative/clients` (POST) - Now requires employee access
-- `/api/creative/clients/<id>` (GET/PUT) - Requires authentication and access check
-- `/api/creative/clients/<id>` (DELETE) - Requires employee access
-- `/api/creative/clients/<id>/assign-employee` - Requires employee access, validates employee_id
-- `/api/creative/employees` - Requires employee access
-- `/api/creative/support-requests` (GET/POST/PUT) - Requires authentication, filters by assignments
+## Helper Functions Needed
 
-### Database Migration Fixes
-- **Fixed**: "Table already exists" errors - Updated migrations 001 and 32 to check for existing tables before creating
-- **Fixed**: Missing `is_employee` column handling - Added safe fallback queries and error handling
-- **Created**: `RUN_MIGRATION.md` - Comprehensive migration instructions
-- **Created**: `DEBUG_LOGIN.md` - Login troubleshooting guide
+### Web3 ID Generator
+```python
+def username_to_web3_id(username: str) -> str:
+    """Convert username to Web3 domain format"""
+    if not username:
+        return None
+    return f"{username}.isharehow.eth"
+```
 
-### Additional Improvements
-- **Enhanced Login Error Messages**: Specific feedback for user not found, no password, wrong password
-- **Improved Image Fallbacks**: Better UI for broken images in ContentCard with channel icon fallback
-- **Better Error Logging**: Added app.logger statements throughout login and authentication flows
-- **Raw SQL Fallbacks**: Login and user queries work even when `is_employee` column is missing
+### Patreon Connected Checker
+```python
+@property
+def patreon_connected(self):
+    """Auto-compute patreon_connected from patreon_id"""
+    return self.patreon_id is not None
+```
 
+### Patreon Data Sync
+```python
+def sync_patreon_data(user, patreon_response):
+    """Update all Patreon-related fields from API response"""
+    # Extract data from Patreon API response
+    # Update: is_paid_member, membership_tier, membership_renewal_date, lifetime_support_amount
+    # Set last_checked = datetime.utcnow()
+```
+
+---
+
+## Migration Checklist
+
+- [ ] Create migration script
+- [ ] Add is_admin field
+- [ ] Add lifetime_support_amount field
+- [ ] Remove deprecated fields
+- [ ] Update isTeamMember → isEmployee
+- [ ] Add Web3 ID helper function
+- [ ] Update Patreon OAuth callback
+- [ ] Update profile endpoint
+- [ ] Create employee management endpoints
+- [ ] Update frontend profile page
+- [ ] Update frontend settings page (admin section)
+- [ ] Update all isTeamMember references
+- [ ] Test Patreon API integration
+- [ ] Test employee management
+- [ ] Update documentation
+
+---
+
+## Notes
+
+- Keep integer `id` as primary key for database relationships
+- Use Web3 ID format (`username.isharehow.eth`) for API responses and frontend
+- All Patreon data should be refreshed on OAuth callback
+- Admin check: `user.is_admin == True` for employee management
+- Employee check: `user.is_employee == True` for employee features

@@ -13,3 +13,5 @@ PyJWT==2.4.0
 cryptography==3.4.8
 bcrypt==4.0.1
 pywebpush==1.14.0
+web3==6.15.1
+eth-utils==2.3.1

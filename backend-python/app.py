@@ -21,6 +21,18 @@ except ImportError:
     WEBPUSH_AVAILABLE = False
     print("Warning: pywebpush not available. Push notifications will be disabled.")
 
+# Try to import web3.py for ENS (Ethereum Name Service) integration
+try:
+    from web3 import Web3
+    from ens import ENS
+    WEB3_AVAILABLE = True
+    print("✓ Web3.py and ENS module loaded successfully")
+except ImportError:
+    WEB3_AVAILABLE = False
+    print("Warning: web3.py not available. ENS integration will be disabled.")
+    Web3 = None
+    ENS = None
+
 # Load environment variables
 load_dotenv()
 
@@ -130,6 +142,106 @@ def get_frontend_url():
     frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
     return frontend_url.rstrip('/')
 
+# Web3/ENS Configuration
+ENS_DOMAIN = 'isharehow.eth'  # Your ENS domain
+ENS_PROVIDER_URL = os.environ.get('ENS_PROVIDER_URL', 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY')
+ENS_PRIVATE_KEY = os.environ.get('ENS_PRIVATE_KEY')  # For setting records (optional)
+
+# Initialize Web3 and ENS if available
+w3 = None
+ens = None
+if WEB3_AVAILABLE:
+    try:
+        # Connect to Ethereum mainnet via Infura or other provider
+        w3 = Web3(Web3.HTTPProvider(ENS_PROVIDER_URL))
+        if w3.is_connected():
+            ens = ENS.from_web3(w3)
+            print(f"✓ Web3 connected to Ethereum mainnet")
+            print(f"✓ ENS module initialized for domain: {ENS_DOMAIN}")
+        else:
+            print("Warning: Web3 connection failed. ENS features will be limited.")
+    except Exception as e:
+        print(f"Warning: Failed to initialize Web3/ENS: {e}")
+        print("ENS features will be disabled.")
+
+# ENS Helper Functions
+def username_to_ens_name(username: str) -> str:
+    """Convert username to ENS domain format: username.isharehow.eth"""
+    if not username:
+        return None
+    # Normalize username (lowercase, no spaces)
+    normalized = username.lower().strip().replace(' ', '')
+    return f"{normalized}.{ENS_DOMAIN}"
+
+def resolve_ens_to_address(ens_name: str) -> str:
+    """Resolve ENS name to Ethereum address"""
+    if not WEB3_AVAILABLE or not ens or not ens_name:
+        return None
+    try:
+        address = ens.address(ens_name)
+        if address:
+            return address.lower()  # Return checksummed address
+        return None
+    except Exception as e:
+        print(f"Error resolving ENS name {ens_name}: {e}")
+        return None
+
+def get_ens_content_hash(ens_name: str) -> str:
+    """Get content hash (IPFS hash) from ENS resolver"""
+    if not WEB3_AVAILABLE or not ens or not ens_name:
+        return None
+    try:
+        resolver = ens.resolver(ens_name)
+        if resolver:
+            content_hash = resolver.caller.contenthash(ens_name)
+            if content_hash and content_hash != b'':
+                # Convert bytes to hex string
+                return '0x' + content_hash.hex()
+        return None
+    except Exception as e:
+        print(f"Error getting content hash for {ens_name}: {e}")
+        return None
+
+def set_ens_content_hash(ens_name: str, ipfs_hash: str, private_key: str = None) -> bool:
+    """Set content hash (IPFS hash) in ENS resolver"""
+    if not WEB3_AVAILABLE or not ens or not ens_name:
+        return False
+    if not private_key:
+        private_key = ENS_PRIVATE_KEY
+    if not private_key:
+        print("Warning: No private key provided for setting ENS content hash")
+        return False
+    try:
+        # This requires the account to own the ENS name
+        # Implementation would use web3.py to set the contenthash record
+        # For now, return False as this requires wallet integration
+        print(f"Setting content hash for {ens_name} requires wallet integration")
+        return False
+    except Exception as e:
+        print(f"Error setting content hash for {ens_name}: {e}")
+        return False
+
+def resolve_or_create_ens(user_id: int, username: str) -> dict:
+    """Resolve ENS name for user or create if doesn't exist"""
+    if not username:
+        return {'ens_name': None, 'crypto_address': None, 'content_hash': None}
+    
+    ens_name = username_to_ens_name(username)
+    if not ens_name:
+        return {'ens_name': None, 'crypto_address': None, 'content_hash': None}
+    
+    # Try to resolve address
+    crypto_address = resolve_ens_to_address(ens_name)
+    
+    # Get content hash if available
+    content_hash = get_ens_content_hash(ens_name)
+    
+    return {
+        'ens_name': ens_name,
+        'crypto_address': crypto_address,
+        'content_hash': content_hash
+    }
+
 # Task model - only define if database is available
 if DB_AVAILABLE:
     class Task(db.Model):
@@ -168,6 +280,10 @@ if DB_AVAILABLE:
         last_checked = db.Column(db.DateTime, nullable=True)
         token_expires_at = db.Column(db.DateTime, nullable=True)
         patreon_connected = db.Column(db.Boolean, default=False, nullable=False)
+        # Web3/ENS fields
+        ens_name = db.Column(db.String(255), unique=True, nullable=True, index=True)  # e.g., "isharehow.isharehow.eth"
+        crypto_address = db.Column(db.String(42), nullable=True, index=True)  # Ethereum address (0x...)
+        content_hash = db.Column(db.String(255), nullable=True)  # IPFS content hash
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
         
@@ -182,8 +298,13 @@ if DB_AVAILABLE:
             return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
         
         def to_dict(self):
+            # Use ENS name as ID if available, otherwise fall back to patreon_id, username, or id
+            user_id = self.ens_name or self.patreon_id or self.username or str(self.id)
             return {
-                'id': self.patreon_id or self.username or str(self.id),  # Use patreon_id, username, or id
+                'id': user_id,
+                'ensName': self.ens_name,  # Web3 domain: username.isharehow.eth
+                'cryptoAddress': self.crypto_address,  # Ethereum address
+                'contentHash': self.content_hash,  # IPFS content hash
                 'patreonId': self.patreon_id,
                 'username': self.username,
                 'email': self.email,
@@ -254,7 +375,7 @@ if DB_AVAILABLE:
     # Wellness Models
     class UserProfile(db.Model):
         __tablename__ = 'user_profiles'
-        id = db.Column(db.String(36), primary_key=True)  # Patreon user ID
+        id = db.Column(db.String(36), primary_key=True)  # ENS name (username.isharehow.eth) or Patreon user ID
         email = db.Column(db.String(255), unique=True)
         name = db.Column(db.String(200))
         avatar_url = db.Column(db.Text)
@@ -263,12 +384,21 @@ if DB_AVAILABLE:
         is_paid_member = db.Column(db.Boolean, default=False)
         membership_payment_date = db.Column(db.DateTime, nullable=True)
         membership_renewal_date = db.Column(db.DateTime, nullable=True)
+        # Web3/ENS fields
+        ens_name = db.Column(db.String(255), unique=True, nullable=True, index=True)  # e.g., "isharehow.isharehow.eth"
+        crypto_address = db.Column(db.String(42), nullable=True, index=True)  # Ethereum address (0x...)
+        content_hash = db.Column(db.String(255), nullable=True)  # IPFS content hash
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
         def to_dict(self):
+            # Use ENS name as ID if available
+            profile_id = self.ens_name or self.id
             return {
-                'id': self.id,
+                'id': profile_id,
+                'ensName': self.ens_name,  # Web3 domain: username.isharehow.eth
+                'cryptoAddress': self.crypto_address,  # Ethereum address
+                'contentHash': self.content_hash,  # IPFS content hash
                 'email': self.email,
                 'name': self.name,
                 'avatarUrl': self.avatar_url,
@@ -1634,16 +1764,36 @@ def register():
                 }), 500
             raise
         
+        # Resolve ENS name and address for the user
+        ens_data = resolve_or_create_ens(None, username)
+        
         # Create new user
         user = User(
             username=username,
             email=email or None,
-            patreon_connected=False
+            patreon_connected=False,
+            ens_name=ens_data.get('ens_name'),
+            crypto_address=ens_data.get('crypto_address'),
+            content_hash=ens_data.get('content_hash')
         )
         user.set_password(password)
         db.session.add(user)
         
         try:
+            db.session.commit()
+            
+            # After commit, create UserProfile with ENS data
+            profile_id = ens_data.get('ens_name') or str(user.id)
+            profile = UserProfile(
+                id=profile_id,
+                email=email or None,
+                name=username,
+                patreon_id=None,
+                ens_name=ens_data.get('ens_name'),
+                crypto_address=ens_data.get('crypto_address'),
+                content_hash=ens_data.get('content_hash')
+            )
+            db.session.add(profile)
             db.session.commit()
         except Exception as commit_error:
             # Check if error is due to missing is_employee column
@@ -2414,6 +2564,10 @@ def verify_and_create_user():
         refresh_token = None
         # Note: Refresh token is only available during OAuth flow, not from manual token entry
         
+        # Resolve ENS name from username if available, otherwise use patreon_id
+        username_for_ens = user_data.get('attributes', {}).get('full_name') or api_user_id
+        ens_data = resolve_or_create_ens(None, username_for_ens)
+        
         # Create or update user in database
         user = User.query.filter_by(patreon_id=api_user_id).first()
         if not user:
@@ -2423,7 +2577,11 @@ def verify_and_create_user():
                 access_token=access_token,
                 refresh_token=refresh_token,
                 membership_paid=is_paid_member,  # Updated field name
-                last_checked=datetime.utcnow()
+                last_checked=datetime.utcnow(),
+                patreon_connected=True,  # Auto-set since we have patreon_id
+                ens_name=ens_data.get('ens_name'),
+                crypto_address=ens_data.get('crypto_address'),
+                content_hash=ens_data.get('content_hash')
             )
             # Set token expiration (default 1 hour, but tokens can vary)
             expires_in = 3600  # Default, actual expiration should come from token response
@@ -2437,15 +2595,22 @@ def verify_and_create_user():
                 user.refresh_token = refresh_token
             user.membership_paid = is_paid_member  # Updated field name
             user.last_checked = datetime.utcnow()
+            user.patreon_connected = True  # Auto-set since we have patreon_id
+            # Update ENS data if not already set
+            if not user.ens_name and ens_data.get('ens_name'):
+                user.ens_name = ens_data.get('ens_name')
+                user.crypto_address = ens_data.get('crypto_address')
+                user.content_hash = ens_data.get('content_hash')
             expires_in = 3600
             user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
             print(f"✓ Updated existing user: {api_user_id}")
         
-        # Also sync with UserProfile
-        profile = UserProfile.query.get(api_user_id)
+        # Also sync with UserProfile - use ENS name as ID if available
+        profile_id = ens_data.get('ens_name') or api_user_id
+        profile = UserProfile.query.get(profile_id)
         if not profile:
             profile = UserProfile(
-                id=api_user_id,
+                id=profile_id,
                 email=user_email,
                 name=user_name,
                 avatar_url=user_avatar,
@@ -2453,7 +2618,10 @@ def verify_and_create_user():
                 membership_tier=membership_tier,
                 is_paid_member=is_paid_member,
                 membership_payment_date=last_charge_date if is_paid_member else None,
-                membership_renewal_date=(last_charge_date + timedelta(days=30)) if (is_paid_member and last_charge_date) else None
+                membership_renewal_date=(last_charge_date + timedelta(days=30)) if (is_paid_member and last_charge_date) else None,
+                ens_name=ens_data.get('ens_name'),
+                crypto_address=ens_data.get('crypto_address'),
+                content_hash=ens_data.get('content_hash')
             )
             db.session.add(profile)
         else:
@@ -2465,6 +2633,11 @@ def verify_and_create_user():
             if is_paid_member and last_charge_date:
                 profile.membership_payment_date = last_charge_date
                 profile.membership_renewal_date = last_charge_date + timedelta(days=30)
+            # Update ENS data if not already set
+            if not profile.ens_name and ens_data.get('ens_name'):
+                profile.ens_name = ens_data.get('ens_name')
+                profile.crypto_address = ens_data.get('crypto_address')
+                profile.content_hash = ens_data.get('content_hash')
         
         db.session.commit()
         
@@ -2472,7 +2645,10 @@ def verify_and_create_user():
             'success': True,
             'message': 'User verified and created/updated successfully',
             'user': {
-                'id': api_user_id,
+                'id': ens_data.get('ens_name') or api_user_id,
+                'ensName': ens_data.get('ens_name'),
+                'cryptoAddress': ens_data.get('crypto_address'),
+                'contentHash': ens_data.get('content_hash'),
                 'patreonId': api_user_id,
                 'email': user_email,
                 'name': user_name,
@@ -2676,10 +2852,20 @@ def get_profile():
                 'identity': str(user_id)
             }), 404
         
-        # Get UserProfile if it exists
+        # Get UserProfile if it exists - use ENS name as ID if available
         profile_data = {}
         try:
-            profile_id = user.patreon_id or user.username or str(user.id)
+            # Try ENS name first, then fall back to patreon_id, username, or id
+            profile_id = None
+            if hasattr(user, 'ens_name') and user.ens_name:
+                profile_id = user.ens_name
+            elif hasattr(user, 'patreon_id') and user.patreon_id:
+                profile_id = user.patreon_id
+            elif hasattr(user, 'username') and user.username:
+                profile_id = user.username
+            else:
+                profile_id = str(getattr(user, 'id', ''))
+            
             profile = UserProfile.query.get(profile_id)
             if profile:
                 profile_data = profile.to_dict()
@@ -2694,7 +2880,10 @@ def get_profile():
             else:
                 # Fallback for SimpleNamespace objects
                 user_data = {
-                    'id': getattr(user, 'patreon_id', None) or getattr(user, 'username', None) or str(getattr(user, 'id', '')),
+                    'id': getattr(user, 'ens_name', None) or getattr(user, 'patreon_id', None) or getattr(user, 'username', None) or str(getattr(user, 'id', '')),
+                    'ensName': getattr(user, 'ens_name', None),
+                    'cryptoAddress': getattr(user, 'crypto_address', None),
+                    'contentHash': getattr(user, 'content_hash', None),
                     'patreonId': getattr(user, 'patreon_id', None),
                     'username': getattr(user, 'username', None),
                     'email': getattr(user, 'email', None),
@@ -2725,6 +2914,10 @@ def get_profile():
             'name': profile_data.get('name', getattr(user, 'username', None) or getattr(user, 'email', None) or 'User'),
             'avatar': profile_data.get('avatarUrl', ''),  # Map avatarUrl to avatar for frontend
             'avatarUrl': profile_data.get('avatarUrl', ''),  # Keep both for compatibility
+            # ENS data - prefer from profile, fall back to user
+            'ensName': profile_data.get('ensName') or user_data.get('ensName') or getattr(user, 'ens_name', None),
+            'cryptoAddress': profile_data.get('cryptoAddress') or user_data.get('cryptoAddress') or getattr(user, 'crypto_address', None),
+            'contentHash': profile_data.get('contentHash') or user_data.get('contentHash') or getattr(user, 'content_hash', None),
             'membershipTier': profile_data.get('membershipTier'),
             'isPaidMember': getattr(user, 'membership_paid', False),  # Show current payment status
             'isTeamMember': profile_data.get('isTeamMember', False),
@@ -2740,6 +2933,10 @@ def get_profile():
             'membershipAmount': None,  # Would need to be stored in UserProfile
             'lifetimeSupportAmount': None  # Would need to be stored in UserProfile
         })
+        
+        # Update ID to use ENS name if available
+        if user_data.get('ensName'):
+            user_data['id'] = user_data['ensName']
         
         return jsonify(user_data)
     except Exception as e:
