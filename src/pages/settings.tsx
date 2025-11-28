@@ -41,6 +41,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useSettings } from '../hooks/useSettings';
 import { getBackendUrl } from '../utils/backendUrl';
 import AdminClientAssignmentDialog from '../components/dashboard/creative/AdminClientAssignmentDialog';
+import { useRouter } from 'next/router';
 
 const PANEL_LABELS: Record<string, string> = {
   streaming: 'Streaming Panel',
@@ -53,6 +54,7 @@ const PANEL_LABELS: Record<string, string> = {
 };
 
 function SettingsPage() {
+  const router = useRouter();
   const { settings, updateDashboardSettings, updatePanelSettings, updateApiKeys, resetSettings } = useSettings();
   const [user, setUser] = useState<any>(null);
 
@@ -292,6 +294,35 @@ function SettingsPage() {
       }
     } catch (error: any) {
       setEmployeeError(error.message || 'Failed to update employee status');
+    }
+  };
+  
+  const toggleAdminStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/admin/users/${userId}/admin`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isAdmin: !currentStatus }),
+      });
+      if (response.ok) {
+        // Refresh employees list
+        fetchEmployees();
+        // Also refresh user data to update admin status
+        const profileResponse = await fetch(`${backendUrl}/api/profile`, { credentials: 'include' });
+        if (profileResponse.ok) {
+          const updatedUser = await profileResponse.json();
+          setUser(updatedUser);
+        }
+      } else {
+        const errorData = await response.json();
+        setEmployeeError(errorData.error || 'Failed to update admin status');
+      }
+    } catch (error: any) {
+      setEmployeeError(error.message || 'Failed to update admin status');
     }
   };
 
@@ -692,16 +723,28 @@ function SettingsPage() {
                             )}
                           </Stack>
                         </Box>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={emp.isEmployee || false}
-                              onChange={() => toggleEmployeeStatus(emp.id || emp.user_id, emp.isEmployee || false)}
-                              disabled={emp.isAdmin} // Admins are always employees
-                            />
-                          }
-                          label={emp.isEmployee ? 'Employee' : 'Not Employee'}
-                        />
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={emp.isAdmin || false}
+                                onChange={() => toggleAdminStatus(emp.id || emp.user_id, emp.isAdmin || false)}
+                                disabled={emp.id === user?.id || emp.username === user?.username} // Can't change own admin status
+                              />
+                            }
+                            label="Admin"
+                          />
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={emp.isEmployee || false}
+                                onChange={() => toggleEmployeeStatus(emp.id || emp.user_id, emp.isEmployee || false)}
+                                disabled={emp.isAdmin} // Admins are always employees
+                              />
+                            }
+                            label={emp.isEmployee ? 'Employee' : 'Not Employee'}
+                          />
+                        </Stack>
                       </Stack>
                     </Paper>
                   ))}
@@ -740,14 +783,21 @@ function SettingsPage() {
               <Typography variant="body1" sx={{ mb: 3 }}>
                 Assign clients to employees. Admins can reassign any client to any employee. Employees can view their assigned clients.
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AssignmentIcon />}
-                onClick={() => setAssignDialogOpen(true)}
-                sx={{ mb: 2 }}
-              >
-                Open Client Assignment Manager
-              </Button>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  startIcon={<AssignmentIcon />}
+                  onClick={() => setAssignDialogOpen(true)}
+                >
+                  Open Assignment Dialog
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => router.push('/creative')}
+                >
+                  Go to Creative Dashboard
+                </Button>
+              </Stack>
             </Paper>
           </Box>
         )}

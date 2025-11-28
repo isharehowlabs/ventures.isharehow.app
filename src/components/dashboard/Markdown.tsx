@@ -45,9 +45,12 @@ import {
   PlayCircle as InProgressIcon,
   Login as LoginIcon,
   Warning as WarningIcon,
+  Chat as ChatIcon,
 } from '@mui/icons-material';
 import { useTasks, Task } from '../../hooks/useTasks';
 import { trackTaskCompleted } from '../../utils/analytics';
+import Web3MQChat from '../chat/Web3MQChat';
+import { useAuth } from '../../hooks/useAuth';
 
 // Figma file embed URL (replace with real document or make dynamic as needed)
 const FIGMA_EMBED_URL =
@@ -69,9 +72,10 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function Markdown() {
+  const { user } = useAuth();
   const { tasks, createTask, updateTask, deleteTask, isLoading: tasksLoading, error: tasksError, authRequired, refresh, isStale, lastUpdated } = useTasks();
   const [markdownContent, setMarkdownContent] = useState<string>('');
-  const [activeTab, setActiveTab] = useState(0); // 0: Markdown, 1: Tasks, 2: Figma
+  const [activeTab, setActiveTab] = useState(0); // 0: Markdown, 1: Tasks, 2: Figma, 3: Chat
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -198,6 +202,7 @@ export default function Markdown() {
             <Tab icon={<DescriptionIcon />} label="Markdown Notes" iconPosition="start" />
             <Tab icon={<CheckIcon />} label="Tasks" iconPosition="start" />
             <Tab icon={<FigmaIcon />} label="Figma/Design" iconPosition="start" />
+            <Tab icon={<ChatIcon />} label="Chat" iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -207,7 +212,14 @@ export default function Markdown() {
           <TabPanel value={activeTab} index={0}>
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Collaborative Markdown Notes</Typography>
+                <Box>
+                  <Typography variant="h6">Collaborative Markdown Notes</Typography>
+                  {user && (user.isEmployee || user.isAdmin) && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      Planning workspace for employees and clients
+                    </Typography>
+                  )}
+                </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Tooltip title="Copy all">
                     <IconButton onClick={handleCopyMarkdown} size="small">
@@ -428,6 +440,17 @@ export default function Markdown() {
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                 Embed Figma designs for collaborative viewing and code generation during live sessions.
               </Typography>
+            </Box>
+          </TabPanel>
+
+          {/* Web3MQ Chat Tab */}
+          <TabPanel value={activeTab} index={3}>
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Web3MQChat
+                channelId="cowork-general"
+                channelName="Collaborative Chat"
+                compact={true}
+              />
             </Box>
           </TabPanel>
         </Box>

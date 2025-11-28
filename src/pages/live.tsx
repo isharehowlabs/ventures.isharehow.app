@@ -1,31 +1,44 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import React from 'react';
+import AppShell from '../components/AppShell';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
+import { Box, Grid, Paper, Typography } from '@mui/material';
+import Web3MQChat from '../components/chat/Web3MQChat';
+import Markdown from '../components/dashboard/Markdown';
 
-export default function LiveRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Redirect to /labs
-    router.replace('/labs');
-  }, [router]);
-
+function LiveDashboard() {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        gap: 2,
-      }}
-    >
-      <CircularProgress />
-      <Typography variant="body2" color="text.secondary">
-        Redirecting to Labs...
-      </Typography>
-    </Box>
+      <AppShell active="labs">
+      <Box sx={{ p: 3, height: '100%' }}>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          Live Collaboration
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          Real-time collaborative workspace with Web3MQ messaging
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={8}>
+            <Markdown />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Web3MQChat
+              channelId="live-session"
+              channelName="Live Session Chat"
+              compact={false}
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    </AppShell>
   );
 }
+
+function App() {
+  return (
+    <ProtectedRoute>
+      <LiveDashboard />
+    </ProtectedRoute>
+  );
+}
+
+export default App;
 

@@ -25,6 +25,7 @@ import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import DashboardMetrics from './DashboardMetrics';
 import { getBackendUrl } from '../../utils/backendUrl';
+import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -128,6 +129,13 @@ export default function CreativeDashboardPanel() {
               id="creative-tab-4"
               aria-controls="creative-tabpanel-4"
             />
+            <Tab
+              icon={<PeopleIcon />}
+              iconPosition="start"
+              label="Match Clients & Employees"
+              id="creative-tab-5"
+              aria-controls="creative-tabpanel-5"
+            />
           </Tabs>
         </Container>
       </Paper>
@@ -149,6 +157,9 @@ export default function CreativeDashboardPanel() {
           </TabPanel>
           <TabPanel value={activeTab} index={4}>
             <SupportRequests />
+          </TabPanel>
+          <TabPanel value={activeTab} index={5}>
+            <ClientEmployeeMatcher />
           </TabPanel>
         </Container>
       </Box>

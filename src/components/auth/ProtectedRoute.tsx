@@ -124,11 +124,18 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Only block dashboard pages (/labs and /rise) for unpaid members
-  // All other pages (including profile) are accessible to authenticated users
+  // BUT allow access if user is employee, admin, or assigned to a client
+  // All other pages (including profile, cowork, live) are accessible to authenticated users
   const isDashboardPage = typeof window !== 'undefined' && 
     (window.location.pathname === '/labs' || window.location.pathname === '/rise');
   
-  if (!user?.isPaidMember && isDashboardPage) {
+  // Allow access if user is employee, admin, or has assigned clients
+  const hasAccess = user?.isPaidMember || 
+                    user?.isEmployee || 
+                    user?.isAdmin ||
+                    (user?.id && typeof user.id === 'string' && user.id.toLowerCase() === 'isharehow');
+  
+  if (!hasAccess && isDashboardPage) {
     return (
       <Box
         sx={{

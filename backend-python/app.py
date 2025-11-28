@@ -1176,14 +1176,33 @@ def require_admin(f):
         user = get_current_user()
         if not user:
             return jsonify({'error': 'Authentication required'}), 401
-        # Check if user is admin (is_admin field or special patreon_id)
+        # Check if user is admin (is_admin field or special patreon_id or username)
         is_admin = False
+        
+        # Check is_admin field first
         if hasattr(user, 'is_admin'):
             is_admin = bool(user.is_admin)
-        elif hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
-            is_admin = True
-        elif hasattr(user, 'username') and user.username and user.username.lower() in ['isharehow', 'admin']:
-            is_admin = True
+        
+        # Check special identifiers if is_admin field is False or doesn't exist
+        if not is_admin:
+            # Check patreon_id
+            if hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
+                is_admin = True
+            # Check username (case-insensitive)
+            elif hasattr(user, 'username') and user.username:
+                username_lower = user.username.lower()
+                if username_lower in ['isharehow', 'admin']:
+                    is_admin = True
+            # Check email
+            elif hasattr(user, 'email') and user.email:
+                email_lower = user.email.lower()
+                if email_lower == 'jeliyah@isharehowlabs.com':
+                    is_admin = True
+            # Check ID (could be username, patreon_id, or ens_name)
+            elif hasattr(user, 'id'):
+                user_id_str = str(user.id).lower()
+                if user_id_str in ['isharehow', 'admin']:
+                    is_admin = True
         
         if not is_admin:
             return jsonify({'error': 'Admin access required'}), 403
@@ -2922,6 +2941,23 @@ def get_profile():
             else:
                 created_at = user_data.get('createdAt')
         
+        # Determine admin status (check multiple sources)
+        is_admin = False
+        if hasattr(user, 'is_admin'):
+            is_admin = bool(user.is_admin)
+        # Check special identifiers if is_admin field is False or doesn't exist
+        if not is_admin:
+            if hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
+                is_admin = True
+            elif hasattr(user, 'username') and user.username:
+                username_lower = user.username.lower()
+                if username_lower in ['isharehow', 'admin']:
+                    is_admin = True
+            elif hasattr(user, 'email') and user.email:
+                email_lower = user.email.lower()
+                if email_lower == 'jeliyah@isharehowlabs.com':
+                    is_admin = True
+        
         user_data.update({
             'name': profile_data.get('name', getattr(user, 'username', None) or getattr(user, 'email', None) or 'User'),
             'avatar': profile_data.get('avatarUrl', ''),  # Map avatarUrl to avatar for frontend
@@ -2933,7 +2969,7 @@ def get_profile():
             'membershipTier': profile_data.get('membershipTier'),
             'isPaidMember': getattr(user, 'membership_paid', False),  # Show current payment status
             'isEmployee': profile_data.get('isEmployee', False) or getattr(user, 'is_employee', False),
-            'isAdmin': getattr(user, 'is_admin', False),
+            'isAdmin': is_admin,  # Use computed admin status
             'lastChecked': getattr(user, 'last_checked', None).isoformat() if getattr(user, 'last_checked', None) and hasattr(getattr(user, 'last_checked', None), 'isoformat') else user_data.get('lastChecked'),
             'patreonConnected': getattr(user, 'patreon_connected', False) or (getattr(user, 'patreon_id', None) is not None),
             'createdAt': created_at,  # Include createdAt from UserProfile or User model
@@ -6511,6 +6547,82 @@ def admin_list_users():
         traceback.print_exc()
         app.logger.error(f"Error listing users: {e}")
         return jsonify({'error': f'Failed to list users: {str(e)}'}), 500
+
+@app.route('/api/admin/users/<user_id>/admin', methods=['PUT'])
+@require_admin
+def admin_toggle_admin(user_id):
+    """Toggle admin status for a user (admin only)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        data = request.json
+        is_admin = data.get('isAdmin', False)
+        
+        # Find user by ID, username, patreon_id, or ens_name
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        if not user:
+            user = User.query.filter_by(ens_name=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Check if is_admin column exists
+        column_exists = check_is_employee_column_exists()
+        if not column_exists:
+            # Try to add the column if it doesn't exist
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text("""
+                        ALTER TABLE users 
+                        ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT false
+                    """))
+                    conn.commit()
+            except Exception as e:
+                error_str = str(e).lower()
+                if 'already exists' not in error_str and 'duplicate' not in error_str:
+                    return jsonify({'error': 'Database migration required: is_admin column missing'}), 500
+        
+        # Update admin status
+        if hasattr(user, 'is_admin'):
+            user.is_admin = is_admin
+            # If making admin, also make them an employee
+            if is_admin and hasattr(user, 'is_employee'):
+                user.is_employee = True
+        else:
+            # Column doesn't exist, try raw SQL
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(db.text("""
+                        UPDATE users 
+                        SET is_admin = :is_admin, is_employee = CASE WHEN :is_admin = true THEN true ELSE is_employee END
+                        WHERE id = :user_id OR username = :user_id OR patreon_id = :user_id OR ens_name = :user_id
+                    """), {
+                        'is_admin': is_admin,
+                        'user_id': user_id
+                    })
+                    conn.commit()
+            except Exception as e:
+                return jsonify({'error': f'Failed to update admin status: {str(e)}'}), 500
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Admin status updated to {is_admin}',
+            'user': user.to_dict() if hasattr(user, 'to_dict') else {'id': str(user.id), 'isAdmin': is_admin}
+        })
+    except Exception as e:
+        print(f"Error updating admin status: {e}")
+        app.logger.error(f"Error updating admin status: {e}")
+        db.session.rollback()
+        return jsonify({'error': f'Failed to update admin status: {str(e)}'}), 500
 
 @app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
 @require_admin
