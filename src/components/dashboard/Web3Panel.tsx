@@ -10,14 +10,32 @@ import {
   Stack,
   Typography,
   Paper,
+  Chip,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
+import {
+  ContentCopy,
+  OpenInNew,
+  CheckCircle,
+} from '@mui/icons-material';
+import { useAuth } from '../../hooks/useAuth';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function Web3Panel() {
+  const { user } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   useEffect(() => {
     // Fetch crypto balance, transactions, and current price from backend
@@ -61,9 +79,125 @@ export default function Web3Panel() {
           >
             Web3 Dashboard
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720, mb: 3 }}>
             Welcome to your centralized dashboard for managing your decentralized life. Here you can track your crypto balances, review transactions, and access training resources to help you thrive in the Web3 ecosystem.
           </Typography>
+          
+          {/* ENS Identity Card */}
+          {(user?.ensName || user?.cryptoAddress) && (
+            <Paper elevation={2} sx={{ p: 3, mb: 3, bgcolor: 'primary.light', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'white' }}>
+                Your Web3 Identity
+              </Typography>
+              <Stack spacing={2}>
+                {user.ensName && (
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                        ENS Domain:
+                      </Typography>
+                      <Tooltip title={copied === 'ens' ? 'Copied!' : 'Copy to clipboard'}>
+                        <IconButton
+                          size="small"
+                          onClick={() => copyToClipboard(user.ensName, 'ens')}
+                          sx={{ color: 'white', p: 0.5 }}
+                        >
+                          {copied === 'ens' ? <CheckCircle fontSize="small" /> : <ContentCopy fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontWeight: 600,
+                        color: 'white',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {user.ensName}
+                    </Typography>
+                    <Chip
+                      label=".isharehow.eth"
+                      size="small"
+                      sx={{
+                        mt: 1,
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        color: 'white',
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Box>
+                )}
+                {user.cryptoAddress && (
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                        Ethereum Address:
+                      </Typography>
+                      <Tooltip title={copied === 'address' ? 'Copied!' : 'Copy to clipboard'}>
+                        <IconButton
+                          size="small"
+                          onClick={() => copyToClipboard(user.cryptoAddress, 'address')}
+                          sx={{ color: 'white', p: 0.5 }}
+                        >
+                          {copied === 'address' ? <CheckCircle fontSize="small" /> : <ContentCopy fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="View on Etherscan">
+                        <IconButton
+                          size="small"
+                          onClick={() => window.open(`https://etherscan.io/address/${user.cryptoAddress}`, '_blank')}
+                          sx={{ color: 'white', p: 0.5 }}
+                        >
+                          <OpenInNew fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'rgba(255,255,255,0.9)',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {user.cryptoAddress}
+                    </Typography>
+                  </Box>
+                )}
+                {user.contentHash && (
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                        IPFS Content Hash:
+                      </Typography>
+                      <Tooltip title={copied === 'hash' ? 'Copied!' : 'Copy to clipboard'}>
+                        <IconButton
+                          size="small"
+                          onClick={() => copyToClipboard(user.contentHash, 'hash')}
+                          sx={{ color: 'white', p: 0.5 }}
+                        >
+                          {copied === 'hash' ? <CheckCircle fontSize="small" /> : <ContentCopy fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'rgba(255,255,255,0.9)',
+                        wordBreak: 'break-all',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {user.contentHash}
+                    </Typography>
+                  </Box>
+                )}
+              </Stack>
+            </Paper>
+          )}
         </Box>
 
         {/* Trackers Section */}

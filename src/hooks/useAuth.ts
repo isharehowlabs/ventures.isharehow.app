@@ -16,16 +16,17 @@ interface User {
   patreonId?: string;
   isPaidMember?: boolean;
   membershipTier?: string;
-  membershipAmount?: number;
   lifetimeSupportAmount?: number;
-  membershipPaymentDate?: string;
   membershipRenewalDate?: string;
-  isTeamMember?: boolean;
+  isEmployee?: boolean;
+  isAdmin?: boolean;
   createdAt?: string;
   patreonConnected?: boolean;
   lastChecked?: string;
-  lastChargeDate?: string;
-  pledgeStart?: string;
+  // Web3/ENS fields
+  ensName?: string;
+  cryptoAddress?: string;
+  contentHash?: string;
 }
 
 interface AuthState {

@@ -277,6 +277,7 @@ if DB_AVAILABLE:
         refresh_token = db.Column(db.String(500), nullable=True)
         membership_paid = db.Column(db.Boolean, default=False, nullable=False)  # Renamed from membership_active
         is_employee = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Employee flag for Creative Dashboard
+        is_admin = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Admin flag for system administration
         last_checked = db.Column(db.DateTime, nullable=True)
         token_expires_at = db.Column(db.DateTime, nullable=True)
         patreon_connected = db.Column(db.Boolean, default=False, nullable=False)
@@ -309,7 +310,10 @@ if DB_AVAILABLE:
                 'username': self.username,
                 'email': self.email,
                 'membershipPaid': self.membership_paid,  # Updated field name
-                'patreonConnected': self.patreon_connected,
+                'isPaidMember': self.membership_paid,  # Alias for consistency
+                'isEmployee': self.is_employee,
+                'isAdmin': self.is_admin,
+                'patreonConnected': self.patreon_connected or (self.patreon_id is not None),  # Auto-computed
                 'lastChecked': self.last_checked.isoformat() if self.last_checked else None
             }
 
@@ -382,8 +386,9 @@ if DB_AVAILABLE:
         patreon_id = db.Column(db.String(50), nullable=True)
         membership_tier = db.Column(db.String(50))
         is_paid_member = db.Column(db.Boolean, default=False)
-        membership_payment_date = db.Column(db.DateTime, nullable=True)
-        membership_renewal_date = db.Column(db.DateTime, nullable=True)
+        is_employee = db.Column(db.Boolean, default=False)  # Employee status (renamed from isTeamMember)
+        membership_renewal_date = db.Column(db.DateTime, nullable=True)  # From Patreon API
+        lifetime_support_amount = db.Column(db.Numeric(10, 2), nullable=True)  # From Patreon API (in dollars)
         # Web3/ENS fields
         ens_name = db.Column(db.String(255), unique=True, nullable=True, index=True)  # e.g., "isharehow.isharehow.eth"
         crypto_address = db.Column(db.String(42), nullable=True, index=True)  # Ethereum address (0x...)
@@ -405,8 +410,9 @@ if DB_AVAILABLE:
                 'patreonId': self.patreon_id,
                 'membershipTier': self.membership_tier,
                 'isPaidMember': self.is_paid_member,
-                'membershipPaymentDate': self.membership_payment_date.isoformat() if self.membership_payment_date else None,
+                'isEmployee': self.is_employee,  # Renamed from isTeamMember
                 'membershipRenewalDate': self.membership_renewal_date.isoformat() if self.membership_renewal_date else None,
+                'lifetimeSupportAmount': float(self.lifetime_support_amount) if self.lifetime_support_amount else None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
                 'updatedAt': self.updated_at.isoformat() if self.updated_at else None
             }
@@ -1159,6 +1165,28 @@ def require_employee(f):
             return jsonify({'error': 'Authentication required'}), 401
         if not safe_get_is_employee(user):
             return jsonify({'error': 'Employee access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_admin(f):
+    """Decorator to require user to be an admin"""
+    @wraps(f)
+    @jwt_required()
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        # Check if user is admin (is_admin field or special patreon_id)
+        is_admin = False
+        if hasattr(user, 'is_admin'):
+            is_admin = bool(user.is_admin)
+        elif hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
+            is_admin = True
+        elif hasattr(user, 'username') and user.username and user.username.lower() in ['isharehow', 'admin']:
+            is_admin = True
+        
+        if not is_admin:
+            return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)
     return decorated_function
 
@@ -2314,7 +2342,8 @@ def auth_me():
                 'avatarUrl': profile_data.get('avatarUrl', ''),
                 'membershipTier': profile_data.get('membershipTier'),
                 'isPaidMember': getattr(user, 'membership_paid', False),  # Updated field name
-                'isTeamMember': profile_data.get('isTeamMember', False),
+                'isEmployee': profile_data.get('isEmployee', False) or getattr(user, 'is_employee', False),
+                'isAdmin': getattr(user, 'is_admin', False),
                 'authenticated': True  # Explicitly mark as authenticated
             })
             
@@ -2511,12 +2540,13 @@ def verify_and_create_user():
         user_email = attributes.get('email') or email
         user_avatar = attributes.get('image_url', '')
         
-        # Check membership status
+        # Check membership status - pull all data from Patreon API
         is_paid_member = False
         membership_tier = None
         membership_amount = 0
+        lifetime_support_cents = 0
         last_charge_date = None
-        pledge_start = None
+        membership_renewal_date = None
         
         memberships = relationships.get('memberships', {}).get('data', [])
         if memberships:
@@ -2528,30 +2558,41 @@ def verify_and_create_user():
                         member_attrs = item.get('attributes', {})
                         patron_status = member_attrs.get('patron_status')
                         amount_cents = member_attrs.get('currently_entitled_amount_cents', 0)
+                        lifetime_support_cents = member_attrs.get('lifetime_support_cents', 0) or amount_cents
                         
-                        # Extract dates
+                        # Extract last charge date
                         last_charge_str = member_attrs.get('last_charge_date')
                         if last_charge_str:
                             try:
                                 last_charge_date = datetime.fromisoformat(last_charge_str.replace('Z', '+00:00'))
+                                # Calculate renewal date (typically monthly, so add 30 days)
+                                membership_renewal_date = last_charge_date + timedelta(days=30)
                             except:
                                 pass
-                        pledge_start_str = member_attrs.get('pledge_start')
-                        if pledge_start_str:
-                            try:
-                                pledge_start = datetime.fromisoformat(pledge_start_str.replace('Z', '+00:00'))
-                            except:
-                                pass
+                        
+                        # Get tier name from campaign or calculate from amount
+                        # Try to get tier name from campaign relationship
+                        campaign_id = item.get('relationships', {}).get('campaign', {}).get('data', {}).get('id')
+                        if campaign_id:
+                            for campaign_item in included:
+                                if campaign_item.get('id') == campaign_id and campaign_item.get('type') == 'campaign':
+                                    campaign_attrs = campaign_item.get('attributes', {})
+                                    # Try to get tier name from campaign or membership
+                                    tier_name = campaign_attrs.get('name') or member_attrs.get('tier', {}).get('title')
+                                    if tier_name:
+                                        membership_tier = tier_name
                         
                         if patron_status == 'active_patron':
                             is_paid_member = True
                             membership_amount = amount_cents / 100
-                            if membership_amount >= 10:
-                                membership_tier = 'premium'
-                            elif membership_amount >= 5:
-                                membership_tier = 'standard'
-                            else:
-                                membership_tier = 'basic'
+                            # If tier not found from campaign, calculate from amount
+                            if not membership_tier:
+                                if membership_amount >= 10:
+                                    membership_tier = 'Premium'
+                                elif membership_amount >= 5:
+                                    membership_tier = 'Standard'
+                                else:
+                                    membership_tier = 'Basic'
                         break
         
         # Special handling for creator/admin
@@ -2617,8 +2658,8 @@ def verify_and_create_user():
                 patreon_id=api_user_id,
                 membership_tier=membership_tier,
                 is_paid_member=is_paid_member,
-                membership_payment_date=last_charge_date if is_paid_member else None,
-                membership_renewal_date=(last_charge_date + timedelta(days=30)) if (is_paid_member and last_charge_date) else None,
+                membership_renewal_date=membership_renewal_date,
+                lifetime_support_amount=lifetime_support_cents / 100 if lifetime_support_cents else None,
                 ens_name=ens_data.get('ens_name'),
                 crypto_address=ens_data.get('crypto_address'),
                 content_hash=ens_data.get('content_hash')
@@ -2630,9 +2671,9 @@ def verify_and_create_user():
             profile.avatar_url = user_avatar or profile.avatar_url
             profile.membership_tier = membership_tier
             profile.is_paid_member = is_paid_member
-            if is_paid_member and last_charge_date:
-                profile.membership_payment_date = last_charge_date
-                profile.membership_renewal_date = last_charge_date + timedelta(days=30)
+            profile.membership_renewal_date = membership_renewal_date
+            if lifetime_support_cents:
+                profile.lifetime_support_amount = lifetime_support_cents / 100
             # Update ENS data if not already set
             if not profile.ens_name and ens_data.get('ens_name'):
                 profile.ens_name = ens_data.get('ens_name')
@@ -2654,9 +2695,8 @@ def verify_and_create_user():
                 'name': user_name,
                 'isPaidMember': is_paid_member,
                 'membershipTier': membership_tier,
-                'membershipAmount': membership_amount,
-                'lastChargeDate': last_charge_date.isoformat() if last_charge_date else None,
-                'pledgeStart': pledge_start.isoformat() if pledge_start else None
+                'membershipRenewalDate': membership_renewal_date.isoformat() if membership_renewal_date else None,
+                'lifetimeSupportAmount': lifetime_support_cents / 100 if lifetime_support_cents else None
             }
         })
         
@@ -2920,18 +2960,13 @@ def get_profile():
             'contentHash': profile_data.get('contentHash') or user_data.get('contentHash') or getattr(user, 'content_hash', None),
             'membershipTier': profile_data.get('membershipTier'),
             'isPaidMember': getattr(user, 'membership_paid', False),  # Show current payment status
-            'isTeamMember': profile_data.get('isTeamMember', False),
+            'isEmployee': profile_data.get('isEmployee', False) or getattr(user, 'is_employee', False),
+            'isAdmin': getattr(user, 'is_admin', False),
             'lastChecked': getattr(user, 'last_checked', None).isoformat() if getattr(user, 'last_checked', None) and hasattr(getattr(user, 'last_checked', None), 'isoformat') else user_data.get('lastChecked'),
-            'patreonConnected': getattr(user, 'patreon_connected', False),
+            'patreonConnected': getattr(user, 'patreon_connected', False) or (getattr(user, 'patreon_id', None) is not None),
             'createdAt': created_at,  # Include createdAt from UserProfile or User model
-            'membershipPaymentDate': profile_data.get('membershipPaymentDate'),
             'membershipRenewalDate': profile_data.get('membershipRenewalDate'),
-            'lastChargeDate': profile_data.get('membershipPaymentDate'),  # Alias for frontend
-            'pledgeStart': profile_data.get('membershipRenewalDate'),  # Alias for frontend
-            # Membership amount fields - these would need to be stored in UserProfile or calculated
-            # For now, return None/0 if not available
-            'membershipAmount': None,  # Would need to be stored in UserProfile
-            'lifetimeSupportAmount': None  # Would need to be stored in UserProfile
+            'lifetimeSupportAmount': profile_data.get('lifetimeSupportAmount')
         })
         
         # Update ID to use ENS name if available
@@ -5140,11 +5175,12 @@ def patreon_callback():
             print(f"Patreon OAuth error: No access token. Response: {token_data}")
             return redirect(f'{get_frontend_url()}/?auth=error&message=token_error')
 
-        # Fetch user identity with memberships and campaign relationships, including last_charge_date and pledge_start
+        # Fetch user identity with memberships and campaign relationships, including all membership data
         identity_url = (
-            "https://www.patreon.com/api/oauth2/v2/identity?include=memberships,campaigns"
-            "&fields[member]=patron_status,currently_entitled_amount_cents,last_charge_date,pledge_start"
-            "&fields[campaign]=name,creation_name"
+            "https://www.patreon.com/api/oauth2/v2/identity?include=memberships,campaign"
+            "&fields[user]=id,email,full_name,image_url"
+            "&fields[member]=patron_status,currently_entitled_amount_cents,lifetime_support_cents,last_charge_date,pledge_start"
+            "&fields[campaign]=name"
         )
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -5174,21 +5210,15 @@ def patreon_callback():
         user_email = attributes.get('email', '')
         user_avatar = attributes.get('image_url', '')
         
-        # Check membership status and team access
+        # Check membership status - pull all data from Patreon API
         is_paid_member = False
         membership_tier = None
         membership_amount = 0
-        is_team_member = False
+        lifetime_support_cents = 0
         last_charge_date = None
-        pledge_start = None
+        membership_renewal_date = None
         
         memberships = relationships.get('memberships', {}).get('data', [])
-        campaigns = relationships.get('campaigns', {}).get('data', [])
-        
-        # Check if user owns any campaigns (indicates they're a creator/admin)
-        if campaigns:
-            is_team_member = True
-            print(f"✓ User {user_id} is a campaign creator/owner - granting team access")
         
         if memberships:
             # Get membership details from included data
@@ -5200,32 +5230,40 @@ def patreon_callback():
                         member_attrs = item.get('attributes', {})
                         patron_status = member_attrs.get('patron_status')
                         amount_cents = member_attrs.get('currently_entitled_amount_cents', 0)
+                        lifetime_support_cents = member_attrs.get('lifetime_support_cents', 0) or amount_cents
                         
-                        # Extract last_charge_date and pledge_start
+                        # Extract last_charge_date and calculate renewal
                         last_charge_str = member_attrs.get('last_charge_date')
                         if last_charge_str:
                             try:
                                 last_charge_date = datetime.fromisoformat(last_charge_str.replace('Z', '+00:00'))
+                                # Calculate renewal date (typically monthly, so add 30 days)
+                                membership_renewal_date = last_charge_date + timedelta(days=30)
                             except:
                                 pass
-                        pledge_start_str = member_attrs.get('pledge_start')
-                        if pledge_start_str:
-                            try:
-                                pledge_start = datetime.fromisoformat(pledge_start_str.replace('Z', '+00:00'))
-                            except:
-                                pass
+                        
+                        # Get tier name from campaign relationship
+                        campaign_id = item.get('relationships', {}).get('campaign', {}).get('data', {}).get('id')
+                        if campaign_id:
+                            for campaign_item in included:
+                                if campaign_item.get('id') == campaign_id and campaign_item.get('type') == 'campaign':
+                                    campaign_attrs = campaign_item.get('attributes', {})
+                                    tier_name = campaign_attrs.get('name')
+                                    if tier_name:
+                                        membership_tier = tier_name
                         
                         # Check if active patron
                         if patron_status == 'active_patron':
                             is_paid_member = True
                             membership_amount = amount_cents / 100  # Convert cents to dollars
-                            # You can determine tier based on amount if needed
-                            if membership_amount >= 10:
-                                membership_tier = 'premium'
-                            elif membership_amount >= 5:
-                                membership_tier = 'standard'
-                            else:
-                                membership_tier = 'basic'
+                            # If tier not found from campaign, calculate from amount
+                            if not membership_tier:
+                                if membership_amount >= 10:
+                                    membership_tier = 'Premium'
+                                elif membership_amount >= 5:
+                                    membership_tier = 'Standard'
+                                else:
+                                    membership_tier = 'Basic'
                         break
         
         # Special handling for creator/admin - they shouldn't be considered paid members of their own product
@@ -5260,7 +5298,10 @@ def patreon_callback():
                             membership_paid=is_paid_member,  # Updated field name
                             last_checked=datetime.utcnow(),
                             token_expires_at=token_expires_at,
-                            patreon_connected=True
+                            patreon_connected=True,
+                            ens_name=ens_data.get('ens_name'),
+                            crypto_address=ens_data.get('crypto_address'),
+                            content_hash=ens_data.get('content_hash')
                         )
                         db.session.add(user)
                         print(f"✓ Created new user in database: {user_id}")
@@ -5274,6 +5315,11 @@ def patreon_callback():
                         user.last_checked = datetime.utcnow()
                         user.token_expires_at = token_expires_at
                         user.patreon_connected = True
+                        # Update ENS data if not already set
+                        if not user.ens_name and ens_data.get('ens_name'):
+                            user.ens_name = ens_data.get('ens_name')
+                            user.crypto_address = ens_data.get('crypto_address')
+                            user.content_hash = ens_data.get('content_hash')
                         print(f"✓ Linked Patreon account to existing user: {user.username or user.email}")
                 else:
                     # Update existing Patreon-linked user
@@ -5282,9 +5328,14 @@ def patreon_callback():
                     if refresh_token:
                         user.refresh_token = refresh_token
                     user.membership_paid = is_paid_member  # Updated field name
-                    user.last_checked = datetime.utcnow()
+                    user.last_checked = datetime.utcnow()  # Update last_checked when Patreon OAuth is called
                     user.token_expires_at = token_expires_at
-                    user.patreon_connected = True
+                    user.patreon_connected = True  # Auto-set since we have patreon_id
+                    # Update ENS data if not already set
+                    if not user.ens_name and ens_data.get('ens_name'):
+                        user.ens_name = ens_data.get('ens_name')
+                        user.crypto_address = ens_data.get('crypto_address')
+                        user.content_hash = ens_data.get('content_hash')
                     print(f"✓ Updated existing user in database: {user_id}")
                 
                 db.session.commit()
@@ -5301,38 +5352,51 @@ def patreon_callback():
             # If no linked user, create a temporary token (shouldn't happen in normal flow)
             jwt_token = create_access_token(identity=user_id)
         
+        # Resolve ENS name for user
+        username_for_ens = user_name or user_email.split('@')[0] if user_email else user_id
+        ens_data = resolve_or_create_ens(None, username_for_ens)
+        
         # Sync user profile to database (UserProfile for wellness features)
         if DB_AVAILABLE:
             try:
-                profile = UserProfile.query.get(user_id)
+                # Use ENS name as profile ID if available
+                profile_id = ens_data.get('ens_name') or user_id
+                profile = UserProfile.query.get(profile_id)
                 if not profile:
                     # Create new profile
                     profile = UserProfile(
-                        id=user_id,
+                        id=profile_id,
                         email=user_email,
                         name=user_name,
                         avatar_url=user_avatar,
                         patreon_id=user_id,
                         membership_tier=membership_tier,
                         is_paid_member=is_paid_member,
-                        membership_payment_date=datetime.utcnow() if is_paid_member else None,
-                        membership_renewal_date=(datetime.utcnow() + timedelta(days=30)) if is_paid_member else None
+                        membership_renewal_date=membership_renewal_date,
+                        lifetime_support_amount=lifetime_support_cents / 100 if lifetime_support_cents else None,
+                        ens_name=ens_data.get('ens_name'),
+                        crypto_address=ens_data.get('crypto_address'),
+                        content_hash=ens_data.get('content_hash')
                     )
                     db.session.add(profile)
-                    print(f"✓ Created new user profile in database: {user_id}")
+                    print(f"✓ Created new user profile in database: {profile_id}")
                 else:
                     # Update existing profile
-                    profile.email = user_email
-                    profile.name = user_name
-                    profile.avatar_url = user_avatar
+                    profile.email = user_email or profile.email
+                    profile.name = user_name or profile.name
+                    profile.avatar_url = user_avatar or profile.avatar_url
                     profile.membership_tier = membership_tier
                     profile.is_paid_member = is_paid_member
-                    # Only update payment date if it wasn't set before and they're now a paid member
-                    if is_paid_member and not profile.membership_payment_date:
-                        profile.membership_payment_date = datetime.utcnow()
-                        profile.membership_renewal_date = datetime.utcnow() + timedelta(days=30)
+                    profile.membership_renewal_date = membership_renewal_date
+                    if lifetime_support_cents:
+                        profile.lifetime_support_amount = lifetime_support_cents / 100
+                    # Update ENS data if not already set
+                    if not profile.ens_name and ens_data.get('ens_name'):
+                        profile.ens_name = ens_data.get('ens_name')
+                        profile.crypto_address = ens_data.get('crypto_address')
+                        profile.content_hash = ens_data.get('content_hash')
                     profile.updated_at = datetime.utcnow()
-                    print(f"✓ Updated existing user profile in database: {user_id}")
+                    print(f"✓ Updated existing user profile in database: {profile_id}")
                 
                 db.session.commit()
             except Exception as db_error:
@@ -6219,4 +6283,87 @@ def get_crypto_stats():
     except Exception as e:
         print(f"Error fetching crypto stats: {e}")
         return jsonify({'error': 'Failed to fetch stats'}), 500
+
+# --- Admin Endpoints ---
+@app.route('/api/admin/users', methods=['GET'])
+@require_admin
+def admin_list_users():
+    """List all users (admin only)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        users = User.query.all()
+        users_data = []
+        for user in users:
+            user_dict = user.to_dict()
+            # Also get profile data if available
+            try:
+                profile_id = user.ens_name or user.patreon_id or user.username or str(user.id)
+                profile = UserProfile.query.get(profile_id)
+                if profile:
+                    profile_dict = profile.to_dict()
+                    user_dict.update(profile_dict)
+            except:
+                pass
+            users_data.append(user_dict)
+        
+        return jsonify({'users': users_data})
+    except Exception as e:
+        print(f"Error listing users: {e}")
+        app.logger.error(f"Error listing users: {e}")
+        return jsonify({'error': 'Failed to list users'}), 500
+
+@app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
+@require_admin
+def admin_toggle_employee(user_id):
+    """Toggle employee status for a user (admin only)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        data = request.json
+        is_employee = data.get('isEmployee', False)
+        
+        # Find user by ID, username, patreon_id, or ens_name
+        user = None
+        if user_id.isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=user_id).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=user_id).first()
+        if not user:
+            user = User.query.filter_by(ens_name=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Don't allow removing employee status from admins
+        if hasattr(user, 'is_admin') and user.is_admin and not is_employee:
+            return jsonify({'error': 'Cannot remove employee status from admins'}), 400
+        
+        user.is_employee = is_employee
+        db.session.commit()
+        
+        # Also update UserProfile if it exists
+        try:
+            profile_id = user.ens_name or user.patreon_id or user.username or str(user.id)
+            profile = UserProfile.query.get(profile_id)
+            if profile:
+                profile.is_employee = is_employee
+                db.session.commit()
+        except:
+            pass
+        
+        return jsonify({
+            'success': True,
+            'message': f'Employee status updated to {is_employee}',
+            'user': user.to_dict()
+        })
+    except Exception as e:
+        print(f"Error updating employee status: {e}")
+        app.logger.error(f"Error updating employee status: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update employee status'}), 500
 

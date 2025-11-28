@@ -250,7 +250,12 @@ function ProfilePage() {
     avatar: profileData?.avatar || profileData?.avatarUrl || authUser?.avatar,
     isPaidMember: profileData?.isPaidMember ?? authUser?.isPaidMember,
     patreonConnected: profileData?.patreonConnected ?? authUser?.patreonConnected,
-    isTeamMember: profileData?.isTeamMember ?? authUser?.isTeamMember,
+    isEmployee: profileData?.isEmployee ?? authUser?.isEmployee ?? false,
+    isAdmin: profileData?.isAdmin ?? authUser?.isAdmin ?? false,
+    // ENS/Web3 fields
+    ensName: profileData?.ensName || authUser?.ensName,
+    cryptoAddress: profileData?.cryptoAddress || authUser?.cryptoAddress,
+    contentHash: profileData?.contentHash || authUser?.contentHash,
   };
 
   return (
@@ -354,10 +359,43 @@ function ProfilePage() {
                 <Stack spacing={2}>
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      User ID
+                      ENS Domain (Web3 ID)
                     </Typography>
-                    <Typography variant="body1">{user.id || 'Not available'}</Typography>
+                    <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                      {user.ensName || user.id || 'Not available'}
+                    </Typography>
+                    {user.ensName && (
+                      <Typography variant="caption" color="text.secondary">
+                        Your Web3 identity on the Ethereum blockchain
+                      </Typography>
+                    )}
                   </Box>
+                  {user.cryptoAddress && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Ethereum Address
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+                        {user.cryptoAddress}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Resolved from your ENS domain
+                      </Typography>
+                    </Box>
+                  )}
+                  {user.contentHash && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        IPFS Content Hash
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+                        {user.contentHash}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Points to decentralized storage
+                      </Typography>
+                    </Box>
+                  )}
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Patreon ID
@@ -381,11 +419,19 @@ function ProfilePage() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Role
                     </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      {user.isTeamMember && (
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" gap={1}>
+                      {user.isEmployee && (
                         <Chip
-                          label="Team Member"
+                          label="Employee"
                           color="secondary"
+                          variant="filled"
+                          size="small"
+                        />
+                      )}
+                      {user.isAdmin && (
+                        <Chip
+                          label="Admin"
+                          color="error"
                           variant="filled"
                           size="small"
                         />
@@ -393,16 +439,16 @@ function ProfilePage() {
                       <Chip
                         label={
                           user.patreonId === '56776112' ? 'Super Admin' :
-                          user.isTeamMember ? 'Staff' :
+                          user.isEmployee ? 'Staff' :
                           'Community Member'
                         }
                         color={
                           user.patreonId === '56776112' ? 'error' :
-                          user.isTeamMember ? 'warning' :
+                          user.isEmployee ? 'warning' :
                           'primary'
                         }
                         variant={
-                          user.patreonId === '56776112' || user.isTeamMember ? 'filled' : 'outlined'
+                          user.patreonId === '56776112' || user.isEmployee ? 'filled' : 'outlined'
                         }
                         size="small"
                       />
@@ -441,9 +487,9 @@ function ProfilePage() {
                       )}
                     </Stack>
                     <Stack direction="row" spacing={1} alignItems="center">
-                      {user.isTeamMember && (
+                      {user.isEmployee && (
                         <Chip
-                          label="Team Access"
+                          label="Employee Access"
                           color="warning"
                           variant="filled"
                           size="small"
@@ -493,30 +539,6 @@ function ProfilePage() {
                       {user.membershipTier ? user.membershipTier.charAt(0).toUpperCase() + user.membershipTier.slice(1) : 'Not set'}
                     </Typography>
                   </Box>
-                  {user.membershipAmount && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Monthly Support
-                      </Typography>
-                      <Typography variant="body1">${user.membershipAmount.toFixed(2)}/month</Typography>
-                    </Box>
-                  )}
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Date Paid
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: user.membershipPaymentDate ? 500 : 400 }}>
-                      {user.membershipPaymentDate 
-                        ? new Date(user.membershipPaymentDate).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })
-                        : user.isPaidMember 
-                          ? 'Payment date not available'
-                          : 'No payment recorded'}
-                    </Typography>
-                  </Box>
                   {user.isPaidMember && user.membershipRenewalDate && (
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
@@ -536,34 +558,11 @@ function ProfilePage() {
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                         Lifetime Support
                       </Typography>
-                      <Typography variant="body1">${user.lifetimeSupportAmount.toFixed(2)}</Typography>
-                    </Box>
-                  )}
-                  {user.lastChargeDate && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Last Charge Date
-                      </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {new Date(user.lastChargeDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        ${user.lifetimeSupportAmount.toFixed(2)}
                       </Typography>
-                    </Box>
-                  )}
-                  {user.pledgeStart && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Pledge Start
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {new Date(user.pledgeStart).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                      <Typography variant="caption" color="text.secondary">
+                        Total amount supported over time
                       </Typography>
                     </Box>
                   )}
