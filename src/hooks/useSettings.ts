@@ -15,7 +15,7 @@ export interface PanelSettings {
   docs: { visible: boolean; order: number };
   learning: { visible: boolean; order: number };
   aiJournal: { visible: boolean; order: number };
-  web3: { visible: boolean; order: number };
+  web3?: { visible: boolean; order: number }; // Optional - deprecated, ENS info now in profile page
   focus: { visible: boolean; order: number };
   aiAgent: { visible: boolean; order: number };
 }
@@ -45,7 +45,7 @@ const DEFAULT_PANEL_SETTINGS: PanelSettings = {
   docs: { visible: true, order: 2 },
   learning: { visible: true, order: 3 },
   aiJournal: { visible: true, order: 4 },
-  web3: { visible: true, order: 5 },
+  // web3: { visible: false, order: 5 }, // Removed - ENS info now in profile
   focus: { visible: true, order: 6 },
   aiAgent: { visible: true, order: 7 },
 };
@@ -163,7 +163,11 @@ export function useSettings() {
 
   const getVisiblePanels = useCallback(() => {
     return Object.entries(settings.panels)
-      .filter(([_, config]) => config.visible)
+      .filter(([key, config]) => {
+        // Filter out web3 panel (removed - ENS info now in profile)
+        if (key === 'web3') return false;
+        return config.visible;
+      })
       .sort(([_, a], [__, b]) => a.order - b.order)
       .map(([key]) => key as keyof PanelSettings);
   }, [settings.panels]);

@@ -5,7 +5,7 @@ import FigmaPanel from './FigmaPanel';
 import DocsPanel from './DocsPanel';
 import LearningPanel from './LearningPanel';
 import OpportunityPanel from './OpportunityPanel';
-import Web3Panel from './Web3Panel';
+// Web3Panel removed - ENS info now displayed in profile page
 import FocusPanel from './FocusPanel';
 import AIJournalPanel from './AIJournalPanel';
 import AiAgentPanel from './AiAgentPanel';
@@ -59,7 +59,7 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
     opportunities: { component: <OpportunityPanel />, label: 'Opportunities' },
     learning: { component: <LearningPanel />, label: 'Learning Hub' },
     communityQA: { component: communityQA, label: 'Community Q&A' },
-    web3: { component: <Web3Panel />, label: 'Web3' },
+    // web3 panel removed - ENS info now in profile page
     focus: { component: <FocusPanel />, label: 'Focus Timer' },
     aiJournal: { component: <AIJournalPanel />, label: 'Mindset Journal' },
     aiAgent: { component: <AiAgentPanel />, label: 'AI Agent' },
