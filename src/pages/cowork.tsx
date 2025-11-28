@@ -1,12 +1,12 @@
 import React from 'react';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import Markdown from '../components/dashboard/Markdown';
+import Workspace from '../components/dashboard/Workspace';
 
 function CoworkDashboard() {
   return (
     <AppShell active="labs">
-      <Markdown />
+      <Workspace />
     </AppShell>
   );
 }

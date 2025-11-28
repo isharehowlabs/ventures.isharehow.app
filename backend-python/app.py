@@ -250,6 +250,7 @@ if DB_AVAILABLE:
         description = db.Column(db.Text)
         hyperlinks = db.Column(db.Text)  # JSON string of array
         status = db.Column(db.String(20), default='pending')
+        support_request_id = db.Column(db.String(36), db.ForeignKey('support_requests.id'), nullable=True, index=True)  # Link to support request
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -260,6 +261,7 @@ if DB_AVAILABLE:
                 'description': self.description,
                 'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
                 'status': self.status,
+                'supportRequestId': self.support_request_id,
                 'createdAt': self.created_at.isoformat(),
                 'updatedAt': self.updated_at.isoformat()
             }
@@ -3642,7 +3644,8 @@ def create_task():
             title=data['title'].strip(),
             description=data.get('description', '') or '',
             hyperlinks=json.dumps(data.get('hyperlinks', [])),
-            status=data.get('status', 'pending')
+            status=data.get('status', 'pending'),
+            support_request_id=data.get('supportRequestId') or data.get('support_request_id')  # Link to support request if provided
         )
         
         try:
@@ -3696,6 +3699,9 @@ def update_task(task_id):
         task.description = data.get('description', task.description)
         task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
         task.status = data.get('status', task.status)
+        # Update support request link if provided
+        if 'supportRequestId' in data or 'support_request_id' in data:
+            task.support_request_id = data.get('supportRequestId') or data.get('support_request_id') or None
         db.session.commit()
         user_info = get_user_info()
         task_data = task.to_dict()
@@ -4589,15 +4595,29 @@ def get_clients():
         
         clients = query.order_by(Client.created_at.desc()).all()
         
+        # Check if user is admin (admins see all clients)
+        is_admin = False
+        if hasattr(user, 'is_admin'):
+            is_admin = bool(user.is_admin)
+        if not is_admin:
+            # Check special identifiers
+            if hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
+                is_admin = True
+            elif hasattr(user, 'username') and user.username:
+                username_lower = user.username.lower()
+                if username_lower in ['isharehow', 'admin']:
+                    is_admin = True
+        
+        # If admin, show all clients (no filtering)
         # If not an employee, filter to only show clients assigned to this user
-        if not is_employee:
+        if not is_admin and not is_employee:
             clients = [
                 c for c in clients 
                 if c.employee_assignments and 
                 any(a.employee_id == user_db_id for a in c.employee_assignments)
             ]
-        # Filter by employee if specified (only employees can filter by other employees)
-        elif employee_id:
+        # Filter by employee if specified (only employees/admins can filter by other employees)
+        elif employee_id and not is_admin:
             try:
                 emp_id_int = int(employee_id)
                 clients = [c for c in clients if c.employee_assignments and 
@@ -4795,18 +4815,36 @@ def assign_employee(client_id):
             return jsonify({'error': 'Client not found'}), 404
         
         data = request.get_json()
-        employee_id = data.get('employeeId')
-        employee_name = data.get('employeeName')
+        employee_id = data.get('employee_id') or data.get('employeeId')
+        employee_name = data.get('employee_name') or data.get('employeeName')
         
         # Validate that employee_id exists and is an employee
         if employee_id:
-            employee = User.query.get(employee_id)
+            # Try to find employee by ID (could be int or string)
+            try:
+                emp_id_int = int(employee_id)
+                employee = User.query.get(emp_id_int)
+            except (ValueError, TypeError):
+                # Try finding by username, patreon_id, or ens_name
+                employee = User.query.filter_by(username=str(employee_id)).first()
+                if not employee:
+                    employee = User.query.filter_by(patreon_id=str(employee_id)).first()
+                if not employee:
+                    employee = User.query.filter_by(ens_name=str(employee_id)).first()
+            
             if not employee:
-                return jsonify({'error': 'Employee not found'}), 404
-            if not safe_get_is_employee(employee):
-                return jsonify({'error': 'User is not an employee'}), 400
+                return jsonify({'error': f'Employee not found: {employee_id}'}), 404
+            
+            # Check if user is employee or admin (admins can also be assigned)
+            is_employee = safe_get_is_employee(employee)
+            is_admin = getattr(employee, 'is_admin', False)
+            
+            if not is_employee and not is_admin:
+                return jsonify({'error': 'User is not an employee or admin'}), 400
+            
             # Get the employee name from the database
             employee_name = employee.username or employee.email or employee_name
+            employee_id = employee.id  # Use the actual database ID
         
         # Remove existing assignments
         ClientEmployeeAssignment.query.filter_by(client_id=client_id).delete()

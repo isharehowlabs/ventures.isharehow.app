@@ -175,8 +175,8 @@ export default function ClientList({ onAddClient }: ClientListProps) {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          employeeId,
-          employeeName,
+          employee_id: employeeId,
+          employee_name: employeeName,
         }),
       });
 

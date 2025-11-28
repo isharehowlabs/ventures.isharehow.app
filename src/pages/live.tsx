@@ -3,11 +3,11 @@ import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { Box, Grid, Paper, Typography } from '@mui/material';
 import Web3MQChat from '../components/chat/Web3MQChat';
-import Markdown from '../components/dashboard/Markdown';
+import Workspace from '../components/dashboard/Workspace';
 
 function LiveDashboard() {
   return (
-      <AppShell active="labs">
+    <AppShell active="labs">
       <Box sx={{ p: 3, height: '100%' }}>
         <Typography variant="h4" fontWeight={700} gutterBottom>
           Live Collaboration
@@ -17,7 +17,7 @@ function LiveDashboard() {
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={8}>
-            <Markdown />
+            <Workspace />
           </Grid>
           <Grid item xs={12} md={4}>
             <Web3MQChat

@@ -8,6 +8,7 @@ export interface Task {
   description: string;
   hyperlinks: string[];
   status: 'pending' | 'in-progress' | 'completed';
+  supportRequestId?: string; // Link to support request
   createdAt?: string;
   updatedAt?: string;
   userId?: string;
@@ -96,7 +97,7 @@ export function useTasks() {
     }
   };
 
-  const updateTask = async (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'hyperlinks' | 'status'>>) => {
+  const updateTask = async (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'hyperlinks' | 'status' | 'supportRequestId'>>) => {
     try {
       setIsLoading(true);
       setError(null);
