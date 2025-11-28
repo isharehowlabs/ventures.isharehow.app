@@ -929,12 +929,25 @@ def send_push_notification(user_id: int, notification: Notification):
 
 # Global flag to track if is_employee column exists
 _IS_EMPLOYEE_COLUMN_EXISTS = None
+_IS_EMPLOYEE_CHECK_COUNT = 0
+_IS_EMPLOYEE_CHECK_MAX = 100  # Re-check every 100 calls to handle migrations
 
-def check_is_employee_column_exists():
-    """Check if is_employee column exists in the users table"""
-    global _IS_EMPLOYEE_COLUMN_EXISTS
-    if _IS_EMPLOYEE_COLUMN_EXISTS is not None:
-        return _IS_EMPLOYEE_COLUMN_EXISTS
+def check_is_employee_column_exists(force_check=False):
+    """Check if is_employee column exists in the users table
+    
+    Args:
+        force_check: If True, bypass cache and check again (useful after migrations)
+    """
+    global _IS_EMPLOYEE_COLUMN_EXISTS, _IS_EMPLOYEE_CHECK_COUNT
+    
+    # Re-check periodically to handle migrations that happen while server is running
+    if not force_check and _IS_EMPLOYEE_COLUMN_EXISTS is not None:
+        _IS_EMPLOYEE_CHECK_COUNT += 1
+        if _IS_EMPLOYEE_CHECK_COUNT < _IS_EMPLOYEE_CHECK_MAX:
+            return _IS_EMPLOYEE_COLUMN_EXISTS
+        # Reset counter and force re-check
+        _IS_EMPLOYEE_CHECK_COUNT = 0
+        force_check = True
     
     if not DB_AVAILABLE:
         _IS_EMPLOYEE_COLUMN_EXISTS = False
@@ -946,7 +959,7 @@ def check_is_employee_column_exists():
             result = conn.execute(db.text("""
                 SELECT column_name 
                 FROM information_schema.columns 
-                WHERE table_name = 'users' AND column_name = 'is_employee'
+                WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'is_employee'
             """))
             _IS_EMPLOYEE_COLUMN_EXISTS = result.fetchone() is not None
         return _IS_EMPLOYEE_COLUMN_EXISTS
@@ -954,7 +967,9 @@ def check_is_employee_column_exists():
         print(f"Error checking is_employee column: {e}")
         app.logger.warning(f"Error checking is_employee column: {e}")
         # If we can't check, assume it doesn't exist (safer fallback)
-        _IS_EMPLOYEE_COLUMN_EXISTS = False
+        # Don't cache the error - allow retry on next call
+        if force_check:
+            _IS_EMPLOYEE_COLUMN_EXISTS = False
         return False
 
 def safe_query_user(query_func):
@@ -1999,7 +2014,12 @@ def auth_me():
         user = None
         
         # First, try to check if is_employee column exists
-        column_exists = check_is_employee_column_exists()
+        # Use try-except to handle any errors in the check itself
+        try:
+            column_exists = check_is_employee_column_exists()
+        except Exception as check_error:
+            print(f"Error in check_is_employee_column_exists: {check_error}")
+            column_exists = False  # Default to False (use fallback)
         
         if not column_exists:
             # Column doesn't exist - use raw SQL directly
@@ -2045,12 +2065,19 @@ def auth_me():
                             }
                         user.to_dict = to_dict
             except Exception as raw_error:
+                error_str = str(raw_error).lower()
                 print(f"Error in raw SQL fallback for auth/me: {raw_error}")
                 app.logger.error(f"Error fetching user from database: {raw_error}")
+                
+                # If user not found, return 404 instead of 500
+                if 'not found' in error_str or 'no row' in error_str:
+                    return jsonify({'error': 'User not found'}), 404
+                
                 return jsonify({
                     'error': 'Database error',
                     'message': 'Unable to fetch user information. Database migration may be required.',
-                    'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)'
+                    'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)',
+                    'migration_required': True
                 }), 500
         else:
             # Column exists - use normal SQLAlchemy queries
