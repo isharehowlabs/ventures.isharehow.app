@@ -403,31 +403,36 @@ function ProfilePage() {
               </Stack>
               <Box sx={{ pl: 5 }}>
                 <Stack spacing={2}>
-                  {/* Web3/ENS Section */}
-                  {(user.ensName || user.cryptoAddress || user.contentHash) && (
-                    <Box sx={{ 
-                      p: 2, 
-                      borderRadius: 2, 
-                      bgcolor: 'primary.light', 
-                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                      border: '1px solid',
-                      borderColor: 'primary.main'
-                    }}>
-                      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                          Web3 Identity
-                        </Typography>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<Refresh />}
-                          onClick={handleVerifyENS}
-                          disabled={verifyingENS}
-                          sx={{ textTransform: 'none' }}
-                        >
-                          {verifyingENS ? 'Verifying...' : 'Verify ENS'}
-                        </Button>
-                      </Stack>
+                  {/* Web3/ENS Section - Always visible */}
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 2, 
+                    bgcolor: 'primary.light', 
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                    border: '1px solid',
+                    borderColor: 'primary.main'
+                  }}>
+                    <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        Web3 Identity
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Refresh />}
+                        onClick={handleVerifyENS}
+                        disabled={verifyingENS}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        {verifyingENS ? 'Verifying...' : 'Verify ENS'}
+                      </Button>
+                    </Stack>
+                    
+                    {!(user.ensName || user.cryptoAddress || user.contentHash) && (
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        Your Web3 identity will appear here after you verify your ENS domain. Click "Verify ENS" to resolve your domain.
+                      </Alert>
+                    )}
                       
                       {user.ensName && (
                         <Box sx={{ mb: 2 }}>
@@ -526,7 +531,6 @@ function ProfilePage() {
                         </Box>
                       )}
                     </Box>
-                  )}
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Patreon ID
