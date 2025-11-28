@@ -12,6 +12,7 @@ function ProfilePage() {
   const router = useRouter();
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailValue, setEmailValue] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
@@ -29,6 +30,8 @@ function ProfilePage() {
           const data = await response.json();
           console.log('[Profile] Profile data received:', data);
           setProfileData(data);
+          setError(null);
+          setLoading(false);
         } else {
           // Try to get error message from response
           let errorMessage = `HTTP ${response.status}`;
@@ -36,20 +39,31 @@ function ProfilePage() {
             const errorData = await response.json();
             errorMessage = errorData.error || errorData.message || errorMessage;
             console.error('[Profile] Failed to fetch profile:', response.status, errorData);
+            
+            // If it's a 404, the user might not exist in the database yet
+            // But we have authUser, so we can still show the profile
+            if (response.status === 404) {
+              console.log('[Profile] User not found in profile endpoint, using authUser data');
+              setError(null); // Don't show error, use authUser as fallback
+              setProfileData(null); // Will use authUser instead
+            } else {
+              setError(errorMessage);
+            }
           } catch (e) {
             const text = await response.text();
             console.error('[Profile] Failed to fetch profile (non-JSON response):', response.status, text.substring(0, 200));
+            if (response.status === 404) {
+              setError(null); // Don't show error for 404, use authUser
+            } else {
+              setError(`Server error: ${response.status}`);
+            }
           }
-          // Don't set loading to false on error - let user see the error
-          // But still set it so UI doesn't hang
           setLoading(false);
         }
       } catch (error: any) {
         console.error('[Profile] Error fetching profile:', error);
+        setError(error.message || 'Failed to load profile');
         setLoading(false);
-      } finally {
-        // Only set loading to false if we haven't already
-        // (to avoid race conditions)
       }
     };
 
@@ -204,6 +218,24 @@ function ProfilePage() {
     );
   }
 
+  // Show error if there's an error and no authUser to fall back to
+  if (error && !authUser) {
+    return (
+      <AppShell active="profile">
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          <Button variant="contained" onClick={() => router.push('/')}>
+            Go Home
+          </Button>
+        </Box>
+      </AppShell>
+    );
+  }
+
+  // Note: If there's an error but we have authUser, we'll show a warning but continue to render the profile below
+
   // Merge profileData and authUser to ensure all fields are available
   // If profileData fetch failed, use authUser as fallback
   const user: any = {
@@ -224,6 +256,11 @@ function ProfilePage() {
   return (
     <AppShell active="profile">
       <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+        {error && authUser && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            {error} - Showing limited profile information from authentication data.
+          </Alert>
+        )}
         <Typography
           variant="h4"
           sx={{

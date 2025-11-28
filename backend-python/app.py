@@ -2512,34 +2512,160 @@ def get_profile():
         app.logger.info(f"Profile endpoint: Looking up user with identity: {user_id} (type: {type(user_id).__name__})")
         
         # Find user by ID - JWT identity is typically str(user.id) from create_access_token
+        # Handle missing is_employee column gracefully - check first, then use appropriate method
         user = None
         user_id_str = str(user_id) if user_id else None
         
-        # Try integer ID lookup first (most common case)
-        if user_id_str and user_id_str.isdigit():
-            try:
-                user = User.query.get(int(user_id_str))
-                app.logger.info(f"Profile endpoint: Looked up by integer ID: {user_id_str}, found: {user is not None}")
-                if user:
-                    app.logger.info(f"Profile endpoint: Found user - ID: {user.id}, patreon_id: {user.patreon_id}, username: {user.username}")
-            except Exception as e:
-                app.logger.error(f"Profile endpoint: Error looking up by integer ID: {e}")
+        # First, try to check if is_employee column exists
+        try:
+            column_exists = check_is_employee_column_exists()
+        except Exception as check_error:
+            print(f"Error in check_is_employee_column_exists for profile: {check_error}")
+            column_exists = False  # Default to False (use fallback)
         
-        # Try username lookup
-        if not user and user_id_str:
+        if not column_exists:
+            # Column doesn't exist - use raw SQL directly
+            print(f"Warning: is_employee column missing in profile endpoint, using raw SQL fallback")
             try:
-                user = User.query.filter_by(username=user_id_str).first()
-                app.logger.info(f"Profile endpoint: Looked up by username: {user_id_str}, found: {user is not None}")
-            except Exception as e:
-                app.logger.error(f"Profile endpoint: Error looking up by username: {e}")
-        
-        # Try patreon_id lookup
-        if not user and user_id_str:
-            try:
-                user = User.query.filter_by(patreon_id=user_id_str).first()
-                app.logger.info(f"Profile endpoint: Looked up by patreon_id: {user_id_str}, found: {user is not None}")
-            except Exception as e:
-                app.logger.error(f"Profile endpoint: Error looking up by patreon_id: {e}")
+                with db.engine.connect() as conn:
+                    result = conn.execute(db.text("""
+                        SELECT id, username, email, password_hash, patreon_id, 
+                               access_token, refresh_token, membership_paid,
+                               last_checked, token_expires_at, patreon_connected,
+                               created_at, updated_at
+                        FROM users 
+                        WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                        LIMIT 1
+                    """), {'user_id': user_id_str})
+                    row = result.fetchone()
+                    if row:
+                        from types import SimpleNamespace
+                        user = SimpleNamespace(
+                            id=row[0],
+                            username=row[1],
+                            email=row[2],
+                            password_hash=row[3],
+                            patreon_id=row[4],
+                            access_token=row[5],
+                            refresh_token=row[6],
+                            membership_paid=row[7],
+                            last_checked=row[8],
+                            token_expires_at=row[9],
+                            patreon_connected=row[10],
+                            created_at=row[11],
+                            updated_at=row[12]
+                        )
+                        def to_dict():
+                            return {
+                                'id': user.patreon_id or user.username or str(user.id),
+                                'patreonId': user.patreon_id,
+                                'username': user.username,
+                                'email': user.email,
+                                'membershipPaid': user.membership_paid,
+                                'patreonConnected': user.patreon_connected,
+                                'lastChecked': user.last_checked.isoformat() if user.last_checked else None,
+                                'createdAt': user.created_at.isoformat() if user.created_at else None
+                            }
+                        user.to_dict = to_dict
+                        app.logger.info(f"Profile endpoint: Found user via raw SQL - ID: {user.id}, patreon_id: {user.patreon_id}, username: {user.username}")
+            except Exception as raw_error:
+                error_str = str(raw_error).lower()
+                print(f"Error in raw SQL fallback for profile: {raw_error}")
+                app.logger.error(f"Error fetching user from database: {raw_error}")
+                
+                # If user not found, return 404 instead of 500
+                if 'not found' in error_str or 'no row' in error_str:
+                    return jsonify({
+                        'error': 'User not found',
+                        'message': f'No user found with identity: {user_id}',
+                        'identity': str(user_id)
+                    }), 404
+                
+                return jsonify({
+                    'error': 'Database error',
+                    'message': 'Unable to fetch user information. Database migration may be required.',
+                    'details': 'Run: flask db upgrade (see RUN_MIGRATION.md)',
+                    'migration_required': True
+                }), 500
+        else:
+            # Column exists - use normal SQLAlchemy queries
+            # Try integer ID lookup first (most common case)
+            if user_id_str and user_id_str.isdigit():
+                try:
+                    user = User.query.get(int(user_id_str))
+                    app.logger.info(f"Profile endpoint: Looked up by integer ID: {user_id_str}, found: {user is not None}")
+                    if user:
+                        app.logger.info(f"Profile endpoint: Found user - ID: {user.id}, patreon_id: {user.patreon_id}, username: {user.username}")
+                except Exception as e:
+                    error_str = str(e).lower()
+                    app.logger.error(f"Profile endpoint: Error looking up by integer ID: {e}")
+                    # If we still get an is_employee error (shouldn't happen if check worked), use fallback
+                    if 'is_employee' in error_str and 'column' in error_str:
+                        print(f"Unexpected: is_employee error despite check, using raw SQL fallback")
+                        # Use the same raw SQL fallback as above
+                        try:
+                            with db.engine.connect() as conn:
+                                result = conn.execute(db.text("""
+                                    SELECT id, username, email, password_hash, patreon_id, 
+                                           access_token, refresh_token, membership_paid,
+                                           last_checked, token_expires_at, patreon_connected,
+                                           created_at, updated_at
+                                    FROM users 
+                                    WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                                    LIMIT 1
+                                """), {'user_id': user_id_str})
+                                row = result.fetchone()
+                                if row:
+                                    from types import SimpleNamespace
+                                    user = SimpleNamespace(
+                                        id=row[0], username=row[1], email=row[2], password_hash=row[3],
+                                        patreon_id=row[4], access_token=row[5], refresh_token=row[6],
+                                        membership_paid=row[7], last_checked=row[8], token_expires_at=row[9],
+                                        patreon_connected=row[10], created_at=row[11], updated_at=row[12]
+                                    )
+                                    def to_dict():
+                                        return {
+                                            'id': user.patreon_id or user.username or str(user.id),
+                                            'patreonId': user.patreon_id, 'username': user.username,
+                                            'email': user.email, 'membershipPaid': user.membership_paid,
+                                            'patreonConnected': user.patreon_connected,
+                                            'lastChecked': user.last_checked.isoformat() if user.last_checked else None,
+                                            'createdAt': user.created_at.isoformat() if user.created_at else None
+                                        }
+                                    user.to_dict = to_dict
+                        except Exception as raw_error2:
+                            print(f"Error in secondary raw SQL fallback: {raw_error2}")
+                            raise e  # Re-raise original error
+                    else:
+                        raise
+            
+            # Try username lookup
+            if not user and user_id_str:
+                try:
+                    user = User.query.filter_by(username=user_id_str).first()
+                    app.logger.info(f"Profile endpoint: Looked up by username: {user_id_str}, found: {user is not None}")
+                except Exception as e:
+                    error_str = str(e).lower()
+                    app.logger.error(f"Profile endpoint: Error looking up by username: {e}")
+                    if 'is_employee' in error_str and 'column' in error_str:
+                        # Already handled above, skip
+                        pass
+                    else:
+                        raise
+            
+            # Try patreon_id lookup
+            if not user and user_id_str:
+                try:
+                    user = User.query.filter_by(patreon_id=user_id_str).first()
+                    app.logger.info(f"Profile endpoint: Looked up by patreon_id: {user_id_str}, found: {user is not None}")
+                except Exception as e:
+                    error_str = str(e).lower()
+                    app.logger.error(f"Profile endpoint: Error looking up by patreon_id: {e}")
+                    if 'is_employee' in error_str and 'column' in error_str:
+                        # Already handled above, skip
+                        pass
+                    else:
+                        raise
         
         if not user:
             app.logger.error(f"Profile endpoint: User not found for identity: {user_id}")
@@ -2561,21 +2687,49 @@ def get_profile():
             print(f"Warning: Failed to fetch profile: {e}")
         
         # Return combined user data (accessible regardless of payment status)
-        user_data = user.to_dict()
+        # Handle both regular User objects and SimpleNamespace fallback
+        try:
+            if hasattr(user, 'to_dict'):
+                user_data = user.to_dict()
+            else:
+                # Fallback for SimpleNamespace objects
+                user_data = {
+                    'id': getattr(user, 'patreon_id', None) or getattr(user, 'username', None) or str(getattr(user, 'id', '')),
+                    'patreonId': getattr(user, 'patreon_id', None),
+                    'username': getattr(user, 'username', None),
+                    'email': getattr(user, 'email', None),
+                    'membershipPaid': getattr(user, 'membership_paid', False),
+                    'patreonConnected': getattr(user, 'patreon_connected', False),
+                    'lastChecked': getattr(user, 'last_checked', None).isoformat() if getattr(user, 'last_checked', None) else None,
+                    'createdAt': getattr(user, 'created_at', None).isoformat() if getattr(user, 'created_at', None) else None
+                }
+        except Exception as dict_error:
+            print(f"Error creating user dict in profile: {dict_error}")
+            # Fallback for minimal user data if to_dict fails
+            user_data = {
+                'id': getattr(user, 'patreon_id', None) or getattr(user, 'username', None) or str(getattr(user, 'id', '')),
+                'username': getattr(user, 'username', None),
+                'email': getattr(user, 'email', None),
+                'name': getattr(user, 'username', None) or getattr(user, 'email', None) or 'User'
+            }
+        
         # Get createdAt from UserProfile or fall back to User model's created_at
         created_at = profile_data.get('createdAt')
-        if not created_at and user.created_at:
-            created_at = user.created_at.isoformat()
+        if not created_at:
+            if hasattr(user, 'created_at') and user.created_at:
+                created_at = user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at)
+            else:
+                created_at = user_data.get('createdAt')
         
         user_data.update({
-            'name': profile_data.get('name', user.username or user.email or 'User'),
+            'name': profile_data.get('name', getattr(user, 'username', None) or getattr(user, 'email', None) or 'User'),
             'avatar': profile_data.get('avatarUrl', ''),  # Map avatarUrl to avatar for frontend
             'avatarUrl': profile_data.get('avatarUrl', ''),  # Keep both for compatibility
             'membershipTier': profile_data.get('membershipTier'),
-            'isPaidMember': user.membership_paid,  # Show current payment status
+            'isPaidMember': getattr(user, 'membership_paid', False),  # Show current payment status
             'isTeamMember': profile_data.get('isTeamMember', False),
-            'lastChecked': user.last_checked.isoformat() if user.last_checked else None,
-            'patreonConnected': user.patreon_connected,
+            'lastChecked': getattr(user, 'last_checked', None).isoformat() if getattr(user, 'last_checked', None) and hasattr(getattr(user, 'last_checked', None), 'isoformat') else user_data.get('lastChecked'),
+            'patreonConnected': getattr(user, 'patreon_connected', False),
             'createdAt': created_at,  # Include createdAt from UserProfile or User model
             'membershipPaymentDate': profile_data.get('membershipPaymentDate'),
             'membershipRenewalDate': profile_data.get('membershipRenewalDate'),
