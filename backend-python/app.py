@@ -6674,7 +6674,21 @@ def admin_change_password(user_id):
         # Use require_admin decorator logic inline
         user = get_current_user()
         if not user:
-            return jsonify({'error': 'Authentication required'}), 401
+            # Set CORS headers for error response
+            origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+            allowed_origins = ['https://ventures.isharehow.app']
+            if os.environ.get('FLASK_ENV') != 'production':
+                allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+            
+            if origin in allowed_origins:
+                cors_origin = origin
+            else:
+                cors_origin = 'https://ventures.isharehow.app'
+            
+            response = jsonify({'error': 'Authentication required'})
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 401
         # Check if user is admin (same logic as require_admin)
         is_admin = False
         if hasattr(user, 'is_admin'):
@@ -6691,20 +6705,76 @@ def admin_change_password(user_id):
                 if email_lower == 'jeliyah@isharehowlabs.com':
                     is_admin = True
         if not is_admin:
-            return jsonify({'error': 'Admin access required'}), 403
+            # Set CORS headers for error response
+            origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+            allowed_origins = ['https://ventures.isharehow.app']
+            if os.environ.get('FLASK_ENV') != 'production':
+                allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+            
+            if origin in allowed_origins:
+                cors_origin = origin
+            else:
+                cors_origin = 'https://ventures.isharehow.app'
+            
+            response = jsonify({'error': 'Admin access required'})
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 403
     
     if not DB_AVAILABLE:
-        return jsonify({'error': 'Database not available'}), 500
+        # Set CORS headers for error response
+        origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+        allowed_origins = ['https://ventures.isharehow.app']
+        if os.environ.get('FLASK_ENV') != 'production':
+            allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+        
+        if origin in allowed_origins:
+            cors_origin = origin
+        else:
+            cors_origin = 'https://ventures.isharehow.app'
+        
+        response = jsonify({'error': 'Database not available'})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 500
     
     try:
         data = request.json or {}
         new_password = data.get('password', '').strip()
         
         if not new_password:
-            return jsonify({'error': 'Password is required'}), 400
+            # Set CORS headers for error response
+            origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+            allowed_origins = ['https://ventures.isharehow.app']
+            if os.environ.get('FLASK_ENV') != 'production':
+                allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+            
+            if origin in allowed_origins:
+                cors_origin = origin
+            else:
+                cors_origin = 'https://ventures.isharehow.app'
+            
+            response = jsonify({'error': 'Password is required'})
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 400
         
         if len(new_password) < 6:
-            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+            # Set CORS headers for error response
+            origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+            allowed_origins = ['https://ventures.isharehow.app']
+            if os.environ.get('FLASK_ENV') != 'production':
+                allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+            
+            if origin in allowed_origins:
+                cors_origin = origin
+            else:
+                cors_origin = 'https://ventures.isharehow.app'
+            
+            response = jsonify({'error': 'Password must be at least 6 characters'})
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 400
         
         # Decode user_id if it was URL encoded
         try:
@@ -6724,7 +6794,21 @@ def admin_change_password(user_id):
             user = User.query.filter_by(ens_name=user_id).first()
         
         if not user:
-            return jsonify({'error': f'User not found: {user_id}'}), 404
+            # Set CORS headers for error response
+            origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+            allowed_origins = ['https://ventures.isharehow.app']
+            if os.environ.get('FLASK_ENV') != 'production':
+                allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+            
+            if origin in allowed_origins:
+                cors_origin = origin
+            else:
+                cors_origin = 'https://ventures.isharehow.app'
+            
+            response = jsonify({'error': f'User not found: {user_id}'})
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 404
         
         # Change password using User model's set_password method
         if hasattr(user, 'set_password'):
