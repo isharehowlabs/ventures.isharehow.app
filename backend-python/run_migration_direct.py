@@ -91,6 +91,105 @@ def run_migration():
                 """))
             print("✓ Index created successfully")
         
+        # Check if clients table exists
+        if not check_table_exists(engine, 'clients'):
+            print("Creating clients table...")
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("""
+                        CREATE TABLE clients (
+                            id VARCHAR(36) PRIMARY KEY,
+                            name VARCHAR(200) NOT NULL,
+                            email VARCHAR(255) NOT NULL UNIQUE,
+                            company VARCHAR(200) NOT NULL,
+                            phone VARCHAR(50),
+                            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                            tier VARCHAR(50),
+                            notes TEXT,
+                            tags TEXT,
+                            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                        )
+                    """))
+                    conn.execute(text("""
+                        CREATE INDEX IF NOT EXISTS ix_clients_email 
+                        ON clients(email)
+                    """))
+                print("✓ clients table created")
+            except Exception as create_error:
+                error_str = str(create_error).lower()
+                if 'already exists' in error_str or 'duplicate' in error_str:
+                    print("✓ clients table already exists (skipped)")
+                else:
+                    raise
+        else:
+            print("✓ clients table already exists")
+        
+        # Check if client_employee_assignments table exists
+        if not check_table_exists(engine, 'client_employee_assignments'):
+            print("Creating client_employee_assignments table...")
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("""
+                        CREATE TABLE client_employee_assignments (
+                            id VARCHAR(36) PRIMARY KEY,
+                            client_id VARCHAR(36) NOT NULL,
+                            employee_id INTEGER,
+                            employee_name VARCHAR(200),
+                            assigned_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+                            FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE SET NULL
+                        )
+                    """))
+                    conn.execute(text("""
+                        CREATE INDEX IF NOT EXISTS ix_client_employee_assignments_client_id 
+                        ON client_employee_assignments(client_id)
+                    """))
+                    conn.execute(text("""
+                        CREATE INDEX IF NOT EXISTS ix_client_employee_assignments_employee_id 
+                        ON client_employee_assignments(employee_id)
+                    """))
+                print("✓ client_employee_assignments table created")
+            except Exception as create_error:
+                error_str = str(create_error).lower()
+                if 'already exists' in error_str or 'duplicate' in error_str:
+                    print("✓ client_employee_assignments table already exists (skipped)")
+                else:
+                    raise
+        else:
+            print("✓ client_employee_assignments table already exists")
+        
+        # Check if client_dashboard_connections table exists
+        if not check_table_exists(engine, 'client_dashboard_connections'):
+            print("Creating client_dashboard_connections table...")
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("""
+                        CREATE TABLE client_dashboard_connections (
+                            id VARCHAR(36) PRIMARY KEY,
+                            client_id VARCHAR(36) NOT NULL,
+                            dashboard_type VARCHAR(50) NOT NULL,
+                            enabled BOOLEAN NOT NULL DEFAULT true,
+                            connected_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+                        )
+                    """))
+                    conn.execute(text("""
+                        CREATE INDEX IF NOT EXISTS ix_client_dashboard_connections_client_id 
+                        ON client_dashboard_connections(client_id)
+                    """))
+                print("✓ client_dashboard_connections table created")
+            except Exception as create_error:
+                error_str = str(create_error).lower()
+                if 'already exists' in error_str or 'duplicate' in error_str:
+                    print("✓ client_dashboard_connections table already exists (skipped)")
+                else:
+                    raise
+        else:
+            print("✓ client_dashboard_connections table already exists")
+        
         # Check if support_requests table exists
         if not check_table_exists(engine, 'support_requests'):
             print("Creating support_requests table...")
@@ -176,7 +275,7 @@ def run_migration():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("Database Migration: Add is_employee column")
+    print("Database Migration: Add is_employee column and Creative Dashboard tables")
     print("=" * 60)
     print()
     run_migration()
