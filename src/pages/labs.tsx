@@ -19,29 +19,8 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import FloatingAIChat from '../components/dashboard/FloatingAIChat';
 import CryptoIncentivesPanel from '../components/dashboard/CryptoIncentivesPanel';
+import Web3MQChat from '../components/chat/Web3MQChat';
 import { getBackendUrl } from '../utils/backendUrl';
-
-
-// Task List Feature
-interface Task {
-  id: number;
-  text: string;
-  completed: boolean;
-}
-
-// Task List Feature (placeholder - chat feature not yet implemented)
-function TaskListPlaceholder() {
-  return (
-    <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Task List & Chat
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Real-time chat and task management features coming soon!
-      </Typography>
-    </Paper>
-  );
-}
 
 function LabsDashboard() {
   const theme = useTheme();
@@ -152,7 +131,15 @@ function LabsDashboard() {
       )}
 
       <DashboardLayout
-        taskList={<TaskListPlaceholder />}
+        taskList={
+          <Box sx={{ height: '100%', minHeight: 400 }}>
+            <Web3MQChat
+              channelId="labs-general"
+              channelName="Labs Chat"
+              compact={true}
+            />
+          </Box>
+        }
         communityQA={
           <Paper elevation={4} sx={{ p: 4, mb: 4, border: '2px solid gold', background: 'rgba(255, 255, 224, 0.15)' }}>
             <Typography variant="h4" sx={{ fontWeight: 900, color: 'gold', mb: 2 }}>

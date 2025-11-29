@@ -49,7 +49,6 @@ import {
   PlayCircle as InProgressIcon,
   Login as LoginIcon,
   Warning as WarningIcon,
-  Chat as ChatIcon,
   TrendingUp as TrendingIcon,
   Business as BusinessIcon,
   AttachMoney as MoneyIcon,
@@ -77,7 +76,6 @@ try {
 } catch (err) {
   console.warn('MCP hook not available:', err);
 }
-import Web3MQChat from '../chat/Web3MQChat';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/router';
 import { getBackendUrl } from '../../utils/backendUrl';
@@ -173,7 +171,7 @@ export default function Workspace() {
   
   // State
   const [markdownContent, setMarkdownContent] = useState<string>('');
-  const [activeTab, setActiveTab] = useState(0); // 0: Notes, 1: Tasks, 2: Figma, 3: Opportunities, 4: Chat
+  const [activeTab, setActiveTab] = useState(0); // 0: Notes, 1: Tasks, 2: Figma, 3: Opportunities
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -545,7 +543,6 @@ export default function Workspace() {
             <Tab icon={<CheckIcon />} label="Tasks" iconPosition="start" />
             <Tab icon={<FigmaIcon />} label="Design" iconPosition="start" />
             <Tab icon={<TrendingIcon />} label="Opportunities" iconPosition="start" />
-            <Tab icon={<ChatIcon />} label="Chat" iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -1012,16 +1009,6 @@ export default function Workspace() {
             </Box>
           </TabPanel>
 
-          {/* Chat Tab */}
-          <TabPanel value={activeTab} index={4}>
-            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Web3MQChat
-                channelId="workspace-general"
-                channelName="Workspace Chat"
-                compact={true}
-              />
-            </Box>
-          </TabPanel>
         </Box>
       </Paper>
 
