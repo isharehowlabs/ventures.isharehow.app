@@ -109,7 +109,6 @@ except Exception as e:
     # Create a dummy db object to prevent crashes
     db = None
     DB_AVAILABLE = False
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configure CORS to allow credentials (cookies)
 # Note: flask-cors handles all CORS headers automatically, don't add them manually
@@ -117,6 +116,16 @@ allowed_origins = ['https://ventures.isharehow.app']
 if os.environ.get('FLASK_ENV') != 'production':
     allowed_origins.append('http://localhost:5000')
     allowed_origins.append('http://localhost:3000')
+
+# Initialize Socket.IO with same CORS origins as Flask-CORS
+# When using withCredentials: true on client, cannot use "*" - must specify exact origins
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins=allowed_origins,
+    cors_credentials=True,
+    allow_upgrades=True,
+    transports=['websocket', 'polling']
+)
 
 CORS(app, 
      origins=allowed_origins,

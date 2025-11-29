@@ -423,8 +423,30 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const socket = getSocket();
     
-    // Join user's notification room
-    socket.emit('join_notifications', { userId: user.id });
+    // Add error handlers
+    const handleConnect = () => {
+      console.log('Socket.io connected for notifications');
+      // Join user's notification room after connection
+      socket.emit('join_notifications', { userId: user.id });
+    };
+
+    const handleConnectError = (error: Error) => {
+      console.warn('Socket.io connection error (notifications):', error.message);
+      // Don't show error to user, notifications will work via polling
+    };
+
+    const handleDisconnect = (reason: string) => {
+      console.log('Socket.io disconnected (notifications):', reason);
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('disconnect', handleDisconnect);
+
+    // Join user's notification room (only if already connected)
+    if (socket.connected) {
+      socket.emit('join_notifications', { userId: user.id });
+    }
 
     // Listen for new notifications
     socket.on('notification:new', (notification: Notification) => {
@@ -471,12 +493,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      socket.off('connect', handleConnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('disconnect', handleDisconnect);
       socket.off('notification:new');
       socket.off('notification:read');
       socket.off('notification:read-all');
       socket.off('notification:deleted');
     };
-  }, [isAuthenticated, user, notifications]);
+  }, [isAuthenticated, user]);
 
   // Fetch notifications on mount and when auth changes
   useEffect(() => {

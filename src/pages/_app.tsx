@@ -11,6 +11,50 @@ import '../styles/dashboard.css';
 function AppContent({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
+  // Suppress webpack-dev-server errors in production
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      
+      // Filter out webpack-dev-server and HMR connection errors
+      const shouldSuppress = (message: string): boolean => {
+        return (
+          message.includes('WebSocket connection to') ||
+          message.includes('ws://localhost:3000') ||
+          message.includes('[webpack-dev-server]') ||
+          message.includes('[HMR]') ||
+          message.includes('Waiting for update signal from WDS') ||
+          message.includes('Hot Module Replacement enabled') ||
+          message.includes('Disconnected!')
+        );
+      };
+
+      console.error = (...args: any[]) => {
+        const message = args.map(arg => 
+          typeof arg === 'string' ? arg : JSON.stringify(arg)
+        ).join(' ');
+        if (!shouldSuppress(message)) {
+          originalError.apply(console, args);
+        }
+      };
+
+      console.warn = (...args: any[]) => {
+        const message = args.map(arg => 
+          typeof arg === 'string' ? arg : JSON.stringify(arg)
+        ).join(' ');
+        if (!shouldSuppress(message)) {
+          originalWarn.apply(console, args);
+        }
+      };
+
+      return () => {
+        console.error = originalError;
+        console.warn = originalWarn;
+      };
+    }
+  }, []);
+
   // Fix browser password manager autocomplete issues
   useEffect(() => {
     // Ensure browser password manager globals are properly initialized

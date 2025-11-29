@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
-import { io, Socket } from 'socket.io-client';
+import { getSocket } from '../utils/socket';
+import { Socket } from 'socket.io-client';
 
 export interface Task {
   id: string;
@@ -156,11 +157,33 @@ export function useTasks() {
   useEffect(() => {
     fetchTasks();
 
-    // Initialize Socket.IO connection
-    const backendUrl = getBackendUrl();
-    const socketInstance = io(backendUrl);
+    // Use shared Socket.IO connection
+    const socketInstance = getSocket();
     setSocket(socketInstance);
 
+    // Connection event handlers (additional to shared handlers)
+    const handleConnect = () => {
+      console.log('Socket.io connected for tasks');
+    };
+
+    const handleConnectError = (error: Error) => {
+      console.warn('Socket.io connection error (tasks):', {
+        message: error.message,
+        // Additional context if available
+      });
+      // Don't show error to user, just log it
+      // The app will work without real-time updates
+    };
+
+    const handleDisconnect = (reason: string) => {
+      console.log('Socket.io disconnected (tasks):', reason);
+    };
+
+    socketInstance.on('connect', handleConnect);
+    socketInstance.on('connect_error', handleConnectError);
+    socketInstance.on('disconnect', handleDisconnect);
+
+    // Task event handlers
     socketInstance.on('task_created', (newTask: Task) => {
       setTasks(prev => [...prev, newTask]);
       setLastUpdated(new Date());
@@ -190,7 +213,14 @@ export function useTasks() {
     }, 60000); // Check every minute
 
     return () => {
-      socketInstance.disconnect();
+      // Only remove task-specific listeners, keep the socket connection alive
+      socketInstance.off('connect', handleConnect);
+      socketInstance.off('connect_error', handleConnectError);
+      socketInstance.off('disconnect', handleDisconnect);
+      socketInstance.off('task_created');
+      socketInstance.off('task_updated');
+      socketInstance.off('task_deleted');
+      socketInstance.off('auth_restored_ack');
       clearInterval(staleInterval);
     };
   }, [fetchTasks, lastUpdated]);
