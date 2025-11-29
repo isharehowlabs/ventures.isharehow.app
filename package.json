@@ -9,7 +9,8 @@
     "build:commit:auto": "./build-and-commit-auto.sh",
     "start": "echo 'Static export mode - use npm run dev for development or serve the built files' && npm run dev",
     "cleanup:codeql": "./cleanup-codeql.sh",
-    "cleanup": "npm run cleanup:codeql"
+    "cleanup": "npm run cleanup:codeql",
+    "check:class": "node check-class-attributes.js"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",

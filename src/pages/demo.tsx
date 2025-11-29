@@ -19,6 +19,7 @@ import {
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import AppShell from '../components/AppShell';
+import BookDemoForm from '../components/demo/BookDemoForm';
 
 export default function BookDemoPage() {
   const router = useRouter();
@@ -71,8 +72,8 @@ export default function BookDemoPage() {
           }}
         >
           <Container maxWidth="lg">
-            {/* Hero Section */}
-            <Box sx={{ textAlign: 'center', mb: 8 }}>
+            {/* Hero Section with Form */}
+            <Box sx={{ textAlign: 'center', mb: 6 }}>
               <Typography
                 variant="h2"
                 component="h1"
@@ -85,56 +86,27 @@ export default function BookDemoPage() {
                   WebkitTextFillColor: 'transparent',
                 }}
               >
-                See iShareHow Ventures in Action
+                Book Your Demo
               </Typography>
               <Typography
                 variant="h5"
                 color="text.secondary"
                 sx={{ mb: 4, maxWidth: 700, mx: 'auto' }}
               >
-                Book a personalized demo to explore our dashboards, AI tools, and see how we can help transform your business.
+                Fill out the form below to schedule a personalized demo and explore our dashboards, AI tools, and see how we can help transform your business.
               </Typography>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                justifyContent="center"
-                sx={{ mb: 6 }}
-              >
-                <Button
-                  variant="contained"
-                  size="large"
-                  href="https://demo.isharehow.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  startIcon={<PlayArrowIcon />}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                    },
-                  }}
-                >
-                  View Live Demo
-                  <LaunchIcon sx={{ ml: 1, fontSize: '1rem' }} />
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => router.push('/')}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  View Pricing
-                </Button>
-              </Stack>
+            </Box>
+
+            {/* Book Demo Form */}
+            <Box sx={{ mb: 8 }}>
+              <BookDemoForm
+                onSuccess={(clientId) => {
+                  // Redirect to demo page after successful submission
+                  setTimeout(() => {
+                    window.location.href = 'https://demo.isharehow.app';
+                  }, 2000);
+                }}
+              />
             </Box>
 
             {/* Features Grid */}
@@ -201,37 +173,6 @@ export default function BookDemoPage() {
                 ))}
               </Grid>
             </Paper>
-
-            {/* CTA Section */}
-            <Box sx={{ textAlign: 'center', mt: 8 }}>
-              <Typography variant="h5" fontWeight={600} gutterBottom>
-                Ready to See It Live?
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                Click the button below to explore our interactive demo
-              </Typography>
-              <Button
-                variant="contained"
-                size="large"
-                href="https://demo.isharehow.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                startIcon={<PlayArrowIcon />}
-                endIcon={<LaunchIcon />}
-                sx={{
-                  px: 6,
-                  py: 2,
-                  fontSize: '1.2rem',
-                  fontWeight: 600,
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                  },
-                }}
-              >
-                Launch Demo
-              </Button>
-            </Box>
 
             {/* Footer Links */}
             <Box sx={{ textAlign: 'center', mt: 8, pt: 4, borderTop: '1px solid', borderColor: 'divider' }}>

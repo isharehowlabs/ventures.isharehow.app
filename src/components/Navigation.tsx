@@ -59,6 +59,13 @@ const navigationItems: NavigationItem[] = [
     label: 'Products',
     href: '/products',
     icon: <ShoppingBagIcon />,
+  },
+  {
+    key: 'live',
+    label: 'Live Stream',
+    href: '/live',
+    icon: <LiveIcon />,
+    authRequired: false, // Public
     dividerAfter: true,
   },
   {
@@ -74,14 +81,6 @@ const navigationItems: NavigationItem[] = [
     href: '/rise',
     icon: <RiseIcon />,
     authRequired: false, // Public but enhanced when authenticated
-  },
-  {
-    key: 'live',
-    label: 'Live Stream',
-    href: '/live',
-    icon: <LiveIcon />,
-    authRequired: false, // Public
-    dividerAfter: true,
   },
   {
     key: 'creative',

@@ -4643,6 +4643,58 @@ def get_clients():
         traceback.print_exc()
         return jsonify({'error': f'Failed to fetch clients: {str(e)}'}), 500
 
+@app.route('/api/demo/leads', methods=['POST'])
+def create_demo_lead():
+    """Create a demo lead - public endpoint, no authentication required"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('name') or not data.get('email') or not data.get('company'):
+            return jsonify({'error': 'Name, email, and company are required'}), 400
+        
+        # Check if email already exists
+        existing = Client.query.filter_by(email=data['email']).first()
+        if existing:
+            # Update existing client with new demo request info
+            existing.notes = (existing.notes or '') + f'\n\nDemo Request: {datetime.utcnow().isoformat()} - {data.get("message", "No message")}'
+            existing.status = 'pending'  # Reset to pending if inactive
+            db.session.commit()
+            return jsonify({
+                'message': 'Demo request received (existing client updated)',
+                'clientId': existing.id
+            }), 200
+        
+        # Create new client lead
+        client = Client(
+            name=data['name'],
+            email=data['email'],
+            company=data['company'],
+            phone=data.get('phone'),
+            status='pending',
+            notes=f'Demo Request: {data.get("message", "No message")}\nSource: {data.get("source", "book_demo_form")}',
+        )
+        
+        db.session.add(client)
+        db.session.commit()
+        
+        print(f"✓ Created demo lead: {client.email} ({client.id})")
+        
+        return jsonify({
+            'message': 'Demo request submitted successfully',
+            'clientId': client.id
+        }), 201
+        
+    except Exception as e:
+        print(f"Error creating demo lead: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': f'Failed to submit demo request: {str(e)}'}), 500
+
 @require_employee
 @app.route('/api/creative/clients', methods=['POST'])
 def create_client():
