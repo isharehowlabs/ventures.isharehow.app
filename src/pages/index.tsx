@@ -9,10 +9,27 @@ import {
   Paper,
   Stack,
   Divider,
+  Card,
+  CardContent,
+  Avatar,
+  Fade,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
   Star as StarIcon,
+  CloudQueue as CloudIcon,
+  Security as SecurityIcon,
+  Analytics as AnalyticsIcon,
+  Dashboard as DashboardIcon,
+  Brush as BrushIcon,
+  Web as WebIcon,
+  VideoLibrary as VideoIcon,
+  School as SchoolIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  RocketLaunch as RocketLaunchIcon,
+  TrendingUp as TrendingUpIcon,
+  Shield as ShieldIcon,
+  Speed as SpeedIcon,
 } from '@mui/icons-material';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -22,6 +39,14 @@ import PricingToggle from '../components/pricing/PricingToggle';
 import FeatureComparisonTable, { Feature } from '../components/pricing/FeatureComparisonTable';
 import FAQAccordion, { FAQItem } from '../components/pricing/FAQAccordion';
 import TrustBadges from '../components/pricing/TrustBadges';
+import { About } from '../components/landing/About';
+import { Quiz } from '../components/landing/Quiz';
+import { Results } from '../components/landing/Results';
+import { ServiceCard } from '../components/landing/ServiceCard';
+import { quizData } from '../data/quizData';
+import { serviceDefinitions } from '../data/serviceDefinitions';
+import { useStickyState } from '../hooks/useStickyState';
+import { ServiceKey, ServiceScore } from '../types/landing';
 
 const pricingTiers: PricingTier[] = [
   {
@@ -202,31 +227,196 @@ const testimonials = [
   },
 ];
 
+const mbbaaSFeatures = [
+  {
+    icon: <CloudIcon />,
+    title: 'Infrastructure Management',
+    description: 'Server provisioning, network configuration, security, optimal performance, scalability, and reliability.',
+  },
+  {
+    icon: <AnalyticsIcon />,
+    title: 'Data Analysis',
+    description: 'Transform raw data into actionable insights to identify trends and opportunities.',
+  },
+  {
+    icon: <DashboardIcon />,
+    title: 'Business Intelligence (BI)',
+    description: 'Custom dashboards, reporting tools, and predictive analytics for a clear view of project health and potential.',
+  },
+  {
+    icon: <SecurityIcon />,
+    title: 'Essential Services',
+    description: 'Database administration, API management, cloud service integration, and continuous monitoring.',
+  },
+];
+
+const creativeServices = [
+  {
+    icon: <BrushIcon />,
+    title: 'Brand Experience & UX/UI',
+    description: 'Branding, Web Design & Development, UI/UX Analysis & Improvement, Mobile App Design, and Content Creation.',
+  },
+  {
+    icon: <AutoAwesomeIcon />,
+    title: 'Experience Strategy',
+    description: 'Long-term planning to align digital experience with business and brand objectives.',
+  },
+  {
+    icon: <TrendingUpIcon />,
+    title: 'UX/UI Audits & Optimization',
+    description: 'Continuous analysis, user testing, and data-driven recommendations to resolve user pain points.',
+  },
+  {
+    icon: <WebIcon />,
+    title: 'Website Design, Development & Optimization',
+    description: 'High-performing websites that inform, inspire, and incite action (SEO, UX, Brand Identity).',
+  },
+];
+
+const iShareHowDivisions = [
+  {
+    icon: <VideoIcon />,
+    title: 'Productions/Studios',
+    description: 'Independent Production & editor-in-chief. Develop Tech Solutions, DIY Maker Projects, Applied Labs, Product Reviews, and EV projects. Includes ELI Productions (Writers/Direction/Casting).',
+    color: '#6366f1',
+  },
+  {
+    icon: <SchoolIcon />,
+    title: 'Publishing',
+    description: 'Develop Websites, Courses, and ebooks. Ownership of digital copyright for video, academic journals, blogs. Responsible for video storyline and concept creation.',
+    color: '#8b5cf6',
+  },
+  {
+    icon: <VideoIcon />,
+    title: 'iShareHow YouTube Channel',
+    description: 'A resource for learning about technology, science, building, and more with informative and engaging videos.',
+    color: '#ec4899',
+  },
+];
+
+const keyFeatures = [
+  {
+    icon: <ShieldIcon />,
+    title: 'The iShare Guarantee',
+    description: 'Unwavering support to help you bring your projects, dreams, and visions to fruition.',
+    color: '#10b981',
+  },
+  {
+    icon: <RocketLaunchIcon />,
+    title: 'Full Digital Lifecycle Coverage',
+    description: 'From secure studio setups and post-production to immersive XR/AR/VR experiences and asset management.',
+    color: '#3b82f6',
+  },
+  {
+    icon: <SpeedIcon />,
+    title: 'Battle-Tested Infrastructure',
+    description: 'Global, compliant infrastructure to neutralize technical and security risks in real-time.',
+    color: '#f59e0b',
+  },
+  {
+    icon: <TrendingUpIcon />,
+    title: 'Seamless Scalability',
+    description: 'Effortlessly scale from daily secure communications to enterprise-wide live events and AI-driven immersive projects.',
+    color: '#ef4444',
+  },
+];
+
 const HomePage = () => {
   const router = useRouter();
   const [isAnnual, setIsAnnual] = useState(false);
+  const [quizStep, setQuizStep] = useStickyState<number>("quizStep", 0);
+  const [answers, setAnswers] = useStickyState<Record<string, number>>(
+    "quizAnswers",
+    {}
+  );
 
   const handleSelectTier = (tierId: string) => {
     // Navigate to signup page with selected tier
     router.push(`/demo?tier=${tierId}&annual=${isAnnual}`);
   };
 
+  const handleQuizAnswer = (qid: string, opt: number) => {
+    setAnswers((prev) => ({ ...prev, [qid]: opt }));
+  };
+
+  const nextQuiz = () => {
+    if (quizStep < quizData.length - 1) {
+      setQuizStep(quizStep + 1);
+    } else {
+      // Navigate to results section
+      const resultsElement = document.getElementById('results');
+      if (resultsElement) {
+        resultsElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
+  const prevQuiz = () => {
+    if (quizStep > 0) {
+      setQuizStep(quizStep - 1);
+    }
+  };
+
+  const resetQuiz = () => {
+    setQuizStep(0);
+    setAnswers({});
+    const quizElement = document.getElementById('quiz');
+    if (quizElement) {
+      quizElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const getQuizScores = (): Record<ServiceKey, number> => {
+    const scores: Record<ServiceKey, number> = {
+      security: 0,
+      infrastructure: 0,
+      production: 0,
+      applications: 0,
+      support: 0,
+      platform: 0,
+    };
+    Object.keys(answers).forEach((qid) => {
+      const question = quizData.find((q) => q.id === qid);
+      if (!question) return;
+      const answer = question.options[answers[qid]];
+      if (answer && answer.scores) {
+        Object.entries(answer.scores).forEach(([key, value]) => {
+          scores[key as ServiceKey] += value ?? 0;
+        });
+      }
+    });
+    return scores;
+  };
+
+  const getTopScores = (n: number = 3): ServiceScore[] => {
+    const scores = getQuizScores();
+    return Object.entries(scores)
+      .sort(([, a], [, b]) => b - a)
+      .filter(([, score]) => score > 0)
+      .slice(0, n)
+      .map(([key]) => ({
+        key: key as ServiceKey,
+        ...serviceDefinitions[key as ServiceKey],
+        score: scores[key as ServiceKey],
+      }));
+  };
+
   return (
     <>
       <Head>
-        <title>Pricing - iShareHow Labs</title>
+        <title>iShareHow Labs - Empowering Your Vision with Managed Solutions</title>
         <meta
           name="description"
-          content="Pricing that scales with your business. Choose the plan that works best for your creative goals. NO HIDDEN FEES. NO SURPRISES."
+          content="Tired of juggling complex IT back-ends, unpredictable creative hiring, and scattered digital strategies? iShareHow Labs offers an integrated ecosystem of Managed Services, Creative-as-a-Service, and Strategic Intelligence designed to be the robust foundation for your business growth."
         />
         <meta
           name="keywords"
-          content="pricing, subscription, plans, starter, professional, enterprise, iShareHow Labs"
+          content="managed services, creative as a service, SaaS, infrastructure, pricing, subscription, plans, starter, professional, enterprise, iShareHow Labs"
         />
       </Head>
 
       <AppShell active="home">
-        <Box>
+        <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
           {/* Hero Section */}
           <Paper
             elevation={0}
@@ -248,52 +438,541 @@ const HomePage = () => {
                   fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' },
                 }}
               >
-                Pricing That Scales With Your Business
+                iShareHow Labs
+              </Typography>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 700,
+                  mb: 3,
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                  opacity: 0.95,
+                }}
+              >
+                Empowering Your Vision with Managed Solutions
               </Typography>
               <Typography
                 variant="h5"
                 sx={{
                   fontWeight: 600,
-                  mb: 2,
-                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' },
-                  opacity: 0.95,
+                  mb: 4,
+                  fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+                  opacity: 0.9,
                 }}
               >
-                Choose the plan that works best for your creative goals
+                Your Dedicated Infrastructure Provider for Next-Level Success
               </Typography>
               <Typography
                 variant="h6"
                 sx={{
-                  fontWeight: 700,
+                  maxWidth: 900,
+                  mx: 'auto',
                   mb: 4,
+                  opacity: 0.95,
+                  fontWeight: 400,
                   fontSize: { xs: '1rem', md: '1.25rem' },
-                  opacity: 0.9,
                 }}
               >
-                NO HIDDEN FEES. NO SURPRISES.
+                Tired of juggling complex IT back-ends, unpredictable creative hiring, and scattered digital strategies? iShareHow Labs offers an integrated ecosystem of Managed Services, Creative-as-a-Service, and Strategic Intelligence designed to be the robust foundation for your business growth.
               </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  maxWidth: 700,
+                  mx: 'auto',
+                  mb: 4,
+                  opacity: 0.9,
+                  fontSize: { xs: '0.95rem', md: '1.1rem' },
+                  fontStyle: 'italic',
+                }}
+              >
+                We're here to support your dream with our tailored solutions.
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={() => router.push('/demo')}
+                sx={{
+                  bgcolor: 'white',
+                  color: '#6366F1',
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                  },
+                }}
+              >
+                Contact Us to Start Your Project Today
+              </Button>
             </Container>
           </Paper>
 
-          <Container maxWidth="lg" sx={{ mb: 8 }}>
-            {/* Pricing Toggle */}
-            <PricingToggle isAnnual={isAnnual} onChange={setIsAnnual} />
+          {/* SaaS Section */}
+          <Box id="saas" sx={{ mb: 8 }}>
+            <Container maxWidth="lg">
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 800,
+                  mb: 2,
+                  textAlign: 'center',
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                SaaS
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  mb: 1,
+                  textAlign: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Your Indispensable, Dedicated Infrastructure Provider
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  textAlign: 'center',
+                  mb: 5,
+                  color: 'text.secondary',
+                  maxWidth: 800,
+                  mx: 'auto',
+                  fontSize: '1.1rem',
+                }}
+              >
+                We meticulously manage all critical aspects of your project's back-end, ensuring a robust and efficient foundation for your success, allowing you to focus on client delivery and core business.
+              </Typography>
 
-            {/* Pricing Tiers */}
-            <Grid container spacing={4} sx={{ mb: 8 }}>
-              {pricingTiers.map((tier) => (
-                <Grid item xs={12} md={4} key={tier.id}>
-                  <PricingTierCard
-                    tier={tier}
-                    isAnnual={isAnnual}
-                    onSelect={handleSelectTier}
-                  />
+              <Grid container spacing={3} sx={{ mb: 5 }}>
+                {mbbaaSFeatures.map((feature, index) => (
+                  <Grid item xs={12} sm={6} md={3} key={index}>
+                    <Card
+                      elevation={2}
+                      sx={{
+                        height: '100%',
+                        p: 3,
+                        transition: 'transform 0.3s, box-shadow 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-8px)',
+                          boxShadow: 6,
+                        },
+                      }}
+                    >
+                      <Avatar
+                        sx={{
+                          bgcolor: 'primary.main',
+                          width: 56,
+                          height: 56,
+                          mb: 2,
+                        }}
+                      >
+                        {feature.icon}
+                      </Avatar>
+                      <Typography variant="h6" fontWeight={600} gutterBottom>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {feature.description}
+                      </Typography>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Container>
+          </Box>
+
+          <Divider sx={{ my: 8 }} />
+
+          {/* Creative Services Section */}
+          <Box id="creative" sx={{ mb: 8 }}>
+            <Container maxWidth="lg">
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 800,
+                  mb: 2,
+                  textAlign: 'center',
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                Experience & Design Services
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  mb: 1,
+                  textAlign: 'center',
+                  color: 'text.primary',
+                  fontStyle: 'italic',
+                }}
+              >
+                Creative-as-a-Service
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  mb: 3,
+                  textAlign: 'center',
+                  color: 'text.secondary',
+                }}
+              >
+                Visionary Ideas. Fearless Creativity. Bold Innovation.
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  textAlign: 'center',
+                  mb: 5,
+                  color: 'text.secondary',
+                  maxWidth: 800,
+                  mx: 'auto',
+                  fontSize: '1.1rem',
+                }}
+              >
+                Get the strategic creative leadership of an agency combined with the predictable, scalable structure of a Managed Service Provider (MSP). We focus on digital brand experience to drive next-level results.
+              </Typography>
+
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                {creativeServices.map((service, index) => (
+                  <Grid item xs={12} md={6} key={index}>
+                    <Card
+                      elevation={2}
+                      sx={{
+                        height: '100%',
+                        p: 3,
+                        transition: 'transform 0.3s, box-shadow 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-8px)',
+                          boxShadow: 6,
+                        },
+                      }}
+                    >
+                      <Stack direction="row" spacing={2}>
+                        <Avatar
+                          sx={{
+                            bgcolor: 'secondary.main',
+                            width: 56,
+                            height: 56,
+                          }}
+                        >
+                          {service.icon}
+                        </Avatar>
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="h6" fontWeight={600} gutterBottom>
+                            {service.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {service.description}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 4,
+                  borderRadius: 3,
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Grid container spacing={4}>
+                  <Grid item xs={12} md={4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight={700} gutterBottom>
+                        Core Focus
+                      </Typography>
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                          <Typography variant="body2">Brand Experience & UX/UI</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                          <Typography variant="body2">Managed Model</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                          <Typography variant="body2">Scalability</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CheckCircleIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />
+                          <Typography variant="body2">Technology Integration</Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight={700} gutterBottom>
+                        Key Services
+                      </Typography>
+                      <Stack spacing={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          • Branding, Web Design & Development
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • UI/UX Analysis & Improvement
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Mobile App Design
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Content Creation
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Front-End Coding & SEO
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight={700} gutterBottom>
+                        Managed Model
+                      </Typography>
+                      <Stack spacing={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          • Flat-rate, monthly subscription
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Unlimited requests and revisions (within plan scope)
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Month-to-month flexibility
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • Scale up or down by changing your plan
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          • No overhead of hiring
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Grid>
                 </Grid>
-              ))}
-            </Grid>
+              </Paper>
+            </Container>
+          </Box>
 
-            {/* Feature Comparison Table */}
-            <Box sx={{ mb: 8 }}>
+          <Divider sx={{ my: 8 }} />
+
+          {/* iShareHow Divisions Section */}
+          <Box id="isharehow" sx={{ mb: 8 }}>
+            <Container maxWidth="lg">
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 800,
+                  mb: 2,
+                  textAlign: 'center',
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                iShareHow
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  textAlign: 'center',
+                  mb: 5,
+                  color: 'text.secondary',
+                  maxWidth: 800,
+                  mx: 'auto',
+                  fontSize: '1.1rem',
+                }}
+              >
+                We develop and distribute compelling content through our iShareHow YT Channel and publishing division.
+              </Typography>
+
+              <Grid container spacing={4}>
+                {iShareHowDivisions.map((division, index) => (
+                  <Grid item xs={12} md={4} key={index}>
+                    <Card
+                      elevation={3}
+                      sx={{
+                        height: '100%',
+                        p: 4,
+                        background: `linear-gradient(135deg, ${division.color}15, ${division.color}05)`,
+                        border: '1px solid',
+                        borderColor: `${division.color}30`,
+                        transition: 'transform 0.3s, box-shadow 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-8px)',
+                          boxShadow: 8,
+                        },
+                      }}
+                    >
+                      <Avatar
+                        sx={{
+                          bgcolor: division.color,
+                          width: 64,
+                          height: 64,
+                          mb: 3,
+                        }}
+                      >
+                        {division.icon}
+                      </Avatar>
+                      <Typography variant="h5" fontWeight={700} gutterBottom>
+                        {division.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {division.description}
+                      </Typography>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Container>
+          </Box>
+
+          {/* Key Features Section */}
+          <Box sx={{ py: 8 }} id="features">
+            <Container maxWidth="lg">
+              <Typography
+                variant="h3"
+                gutterBottom
+                textAlign="center"
+                sx={{
+                  mb: 6,
+                  fontWeight: 800,
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                Our Features
+              </Typography>
+              <Grid container spacing={6}>
+                {[
+                  {
+                    title: "AI Creative Director™",
+                    description: "Your AI partner for stunning creative direction and design.",
+                    icon: "🎨",
+                  },
+                  {
+                    title: "Autopilot MSP + SOC",
+                    description: "Automated Managed Services with top-tier Security Operations.",
+                    icon: "🛡️",
+                  },
+                  {
+                    title: "Real-Time Agency OS Dashboard",
+                    description: "A live, comprehensive view of your agency's operations.",
+                    icon: "📈",
+                  },
+                  {
+                    title: "AI Venture Mentor & Community",
+                    description: "Guidance and a network for your entrepreneurial journey.",
+                    icon: "🧑‍🤝‍🧑",
+                  },
+                ].map((feature) => (
+                  <Grid item xs={12} sm={6} md={3} key={feature.title}>
+                    <Fade in timeout={1000}>
+                      <Card
+                        elevation={4}
+                        sx={{
+                          textAlign: 'center',
+                          py: 6,
+                          px: 3,
+                          borderRadius: 3,
+                          transition: 'transform 0.3s',
+                          '&:hover': { transform: 'translateY(-8px)' },
+                        }}
+                      >
+                        <CardContent>
+                          <Typography
+                            variant="h1"
+                            component="div"
+                            gutterBottom
+                            sx={{ fontSize: '4rem', mb: 2 }}
+                          >
+                            {feature.icon}
+                          </Typography>
+                          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+                            {feature.title}
+                          </Typography>
+                          <Typography variant="body1" color="text.secondary">
+                            {feature.description}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Fade>
+                  </Grid>
+                ))}
+              </Grid>
+            </Container>
+          </Box>
+
+          <Divider sx={{ my: 8 }} />
+
+          {/* Services Section */}
+          <Box sx={{ py: 8, bgcolor: 'grey.50' }} id="services">
+            <Container maxWidth="lg">
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 800,
+                  mb: 2,
+                  textAlign: 'center',
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                Comprehensive Managed Services
+              </Typography>
+              <Typography
+                variant="h5"
+                color="text.secondary"
+                textAlign="center"
+                sx={{ mb: 6, fontWeight: 500 }}
+              >
+                We deliver enterprise-grade managed services with security operations at the core. From SOC monitoring to studio production, all services are backed by guaranteed availability and unified platform management.
+              </Typography>
+              <Grid container spacing={6}>
+                {Object.entries(serviceDefinitions).map(([key, service]) => (
+                  <Grid item xs={12} sm={6} md={4} key={key}>
+                    <ServiceCard service={{ ...service, key }} />
+                  </Grid>
+                ))}
+              </Grid>
+            </Container>
+          </Box>
+
+          <Divider sx={{ my: 8 }} />
+
+          {/* Quiz Section */}
+          <Box sx={{ py: 8 }} id="quiz">
+            <Container maxWidth="md">
               <Typography
                 variant="h3"
                 sx={{
@@ -307,16 +986,57 @@ const HomePage = () => {
                   WebkitTextFillColor: 'transparent',
                 }}
               >
-                Compare Plans
+                Service Finder Quiz
               </Typography>
-              <FeatureComparisonTable
-                features={comparisonFeatures}
-                tiers={pricingTiers}
+              <Quiz
+                quizStep={quizStep}
+                answers={answers}
+                onAnswer={handleQuizAnswer}
+                onNext={nextQuiz}
+                onPrev={prevQuiz}
+                quizData={quizData}
+                isActive={true}
               />
-            </Box>
+              <Box sx={{ textAlign: 'center', mt: 6 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={resetQuiz}
+                  sx={{ px: 4, py: 2, fontSize: '1.1rem', fontWeight: 600 }}
+                >
+                  Reset Quiz
+                </Button>
+              </Box>
+            </Container>
+          </Box>
 
-            {/* Social Proof Section */}
-            <Box sx={{ mb: 8 }}>
+          {/* Results Section */}
+          <Box sx={{ py: 8, bgcolor: 'grey.50' }} id="results">
+            <Container maxWidth="md">
+              <Results
+                topServices={getTopScores()}
+                onResetQuiz={resetQuiz}
+                onNav={(view) => {
+                  const element = document.getElementById(view);
+                  if (element) element.scrollIntoView({ behavior: 'smooth' });
+                }}
+                isActive={true}
+              />
+            </Container>
+          </Box>
+
+          {/* About Section */}
+          <Box sx={{ py: 8 }} id="about">
+            <Container maxWidth="md">
+              <About isActive={true} />
+            </Container>
+          </Box>
+
+          <Divider sx={{ my: 8 }} />
+
+          {/* Pricing Section */}
+          <Box id="pricing" sx={{ mb: 8 }}>
+            <Container maxWidth="lg">
               <Typography
                 variant="h3"
                 sx={{
@@ -324,6 +1044,113 @@ const HomePage = () => {
                   mb: 2,
                   textAlign: 'center',
                   fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                Pricing That Scales With Your Business
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 600,
+                  mb: 2,
+                  textAlign: 'center',
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' },
+                  color: 'text.primary',
+                }}
+              >
+                Choose the plan that works best for your creative goals
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  mb: 4,
+                  textAlign: 'center',
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  color: 'text.secondary',
+                }}
+              >
+                NO HIDDEN FEES. NO SURPRISES.
+              </Typography>
+
+              {/* Pricing Toggle */}
+              <PricingToggle isAnnual={isAnnual} onChange={setIsAnnual} />
+
+              {/* Pricing Tiers */}
+              <Grid container spacing={4} sx={{ mb: 8 }}>
+                {pricingTiers.map((tier) => (
+                  <Grid item xs={12} md={4} key={tier.id}>
+                    <PricingTierCard
+                      tier={tier}
+                      isAnnual={isAnnual}
+                      onSelect={handleSelectTier}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Feature Comparison Table */}
+              <Box sx={{ mb: 8 }}>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    mb: 4,
+                    textAlign: 'center',
+                    fontSize: { xs: '1.5rem', md: '2rem' },
+                  }}
+                >
+                  Compare Plans
+                </Typography>
+                <FeatureComparisonTable
+                  features={comparisonFeatures}
+                  tiers={pricingTiers}
+                />
+              </Box>
+
+              {/* Trust Badges */}
+              <TrustBadges />
+
+              {/* FAQ Section */}
+              <Box sx={{ mb: 8 }}>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    mb: 4,
+                    textAlign: 'center',
+                    fontSize: { xs: '1.5rem', md: '2rem' },
+                  }}
+                >
+                  Frequently Asked Questions
+                </Typography>
+                <Container maxWidth="md">
+                  <FAQAccordion faqs={faqs} />
+                </Container>
+              </Box>
+            </Container>
+          </Box>
+
+          <Divider sx={{ my: 8 }} />
+
+          {/* Social Proof Section */}
+          <Box sx={{ mb: 8 }}>
+            <Container maxWidth="lg">
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 800,
+                  mb: 2,
+                  textAlign: 'center',
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Trusted by Businesses Worldwide
@@ -372,21 +1199,30 @@ const HomePage = () => {
               </Grid>
 
               {/* Testimonials */}
+              <Typography
+                variant="h4"
+                gutterBottom
+                textAlign="center"
+                sx={{ mb: 6, fontWeight: 700, color: 'primary.main' }}
+              >
+                What Our Users Say
+              </Typography>
               <Grid container spacing={4} sx={{ mb: 4 }}>
                 {testimonials.map((testimonial, index) => (
                   <Grid item xs={12} md={4} key={index}>
-                    <Paper
-                      elevation={2}
+                    <Card
+                      elevation={4}
                       sx={{
-                        p: 3,
+                        p: 4,
+                        borderRadius: 3,
+                        transition: 'transform 0.3s',
+                        '&:hover': { transform: 'translateY(-4px)' },
                         height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
                       }}
                     >
                       <Typography
                         variant="body1"
-                        sx={{ mb: 2, fontStyle: 'italic', flexGrow: 1 }}
+                        sx={{ mb: 2, fontStyle: 'italic', flexGrow: 1, fontSize: '1.1rem' }}
                         color="text.secondary"
                       >
                         "{testimonial.quote}"
@@ -398,111 +1234,96 @@ const HomePage = () => {
                       <Typography variant="caption" color="text.secondary">
                         {testimonial.role}
                       </Typography>
-                    </Paper>
+                    </Card>
                   </Grid>
                 ))}
               </Grid>
-            </Box>
+            </Container>
+          </Box>
 
-            {/* Trust Badges */}
-            <TrustBadges />
-
-            {/* FAQ Section */}
-            <Box sx={{ mb: 8 }}>
-              <Typography
-                variant="h3"
+          {/* Final CTA Section */}
+          <Box id="contact" sx={{ mb: 4 }}>
+            <Container maxWidth="lg">
+              <Paper
+                elevation={3}
                 sx={{
-                  fontWeight: 800,
-                  mb: 4,
+                  p: { xs: 4, md: 8 },
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, #22D3EE 0%, #6366F1 100%)',
+                  color: 'white',
                   textAlign: 'center',
-                  fontSize: { xs: '1.75rem', md: '2.5rem' },
                 }}
               >
-                Frequently Asked Questions
-              </Typography>
-              <Container maxWidth="md">
-                <FAQAccordion faqs={faqs} />
-              </Container>
-            </Box>
-
-            {/* CTA Section */}
-            <Paper
-              elevation={3}
-              sx={{
-                p: { xs: 4, md: 8 },
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, #22D3EE 0%, #6366F1 100%)',
-                color: 'white',
-                textAlign: 'center',
-              }}
-            >
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 800,
-                  mb: 2,
-                  fontSize: { xs: '1.75rem', md: '2.5rem' },
-                }}
-              >
-                Ready to Get Started?
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  mb: 4,
-                  opacity: 0.95,
-                  fontWeight: 400,
-                  maxWidth: 800,
-                  mx: 'auto',
-                }}
-              >
-                Join thousands of businesses using iShareHow Labs to scale their creative operations.
-              </Typography>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                justifyContent="center"
-              >
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={() => router.push('/demo')}
+                <Typography
+                  variant="h3"
                   sx={{
-                    bgcolor: 'white',
-                    color: '#6366F1',
-                    fontWeight: 700,
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.9)',
-                    },
+                    fontWeight: 800,
+                    mb: 2,
+                    fontSize: { xs: '1.75rem', md: '2.5rem' },
                   }}
                 >
-                  Start Your Free Trial
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => router.push('/demo?tier=enterprise')}
+                  Ready to Transform Your Aspirations into Tangible Achievements?
+                </Typography>
+                <Typography
+                  variant="h6"
                   sx={{
-                    borderColor: 'white',
-                    color: 'white',
-                    fontWeight: 700,
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    '&:hover': {
-                      borderColor: 'rgba(255,255,255,0.8)',
-                      bgcolor: 'rgba(255,255,255,0.1)',
-                    },
+                    mb: 4,
+                    opacity: 0.95,
+                    fontWeight: 400,
+                    maxWidth: 800,
+                    mx: 'auto',
+                    fontSize: { xs: '1rem', md: '1.25rem' },
                   }}
                 >
-                  Contact Sales
-                </Button>
-              </Stack>
-            </Paper>
-          </Container>
+                  Trust iShareHow Labs and our advanced AI app ecosystem to provide the technical backbone and strategic insights that will ensure your competitive edge in today's dynamic market.
+                </Typography>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={2}
+                  justifyContent="center"
+                  sx={{ mt: 4 }}
+                >
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={() => router.push('/demo')}
+                    sx={{
+                      bgcolor: 'white',
+                      color: '#6366F1',
+                      fontWeight: 700,
+                      px: 4,
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.9)',
+                      },
+                    }}
+                  >
+                    Contact Us to Start Your Project Today
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={() => router.push('/demo?tier=enterprise')}
+                    sx={{
+                      borderColor: 'white',
+                      color: 'white',
+                      fontWeight: 700,
+                      px: 4,
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      '&:hover': {
+                        borderColor: 'rgba(255,255,255,0.8)',
+                        bgcolor: 'rgba(255,255,255,0.1)',
+                      },
+                    }}
+                  >
+                    Contact Sales
+                  </Button>
+                </Stack>
+              </Paper>
+            </Container>
+          </Box>
         </Box>
       </AppShell>
     </>
