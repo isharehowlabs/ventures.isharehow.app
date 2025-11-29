@@ -19,3 +19,8 @@ yarn-error.log*
 backend/.env
 backend/.env.backup
 *.env.backup
+
+# CodeQL databases
+codeql-database/
+.codeql/
+*.codeql/

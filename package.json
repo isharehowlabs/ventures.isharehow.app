@@ -7,7 +7,9 @@
     "build": "next build && cp -a out/. .",
     "build:commit": "./build-and-commit.sh",
     "build:commit:auto": "./build-and-commit-auto.sh",
-    "start": "echo 'Static export mode - use npm run dev for development or serve the built files' && npm run dev"
+    "start": "echo 'Static export mode - use npm run dev for development or serve the built files' && npm run dev",
+    "cleanup:codeql": "./cleanup-codeql.sh",
+    "cleanup": "npm run cleanup:codeql"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
