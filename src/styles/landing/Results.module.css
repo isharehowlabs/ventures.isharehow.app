@@ -1,3 +1,4 @@
+/* Results - Theme-aware with manual toggle support */
 .view {
   display: block;
   padding: 40px 0;
@@ -19,11 +20,17 @@
 }
 
 .resultCard {
-  background: var(--md-sys-color-surface, #fff);
-  border-radius: 16px;
+  background: #FFFFFF;
+  border-radius: 12px;
   padding: 32px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.08), 0px 2px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e9ecef;
+}
+
+:global([data-theme="dark"]) .resultCard {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 .resultHeader {
@@ -34,16 +41,16 @@
 }
 
 .resultIcon {
-  width: 72px;
-  height: 72px;
-  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+  width: 64px;
+  height: 64px;
+  background: #4B5DBD;
   color: #fff;
-  border-radius: 20px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
-  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
+  font-size: 32px;
+  box-shadow: 0px 2px 4px rgba(75, 93, 189, 0.2);
 }
 
 .resultTitle {
@@ -51,26 +58,34 @@
 }
 
 .resultTitle h2 {
-  font-size: 28px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 600;
   margin-bottom: 4px;
+  color: #212529;
+}
+
+:global([data-theme="dark"]) .resultTitle h2 {
+  color: #f7fafc;
 }
 
 .resultScore {
-  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+  background: #4B5DBD;
   color: #fff;
-  padding: 10px 20px;
-  border-radius: 24px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 14px;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
 }
 
 .resultDescription {
   font-size: 16px;
   line-height: 1.6;
-  color: var(--md-sys-color-on-surface-variant, #666);
+  color: #6c757d;
   margin-bottom: 24px;
+}
+
+:global([data-theme="dark"]) .resultDescription {
+  color: #cbd5e0;
 }
 
 .resultServices {
@@ -83,14 +98,20 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: var(--md-sys-color-surface-variant, #f5f5f5);
-  border-radius: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+:global([data-theme="dark"]) .resultService {
+  background: #0f172a;
+  border-color: #334155;
 }
 
 .resultServiceIcon {
   width: 40px;
   height: 40px;
-  background: #6366f1;
+  background: #4B5DBD;
   color: #fff;
   border-radius: 8px;
   display: flex;
@@ -103,27 +124,42 @@
   text-align: center;
   margin-top: 32px;
   padding: 32px;
-  background: var(--md-sys-color-surface-dim, #f9f9f9);
-  border: 1px solid var(--md-sys-color-outline, #e0e0e0);
-  border-radius: 16px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+}
+
+:global([data-theme="dark"]) .ctaSection {
+  background: #0f172a;
+  border-color: #334155;
 }
 
 .ctaSection h3 {
   font-size: 24px;
+  font-weight: 600;
   margin-bottom: 16px;
+  color: #212529;
+}
+
+:global([data-theme="dark"]) .ctaSection h3 {
+  color: #f7fafc;
 }
 
 .ctaSection p {
-  color: var(--md-sys-color-on-surface-variant, #666);
+  color: #6c757d;
   margin-bottom: 24px;
 }
 
+:global([data-theme="dark"]) .ctaSection p {
+  color: #cbd5e0;
+}
+
 .btn {
-  padding: 12px 24px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 24px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   display: inline-flex;
@@ -133,24 +169,30 @@
 }
 
 .btnPrimary {
-  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+  background: #4B5DBD;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
 }
 
 .btnPrimary:hover {
-  background: linear-gradient(135deg, #3730a3 0%, #22d3ee 100%);
-  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
-  transform: translateY(-2px);
+  background: #3A4A9D;
+  box-shadow: 0px 2px 4px rgba(75, 93, 189, 0.2);
 }
 
 .btnSecondary {
   background: transparent;
-  color: #6366f1;
-  border: 1px solid var(--md-sys-color-outline, #e0e0e0);
+  color: #4B5DBD;
+  border: 1.5px solid #dee2e6;
+}
+
+:global([data-theme="dark"]) .btnSecondary {
+  border-color: #334155;
 }
 
 .btnSecondary:hover {
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(75, 93, 189, 0.04);
+  border-color: #4B5DBD;
 }
 
+:global([data-theme="dark"]) .btnSecondary:hover {
+  background: rgba(75, 93, 189, 0.12);
+}

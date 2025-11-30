@@ -76,6 +76,20 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
+  // Update document class when resolvedMode changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Remove both classes first
+    document.documentElement.classList.remove('light-mode', 'dark-mode');
+    
+    // Add the current mode class
+    document.documentElement.classList.add(`${resolvedMode}-mode`);
+    
+    // Also set a data attribute for CSS modules
+    document.documentElement.setAttribute('data-theme', resolvedMode);
+  }, [resolvedMode]);
+
   const setThemeMode = (newMode: ThemeMode) => {
     setMode(newMode);
     localStorage.setItem('themeMode', newMode);

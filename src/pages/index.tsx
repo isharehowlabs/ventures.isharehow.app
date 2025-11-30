@@ -39,9 +39,7 @@ import PricingToggle from '../components/pricing/PricingToggle';
 import FeatureComparisonTable, { Feature } from '../components/pricing/FeatureComparisonTable';
 import FAQAccordion, { FAQItem } from '../components/pricing/FAQAccordion';
 import TrustBadges from '../components/pricing/TrustBadges';
-import { About } from '../components/landing/About';
-import { Quiz } from '../components/landing/Quiz';
-import { Results } from '../components/landing/Results';
+import { ServiceFinderQuiz } from '../components/landing/ServiceFinderQuiz';
 import { ServiceCard } from '../components/landing/ServiceCard';
 import { quizData } from '../data/quizData';
 import { serviceDefinitions } from '../data/serviceDefinitions';
@@ -421,12 +419,11 @@ const HomePage = () => {
           <Paper
             elevation={0}
             sx={{
-              background: 'linear-gradient(135deg, #22D3EE 0%, #6366F1 100%)',
+              color: "primary.main",
               borderRadius: 0,
               p: { xs: 4, md: 8 },
               mb: 6,
               textAlign: 'center',
-              color: 'white',
             }}
           >
             <Container maxWidth="lg">
@@ -520,10 +517,7 @@ const HomePage = () => {
                   mb: 2,
                   textAlign: 'center',
                   fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: "primary.main",
                 }}
               >
                 SaaS
@@ -603,10 +597,7 @@ const HomePage = () => {
                   mb: 2,
                   textAlign: 'center',
                   fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: "primary.main",
                 }}
               >
                 Experience & Design Services
@@ -788,10 +779,7 @@ const HomePage = () => {
                   mb: 2,
                   textAlign: 'center',
                   fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: "primary.main",
                 }}
               >
                 iShareHow
@@ -851,89 +839,10 @@ const HomePage = () => {
             </Container>
           </Box>
 
-          {/* Key Features Section */}
-          <Box sx={{ py: 8 }} id="features">
-            <Container maxWidth="lg">
-              <Typography
-                variant="h3"
-                gutterBottom
-                textAlign="center"
-                sx={{
-                  mb: 6,
-                  fontWeight: 800,
-                  fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Our Features
-              </Typography>
-              <Grid container spacing={6}>
-                {[
-                  {
-                    title: "AI Creative Director™",
-                    description: "Your AI partner for stunning creative direction and design.",
-                    icon: "🎨",
-                  },
-                  {
-                    title: "Autopilot MSP + SOC",
-                    description: "Automated Managed Services with top-tier Security Operations.",
-                    icon: "🛡️",
-                  },
-                  {
-                    title: "Real-Time Agency OS Dashboard",
-                    description: "A live, comprehensive view of your agency's operations.",
-                    icon: "📈",
-                  },
-                  {
-                    title: "AI Venture Mentor & Community",
-                    description: "Guidance and a network for your entrepreneurial journey.",
-                    icon: "🧑‍🤝‍🧑",
-                  },
-                ].map((feature) => (
-                  <Grid item xs={12} sm={6} md={3} key={feature.title}>
-                    <Fade in timeout={1000}>
-                      <Card
-                        elevation={4}
-                        sx={{
-                          textAlign: 'center',
-                          py: 6,
-                          px: 3,
-                          borderRadius: 3,
-                          transition: 'transform 0.3s',
-                          '&:hover': { transform: 'translateY(-8px)' },
-                        }}
-                      >
-                        <CardContent>
-                          <Typography
-                            variant="h1"
-                            component="div"
-                            gutterBottom
-                            sx={{ fontSize: '4rem', mb: 2 }}
-                          >
-                            {feature.icon}
-                          </Typography>
-                          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-                            {feature.title}
-                          </Typography>
-                          <Typography variant="body1" color="text.secondary">
-                            {feature.description}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Fade>
-                  </Grid>
-                ))}
-              </Grid>
-            </Container>
-          </Box>
-
           <Divider sx={{ my: 8 }} />
 
           {/* Services Section */}
-          <Box sx={{ py: 8, bgcolor: 'grey.50' }} id="services">
+          <Box sx={{ py: 8, bgcolor: "background.default" }} id="services">
             <Container maxWidth="lg">
               <Typography
                 variant="h3"
@@ -942,10 +851,7 @@ const HomePage = () => {
                   mb: 2,
                   textAlign: 'center',
                   fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: "primary.main",
                 }}
               >
                 Comprehensive Managed Services
@@ -956,7 +862,10 @@ const HomePage = () => {
                 textAlign="center"
                 sx={{ mb: 6, fontWeight: 500 }}
               >
-                We deliver enterprise-grade managed services with security operations at the core. From SOC monitoring to studio production, all services are backed by guaranteed availability and unified platform management.
+                We deliver enterprise-grade managed services with security operations at the core. From SOC monitoring to studio production, all services are backed by guaranteed availability and unified platform management. We're building the future of managed services by combining Security Operations Center (SOC)
+          expertise with a comprehensive SaaS platform. Our mission is to become the best SOC company
+          while delivering end-to-end managed services across infrastructure, security, production,
+          applications, and support.
               </Typography>
               <Grid container spacing={6}>
                 {Object.entries(serviceDefinitions).map(([key, service]) => (
@@ -970,69 +879,26 @@ const HomePage = () => {
 
           <Divider sx={{ my: 8 }} />
 
-          {/* Quiz Section */}
+          {/* Unified Service Finder Quiz & Results */}
           <Box sx={{ py: 8 }} id="quiz">
-            <Container maxWidth="md">
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 800,
-                  mb: 4,
-                  textAlign: 'center',
-                  fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Service Finder Quiz
-              </Typography>
-              <Quiz
+            <Container maxWidth="lg">
+              <ServiceFinderQuiz
                 quizStep={quizStep}
                 answers={answers}
                 onAnswer={handleQuizAnswer}
                 onNext={nextQuiz}
                 onPrev={prevQuiz}
+                onReset={resetQuiz}
                 quizData={quizData}
-                isActive={true}
-              />
-              <Box sx={{ textAlign: 'center', mt: 6 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={resetQuiz}
-                  sx={{ px: 4, py: 2, fontSize: '1.1rem', fontWeight: 600 }}
-                >
-                  Reset Quiz
-                </Button>
-              </Box>
-            </Container>
-          </Box>
-
-          {/* Results Section */}
-          <Box sx={{ py: 8, bgcolor: 'grey.50' }} id="results">
-            <Container maxWidth="md">
-              <Results
                 topServices={getTopScores()}
-                onResetQuiz={resetQuiz}
                 onNav={(view) => {
                   const element = document.getElementById(view);
                   if (element) element.scrollIntoView({ behavior: 'smooth' });
                 }}
-                isActive={true}
               />
             </Container>
           </Box>
 
-          {/* About Section */}
-          <Box sx={{ py: 8 }} id="about">
-            <Container maxWidth="md">
-              <About isActive={true} />
-            </Container>
-          </Box>
-
-          <Divider sx={{ my: 8 }} />
 
           {/* Pricing Section */}
           <Box id="pricing" sx={{ mb: 8 }}>
@@ -1044,10 +910,7 @@ const HomePage = () => {
                   mb: 2,
                   textAlign: 'center',
                   fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: "primary.main",
                 }}
               >
                 Pricing That Scales With Your Business
@@ -1147,10 +1010,7 @@ const HomePage = () => {
                   mb: 2,
                   textAlign: 'center',
                   fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: "primary.main",
                 }}
               >
                 Trusted by Businesses Worldwide
@@ -1249,8 +1109,7 @@ const HomePage = () => {
                 sx={{
                   p: { xs: 4, md: 8 },
                   borderRadius: 3,
-                  background: 'linear-gradient(135deg, #22D3EE 0%, #6366F1 100%)',
-                  color: 'white',
+                  color: "primary.main",
                   textAlign: 'center',
                 }}
               >
