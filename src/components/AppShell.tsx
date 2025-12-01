@@ -25,6 +25,7 @@ import { useRouter } from 'next/router';
 import ThemeToggle from './ThemeToggle';
 import SearchBar from './SearchBar';
 import NotificationMenu from './NotificationMenu';
+import FocusTimer from './shared/FocusTimer';
 import Navigation, { type NavKey } from './Navigation';
 import { getBackendUrl } from '../utils/backendUrl';
 import { useAuth } from '../hooks/useAuth';
@@ -134,6 +135,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
           {/* Right side items */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SearchBar />
+            <FocusTimer location={active === 'rise' ? 'rise' : 'cowork'} />
             <NotificationMenu />
             <ThemeToggle />
 

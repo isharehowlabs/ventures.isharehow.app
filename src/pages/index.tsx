@@ -403,6 +403,7 @@ const HomePage = () => {
     <>
       <Head>
         <title>iShareHow Labs - Empowering Your Vision with Managed Solutions</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/" />
         <meta
           name="description"
           content="Tired of juggling complex IT back-ends, unpredictable creative hiring, and scattered digital strategies? iShareHow Labs offers an integrated ecosystem of Managed Services, Creative-as-a-Service, and Strategic Intelligence designed to be the robust foundation for your business growth."

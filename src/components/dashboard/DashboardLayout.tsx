@@ -3,7 +3,7 @@ import { Box, Tabs, Tab, useTheme, useMediaQuery, Paper, Typography } from '@mui
 import Workspace from './Workspace';
 import LearningPanel from './LearningPanel';
 // Web3Panel removed - ENS info now displayed in profile page
-import FocusPanel from './FocusPanel';
+// FocusPanel removed - Focus Timer now in top bar
 import AIJournalPanel from './AIJournalPanel';
 import AiAgentPanel from './AiAgentPanel';
 import DashboardHeader from './DashboardHeader';
@@ -55,7 +55,7 @@ export default function DashboardLayout({ children, taskList, communityQA }: Das
     communityQA: { component: communityQA, label: 'Community Q&A' },
     // web3 panel removed - ENS info now in profile page
     // streaming panel moved to /live page
-    focus: { component: <FocusPanel />, label: 'Focus Timer' },
+    // focus panel removed - Focus Timer now in top bar
     aiJournal: { component: <AIJournalPanel />, label: 'Mindset Journal' },
     aiAgent: { component: <AiAgentPanel />, label: 'AI Agent' },
   };

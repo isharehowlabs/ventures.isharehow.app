@@ -1,6 +1,5 @@
 import React from 'react';
 import AppShell from '../components/AppShell';
-import ProtectedRoute from '../components/auth/ProtectedRoute';
 import StreamingPanel from '../components/dashboard/StreamingPanel';
 
 function LiveStreamPage() {
@@ -11,13 +10,5 @@ function LiveStreamPage() {
   );
 }
 
-function App() {
-  return (
-    <ProtectedRoute>
-      <LiveStreamPage />
-    </ProtectedRoute>
-  );
-}
-
-export default App;
+export default LiveStreamPage;
 

@@ -22,10 +22,10 @@ import {
   EmojiEvents as SkillsIcon,
   FitnessCenter as WellnessIcon,
   Stars as AchievementsIcon,
+  Spa as SpiritualIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import PomodoroTimer from '../components/shared/PomodoroTimer';
 import FocusModal from '../components/shared/FocusModal';
 import MindsetJournal from '../components/shared/MindsetJournal';
 import ActivityCard from '../components/wellness/ActivityCard';
@@ -33,6 +33,7 @@ import GoalCard from '../components/wellness/GoalCard';
 import AchievementCard from '../components/wellness/AchievementCard';
 import FocusSessionCard from '../components/wellness/FocusSessionCard';
 import GoalDialog from '../components/wellness/GoalDialog';
+import SpiritualFestivals from '../components/spiritual/SpiritualFestivals';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchAuras,
@@ -234,6 +235,7 @@ export default function RiseDashboard() {
             <Tab icon={<SkillsIcon />} label="Goals" />
             <Tab icon={<WellnessIcon />} label="Wellness" />
             <Tab icon={<AchievementsIcon />} label="Achievements" />
+            <Tab icon={<SpiritualIcon />} label="Festivals" />
           </Tabs>
         </Paper>
 
@@ -308,9 +310,6 @@ export default function RiseDashboard() {
         <TabPanel value={currentTab} index={1}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <PomodoroTimer location="rise" />
-            </Grid>
-            <Grid item xs={12} md={6}>
               <Paper sx={{ p: 3, textAlign: 'center' }}>
                 <Typography variant="h5" gutterBottom>Full Focus Mode</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -331,7 +330,7 @@ export default function RiseDashboard() {
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h5" gutterBottom>Focus Session History</Typography>
                 {focusSessions.length === 0 ? (
-                  <Typography color="text.secondary">No focus sessions yet. Start a pomodoro timer!</Typography>
+                  <Typography color="text.secondary">No focus sessions yet. Start a timer from the top bar!</Typography>
                 ) : (
                   focusSessions.map((session) => (
                     <FocusSessionCard key={session.id} session={session} />
@@ -434,6 +433,11 @@ export default function RiseDashboard() {
               ))
             )}
           </Grid>
+        </TabPanel>
+
+        {/* Tab 7: Spiritual Festivals */}
+        <TabPanel value={currentTab} index={6}>
+          <SpiritualFestivals />
         </TabPanel>
 
         {/* Focus Modal */}
