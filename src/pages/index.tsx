@@ -491,15 +491,15 @@ const HomePage = () => {
                 size="large"
                 onClick={() => router.push('/demo')}
                 sx={{
-                  bgcolor: 'white',
-                  color: '#6366F1',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'primary.main' : 'white',
+                  color: (theme) => theme.palette.mode === 'dark' ? 'white' : 'primary.main',
                   fontWeight: 700,
                   px: 4,
                   py: 1.5,
                   fontSize: '1.1rem',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                   '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.9)',
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'primary.dark' : 'rgba(255,255,255,0.9)',
                   },
                 }}
               >
@@ -1148,14 +1148,14 @@ const HomePage = () => {
                     size="large"
                     onClick={() => router.push('/demo')}
                     sx={{
-                      bgcolor: 'white',
-                      color: '#6366F1',
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'primary.main' : 'white',
+                      color: (theme) => theme.palette.mode === 'dark' ? 'white' : 'primary.main',
                       fontWeight: 700,
                       px: 4,
                       py: 1.5,
                       fontSize: '1.1rem',
                       '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.9)',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'primary.dark' : 'rgba(255,255,255,0.9)',
                       },
                     }}
                   >
