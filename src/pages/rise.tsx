@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
-  Timer as TimerIcon,
   MenuBook as JournalIcon,
   EmojiEvents as SkillsIcon,
   FitnessCenter as WellnessIcon,
@@ -26,12 +25,10 @@ import {
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import FocusModal from '../components/shared/FocusModal';
 import MindsetJournal from '../components/shared/MindsetJournal';
 import ActivityCard from '../components/wellness/ActivityCard';
 import GoalCard from '../components/wellness/GoalCard';
 import AchievementCard from '../components/wellness/AchievementCard';
-import FocusSessionCard from '../components/wellness/FocusSessionCard';
 import GoalDialog from '../components/wellness/GoalDialog';
 import SpiritualFestivals from '../components/spiritual/SpiritualFestivals';
 import { useAuth } from '../hooks/useAuth';
@@ -91,7 +88,6 @@ export default function RiseDashboard() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   
   // UI state
-  const [focusModalOpen, setFocusModalOpen] = useState(false);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
@@ -230,7 +226,6 @@ export default function RiseDashboard() {
             scrollButtons="auto"
           >
             <Tab icon={<DashboardIcon />} label="Overview" />
-            <Tab icon={<TimerIcon />} label="Focus" />
             <Tab icon={<JournalIcon />} label="Journal" />
             <Tab icon={<SkillsIcon />} label="Goals" />
             <Tab icon={<WellnessIcon />} label="Wellness" />
@@ -306,43 +301,8 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 2: Focus & Productivity */}
+        {/* Tab 2: Mindset & Journal */}
         <TabPanel value={currentTab} index={1}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 3, textAlign: 'center' }}>
-                <Typography variant="h5" gutterBottom>Full Focus Mode</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Enter a distraction-free environment
-                </Typography>
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={() => setFocusModalOpen(true)}
-                  fullWidth
-                >
-                  Enter Focus Mode
-                </Button>
-              </Paper>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom>Focus Session History</Typography>
-                {focusSessions.length === 0 ? (
-                  <Typography color="text.secondary">No focus sessions yet. Start a timer from the top bar!</Typography>
-                ) : (
-                  focusSessions.map((session) => (
-                    <FocusSessionCard key={session.id} session={session} />
-                  ))
-                )}
-              </Paper>
-            </Grid>
-          </Grid>
-        </TabPanel>
-
-        {/* Tab 3: Mindset & Journal */}
-        <TabPanel value={currentTab} index={2}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <MindsetJournal location="rise" />
@@ -350,8 +310,8 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 4: Goals & Training */}
-        <TabPanel value={currentTab} index={3}>
+        {/* Tab 3: Goals & Training */}
+        <TabPanel value={currentTab} index={2}>
           <Box sx={{ mb: 3 }}>
             <Button
               variant="contained"
@@ -391,8 +351,8 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 5: Wellness & Cycling */}
-        <TabPanel value={currentTab} index={4}>
+        {/* Tab 4: Wellness & Cycling */}
+        <TabPanel value={currentTab} index={3}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Paper sx={{ p: 3 }}>
@@ -414,8 +374,8 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 6: Achievements */}
-        <TabPanel value={currentTab} index={5}>
+        {/* Tab 5: Achievements */}
+        <TabPanel value={currentTab} index={4}>
           <Grid container spacing={3}>
             {achievements.length === 0 ? (
               <Grid item xs={12}>
@@ -435,17 +395,10 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 7: Spiritual Festivals */}
-        <TabPanel value={currentTab} index={6}>
+        {/* Tab 6: Spiritual Festivals */}
+        <TabPanel value={currentTab} index={5}>
           <SpiritualFestivals />
         </TabPanel>
-
-        {/* Focus Modal */}
-        <FocusModal
-          open={focusModalOpen}
-          onClose={() => setFocusModalOpen(false)}
-          duration={25}
-        />
 
         {/* Goal Dialog */}
         <GoalDialog
