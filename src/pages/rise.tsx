@@ -20,12 +20,11 @@ import {
   MenuBook as JournalIcon,
   EmojiEvents as SkillsIcon,
   FitnessCenter as WellnessIcon,
-  Stars as AchievementsIcon,
   Spa as SpiritualIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import MindsetJournal from '../components/shared/MindsetJournal';
+import MentalSpiritualJournal from '../components/spiritual/MentalSpiritualJournal';
 import ActivityCard from '../components/wellness/ActivityCard';
 import GoalCard from '../components/wellness/GoalCard';
 import AchievementCard from '../components/wellness/AchievementCard';
@@ -226,10 +225,9 @@ export default function RiseDashboard() {
             scrollButtons="auto"
           >
             <Tab icon={<DashboardIcon />} label="Overview" />
-            <Tab icon={<JournalIcon />} label="Journal" />
-            <Tab icon={<SkillsIcon />} label="Goals" />
+            <Tab icon={<JournalIcon />} label="Mental Spiritual Journal" />
+            <Tab icon={<SkillsIcon />} label="Goals & Achievements" />
             <Tab icon={<WellnessIcon />} label="Wellness" />
-            <Tab icon={<AchievementsIcon />} label="Achievements" />
             <Tab icon={<SpiritualIcon />} label="Festivals" />
           </Tabs>
         </Paper>
@@ -301,53 +299,84 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 2: Mindset & Journal */}
+        {/* Tab 2: Mental Spiritual Journal */}
         <TabPanel value={currentTab} index={1}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <MindsetJournal location="rise" />
-            </Grid>
-          </Grid>
+          <MentalSpiritualJournal />
         </TabPanel>
 
-        {/* Tab 3: Goals & Training */}
+        {/* Tab 3: Goals & Achievements */}
         <TabPanel value={currentTab} index={2}>
-          <Box sx={{ mb: 3 }}>
-            <Button
-              variant="contained"
-              onClick={() => {
-                setEditingGoal(null);
-                setGoalDialogOpen(true);
-              }}
-            >
-              Add New Goal
-            </Button>
-          </Box>
-          
           <Grid container spacing={3}>
-            {goals.length === 0 ? (
-              <Grid item xs={12}>
-                <Paper sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
-                    No goals yet. Create your first goal to start tracking progress!
+            {/* Goals Section */}
+            <Grid item xs={12} lg={7}>
+              <Paper sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h5" gutterBottom>
+                    Your Goals
                   </Typography>
-                </Paper>
-              </Grid>
-            ) : (
-              goals.map((goal) => (
-                <Grid item xs={12} md={6} key={goal.id}>
-                  <GoalCard
-                    goal={goal}
-                    onEdit={(g) => {
-                      setEditingGoal(g);
+                  <Button
+                    variant="contained"
+                    onClick={() => {
+                      setEditingGoal(null);
                       setGoalDialogOpen(true);
                     }}
-                    onDelete={handleGoalDelete}
-                    onUpdateProgress={handleGoalProgressUpdate}
-                  />
-                </Grid>
-              ))
-            )}
+                  >
+                    Add New Goal
+                  </Button>
+                </Box>
+                
+                {goals.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography color="text.secondary">
+                      No goals yet. Create your first goal to start tracking progress!
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Grid container spacing={2}>
+                    {goals.map((goal) => (
+                      <Grid item xs={12} key={goal.id}>
+                        <GoalCard
+                          goal={goal}
+                          onEdit={(g) => {
+                            setEditingGoal(g);
+                            setGoalDialogOpen(true);
+                          }}
+                          onDelete={handleGoalDelete}
+                          onUpdateProgress={handleGoalProgressUpdate}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Achievements Section */}
+            <Grid item xs={12} lg={5}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h5" gutterBottom>
+                  Achievements
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Unlock achievements as you progress on your goals and journey.
+                </Typography>
+                {achievements.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography color="text.secondary">
+                      No achievements unlocked yet. Keep working on your goals!
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Grid container spacing={2}>
+                    {achievements.map((achievement) => (
+                      <Grid item xs={12} key={achievement.id}>
+                        <AchievementCard achievement={achievement} />
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+              </Paper>
+            </Grid>
           </Grid>
         </TabPanel>
 
@@ -374,29 +403,8 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 5: Achievements */}
+        {/* Tab 5: Spiritual Festivals */}
         <TabPanel value={currentTab} index={4}>
-          <Grid container spacing={3}>
-            {achievements.length === 0 ? (
-              <Grid item xs={12}>
-                <Paper sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
-                    No achievements unlocked yet. Keep working on your goals!
-                  </Typography>
-                </Paper>
-              </Grid>
-            ) : (
-              achievements.map((achievement) => (
-                <Grid item xs={12} sm={6} md={4} key={achievement.id}>
-                  <AchievementCard achievement={achievement} />
-                </Grid>
-              ))
-            )}
-          </Grid>
-        </TabPanel>
-
-        {/* Tab 6: Spiritual Festivals */}
-        <TabPanel value={currentTab} index={5}>
           <SpiritualFestivals />
         </TabPanel>
 
