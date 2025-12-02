@@ -62,6 +62,7 @@ export default function GameLobby() {
       playerName: playerName.trim(),
       userId: user?.id,
       avatar: user?.avatar,
+      roomCode: user?.id || undefined,
     });
   };
 

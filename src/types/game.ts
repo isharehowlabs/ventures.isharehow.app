@@ -57,6 +57,7 @@ export interface CreateRoomData {
   playerName: string;
   userId?: string;
   avatar?: string;
+  roomCode?: string;
 }
 
 export interface JoinRoomData {

@@ -7035,14 +7035,34 @@ def generate_room_code():
             return code
 
 @socketio.on('game:create-room')
+@socketio.on('game:create-room')
 def handle_create_room(data):
     """Create a new game room"""
     try:
         player_name = data.get('playerName', 'Guest')
         user_id = data.get('userId')
         avatar = data.get('avatar')
+        custom_room_code = data.get('roomCode', '').strip()
         
-        room_code = generate_room_code()
+        # Determine room code
+        if custom_room_code:
+            # If roomCode is provided (from userId), convert it to 6-char code
+            # Use first 6 chars of hash for consistency
+            if len(custom_room_code) > 6:
+                # Hash the userId to create a consistent 6-char code
+                hash_obj = hashlib.md5(custom_room_code.encode())
+                room_code = hash_obj.hexdigest()[:6].upper()
+            else:
+                room_code = custom_room_code.upper()
+            
+            # Check if code already exists
+            if room_code in game_rooms:
+                emit('game:error', {'message': 'Room code already in use. Please try again.'})
+                return
+        else:
+            # Auto-generate if not provided
+            room_code = generate_room_code()
+        
         player_id = request.sid
         
         # Create room
@@ -7075,58 +7095,6 @@ def handle_create_room(data):
     except Exception as e:
         emit('game:error', {'message': f'Failed to create room: {str(e)}'})
 
-@socketio.on('game:join-room')
-def handle_join_room(data):
-    """Join an existing game room"""
-    try:
-        room_code = data.get('roomCode', '').upper()
-        player_name = data.get('playerName', 'Guest')
-        user_id = data.get('userId')
-        avatar = data.get('avatar')
-        
-        if room_code not in game_rooms:
-            emit('game:error', {'message': 'Room not found'})
-            return
-        
-        room = game_rooms[room_code]
-        
-        # Check if room is full
-        if len(room['players']) >= 16:
-            emit('game:error', {'message': 'Room is full (max 16 players)'})
-            return
-        
-        # Check if game already started
-        if room['state'] != 'lobby':
-            emit('game:error', {'message': 'Game already in progress'})
-            return
-        
-        player_id = request.sid
-        
-        # Add player to room
-        room['players'].append({
-            'id': player_id,
-            'name': player_name,
-            'score': 0,
-            'isHost': False,
-            'isActive': True,
-            'avatar': avatar,
-            'userId': user_id,
-        })
-        
-        # Join socket.io room
-        join_room(room_code)
-        
-        # Notify player
-        emit('game:room-joined', {'room': room})
-        
-        # Notify others
-        emit('game:player-joined', {
-            'player': room['players'][-1],
-            'room': room
-        }, room=room_code, skip_sid=request.sid)
-        
-    except Exception as e:
-        emit('game:error', {'message': f'Failed to join room: {str(e)}'})
 
 @socketio.on('game:leave-room')
 def handle_leave_room(data):
