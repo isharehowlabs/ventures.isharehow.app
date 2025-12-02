@@ -20,10 +20,11 @@ import {
   VideoCall as DemoIcon,
   Brush as CreativeIcon,
   LiveTv as LiveIcon,
+  SportsEsports as GamesIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative';
+type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative';
 
 interface NavigationItem {
   key: NavKey;
@@ -66,6 +67,13 @@ const navigationItems: NavigationItem[] = [
     href: '/live',
     icon: <LiveIcon />,
     authRequired: false, // Public
+  },
+  {
+    key: 'lookupcafe',
+    label: 'LookUp.Cafe',
+    href: '/lookupcafe',
+    icon: <GamesIcon />,
+    authRequired: false, // Public - free tier
     dividerAfter: true,
   },
   {

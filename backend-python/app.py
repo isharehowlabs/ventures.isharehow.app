@@ -7018,3 +7018,267 @@ def admin_toggle_employee(user_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to update employee status'}), 500
 
+
+# ==================== LookUp.Cafe Game Handlers ====================
+import random
+import string
+from datetime import datetime
+
+# In-memory storage for game rooms (use Redis for production)
+game_rooms = {}
+
+def generate_room_code():
+    """Generate a unique 6-character room code"""
+    while True:
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        if code not in game_rooms:
+            return code
+
+@socketio.on('game:create-room')
+def handle_create_room(data):
+    """Create a new game room"""
+    try:
+        player_name = data.get('playerName', 'Guest')
+        user_id = data.get('userId')
+        avatar = data.get('avatar')
+        
+        room_code = generate_room_code()
+        player_id = request.sid
+        
+        # Create room
+        game_rooms[room_code] = {
+            'roomCode': room_code,
+            'hostId': player_id,
+            'players': [{
+                'id': player_id,
+                'name': player_name,
+                'score': 0,
+                'isHost': True,
+                'isActive': True,
+                'avatar': avatar,
+                'userId': user_id,
+            }],
+            'gameType': None,
+            'state': 'lobby',
+            'currentRound': 0,
+            'maxRounds': 5,
+            'currentDrawerId': None,
+            'currentWord': None,
+            'roundStartTime': None,
+        }
+        
+        # Join socket.io room
+        join_room(room_code)
+        
+        emit('game:room-created', {'room': game_rooms[room_code]})
+        
+    except Exception as e:
+        emit('game:error', {'message': f'Failed to create room: {str(e)}'})
+
+@socketio.on('game:join-room')
+def handle_join_room(data):
+    """Join an existing game room"""
+    try:
+        room_code = data.get('roomCode', '').upper()
+        player_name = data.get('playerName', 'Guest')
+        user_id = data.get('userId')
+        avatar = data.get('avatar')
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        
+        # Check if room is full
+        if len(room['players']) >= 16:
+            emit('game:error', {'message': 'Room is full (max 16 players)'})
+            return
+        
+        # Check if game already started
+        if room['state'] != 'lobby':
+            emit('game:error', {'message': 'Game already in progress'})
+            return
+        
+        player_id = request.sid
+        
+        # Add player to room
+        room['players'].append({
+            'id': player_id,
+            'name': player_name,
+            'score': 0,
+            'isHost': False,
+            'isActive': True,
+            'avatar': avatar,
+            'userId': user_id,
+        })
+        
+        # Join socket.io room
+        join_room(room_code)
+        
+        # Notify player
+        emit('game:room-joined', {'room': room})
+        
+        # Notify others
+        emit('game:player-joined', {
+            'player': room['players'][-1],
+            'room': room
+        }, room=room_code, skip_sid=request.sid)
+        
+    except Exception as e:
+        emit('game:error', {'message': f'Failed to join room: {str(e)}'})
+
+@socketio.on('game:leave-room')
+def handle_leave_room(data):
+    """Leave a game room"""
+    try:
+        room_code = data.get('roomCode')
+        player_id = request.sid
+        
+        if room_code not in game_rooms:
+            return
+        
+        room = game_rooms[room_code]
+        
+        # Remove player
+        room['players'] = [p for p in room['players'] if p['id'] != player_id]
+        
+        # If room is empty, delete it
+        if not room['players']:
+            del game_rooms[room_code]
+            return
+        
+        # If host left, assign new host
+        if room['hostId'] == player_id and room['players']:
+            room['players'][0]['isHost'] = True
+            room['hostId'] = room['players'][0]['id']
+        
+        # Notify others
+        emit('game:player-left', {
+            'playerId': player_id,
+            'room': room
+        }, room=room_code)
+        
+    except Exception as e:
+        print(f'Error leaving room: {e}')
+
+@socketio.on('game:start-game')
+def handle_start_game(data):
+    """Start the game"""
+    try:
+        room_code = data.get('roomCode')
+        game_type = data.get('gameType')
+        max_rounds = data.get('maxRounds', 5)
+        player_id = request.sid
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        
+        # Verify host
+        if room['hostId'] != player_id:
+            emit('game:error', {'message': 'Only host can start the game'})
+            return
+        
+        # Check minimum players
+        if len(room['players']) < 2:
+            emit('game:error', {'message': 'Need at least 2 players'})
+            return
+        
+        # Update room state
+        room['gameType'] = game_type
+        room['state'] = 'playing'
+        room['currentRound'] = 1
+        room['maxRounds'] = max_rounds
+        room['roundStartTime'] = datetime.now().timestamp()
+        
+        # For drawing game, select first drawer
+        if game_type == 'drawing':
+            room['currentDrawerId'] = room['players'][0]['id']
+            # In production, fetch from word list
+            room['currentWord'] = random.choice(['cat', 'house', 'tree', 'car', 'sun'])
+        
+        # Notify all players
+        emit('game:started', {'room': room}, room=room_code)
+        emit('game:round-start', {
+            'room': room,
+            'word': room['currentWord'] if game_type == 'drawing' else None
+        }, room=room_code)
+        
+    except Exception as e:
+        emit('game:error', {'message': f'Failed to start game: {str(e)}'})
+
+@socketio.on('game:submit-answer')
+def handle_submit_answer(data):
+    """Submit an answer/guess"""
+    try:
+        room_code = data.get('roomCode')
+        answer = data.get('answer', '').strip().lower()
+        player_id = request.sid
+        
+        if room_code not in game_rooms:
+            return
+        
+        room = game_rooms[room_code]
+        
+        # For drawing game, check if answer is correct
+        if room['gameType'] == 'drawing':
+            correct_word = room.get('currentWord', '').lower()
+            if answer == correct_word:
+                # Award points
+                for player in room['players']:
+                    if player['id'] == player_id:
+                        player['score'] += 100
+                        break
+                
+                # Notify correct answer
+                emit('game:correct-answer', {
+                    'playerId': player_id,
+                    'answer': answer
+                }, room=room_code)
+        
+        # For other games, store answer for later evaluation
+        # In production, implement proper game logic
+        
+    except Exception as e:
+        print(f'Error submitting answer: {e}')
+
+@socketio.on('game:draw')
+def handle_draw(data):
+    """Broadcast drawing data to all players in room"""
+    try:
+        room_code = data.get('roomCode')
+        player_id = data.get('playerId')
+        
+        if room_code not in game_rooms:
+            return
+        
+        room = game_rooms[room_code]
+        
+        # Only allow current drawer to draw
+        if room.get('currentDrawerId') != player_id:
+            return
+        
+        # Broadcast to all other players
+        emit('game:drawing-update', data, room=room_code, skip_sid=request.sid)
+        
+    except Exception as e:
+        print(f'Error handling draw: {e}')
+
+@socketio.on('game:clear-canvas')
+def handle_clear_canvas(data):
+    """Clear the canvas for all players"""
+    try:
+        room_code = data.get('roomCode')
+        
+        if room_code not in game_rooms:
+            return
+        
+        emit('game:canvas-cleared', {}, room=room_code)
+        
+    except Exception as e:
+        print(f'Error clearing canvas: {e}')
+
+# ==================== End LookUp.Cafe Game Handlers ====================

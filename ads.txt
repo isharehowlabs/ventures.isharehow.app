@@ -1,0 +1,2 @@
+# ads.txt file for ventures.isharehow.app
+google.com, pub-0501888641420535, DIRECT, f08c47fec0942fa0

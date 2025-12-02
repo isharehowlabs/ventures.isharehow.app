@@ -1,6 +1,16 @@
 import { Box, Typography, Paper, Grid } from '@mui/material';
+import { useEffect } from 'react';
 
 export default function StreamingPanel() {
+  useEffect(() => {
+    // Initialize AdSense ads after component mounts
+    try {
+      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+    } catch (err) {
+      console.error('AdSense error:', err);
+    }
+  }, []);
+
   return (
     <Box 
       sx={{ 
@@ -14,7 +24,7 @@ export default function StreamingPanel() {
       }}
     >
       <Grid container spacing={2} sx={{ height: '100%', minHeight: 0 }}>
-        <Grid item xs={12} lg={8} sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Grid item xs={12} lg={8} sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, gap: 2 }}>
           <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
             <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Live Stream
@@ -45,6 +55,17 @@ export default function StreamingPanel() {
                 title="Twitch Stream"
               />
             </Box>
+          </Paper>
+          
+          {/* Google AdSense Ad Block */}
+          <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+            <ins 
+              className="adsbygoogle"
+              style={{ display: 'block' }}
+              data-ad-format="autorelaxed"
+              data-ad-client="ca-pub-0501888641420535"
+              data-ad-slot="8218985343"
+            />
           </Paper>
         </Grid>
         <Grid item xs={12} lg={4} sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
