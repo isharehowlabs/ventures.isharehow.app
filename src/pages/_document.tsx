@@ -11,12 +11,6 @@ export default function Document() {
           href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" 
           rel="stylesheet" 
         />
-        {/* Google AdSense */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0501888641420535"
-          crossOrigin="anonymous"
-        />
       </Head>
       <body>
         {/* Initialize theme before React hydrates to prevent flash */}
