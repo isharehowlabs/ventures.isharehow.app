@@ -86,6 +86,11 @@ export default function WellnessDataPage() {
     }
   };
 
+  // Load data on mount and when daysBack changes
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
+
   // Prepare chart data for RPE and Feel
   const rpeFeelData = activities
     .filter(a => a.rpe || a.feel)
