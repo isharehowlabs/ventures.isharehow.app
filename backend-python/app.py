@@ -7021,6 +7021,7 @@ def admin_toggle_employee(user_id):
 
 # ==================== LookUp.Cafe Game Handlers ====================
 import random
+import hashlib
 import string
 from datetime import datetime
 
