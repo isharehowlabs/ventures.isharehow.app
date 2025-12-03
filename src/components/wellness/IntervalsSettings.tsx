@@ -10,23 +10,27 @@ import {
   CircularProgress,
   Link,
 } from '@mui/material';
-import { Save, Check, Link as LinkIcon } from '@mui/icons-material';
+import { Save, Check, Link as LinkIcon, Login } from '@mui/icons-material';
 import {
   saveApiKey,
   getApiKeys,
   deleteApiKey,
   type APIKey,
 } from '../../services/intervalsIcu';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function IntervalsSettings() {
+  const { isAuthenticated, login } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [existingKey, setExistingKey] = useState<APIKey | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    loadExistingKey();
-  }, []);
+    if (isAuthenticated) {
+      loadExistingKey();
+    }
+  }, [isAuthenticated]);
 
   const loadExistingKey = async () => {
     try {
@@ -65,85 +69,110 @@ export default function IntervalsSettings() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to remove your Intervals.icu API key?')) {
+    if (!confirm('Are you sure you want to remove the Intervals.icu connection?')) {
       return;
     }
+
+    setSaving(true);
+    setMessage(null);
 
     try {
       await deleteApiKey('intervals_icu');
       setExistingKey(null);
-      setMessage({ type: 'success', text: 'API key removed successfully' });
+      setMessage({ type: 'success', text: 'API key removed successfully!' });
     } catch (error) {
       setMessage({
         type: 'error',
-        text: 'Failed to remove API key',
+        text: error instanceof Error ? error.message : 'Failed to remove API key',
       });
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Intervals.icu Integration
-        </Typography>
-        
-        <Typography variant="body2" color="text.secondary" paragraph>
-          Connect your Intervals.icu account to import activity data, RPE, Feel, power metrics, heart rate data, and wellness tracking.
-        </Typography>
-
-        <Box sx={{ mb: 2 }}>
-          <Link
-            href="https://intervals.icu/settings"
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
-          >
-            <LinkIcon fontSize="small" />
-            Get your API key from Intervals.icu settings
-          </Link>
+        <Box display="flex" alignItems="center" gap={1} mb={2}>
+          <LinkIcon color="primary" />
+          <Typography variant="h6">Intervals.icu Integration</Typography>
         </Box>
 
-        {message && (
-          <Alert severity={message.type} sx={{ mb: 2 }} onClose={() => setMessage(null)}>
-            {message.text}
-          </Alert>
-        )}
+        <Typography variant="body2" color="text.secondary" paragraph>
+          Connect your Intervals.icu account to automatically sync your cycling activities,
+          wellness metrics, and performance data.
+        </Typography>
 
-        {existingKey ? (
-          <Box>
-            <Alert severity="success" icon={<Check />} sx={{ mb: 2 }}>
-              Intervals.icu is connected
-              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                Connected since: {new Date(existingKey.createdAt).toLocaleDateString()}
-              </Typography>
-            </Alert>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button variant="outlined" color="error" onClick={handleDelete}>
-                Remove Connection
-              </Button>
-            </Box>
-          </Box>
-        ) : (
-          <Box>
-            <TextField
-              fullWidth
-              label="API Key"
-              placeholder="API_KEY_xxxxx:athlete_id"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              sx={{ mb: 2 }}
-              helperText="Format: API_KEY:athlete_id (e.g., API_KEY_xxxxx:12345)"
-            />
+        <Link
+          href="https://intervals.icu/settings"
+          target="_blank"
+          rel="noopener"
+          sx={{ display: 'inline-block', mb: 2 }}
+        >
+          Get your API key from Intervals.icu settings
+        </Link>
+
+        {!isAuthenticated ? (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2" gutterBottom>
+              You need to be logged in to connect your Intervals.icu account.
+            </Typography>
             <Button
               variant="contained"
-              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <Save />}
-              onClick={handleSave}
-              disabled={saving || !apiKey.trim()}
+              startIcon={<Login />}
+              onClick={login}
+              sx={{ mt: 1 }}
             >
-              {saving ? 'Saving...' : 'Save API Key'}
+              Login with Patreon
             </Button>
-          </Box>
+          </Alert>
+        ) : (
+          <>
+            {message && (
+              <Alert severity={message.type} sx={{ mb: 2 }} onClose={() => setMessage(null)}>
+                {message.text}
+              </Alert>
+            )}
+
+            {existingKey ? (
+              <>
+                <Alert severity="success" icon={<Check />} sx={{ mb: 2 }}>
+                  <Typography variant="body2">Intervals.icu is connected</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Connected since: {new Date(existingKey.createdAt).toLocaleDateString()}
+                  </Typography>
+                </Alert>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={handleDelete}
+                  disabled={saving}
+                >
+                  {saving ? <CircularProgress size={20} /> : 'Remove Connection'}
+                </Button>
+              </>
+            ) : (
+              <Box>
+                <TextField
+                  fullWidth
+                  label="API Key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="API_KEY_xxxxx:athlete_id"
+                  helperText="Format: API_KEY:athlete_id (e.g., API_KEY_xxxxx:12345)"
+                  sx={{ mb: 2 }}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={saving ? <CircularProgress size={20} /> : <Save />}
+                  onClick={handleSave}
+                  disabled={saving || !apiKey.trim()}
+                >
+                  {saving ? 'Saving...' : 'Save API Key'}
+                </Button>
+              </Box>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
