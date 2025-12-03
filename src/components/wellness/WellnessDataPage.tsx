@@ -41,11 +41,9 @@ import {
   type IntervalsActivityData,
   type IntervalsWellnessMetrics,
 } from '../../services/intervalsIcu';
-import { useAuth } from '../../hooks/useAuth';
 
 export default function WellnessDataPage() {
   const [loading, setLoading] = useState(true);
-  const { isAuthenticated } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [activities, setActivities] = useState<IntervalsActivityData[]>([]);
   const [wellnessMetrics, setWellnessMetrics] = useState<IntervalsWellnessMetrics[]>([]);
@@ -71,12 +69,26 @@ export default function WellnessDataPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, [daysBack, isAuthenticated]);
+    loadData();
+  }, [daysBack]);
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -145,15 +157,6 @@ export default function WellnessDataPage() {
     }))
     .reverse();
 
-  if (!isAuthenticated) {
-    return (
-      <Alert severity="info">
-        <Typography variant="body2">
-          Please connect your Intervals.icu account above to view your wellness data.
-        </Typography>
-      </Alert>
-    );
-  }
 
   if (loading && !activities.length) {
     return (

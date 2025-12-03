@@ -1,9 +1,10 @@
 /**
  * Intervals.icu API Service
- * Handles frontend communication with backend Intervals.icu endpoints
+ * Handles direct communication with Intervals.icu API using API key from localStorage
  */
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ventures.isharehow.app';
+const STORAGE_KEY = 'intervals_icu_api_key';
+const INTERVALS_API_BASE = 'https://intervals.icu/api/v1/athlete';
 
 export interface IntervalsActivityData {
   id: string;
@@ -43,123 +44,144 @@ export interface IntervalsWellnessMetrics {
   syncedAt: string;
 }
 
-export interface APIKey {
-  id: string;
-  serviceName: string;
-  hasKey: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 /**
- * Save Intervals.icu API key
+ * Get API key from localStorage
  */
-export async function saveApiKey(apiKey: string): Promise<void> {
-  const response = await fetch(`${BACKEND_URL}/api/user/api-keys`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({
-      serviceName: 'intervals_icu',
-      apiKey,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to save API key');
-  }
-}
-
-/**
- * Test connection to Intervals.icu with the saved API key
- */
-export async function testConnection(): Promise<boolean> {
+function getApiKey(): string | null {
   try {
-    const keys = await getApiKeys();
-    return keys.some(k => k.serviceName === 'intervals_icu' && k.hasKey);
+    return localStorage.getItem(STORAGE_KEY);
   } catch (error) {
-    return false;
+    console.error('Failed to get API key from localStorage:', error);
+    return null;
   }
 }
 
 /**
- * Get list of configured API keys
+ * Parse API key to get athlete ID
  */
-export async function getApiKeys(): Promise<APIKey[]> {
-  const response = await fetch(`${BACKEND_URL}/api/user/api-keys`, {
-    credentials: 'include',
+function getAthleteId(): string | null {
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
+  
+  // API key format: API_KEY_xxxxx:athlete_id
+  const parts = apiKey.split(':');
+  if (parts.length !== 2) return null;
+  
+  return parts[1];
+}
+
+/**
+ * Make request to Intervals.icu API
+ */
+async function intervalsRequest<T>(endpoint: string): Promise<T> {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('No API key found. Please configure your Intervals.icu API key.');
+  }
+
+  const response = await fetch(`${INTERVALS_API_BASE}/${getAthleteId()}${endpoint}`, {
+    headers: {
+      'Authorization': `Basic ${btoa(apiKey)}`,
+      'Content-Type': 'application/json',
+    },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to get API keys');
+    if (response.status === 401) {
+      throw new Error('Invalid API key. Please check your Intervals.icu settings.');
+    }
+    throw new Error(`Intervals.icu API error: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data.apiKeys || [];
+  return response.json();
 }
 
 /**
- * Delete an API key
- */
-export async function deleteApiKey(serviceName: string): Promise<void> {
-  const response = await fetch(`${BACKEND_URL}/api/user/api-keys/${serviceName}`, {
-    method: 'DELETE',
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to delete API key');
-  }
-}
-
-/**
- * Trigger data sync from Intervals.icu
- */
-export async function syncData(daysBack: number = 30): Promise<{ activitiesSynced: number; wellnessMetricsSynced: number }> {
-  const response = await fetch(`${BACKEND_URL}/api/wellness/intervals/sync`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ daysBack }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to sync data');
-  }
-
-  return await response.json();
-}
-
-/**
- * Get imported activity data
+ * Get activities from Intervals.icu
  */
 export async function getActivities(daysBack: number = 30): Promise<IntervalsActivityData[]> {
-  const response = await fetch(`${BACKEND_URL}/api/wellness/intervals/activities?daysBack=${daysBack}`, {
-    credentials: 'include',
-  });
+  try {
+    const oldest = new Date();
+    oldest.setDate(oldest.getDate() - daysBack);
+    const oldestStr = oldest.toISOString().split('T')[0];
 
-  if (!response.ok) {
-    throw new Error('Failed to get activities');
+    const activities = await intervalsRequest<any[]>(`/activities?oldest=${oldestStr}`);
+    
+    return activities.map(a => ({
+      id: a.id,
+      activityId: a.id,
+      activityDate: a.start_date_local?.split('T')[0] || '',
+      activityName: a.name || 'Activity',
+      activityType: a.type || 'ride',
+      rpe: a.icu_rpe,
+      feel: a.icu_feel,
+      duration: a.moving_time,
+      distance: a.distance,
+      powerData: {
+        avgPower: a.average_power,
+        maxPower: a.max_power,
+        normalizedPower: a.normalized_power,
+        work: a.work,
+      },
+      hrData: {
+        avgHr: a.average_hr,
+        maxHr: a.max_hr,
+      },
+      syncedAt: new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.error('Failed to fetch activities:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.activities || [];
 }
 
 /**
- * Get imported wellness metrics
+ * Get wellness metrics from Intervals.icu
  */
 export async function getWellnessMetrics(daysBack: number = 30): Promise<IntervalsWellnessMetrics[]> {
-  const response = await fetch(`${BACKEND_URL}/api/wellness/intervals/wellness?daysBack=${daysBack}`, {
-    credentials: 'include',
-  });
+  try {
+    const oldest = new Date();
+    oldest.setDate(oldest.getDate() - daysBack);
+    const oldestStr = oldest.toISOString().split('T')[0];
 
-  if (!response.ok) {
-    throw new Error('Failed to get wellness metrics');
+    const wellness = await intervalsRequest<any[]>(`/wellness?oldest=${oldestStr}`);
+    
+    return wellness.map(w => ({
+      id: w.id,
+      metricDate: w.id, // Wellness uses date as ID
+      hrv: w.hrv,
+      restingHr: w.restingHR,
+      weight: w.weight,
+      sleepSeconds: w.sleepSecs,
+      sleepQuality: w.sleepQuality,
+      fatigue: w.fatigue,
+      mood: w.mood,
+      stress: w.stress,
+      soreness: w.soreness,
+      syncedAt: new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.error('Failed to fetch wellness metrics:', error);
+    throw error;
   }
+}
 
-  const data = await response.json();
-  return data.metrics || [];
+/**
+ * Sync data (just refetch - no backend storage)
+ */
+export async function syncData(daysBack: number = 30): Promise<{ activitiesSynced: number; wellnessMetricsSynced: number }> {
+  try {
+    const [activities, wellness] = await Promise.all([
+      getActivities(daysBack),
+      getWellnessMetrics(daysBack),
+    ]);
+
+    return {
+      activitiesSynced: activities.length,
+      wellnessMetricsSynced: wellness.length,
+    };
+  } catch (error) {
+    console.error('Failed to sync data:', error);
+    throw error;
+  }
 }
