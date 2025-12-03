@@ -41,7 +41,23 @@ export default function IntervalsSettings() {
       }
     } catch (error) {
       console.error('Failed to load API keys:', error);
+      // Don't show error to user for loading - they may not have a key yet
     }
+  };
+
+  const parseError = (error: any): string => {
+    if (error instanceof Error) {
+      // Check for CORS errors
+      if (error.message.includes('fetch') || error.message.includes('CORS') || error.message.includes('Network')) {
+        return 'Unable to connect to the server. This may be a temporary issue. Please try again later.';
+      }
+      // Check for auth errors
+      if (error.message.includes('401') || error.message.includes('Unauthorized') || error.message.includes('Not authenticated')) {
+        return 'Authentication failed. Please try logging out and logging back in.';
+      }
+      return error.message;
+    }
+    return 'An unexpected error occurred. Please try again.';
   };
 
   const handleSave = async () => {
@@ -61,7 +77,7 @@ export default function IntervalsSettings() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to save API key',
+        text: parseError(error),
       });
     } finally {
       setSaving(false);
@@ -83,7 +99,7 @@ export default function IntervalsSettings() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to remove API key',
+        text: parseError(error),
       });
     } finally {
       setSaving(false);
