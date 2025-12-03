@@ -17,6 +17,9 @@ import {
   Analytics as AnalyticsIcon,
   Settings as SettingsIcon,
   Support as SupportIcon,
+  School as SchoolIcon,
+  SmartToy as SmartToyIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import ClientList from './creative/ClientList';
 import AddClientDialog from './creative/AddClientDialog';
@@ -25,6 +28,9 @@ import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import DashboardMetrics from './DashboardMetrics';
 import { getBackendUrl } from '../../utils/backendUrl';
+import LearningPanel from './LearningPanel';
+import AiAgentPanel from './AiAgentPanel';
+import OpportunitiesPanel from './OpportunitiesPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
 
 interface TabPanelProps {
@@ -136,6 +142,27 @@ export default function CreativeDashboardPanel() {
               id="creative-tab-5"
               aria-controls="creative-tabpanel-5"
             />
+            <Tab
+              icon={<SchoolIcon />}
+              iconPosition="start"
+              label="Learning Hub"
+              id="creative-tab-6"
+              aria-controls="creative-tabpanel-6"
+            />
+            <Tab
+              icon={<SmartToyIcon />}
+              iconPosition="start"
+              label="AI Agent"
+              id="creative-tab-7"
+              aria-controls="creative-tabpanel-7"
+            />
+            <Tab
+              icon={<TrendingUpIcon />}
+              iconPosition="start"
+              label="Opportunities"
+              id="creative-tab-8"
+              aria-controls="creative-tabpanel-8"
+            />
           </Tabs>
         </Container>
       </Paper>
@@ -160,6 +187,15 @@ export default function CreativeDashboardPanel() {
           </TabPanel>
           <TabPanel value={activeTab} index={5}>
             <ClientEmployeeMatcher />
+          </TabPanel>
+          <TabPanel value={activeTab} index={6}>
+            <LearningPanel />
+          </TabPanel>
+          <TabPanel value={activeTab} index={7}>
+            <AiAgentPanel />
+          </TabPanel>
+          <TabPanel value={activeTab} index={8}>
+            <OpportunitiesPanel />
           </TabPanel>
         </Container>
       </Box>

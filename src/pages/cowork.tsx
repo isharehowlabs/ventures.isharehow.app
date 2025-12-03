@@ -2,15 +2,15 @@ import React from 'react';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import Workspace from '../components/dashboard/Workspace';
-import FloatingWeb3MQChat from '../components/chat/FloatingWeb3MQChat';
+import FloatingPushChat from '../components/chat/FloatingPushChat';
 
 function CoworkDashboard() {
   return (
     <AppShell active="labs">
       <Workspace />
-      <FloatingWeb3MQChat
-        channelId="cowork-general"
-        channelName="Co-Work Chat"
+      <FloatingPushChat
+        peerAddress="0x0000000000000000000000000000000000000000"
+        chatName="Co-Work Chat"
         position="bottom-right"
       />
     </AppShell>

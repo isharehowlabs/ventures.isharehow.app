@@ -54,10 +54,7 @@ const PANEL_LABELS: Record<string, string> = {
   streaming: 'Streaming Panel',
   figma: 'Designs & Code Panel',
   docs: 'Documents Panel',
-  learning: 'Learning Hub Panel',
-  aiJournal: 'AI Journal Panel',
   // web3: 'Web3 Panel', // Removed - ENS info now in profile page
-  aiAgent: 'AI Agent Panel',
 };
 
 function SettingsPage() {

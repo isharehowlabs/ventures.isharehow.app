@@ -11,11 +11,8 @@ export interface DashboardSettings {
 
 export interface PanelSettings {
   workspace: { visible: boolean; order: number }; // Unified workspace (combines docs, figma, opportunities, tasks)
-  learning: { visible: boolean; order: number };
-  aiJournal: { visible: boolean; order: number };
   web3?: { visible: boolean; order: number }; // Optional - deprecated, ENS info now in profile page
   focus: { visible: boolean; order: number };
-  aiAgent: { visible: boolean; order: number };
 }
 
 export interface ApiKeys {
@@ -39,12 +36,9 @@ const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
 
 const DEFAULT_PANEL_SETTINGS: PanelSettings = {
   workspace: { visible: true, order: 0 }, // Unified workspace (combines docs, figma, opportunities, tasks)
-  learning: { visible: true, order: 1 },
-  aiJournal: { visible: true, order: 2 },
   // web3: { visible: false, order: 3 }, // Removed - ENS info now in profile
   // streaming: removed - now on /live page
   focus: { visible: true, order: 3 },
-  aiAgent: { visible: true, order: 4 },
 };
 
 const STORAGE_KEY = 'user_dashboard_settings';
