@@ -127,7 +127,7 @@ const contentItems = [
     category: ['Consciousness'],
     color: '#7c3aed',
     mediaType: 'image' as const,
-    mediaUrl: 'https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/bc638622a44629cb303c05cdb4bbd6b3~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=f1f4bf1c&x-expires=1763852400&x-signature=xbu5y1%2FGPr682UEzdG6bmeZR1lM%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5',
+    mediaUrl: '/journey-consciousness.svg',
     externalUrl: 'https://www.tiktok.com/@journeythroughconscious',
   },
   {

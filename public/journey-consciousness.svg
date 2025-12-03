@@ -1,0 +1,47 @@
+<svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient Background -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="orbGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1080" height="1080" fill="url(#bgGradient)"/>
+  
+  <!-- Concentric circles (consciousness ripples) -->
+  <circle cx="540" cy="540" r="80" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <circle cx="540" cy="540" r="160" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <circle cx="540" cy="540" r="240" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <circle cx="540" cy="540" r="320" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <circle cx="540" cy="540" r="400" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <circle cx="540" cy="540" r="480" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  
+  <!-- Ethereal orbs -->
+  <circle cx="200" cy="200" r="40" fill="url(#orbGradient)"/>
+  <circle cx="850" cy="300" r="30" fill="url(#orbGradient)"/>
+  <circle cx="300" cy="800" r="35" fill="url(#orbGradient)"/>
+  <circle cx="900" cy="750" r="45" fill="url(#orbGradient)"/>
+  <circle cx="150" cy="600" r="25" fill="url(#orbGradient)"/>
+  <circle cx="750" cy="150" r="38" fill="url(#orbGradient)"/>
+  
+  <!-- Central symbol -->
+  <circle cx="540" cy="540" r="200" fill="none" stroke="white" stroke-width="4" opacity="0.9"/>
+  <circle cx="540" cy="540" r="180" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Lotus/Eye symbol -->
+  <path d="M 540 380 Q 480 420 540 460 Q 600 420 540 380" fill="white" opacity="0.8"/>
+  <path d="M 540 700 Q 480 660 540 620 Q 600 660 540 700" fill="white" opacity="0.8"/>
+  <circle cx="540" cy="540" r="40" fill="white" opacity="0.9"/>
+  <circle cx="540" cy="540" r="25" fill="#4f46e5" opacity="0.9"/>
+  
+  <!-- Text -->
+  <text x="540" y="480" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.5))">Journey Through</text>
+  <text x="540" y="580" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.5))">Consciousness</text>
+</svg>

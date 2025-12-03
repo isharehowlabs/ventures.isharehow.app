@@ -1148,14 +1148,14 @@ const HomePage = () => {
                     size="large"
                     onClick={() => router.push('/demo')}
                     sx={{
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'primary.main' : 'white',
-                      color: (theme) => theme.palette.mode === 'dark' ? 'white' : 'primary.main',
+                      bgcolor: 'primary.main',
+                      color: 'white',
                       fontWeight: 700,
                       px: 4,
                       py: 1.5,
                       fontSize: '1.1rem',
                       '&:hover': {
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'primary.dark' : 'rgba(255,255,255,0.9)',
+                        bgcolor: 'primary.dark',
                       },
                     }}
                   >
@@ -1166,15 +1166,15 @@ const HomePage = () => {
                     size="large"
                     onClick={() => router.push('/demo?tier=enterprise')}
                     sx={{
-                      borderColor: (theme) => theme.palette.mode === 'dark' ? 'primary.main' : 'white',
-                      color: (theme) => theme.palette.mode === 'dark' ? 'primary.main' : 'white',
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
                       fontWeight: 700,
                       px: 4,
                       py: 1.5,
                       fontSize: '1.1rem',
                       '&:hover': {
-                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'primary.light' : 'rgba(255,255,255,0.8)',
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(75,93,189,0.1)' : 'rgba(255,255,255,0.1)',
+                        borderColor: 'primary.dark',
+                        bgcolor: 'rgba(75,93,189,0.1)',
                       },
                     }}
                   >

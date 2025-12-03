@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -18,6 +18,7 @@ import {
   CardContent,
   CardActions,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import {
   SportsEsports as GuessingIcon,
@@ -33,19 +34,36 @@ import { GameType } from '../../types/game';
 import GameRoom from './GameRoom';
 
 export default function GameLobby() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { gameRoom, players, isConnected, error, createRoom, joinRoom } = useGameSocket();
   
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [view, setView] = useState<'menu' | 'create' | 'join'>('menu');
+  const [isCreating, setIsCreating] = useState(false);
 
-  // Auto-fill player name from authenticated user
+  // Auto-fill player name from authenticated user - check multiple fields
   useEffect(() => {
-    if (isAuthenticated && user?.name) {
-      setPlayerName(user.name);
+    if (isAuthenticated && user && !playerName) {
+      // Try multiple fields for the display name (name is the primary field from backend)
+      const displayName = user.name || user.email?.split('@')[0] || '';
+      if (displayName) {
+        setPlayerName(displayName);
+        console.log('[GameLobby] Auto-filled player name from user profile:', displayName);
+      }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, playerName]);
+
+  // Debug: Log auth state changes
+  useEffect(() => {
+    console.log('[GameLobby] Auth state:', { 
+      isAuthenticated, 
+      authLoading,
+      userName: user?.name,
+      userEmail: user?.email,
+      playerName 
+    });
+  }, [isAuthenticated, authLoading, user, playerName]);
 
   // If already in a game room, show the game room component
   if (gameRoom) {
@@ -107,7 +125,16 @@ export default function GameLobby() {
         
         {!isConnected && (
           <Alert severity="warning" sx={{ mt: 2, maxWidth: 600, mx: 'auto' }}>
-            Connecting to game server...
+            <Box display="flex" alignItems="center" gap={1}>
+              <CircularProgress size={16} />
+              <span>Connecting to game server...</span>
+            </Box>
+          </Alert>
+        )}
+        
+        {isAuthenticated && user?.name && (
+          <Alert severity="info" sx={{ mt: 2, maxWidth: 600, mx: 'auto' }}>
+            Welcome, <strong>{user.name}</strong>! Your display name will be used automatically.
           </Alert>
         )}
         
@@ -140,10 +167,9 @@ export default function GameLobby() {
                   size="large"
                   fullWidth
                   onClick={() => setView('create')}
-                  disabled={!isConnected}
                   sx={{ maxWidth: 300 }}
                 >
-                  Create Room
+                  {!isConnected ? 'Create Room...' : 'Create Room'}
                 </Button>
               </CardActions>
             </Card>
@@ -168,10 +194,9 @@ export default function GameLobby() {
                   size="large"
                   fullWidth
                   onClick={() => setView('join')}
-                  disabled={!isConnected}
                   sx={{ maxWidth: 300 }}
                 >
-                  Join Room
+                  {!isConnected ? 'Join Room...' : 'Join Room'}
                 </Button>
               </CardActions>
             </Card>
@@ -230,6 +255,15 @@ export default function GameLobby() {
               Create New Room
             </Typography>
             
+            {!isConnected && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <CircularProgress size={16} />
+                  <span>Waiting for game server connection...</span>
+                </Box>
+              </Alert>
+            )}
+            
             <TextField
               fullWidth
               label="Your Name"
@@ -237,7 +271,7 @@ export default function GameLobby() {
               onChange={(e) => setPlayerName(e.target.value)}
               margin="normal"
               helperText={isAuthenticated ? 'Using your account name' : 'Enter a display name'}
-              disabled={isAuthenticated}
+              disabled={isAuthenticated && !!playerName}
             />
 
             <Box mt={3} display="flex" gap={2}>
@@ -253,8 +287,9 @@ export default function GameLobby() {
                 onClick={handleCreateRoom}
                 fullWidth
                 disabled={!playerName.trim() || !isConnected}
+                startIcon={!isConnected ? <CircularProgress size={20} color="inherit" /> : null}
               >
-                Create Room
+                {!isConnected ? 'Connecting...' : 'Create Room'}
               </Button>
             </Box>
           </Paper>
@@ -269,6 +304,15 @@ export default function GameLobby() {
               Join Room
             </Typography>
             
+            {!isConnected && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <CircularProgress size={16} />
+                  <span>Waiting for game server connection...</span>
+                </Box>
+              </Alert>
+            )}
+            
             <TextField
               fullWidth
               label="Your Name"
@@ -276,7 +320,7 @@ export default function GameLobby() {
               onChange={(e) => setPlayerName(e.target.value)}
               margin="normal"
               helperText={isAuthenticated ? 'Using your account name' : 'Enter a display name'}
-              disabled={isAuthenticated}
+              disabled={isAuthenticated && !!playerName}
             />
 
             <TextField
@@ -302,8 +346,9 @@ export default function GameLobby() {
                 onClick={handleJoinRoom}
                 fullWidth
                 disabled={!playerName.trim() || roomCode.length !== 6 || !isConnected}
+                startIcon={!isConnected ? <CircularProgress size={20} color="inherit" /> : null}
               >
-                Join Room
+                {!isConnected ? 'Connecting...' : 'Join Room'}
               </Button>
             </Box>
           </Paper>
