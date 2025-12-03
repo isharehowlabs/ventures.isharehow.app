@@ -518,6 +518,116 @@ if DB_AVAILABLE:
                 'unlockedAt': self.unlocked_at.isoformat() if self.unlocked_at else None
             }
 
+
+    class UserAPIKey(db.Model):
+        __tablename__ = 'user_api_keys'
+        __table_args__ = (db.UniqueConstraint('user_id', 'service_name', name='unique_user_service'),)
+        
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        service_name = db.Column(db.String(50), nullable=False)
+        api_key_encrypted = db.Column(db.Text, nullable=False)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'serviceName': self.service_name,
+                'hasKey': True,  # Never expose the actual key
+                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+            }
+
+    class IntervalsActivityData(db.Model):
+        __tablename__ = 'intervals_activity_data'
+        __table_args__ = (db.UniqueConstraint('user_id', 'activity_id', name='unique_user_activity'),)
+        
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        activity_id = db.Column(db.String(100), nullable=False)
+        activity_date = db.Column(db.Date, nullable=False)
+        activity_name = db.Column(db.String(200))
+        activity_type = db.Column(db.String(50))
+        rpe = db.Column(db.Integer)
+        feel = db.Column(db.Integer)
+        duration = db.Column(db.Integer)
+        distance = db.Column(db.Float)
+        power_data = db.Column(db.JSON)
+        hr_data = db.Column(db.JSON)
+        synced_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'activityId': self.activity_id,
+                'activityDate': self.activity_date.isoformat() if self.activity_date else None,
+                'activityName': self.activity_name,
+                'activityType': self.activity_type,
+                'rpe': self.rpe,
+                'feel': self.feel,
+                'duration': self.duration,
+                'distance': self.distance,
+                'powerData': self.power_data,
+                'hrData': self.hr_data,
+                'syncedAt': self.synced_at.isoformat() if self.synced_at else None
+            }
+
+    class IntervalsMenstrualData(db.Model):
+        __tablename__ = 'intervals_menstrual_data'
+        __table_args__ = (db.UniqueConstraint('user_id', 'cycle_date', name='unique_user_cycle_date'),)
+        
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        cycle_date = db.Column(db.Date, nullable=False)
+        phase = db.Column(db.String(50))
+        symptoms = db.Column(db.JSON)
+        opt_in = db.Column(db.Boolean, default=False)
+        synced_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'cycleDate': self.cycle_date.isoformat() if self.cycle_date else None,
+                'phase': self.phase,
+                'symptoms': self.symptoms,
+                'syncedAt': self.synced_at.isoformat() if self.synced_at else None
+            }
+
+    class IntervalsWellnessMetrics(db.Model):
+        __tablename__ = 'intervals_wellness_metrics'
+        __table_args__ = (db.UniqueConstraint('user_id', 'metric_date', name='unique_user_metric_date'),)
+        
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        metric_date = db.Column(db.Date, nullable=False)
+        hrv = db.Column(db.Float)
+        resting_hr = db.Column(db.Integer)
+        weight = db.Column(db.Float)
+        sleep_seconds = db.Column(db.Integer)
+        sleep_quality = db.Column(db.Integer)
+        fatigue = db.Column(db.Integer)
+        mood = db.Column(db.Integer)
+        stress = db.Column(db.Integer)
+        soreness = db.Column(db.Integer)
+        synced_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'metricDate': self.metric_date.isoformat() if self.metric_date else None,
+                'hrv': self.hrv,
+                'restingHr': self.resting_hr,
+                'weight': self.weight,
+                'sleepSeconds': self.sleep_seconds,
+                'sleepQuality': self.sleep_quality,
+                'fatigue': self.fatigue,
+                'mood': self.mood,
+                'stress': self.stress,
+                'soreness': self.soreness,
+                'syncedAt': self.synced_at.isoformat() if self.synced_at else None
+            }
+
 else:
     # Dummy Task class when database is unavailable
     class Task:
@@ -3751,6 +3861,24 @@ def delete_task(task_id):
 # ============================================================================
 
 # Helper function to get or create user profile
+
+def parse_date_safely(date_string):
+    """Safely parse date strings in various ISO formats"""
+    if not date_string:
+        return None
+    try:
+        # Try full ISO format first (with time)
+        return datetime.fromisoformat(date_string)
+    except (ValueError, AttributeError):
+        try:
+            # Try date-only format (YYYY-MM-DD) and add time
+            if 'T' not in date_string:
+                return datetime.fromisoformat(date_string + 'T00:00:00')
+            raise
+        except Exception as e:
+            print(f"Error parsing date '{date_string}': {e}")
+            return None
+
 def get_or_create_user_profile():
     """Get or create user profile from session data"""
     if 'user' not in session:
@@ -4016,7 +4144,7 @@ def create_goal():
             category=data.get('category'),
             target_value=data.get('targetValue', 100),
             current_progress=data.get('currentProgress', 0),
-            deadline=datetime.fromisoformat(data['deadline']) if data.get('deadline') else None,
+            deadline=parse_date_safely(data.get('deadline')),
             status='active'
         )
         
@@ -4060,7 +4188,7 @@ def update_goal(goal_id):
         if 'currentProgress' in data:
             goal.current_progress = data['currentProgress']
         if 'deadline' in data:
-            goal.deadline = datetime.fromisoformat(data['deadline']) if data['deadline'] else None
+            goal.deadline = parse_date_safely(data.get('deadline'))
         if 'status' in data:
             goal.status = data['status']
         
@@ -7251,3 +7379,290 @@ def handle_clear_canvas(data):
         print(f'Error clearing canvas: {e}')
 
 # ==================== End LookUp.Cafe Game Handlers ====================
+
+
+# ===== Intervals.icu Integration Endpoints =====
+
+@app.route('/api/user/api-keys', methods=['GET'])
+def get_api_keys():
+    """Get list of configured API keys (without exposing the keys)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        keys = UserAPIKey.query.filter_by(user_id=profile.id).all()
+        return jsonify({
+            'apiKeys': [key.to_dict() for key in keys]
+        })
+    except Exception as e:
+        print(f"Error getting API keys: {e}")
+        return jsonify({'error': 'Failed to get API keys'}), 500
+
+
+@app.route('/api/user/api-keys', methods=['POST'])
+def save_api_key():
+    """Save or update an API key for a service"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        from intervals_icu import encrypt_api_key, IntervalsICUClient
+        
+        data = request.json
+        service_name = data.get('serviceName')
+        api_key = data.get('apiKey')
+        
+        if not service_name or not api_key:
+            return jsonify({'error': 'Service name and API key required'}), 400
+        
+        # Test the connection first
+        if service_name == 'intervals_icu':
+            client = IntervalsICUClient(api_key)
+            if not client.test_connection():
+                return jsonify({'error': 'Invalid API key or connection failed'}), 400
+        
+        # Check if key already exists
+        existing_key = UserAPIKey.query.filter_by(
+            user_id=profile.id,
+            service_name=service_name
+        ).first()
+        
+        encrypted_key = encrypt_api_key(api_key)
+        
+        if existing_key:
+            existing_key.api_key_encrypted = encrypted_key
+            existing_key.updated_at = datetime.utcnow()
+        else:
+            new_key = UserAPIKey(
+                id=str(uuid.uuid4()),
+                user_id=profile.id,
+                service_name=service_name,
+                api_key_encrypted=encrypted_key
+            )
+            db.session.add(new_key)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'API key saved successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving API key: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to save API key'}), 500
+
+
+@app.route('/api/user/api-keys/<service_name>', methods=['DELETE'])
+def delete_api_key(service_name):
+    """Delete an API key"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        key = UserAPIKey.query.filter_by(
+            user_id=profile.id,
+            service_name=service_name
+        ).first()
+        
+        if not key:
+            return jsonify({'error': 'API key not found'}), 404
+        
+        db.session.delete(key)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting API key: {e}")
+        return jsonify({'error': 'Failed to delete API key'}), 500
+
+
+@app.route('/api/wellness/intervals/sync', methods=['POST'])
+def sync_intervals_data():
+    """Sync data from Intervals.icu"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        from intervals_icu import decrypt_api_key, IntervalsICUClient
+        from datetime import date
+        
+        # Get API key
+        api_key_record = UserAPIKey.query.filter_by(
+            user_id=profile.id,
+            service_name='intervals_icu'
+        ).first()
+        
+        if not api_key_record:
+            return jsonify({'error': 'Intervals.icu API key not configured'}), 400
+        
+        api_key = decrypt_api_key(api_key_record.api_key_encrypted)
+        client = IntervalsICUClient(api_key)
+        
+        # Get date range from request
+        data = request.json or {}
+        days_back = data.get('daysBack', 30)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        
+        # Fetch and store activities
+        activities = client.get_activities(start_date, end_date)
+        activity_count = 0
+        
+        for activity_data in activities:
+            existing = IntervalsActivityData.query.filter_by(
+                user_id=profile.id,
+                activity_id=activity_data['activity_id']
+            ).first()
+            
+            if existing:
+                # Update existing
+                for key, value in activity_data.items():
+                    if hasattr(existing, key):
+                        setattr(existing, key, value)
+                existing.synced_at = datetime.utcnow()
+            else:
+                # Create new
+                new_activity = IntervalsActivityData(
+                    id=str(uuid.uuid4()),
+                    user_id=profile.id,
+                    **activity_data,
+                    synced_at=datetime.utcnow()
+                )
+                db.session.add(new_activity)
+            activity_count += 1
+        
+        # Fetch and store wellness data
+        wellness_data = client.get_wellness_data(start_date, end_date)
+        wellness_count = 0
+        
+        for wellness_entry in wellness_data:
+            metric_date = wellness_entry.pop('metric_date')
+            menstruation = wellness_entry.pop('menstruation', False)
+            
+            existing = IntervalsWellnessMetrics.query.filter_by(
+                user_id=profile.id,
+                metric_date=metric_date
+            ).first()
+            
+            if existing:
+                for key, value in wellness_entry.items():
+                    if hasattr(existing, key):
+                        setattr(existing, key, value)
+                existing.synced_at = datetime.utcnow()
+            else:
+                new_metric = IntervalsWellnessMetrics(
+                    id=str(uuid.uuid4()),
+                    user_id=profile.id,
+                    metric_date=metric_date,
+                    **wellness_entry,
+                    synced_at=datetime.utcnow()
+                )
+                db.session.add(new_metric)
+            wellness_count += 1
+            
+            # Handle menstrual data if present and opted in
+            if menstruation:
+                existing_menstrual = IntervalsMenstrualData.query.filter_by(
+                    user_id=profile.id,
+                    cycle_date=metric_date
+                ).first()
+                
+                if not existing_menstrual:
+                    new_menstrual = IntervalsMenstrualData(
+                        id=str(uuid.uuid4()),
+                        user_id=profile.id,
+                        cycle_date=metric_date,
+                        phase='menstruation',
+                        opt_in=True,
+                        synced_at=datetime.utcnow()
+                    )
+                    db.session.add(new_menstrual)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'activitiesSynced': activity_count,
+            'wellnessMetricsSynced': wellness_count
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error syncing Intervals.icu data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to sync data'}), 500
+
+
+@app.route('/api/wellness/intervals/activities', methods=['GET'])
+def get_intervals_activities():
+    """Get imported activity data"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        days_back = request.args.get('daysBack', 30, type=int)
+        start_date = datetime.now() - timedelta(days=days_back)
+        
+        activities = IntervalsActivityData.query.filter(
+            IntervalsActivityData.user_id == profile.id,
+            IntervalsActivityData.activity_date >= start_date.date()
+        ).order_by(IntervalsActivityData.activity_date.desc()).all()
+        
+        return jsonify({
+            'activities': [activity.to_dict() for activity in activities]
+        })
+    except Exception as e:
+        print(f"Error getting activities: {e}")
+        return jsonify({'error': 'Failed to get activities'}), 500
+
+
+@app.route('/api/wellness/intervals/wellness', methods=['GET'])
+def get_intervals_wellness():
+    """Get imported wellness metrics"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        days_back = request.args.get('daysBack', 30, type=int)
+        start_date = datetime.now() - timedelta(days=days_back)
+        
+        metrics = IntervalsWellnessMetrics.query.filter(
+            IntervalsWellnessMetrics.user_id == profile.id,
+            IntervalsWellnessMetrics.metric_date >= start_date.date()
+        ).order_by(IntervalsWellnessMetrics.metric_date.desc()).all()
+        
+        return jsonify({
+            'metrics': [metric.to_dict() for metric in metrics]
+        })
+    except Exception as e:
+        print(f"Error getting wellness metrics: {e}")
+        return jsonify({'error': 'Failed to get wellness metrics'}), 500
+
