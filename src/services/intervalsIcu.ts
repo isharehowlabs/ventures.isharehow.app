@@ -1,10 +1,10 @@
 /**
  * Intervals.icu API Service
- * Handles direct communication with Intervals.icu API using API key from localStorage
+ * Uses backend proxy to bypass CORS restrictions
  */
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ventures.isharehow.app';
 const STORAGE_KEY = 'intervals_icu_api_key';
-const INTERVALS_API_BASE = 'https://intervals.icu/api/v1/athlete';
 
 export interface IntervalsActivityData {
   id: string;
@@ -63,7 +63,6 @@ function getAthleteId(): string | null {
   const apiKey = getApiKey();
   if (!apiKey) return null;
   
-  // API key format: API_KEY_xxxxx:athlete_id
   const parts = apiKey.split(':');
   if (parts.length !== 2) return null;
   
@@ -71,17 +70,17 @@ function getAthleteId(): string | null {
 }
 
 /**
- * Make request to Intervals.icu API
+ * Make request through backend proxy
  */
-async function intervalsRequest<T>(endpoint: string): Promise<T> {
+async function proxyRequest<T>(endpoint: string): Promise<T> {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error('No API key found. Please configure your Intervals.icu API key.');
+    throw new Error('No API key configured. Please add your Intervals.icu API key above.');
   }
 
-  const response = await fetch(`${INTERVALS_API_BASE}/${getAthleteId()}${endpoint}`, {
+  const response = await fetch(`${BACKEND_URL}/api/intervals-proxy${endpoint}`, {
     headers: {
-      'Authorization': `Basic ${btoa(apiKey)}`,
+      'X-Intervals-API-Key': apiKey,
       'Content-Type': 'application/json',
     },
   });
@@ -90,22 +89,30 @@ async function intervalsRequest<T>(endpoint: string): Promise<T> {
     if (response.status === 401) {
       throw new Error('Invalid API key. Please check your Intervals.icu settings.');
     }
-    throw new Error(`Intervals.icu API error: ${response.status}`);
+    if (response.status === 403) {
+      throw new Error('Access forbidden. Please verify your API key has the correct permissions.');
+    }
+    throw new Error(`Failed to fetch data: ${response.status}`);
   }
 
   return response.json();
 }
 
 /**
- * Get activities from Intervals.icu
+ * Get activities from Intervals.icu via backend proxy
  */
 export async function getActivities(daysBack: number = 30): Promise<IntervalsActivityData[]> {
   try {
+    const athleteId = getAthleteId();
+    if (!athleteId) {
+      throw new Error('Invalid API key format. Expected: API_KEY_xxxxx:athlete_id');
+    }
+
     const oldest = new Date();
     oldest.setDate(oldest.getDate() - daysBack);
     const oldestStr = oldest.toISOString().split('T')[0];
 
-    const activities = await intervalsRequest<any[]>(`/activities?oldest=${oldestStr}`);
+    const activities = await proxyRequest<any[]>(`/activities?athleteId=${athleteId}&oldest=${oldestStr}`);
     
     return activities.map(a => ({
       id: a.id,
@@ -136,19 +143,24 @@ export async function getActivities(daysBack: number = 30): Promise<IntervalsAct
 }
 
 /**
- * Get wellness metrics from Intervals.icu
+ * Get wellness metrics from Intervals.icu via backend proxy
  */
 export async function getWellnessMetrics(daysBack: number = 30): Promise<IntervalsWellnessMetrics[]> {
   try {
+    const athleteId = getAthleteId();
+    if (!athleteId) {
+      throw new Error('Invalid API key format. Expected: API_KEY_xxxxx:athlete_id');
+    }
+
     const oldest = new Date();
     oldest.setDate(oldest.getDate() - daysBack);
     const oldestStr = oldest.toISOString().split('T')[0];
 
-    const wellness = await intervalsRequest<any[]>(`/wellness?oldest=${oldestStr}`);
+    const wellness = await proxyRequest<any[]>(`/wellness?athleteId=${athleteId}&oldest=${oldestStr}`);
     
     return wellness.map(w => ({
       id: w.id,
-      metricDate: w.id, // Wellness uses date as ID
+      metricDate: w.id,
       hrv: w.hrv,
       restingHr: w.restingHR,
       weight: w.weight,
@@ -167,7 +179,7 @@ export async function getWellnessMetrics(daysBack: number = 30): Promise<Interva
 }
 
 /**
- * Sync data (just refetch - no backend storage)
+ * Sync data from Intervals.icu
  */
 export async function syncData(daysBack: number = 30): Promise<{ activitiesSynced: number; wellnessMetricsSynced: number }> {
   try {
