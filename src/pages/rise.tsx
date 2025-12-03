@@ -29,6 +29,7 @@ import ActivityCard from '../components/wellness/ActivityCard';
 import GoalCard from '../components/wellness/GoalCard';
 import AchievementCard from '../components/wellness/AchievementCard';
 import GoalDialog from '../components/wellness/GoalDialog';
+import WellnessDataPage from '../components/wellness/WellnessDataPage';
 import SpiritualFestivals from '../components/spiritual/SpiritualFestivals';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -382,25 +383,7 @@ export default function RiseDashboard() {
 
         {/* Tab 4: Wellness & Cycling */}
         <TabPanel value={currentTab} index={3}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom>Wellness Activities</Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  Track your wellness journey, cycling sessions, and consciousness development.
-                </Typography>
-                {activities.filter(a => a.activityType !== 'focus' && a.activityType !== 'journal').length === 0 ? (
-                  <Typography color="text.secondary">No wellness activities yet.</Typography>
-                ) : (
-                  activities
-                    .filter(a => a.activityType !== 'focus' && a.activityType !== 'journal')
-                    .map((activity) => (
-                      <ActivityCard key={activity.id} activity={activity} />
-                    ))
-                )}
-              </Paper>
-            </Grid>
-          </Grid>
+          <WellnessDataPage />
         </TabPanel>
 
         {/* Tab 5: Spiritual Festivals */}
