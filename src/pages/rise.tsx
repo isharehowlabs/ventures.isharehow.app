@@ -30,6 +30,7 @@ import GoalCard from '../components/wellness/GoalCard';
 import AchievementCard from '../components/wellness/AchievementCard';
 import GoalDialog from '../components/wellness/GoalDialog';
 import WellnessDataPage from '../components/wellness/WellnessDataPage';
+import IntervalsSettings from '../components/wellness/IntervalsSettings';
 import SpiritualFestivals from '../components/spiritual/SpiritualFestivals';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -381,9 +382,17 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
+
         {/* Tab 4: Wellness & Cycling */}
         <TabPanel value={currentTab} index={3}>
-          <WellnessDataPage />
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <IntervalsSettings />
+            </Grid>
+            <Grid item xs={12}>
+              <WellnessDataPage />
+            </Grid>
+          </Grid>
         </TabPanel>
 
         {/* Tab 5: Spiritual Festivals */}
