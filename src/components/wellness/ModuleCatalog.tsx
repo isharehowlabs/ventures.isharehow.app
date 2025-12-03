@@ -257,6 +257,7 @@ export default function ModuleCatalog() {
             {selectedModule?.progress?.state === 'locked' ? 'unlock' : 'complete'} this module.
           </Typography>
           <TextField
+            id="module-search"
             autoFocus
             fullWidth
             label="Activation Key"

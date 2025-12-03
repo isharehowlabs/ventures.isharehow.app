@@ -122,6 +122,7 @@ export default function IntervalsSettings() {
         ) : (
           <Box>
             <TextField
+              id="intervals-api-key"
               fullWidth
               label="API Key"
               value={apiKey}

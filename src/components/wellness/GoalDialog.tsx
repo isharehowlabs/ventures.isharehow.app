@@ -86,6 +86,7 @@ export default function GoalDialog({ open, onClose, onSave, goal }: GoalDialogPr
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           <TextField
+            id="goal-title"
             label="Goal Title"
             value={formData.title}
             onChange={(e) => handleChange('title', e.target.value)}
@@ -96,6 +97,7 @@ export default function GoalDialog({ open, onClose, onSave, goal }: GoalDialogPr
           
           <TextField
             label="Description"
+            id="goal-description"
             value={formData.description}
             onChange={(e) => handleChange('description', e.target.value)}
             multiline
@@ -105,6 +107,7 @@ export default function GoalDialog({ open, onClose, onSave, goal }: GoalDialogPr
           
           <TextField
             select
+            id="goal-category"
             label="Category"
             value={formData.category}
             onChange={(e) => handleChange('category', e.target.value)}
@@ -122,6 +125,7 @@ export default function GoalDialog({ open, onClose, onSave, goal }: GoalDialogPr
               label="Current Progress"
               type="number"
               value={formData.currentProgress}
+            id="goal-target-value"
               onChange={(e) => handleChange('currentProgress', parseInt(e.target.value) || 0)}
               fullWidth
               inputProps={{ min: 0 }}
@@ -131,6 +135,7 @@ export default function GoalDialog({ open, onClose, onSave, goal }: GoalDialogPr
               label="Target Value"
               type="number"
               value={formData.targetValue}
+            id="goal-unit"
               onChange={(e) => handleChange('targetValue', parseInt(e.target.value) || 1)}
               fullWidth
               required
@@ -142,6 +147,7 @@ export default function GoalDialog({ open, onClose, onSave, goal }: GoalDialogPr
             label="Deadline"
             type="date"
             value={formData.deadline}
+            id="goal-deadline"
             onChange={(e) => handleChange('deadline', e.target.value)}
             fullWidth
             InputLabelProps={{ shrink: true }}

@@ -171,8 +171,9 @@ export default function WellnessDataPage() {
       {/* Header Controls */}
       <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Time Range</InputLabel>
+          <InputLabel htmlFor="wellness-time-range">Time Range</InputLabel>
           <Select
+            id="wellness-time-range"
             value={daysBack}
             label="Time Range"
             onChange={(e) => setDaysBack(Number(e.target.value))}
