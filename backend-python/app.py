@@ -130,7 +130,7 @@ socketio = SocketIO(
 CORS(app, 
      origins=allowed_origins,
      supports_credentials=True,
-     allow_headers=['Content-Type', 'Authorization'])
+     allow_headers=['Content-Type', 'Authorization', 'X-Intervals-API-Key'])
 
 # Initialize JWT Manager (flask-jwt-extended)
 jwt = JWTManager(app)
@@ -7665,4 +7665,87 @@ def get_intervals_wellness():
     except Exception as e:
         print(f"Error getting wellness metrics: {e}")
         return jsonify({'error': 'Failed to get wellness metrics'}), 500
+
+
+# ============================================
+# Intervals.icu Proxy Routes (CORS Bypass)
+# ============================================
+
+@app.route('/api/intervals-proxy/activities', methods=['GET', 'OPTIONS'])
+def intervals_proxy_activities():
+    """Proxy endpoint to bypass CORS for Intervals.icu activities"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        api_key = request.headers.get('X-Intervals-API-Key', '').strip()
+        athlete_id = request.args.get('athleteId', '').strip()
+        oldest = request.args.get('oldest', '').strip()
+        
+        if not api_key or ':' not in api_key:
+            return jsonify({'error': 'Missing or invalid X-Intervals-API-Key'}), 401
+        if not athlete_id or not oldest:
+            return jsonify({'error': 'athleteId and oldest are required'}), 400
+        
+        # Make request to Intervals.icu
+        import base64
+        auth_header = f"Basic {base64.b64encode(api_key.encode('utf-8')).decode('utf-8')}"
+        
+        response = requests.get(
+            f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities',
+            headers={'Authorization': auth_header},
+            params={'oldest': oldest},
+            timeout=(5, 30)
+        )
+        
+        # Return response with proper status
+        return Response(
+            response.content,
+            status=response.status_code,
+            mimetype='application/json'
+        )
+        
+    except requests.RequestException as e:
+        return jsonify({'error': 'Upstream request failed', 'detail': str(e)}), 502
+    except Exception as e:
+        return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
+
+@app.route('/api/intervals-proxy/wellness', methods=['GET', 'OPTIONS'])
+def intervals_proxy_wellness():
+    """Proxy endpoint to bypass CORS for Intervals.icu wellness"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        api_key = request.headers.get('X-Intervals-API-Key', '').strip()
+        athlete_id = request.args.get('athleteId', '').strip()
+        oldest = request.args.get('oldest', '').strip()
+        
+        if not api_key or ':' not in api_key:
+            return jsonify({'error': 'Missing or invalid X-Intervals-API-Key'}), 401
+        if not athlete_id or not oldest:
+            return jsonify({'error': 'athleteId and oldest are required'}), 400
+        
+        # Make request to Intervals.icu
+        import base64
+        auth_header = f"Basic {base64.b64encode(api_key.encode('utf-8')).decode('utf-8')}"
+        
+        response = requests.get(
+            f'https://intervals.icu/api/v1/athlete/{athlete_id}/wellness',
+            headers={'Authorization': auth_header},
+            params={'oldest': oldest},
+            timeout=(5, 30)
+        )
+        
+        # Return response with proper status
+        return Response(
+            response.content,
+            status=response.status_code,
+            mimetype='application/json'
+        )
+        
+    except requests.RequestException as e:
+        return jsonify({'error': 'Upstream request failed', 'detail': str(e)}), 502
+    except Exception as e:
+        return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
 
