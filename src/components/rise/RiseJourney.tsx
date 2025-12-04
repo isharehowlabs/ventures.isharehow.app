@@ -1,427 +1,199 @@
-import { useState, useEffect } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Button,
-  Chip,
-  LinearProgress,
-  Alert,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton,
-} from '@mui/material';
-import {
-  SelfImprovement,
-  FitnessCenter,
-  AccountBalance,
-  Palette,
-  TrendingUp,
-  Psychology,
-  AutoAwesome,
-  Lock,
-  PlayArrow,
-  CheckCircle,
-  Close as CloseIcon,
-} from '@mui/icons-material';
-import RiseJourneyQuiz from './RiseJourneyQuiz';
-import RiseJourneyLesson from './RiseJourneyLesson';
+import React, { useState, useEffect } from 'react';
+import { Lock, Play, CheckCircle, ShoppingBag, ArrowRight } from 'lucide-react';
 
-interface JourneyLevel {
-  id: string;
-  levelKey: string;
-  title: string;
-  description: string;
-  focus: string;
-  revenueProducts: string[];
-  order: number;
-  progress: {
-    state: 'locked' | 'in-progress' | 'completed';
-    startedAt: string | null;
-    completedAt: string | null;
-  };
+// The 7 Levels defined in the backend
+const LEVELS = [
+  { id: 1, title: 'Wellness', subtitle: 'Physical Health & Energy', color: 'bg-green-500', borderColor: 'border-green-500', textColor: 'text-green-500' },
+  { id: 2, title: 'Mobility', subtitle: 'Foundational Movement', color: 'bg-blue-500', borderColor: 'border-blue-500', textColor: 'text-blue-500' },
+  { id: 3, title: 'Accountability', subtitle: 'Self-Love & Power', color: 'bg-indigo-500', borderColor: 'border-indigo-500', textColor: 'text-indigo-500' },
+  { id: 4, title: 'Creativity', subtitle: 'Mental Clarity', color: 'bg-purple-500', borderColor: 'border-purple-500', textColor: 'text-purple-500' },
+  { id: 5, title: 'Alignment', subtitle: 'Intentional Action', color: 'bg-pink-500', borderColor: 'border-pink-500', textColor: 'text-pink-500' },
+  { id: 6, title: 'Mindfulness', subtitle: 'Energy Clearing', color: 'bg-yellow-500', borderColor: 'border-yellow-500', textColor: 'text-yellow-500' },
+  { id: 7, title: 'Destiny', subtitle: 'Purpose Activation', color: 'bg-orange-500', borderColor: 'border-orange-500', textColor: 'text-orange-500' },
+];
+
+interface UserProgress {
+  recommendedLevel: number;
+  completedLevels: number[];
+  currentLevel: number;
+  levelProgress: { [key: number]: number }; // Progress percentage per level
 }
 
-interface Trial {
-  id: string;
-  isActive: boolean;
-  daysRemaining: number;
-  expiresAt: string;
-}
-
-const levelIcons: Record<string, any> = {
-  wellness: SelfImprovement,
-  mobility: FitnessCenter,
-  accountability: AccountBalance,
-  creativity: Palette,
-  alignment: TrendingUp,
-  mindfulness: Psychology,
-  destiny: AutoAwesome,
-};
-
-const levelColors: Record<string, string> = {
-  wellness: '#4caf50',
-  mobility: '#2196f3',
-  accountability: '#ff9800',
-  creativity: '#9c27b0',
-  alignment: '#f44336',
-  mindfulness: '#00bcd4',
-  destiny: '#ffc107',
-};
-
-export default function RiseJourney() {
-  const [levels, setLevels] = useState<JourneyLevel[]>([]);
-  const [trial, setTrial] = useState<Trial | null>(null);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-  const [recommendedLevel, setRecommendedLevel] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [selectedLevel, setSelectedLevel] = useState<JourneyLevel | null>(null);
-  const [showLesson, setShowLesson] = useState(false);
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ventures.isharehow.app';
+const RiseJourney: React.FC = () => {
+  const [activeLevel, setActiveLevel] = useState<number | null>(null);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number>(7);
+  const [userProgress, setUserProgress] = useState<UserProgress>({
+    recommendedLevel: 2,
+    completedLevels: [1],
+    currentLevel: 2,
+    levelProgress: { 1: 100, 2: 15 }
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadData();
+    // TODO: Replace with actual API call
+    // fetchUserProgress();
+    fetchTrialStatus();
   }, []);
 
-  const loadData = async () => {
+  const fetchTrialStatus = async () => {
+    // TODO: Implement actual API call to get trial days remaining
+    // const response = await fetch('/api/user/trial-status');
+    // const data = await response.json();
+    // setTrialDaysLeft(data.daysRemaining);
+  };
+
+  const fetchUserProgress = async () => {
     setLoading(true);
-    setError(null);
-
     try {
-      // Check if quiz is completed
-      const quizResponse = await fetch(`${backendUrl}/api/rise-journey/quiz`, {
-        credentials: 'include',
-      });
-      if (quizResponse.ok) {
-        const quizData = await quizResponse.json();
-        if (quizData.quiz) {
-          setQuizCompleted(true);
-          setRecommendedLevel(quizData.quiz.recommendedLevel);
-        }
-      } else if (quizResponse.status === 401) {
-        setError('Please log in to access the Rise Journey. Your session may have expired.');
-        setLoading(false);
-        return;
-      }
-
-      // Get trial status
-      const trialResponse = await fetch(`${backendUrl}/api/rise-journey/trial`, {
-        credentials: 'include',
-      });
-      if (trialResponse.ok) {
-        const trialData = await trialResponse.json();
-        setTrial(trialData.trial);
-      } else if (trialResponse.status === 401) {
-        setError('Please log in to access the Rise Journey. Your session may have expired.');
-        setLoading(false);
-        return;
-      }
-
-      // Get levels
-      const levelsResponse = await fetch(`${backendUrl}/api/rise-journey/levels`, {
-        credentials: 'include',
-      });
-      if (levelsResponse.ok) {
-        const levelsData = await levelsResponse.json();
-        setLevels(levelsData.levels || []);
-      } else if (levelsResponse.status === 401) {
-        setError('Please log in to access the Rise Journey. Your session may have expired.');
-      } else {
-        throw new Error('Failed to load journey levels');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load journey data');
+      // TODO: Replace with actual API endpoint
+      // const response = await fetch('/api/rise-journey/progress');
+      // const data = await response.json();
+      // setUserProgress(data);
+    } catch (error) {
+      console.error('Failed to fetch user progress:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuizComplete = async (level: string, scores: Record<string, number>) => {
-    setQuizCompleted(true);
-    setRecommendedLevel(level);
-    setShowQuiz(false);
-    await loadData();
+  const handleEnterPath = (levelId: number) => {
+    // Navigate to level detail page
+    window.location.href = `/rise/level/${levelId}`;
   };
-
-  const handleLevelClick = async (level: JourneyLevel) => {
-    if (level.progress.state === 'locked') {
-      // Start the level
-      try {
-        const response = await fetch(`${backendUrl}/api/rise-journey/levels/${level.id}/start`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-        if (response.ok) {
-          await loadData();
-        }
-      } catch (err) {
-        console.error('Failed to start level:', err);
-      }
-    } else {
-      setSelectedLevel(level);
-      setShowLesson(true);
-    }
-  };
-
-  const handleStartLesson = (lessonId: string) => {
-    setSelectedLessonId(lessonId);
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!quizCompleted) {
-    return (
-      <Box>
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            Welcome to Your Rise Journey
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-            Take our assessment to discover where to begin your journey of consciousness and personal growth.
-          </Typography>
-        </Box>
-        <RiseJourneyQuiz onComplete={handleQuizComplete} />
-      </Box>
-    );
-  }
 
   return (
-    <Box>
-      {trial && trial.isActive && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>7-Day Free Trial Active</strong> - {trial.daysRemaining} days remaining
-          </Typography>
-        </Alert>
-      )}
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+      {/* Header & Trial Status */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Your Rise Journey</h1>
+          <p className="text-lg text-gray-600">The path to higher consciousness.</p>
+        </div>
+        <div className="bg-gradient-to-r from-orange-100 to-red-100 px-6 py-3 rounded-lg border-2 border-orange-200 shadow-md">
+          <span className="text-orange-800 font-bold text-lg">{trialDaysLeft} Days Remaining</span>
+          <span className="text-orange-700 ml-2">in Free Trial</span>
+        </div>
+      </div>
 
-      {recommendedLevel && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Recommended Starting Point:</strong> {levels.find(l => l.levelKey === recommendedLevel)?.title || recommendedLevel}
-          </Typography>
-        </Alert>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Your Rise Journey
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Seven levels of consciousness and personal growth. Each level builds on the previous, but you can start wherever feels right.
-        </Typography>
-      </Box>
-
-      <Grid container spacing={3}>
-        {levels.map((level) => {
-          const Icon = levelIcons[level.levelKey] || SelfImprovement;
-          const color = levelColors[level.levelKey] || '#666';
-          const isRecommended = level.levelKey === recommendedLevel;
-          const isLocked = level.progress.state === 'locked';
-          const isCompleted = level.progress.state === 'completed';
+      {/* The Journey Path */}
+      <div className="space-y-6 max-w-5xl mx-auto">
+        {LEVELS.map((level, index) => {
+          const isLocked = index > userProgress.currentLevel && level.id !== userProgress.recommendedLevel;
+          const isRecommended = level.id === userProgress.recommendedLevel;
+          const isComplete = userProgress.completedLevels.includes(level.id);
+          const progress = userProgress.levelProgress[level.id] || 0;
 
           return (
-            <Grid item xs={12} md={6} lg={4} key={level.id}>
-              <Card
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: isRecommended ? 2 : 1,
-                  borderColor: isRecommended ? 'primary.main' : 'divider',
-                  position: 'relative',
-                  opacity: isLocked ? 0.7 : 1,
-                  cursor: isLocked ? 'default' : 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': !isLocked ? {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 4,
-                  } : {},
-                }}
-                onClick={() => !isLocked && handleLevelClick(level)}
-              >
-                {isLocked && (
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 16,
-                      right: 16,
-                      zIndex: 1,
-                    }}
-                  >
-                    <Lock color="disabled" />
-                  </Box>
-                )}
+            <div 
+              key={level.id} 
+              className={`relative transition-all duration-300 ${
+                isLocked ? 'opacity-60' : 'hover:scale-[1.02] hover:shadow-xl'
+              }`}
+            >
+              
+              {/* Connector Line */}
+              {index !== LEVELS.length - 1 && (
+                <div className="absolute left-12 top-20 bottom-[-24px] w-1 bg-gradient-to-b from-gray-300 to-gray-200 -z-10 rounded-full" />
+              )}
 
-                {isRecommended && (
-                  <Chip
-                    label="Recommended"
-                    color="primary"
-                    size="small"
-                    sx={{
-                      position: 'absolute',
-                      top: 16,
-                      left: 16,
-                      zIndex: 1,
-                    }}
-                  />
-                )}
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition-all duration-300">
+                <div className="flex flex-col md:flex-row">
+                  {/* Visual Strip */}
+                  <div className={`w-full md:w-2 h-2 md:h-auto ${level.color}`} />
+                  
+                  <div className="p-6 flex-1 flex flex-col md:flex-row items-center gap-6">
+                    {/* Icon/Number */}
+                    <div 
+                      className={`flex items-center justify-center w-20 h-20 rounded-full border-4 ${
+                        isComplete 
+                          ? `${level.borderColor} ${level.textColor} bg-white` 
+                          : 'border-gray-300 text-gray-400 bg-gray-50'
+                      } font-bold text-2xl shadow-md flex-shrink-0`}
+                    >
+                      {isComplete ? <CheckCircle className="w-10 h-10" /> : index + 1}
+                    </div>
 
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Icon sx={{ fontSize: 40, color }} />
-                    <Box>
-                      <Typography variant="h6" fontWeight="bold">
-                        {level.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {level.focus}
-                      </Typography>
-                    </Box>
-                  </Box>
+                    {/* Content */}
+                    <div className="flex-1 w-full">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
+                        <h3 className="text-2xl font-bold text-gray-800">{level.title}</h3>
+                        {isRecommended && (
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold border border-blue-200">
+                            ✨ Recommended Start
+                          </span>
+                        )}
+                        {isComplete && (
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold border border-green-200">
+                            ✓ Complete
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-600 mb-4 text-lg">{level.subtitle}</p>
+                      
+                      {/* Progress Bar within Level */}
+                      {!isLocked && (
+                        <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+                          <div 
+                            className={`${level.color} h-3 rounded-full transition-all duration-500 shadow-sm`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      )}
 
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {level.description}
-                  </Typography>
+                      {/* Revenue/Product Recommendation */}
+                      <div className="flex items-center text-sm text-gray-500 gap-2 mt-2 hover:text-gray-700 cursor-pointer transition-colors">
+                        <ShoppingBag size={16} className="text-orange-500" />
+                        <span>Pair with: <span className="font-semibold text-gray-700">Rise {level.title} Essentials</span></span>
+                      </div>
+                    </div>
 
-                  {!isLocked && (
-                    <Box sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Progress
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {level.progress.state === 'completed' ? '100%' : level.progress.state === 'in-progress' ? 'In Progress' : '0%'}
-                        </Typography>
-                      </Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={level.progress.state === 'completed' ? 100 : level.progress.state === 'in-progress' ? 50 : 0}
-                        sx={{ height: 8, borderRadius: 1 }}
-                      />
-                    </Box>
-                  )}
-
-                  {level.revenueProducts && level.revenueProducts.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                        Recommended Products:
-                      </Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        {level.revenueProducts.map((product, idx) => (
-                          <Chip key={idx} label={product} size="small" variant="outlined" color="primary" />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
-                    {isCompleted && (
-                      <Chip icon={<CheckCircle />} label="Completed" color="success" size="small" />
-                    )}
-                    {level.progress.state === 'in-progress' && (
-                      <Chip icon={<PlayArrow />} label="In Progress" color="primary" size="small" />
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                    {/* Action Button */}
+                    <div className="flex-shrink-0 w-full md:w-auto">
+                      {isLocked ? (
+                        <button 
+                          disabled 
+                          className="w-full md:w-auto px-6 py-3 rounded-lg bg-gray-200 text-gray-500 font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+                        >
+                          <Lock className="h-5 w-5" /> 
+                          Locked
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleEnterPath(level.id)}
+                          className={`w-full md:w-auto px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
+                            isRecommended 
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
+                              : 'bg-gray-800 hover:bg-gray-900 text-white shadow-md hover:shadow-lg'
+                          }`}
+                        >
+                          {isComplete ? 'Review Path' : 'Enter Path'} 
+                          <ArrowRight className="h-5 w-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           );
         })}
-      </Grid>
+      </div>
 
-      {/* Lesson Dialog */}
-      <Dialog
-        open={showLesson && selectedLevel !== null}
-        onClose={() => {
-          setShowLesson(false);
-          setSelectedLevel(null);
-        }}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">{selectedLevel?.title}</Typography>
-            <IconButton onClick={() => {
-              setShowLesson(false);
-              setSelectedLevel(null);
-            }}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedLevel && (
-            <RiseJourneyLesson
-              levelId={selectedLevel.id}
-              onStartLesson={handleStartLesson}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Individual Lesson Dialog */}
-      <Dialog
-        open={showLesson && selectedLessonId !== null}
-        onClose={() => {
-          setShowLesson(false);
-          setSelectedLessonId(null);
-        }}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: {
-            height: '90vh',
-            maxHeight: '90vh',
-          },
-        }}
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Lesson</Typography>
-            <IconButton onClick={() => {
-              setShowLesson(false);
-              setSelectedLessonId(null);
-            }}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedLessonId && (
-            <RiseJourneyLesson
-              levelId={selectedLevel?.id || ''}
-              lessonId={selectedLessonId}
-              onClose={() => {
-                setShowLesson(false);
-                setSelectedLessonId(null);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </Box>
+      {/* Footer CTA */}
+      <div className="mt-12 text-center max-w-3xl mx-auto">
+        <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-8 border-2 border-purple-200 shadow-lg">
+          <h3 className="text-2xl font-bold text-gray-800 mb-3">Ready to Transform Your Life?</h3>
+          <p className="text-gray-700 mb-4">
+            Unlock all 7 levels and gain lifetime access to your personal growth journey.
+          </p>
+          <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+            Upgrade to Full Access
+          </button>
+        </div>
+      </div>
+    </div>
   );
-}
+};
 
+export default RiseJourney;
