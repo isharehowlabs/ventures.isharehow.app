@@ -3,7 +3,7 @@ from flask_socketio import SocketIO, emit, join_room
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies, verify_jwt_in_request
 from datetime import datetime, timedelta
 import os
 import uuid
@@ -3881,8 +3881,29 @@ def parse_date_safely(date_string):
 
 def get_or_create_user_profile():
     """Get or create user profile from JWT authentication"""
-    # Get user ID from JWT token (set by @jwt_required() decorator)
-    user_id = get_jwt_identity()
+    try:
+        # Ensure JWT is verified (safety check in case decorator didn't work)
+        # This should already be done by @jwt_required() decorator
+        try:
+            verify_jwt_in_request(optional=False)
+        except Exception as verify_err:
+            # JWT verification failed - return auth error
+            print(f"JWT verification failed in get_or_create_user_profile: {verify_err}")
+            return None, jsonify({
+                'error': 'Authentication required', 
+                'message': 'Invalid or missing authentication token. Please log in again.'
+            }), 401
+        
+        # Get user ID from JWT token (set by @jwt_required() decorator)
+        user_id = get_jwt_identity()
+    except RuntimeError as e:
+        # JWT context not available - this means @jwt_required() didn't run or JWT is invalid
+        error_msg = str(e)
+        print(f"Error getting JWT identity: {error_msg}")
+        return None, jsonify({
+            'error': 'Authentication required', 
+            'message': 'JWT token not verified. Please ensure you are logged in.'
+        }), 401
     
     if not user_id:
         return None, jsonify({'error': 'Not authenticated'}), 401
