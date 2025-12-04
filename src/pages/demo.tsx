@@ -109,6 +109,58 @@ export default function BookDemoPage() {
               />
             </Box>
 
+            {/* Prospecting Workshop CTA */}
+            <Paper
+              elevation={6}
+              sx={{
+                mb: 8,
+                p: { xs: 3, md: 4 },
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, rgba(0, 255, 0, 0.15) 0%, rgba(0, 200, 0, 0.1) 100%)',
+                border: '2px solid rgba(0, 255, 0, 0.3)',
+                textAlign: 'center',
+              }}
+            >
+              <Typography
+                variant="h4"
+                fontWeight={700}
+                sx={{
+                  mb: 2,
+                  color: '#00ff00',
+                  fontSize: { xs: '1.5rem', md: '2rem' },
+                }}
+              >
+                🚨 Flash Sale: 10X Your SEO Prospecting
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
+                Join our live 90-minute workshop and get proven scripts, AI-powered SEO tools, and templates to land 5x more clients. 
+                Normally $497, today only <strong style={{ color: '#00ff00' }}>$97</strong> (86% OFF!)
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={() => router.push('/prospecting')}
+                sx={{
+                  background: '#00ff00',
+                  color: '#000',
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  textTransform: 'none',
+                  '&:hover': {
+                    background: '#00cc00',
+                  },
+                }}
+                endIcon={<LaunchIcon />}
+              >
+                Claim Your Spot - $97
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                Limited to 50 spots • 48-hour flash sale
+              </Typography>
+            </Paper>
+
             {/* Features Grid */}
             <Grid container spacing={3} sx={{ mb: 8 }}>
               {features.map((feature, index) => (
