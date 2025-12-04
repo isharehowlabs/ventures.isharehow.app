@@ -3789,7 +3789,6 @@ def create_task():
             assigned_to=data.get('assignedTo'),
             assigned_to_name=data.get('assignedToName')
         )
-        )
         
         try:
             db.session.add(task)
