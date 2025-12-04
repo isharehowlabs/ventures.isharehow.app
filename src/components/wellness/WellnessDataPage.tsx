@@ -44,89 +44,66 @@ import {
 } from 'recharts';
 import {
   getActivities,
-  getWellnessMetrics,
-  syncData,
-  type IntervalsActivityData,
-  type IntervalsWellnessMetrics,
+  getWellness,
+  getAthleteProfile,
+  type IntervalsActivity,
+  type IntervalsWellness,
+  type IntervalsAthlete,
 } from '../../services/intervalsIcu';
 
 export default function WellnessDataPage() {
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [activities, setActivities] = useState<IntervalsActivityData[]>([]);
-  const [wellnessMetrics, setWellnessMetrics] = useState<IntervalsWellnessMetrics[]>([]);
+  const [athleteProfile, setAthleteProfile] = useState<IntervalsAthlete | null>(null);
+  const [setSyncing] = useState(false);
+  const [activities, setActivities] = useState<IntervalsActivity[]>([]);
+  const [wellnessMetrics, setWellnessMetrics] = useState<IntervalsWellness[]>([]);
   const [daysBack, setDaysBack] = useState(30);
   const [error, setError] = useState<string | null>(null);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [activitiesData, metricsData] = await Promise.all([
-        getActivities(daysBack),
-        getWellnessMetrics(daysBack),
+      // Calculate the oldest date based on daysBack
+      const oldestDate = new Date();
+      oldestDate.setDate(oldestDate.getDate() - daysBack);
+      const oldest = oldestDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      
+      const [activitiesData, wellnessData, athleteData] = await Promise.all([
+        getActivities(oldest),
+        getWellness(oldest),
+        getAthleteProfile(),
       ]);
       setActivities(activitiesData);
-      setWellnessMetrics(metricsData);
+      setWellnessMetrics(wellnessData);
+      setAthleteProfile(athleteData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     loadData();
   }, [daysBack]);
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setError(null);
-    setSyncMessage(null);
-    try {
-      const result = await syncData(daysBack);
-      setSyncMessage(
-        `Synced ${result.activitiesSynced} activities and ${result.wellnessMetricsSynced} wellness metrics`
-      );
-      await loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sync data');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  // FTP/Power progression over time (using Normalized Power as FTP estimate)
-  const ftpProgressionData = activities
-    .filter(a => a.powerData?.normalizedPower)
-    .map(a => ({
-      date: a.activityDate,
-      ftp: a.powerData?.normalizedPower || 0,
-      avgPower: a.powerData?.avgPower || 0,
-      name: a.activityName?.substring(0, 15) || 'Activity',
-    }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Power Curve - Best power outputs (simulate power curve from max/avg)
-  const powerCurveData = (() => {
-    if (activities.length === 0) return [];
-    
-    const maxPower = Math.max(...activities.map(a => a.powerData?.maxPower || 0));
-    const avgNP = activities.filter(a => a.powerData?.normalizedPower).length > 0
-      ? activities.reduce((sum, a) => sum + (a.powerData?.normalizedPower || 0), 0) / 
-        activities.filter(a => a.powerData?.normalizedPower).length
-      : 0;
-    
-    // Simulate power curve: 5s, 1min, 5min, 20min, 60min
-    return [
-      { duration: '5s', power: Math.round(maxPower * 0.95) },
-      { duration: '1min', power: Math.round(maxPower * 0.85) },
-      { duration: '5min', power: Math.round(avgNP * 1.15) },
-      { duration: '20min', power: Math.round(avgNP * 1.05) }, // FTP estimate
-      { duration: '60min', power: Math.round(avgNP * 0.95) },
-    ];
-  })();
+  // FTP progression from athlete profile FTP history
+  const ftpProgressionData = athleteProfile?.ftpHistory?.map(entry => ({
+    date: entry.date,
+    ftp: entry.value,
+  })) || [];
+
+  // Power curve data from athlete's current FTP
+  const powerCurveData = athleteProfile?.ftp ? [
+    { duration: '5s', power: Math.round(athleteProfile.ftp * 1.5) }, // Sprint power estimate
+    { duration: '1min', power: Math.round(athleteProfile.ftp * 1.2) }, // VO2max power
+    { duration: '5min', power: Math.round(athleteProfile.ftp * 1.05) }, // Threshold+
+    { duration: '20min', power: athleteProfile.ftp }, // FTP
+    { duration: '60min', power: Math.round(athleteProfile.ftp * 0.95) }, // Sustained threshold
+  ] : [];
 
   // Power/HR Ratio - Efficiency metric (with lag compensation concept)
   const powerHrRatioData = activities
@@ -138,11 +115,11 @@ export default function WellnessDataPage() {
       const ratio = hr > 0 ? Number((power / hr).toFixed(2)) : 0;
       
       return {
-        date: a.activityDate,
+        date: a.start_date_local,
         ratio,
         power,
         hr,
-        name: a.activityName?.substring(0, 15) || 'Activity',
+        name: a.name?.substring(0, 15) || 'Activity',
       };
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -153,9 +130,9 @@ export default function WellnessDataPage() {
     const durationMap = new Map<string, number>();
     
     activities.forEach(a => {
-      const date = a.activityDate;
+      const date = a.start_date_local;
       dayMap.set(date, (dayMap.get(date) || 0) + 1);
-      durationMap.set(date, (durationMap.get(date) || 0) + (a.duration || 0));
+      durationMap.set(date, (durationMap.get(date) || 0) + (a.moving_time || a.elapsed_time || 0));
     });
 
     const dates = Array.from(dayMap.keys()).sort();
@@ -168,22 +145,22 @@ export default function WellnessDataPage() {
 
   // Combined: Activity volume vs FTP trend
   const volumeVsFtpData = (() => {
-    const weeklyData = new Map<string, { activities: number; totalDuration: number; avgFtp: number; ftpCount: number }>();
+    const weeklyData = new Map<string, { activities: number; totalDuration: number; currentFtp: number; ftpCount: number }>();
     
     activities.forEach(a => {
-      const date = new Date(a.activityDate);
+      const date = new Date(a.start_date_local);
       const weekStart = new Date(date.setDate(date.getDate() - date.getDay())).toISOString().split('T')[0];
       
       if (!weeklyData.has(weekStart)) {
-        weeklyData.set(weekStart, { activities: 0, totalDuration: 0, avgFtp: 0, ftpCount: 0 });
+        weeklyData.set(weekStart, { activities: 0, totalDuration: 0, currentFtp: 0, ftpCount: 0 });
       }
       
       const week = weeklyData.get(weekStart)!;
       week.activities++;
-      week.totalDuration += (a.duration || 0) / 3600;
+      week.totalDuration += (a.moving_time || a.elapsed_time || 0) / 3600;
       
       if (a.powerData?.normalizedPower) {
-        week.avgFtp += a.powerData.normalizedPower;
+        week.currentFtp += a.powerData.normalizedPower;
         week.ftpCount++;
       }
     });
@@ -193,50 +170,48 @@ export default function WellnessDataPage() {
         week,
         activities: data.activities,
         hours: Math.round(data.totalDuration * 10) / 10,
-        avgFtp: data.ftpCount > 0 ? Math.round(data.avgFtp / data.ftpCount) : 0,
+        currentFtp: data.ftpCount > 0 ? Math.round(data.currentFtp / data.ftpCount) : 0,
       }))
       .sort((a, b) => a.week.localeCompare(b.week));
   })();
 
-  // RPE and Feel data
-  const rpeFeelData = activities
-    .filter(a => a.rpe || a.feel)
-    .map(a => ({
-      date: a.activityDate,
-      name: a.activityName?.substring(0, 20) || 'Activity',
-      rpe: a.rpe,
-      feel: a.feel,
-    }))
-    .reverse();
-
   // HRV data
+  // RPE and Feel data from wellness metrics
+  const rpeFeelData = wellnessMetrics
+    .filter(w => w.rpe || w.feel)
+    .map(w => ({
+      date: w.date,
+      rpe: w.rpe || 0,
+      feel: w.feel || 0,
+    }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const hrvData = wellnessMetrics
     .filter(m => m.hrv)
     .map(m => ({
-      date: m.metricDate,
+      date: m.date,
       hrv: m.hrv,
     }))
     .reverse();
 
   // Sleep data
   const sleepData = wellnessMetrics
-    .filter(m => m.sleepSeconds)
+    .filter(m => m.sleep?.duration)
     .map(m => ({
-      date: m.metricDate,
-      hours: m.sleepSeconds ? m.sleepSeconds / 3600 : 0,
-      quality: m.sleepQuality,
+      date: m.date,
+      hours: m.sleep?.duration || 0,
+      quality: m.sleep?.quality,
     }))
     .reverse();
 
   // Wellness metrics - all other data
   const wellnessData = wellnessMetrics
-    .filter(m => m.mood || m.fatigue || m.stress || m.soreness)
+    .filter(m => m.wellness?.mood || m.wellness?.fatigue || m.wellness?.stress || m.wellness?.soreness)
     .map(m => ({
-      date: m.metricDate,
-      mood: m.mood,
-      fatigue: m.fatigue,
-      stress: m.stress,
-      soreness: m.soreness,
+      date: m.date,
+      mood: m.wellness?.mood,
+      fatigue: m.wellness?.fatigue,
+      stress: m.wellness?.stress,
+      soreness: m.wellness?.soreness,
     }))
     .reverse();
 
@@ -244,28 +219,25 @@ export default function WellnessDataPage() {
   const weightData = wellnessMetrics
     .filter(m => m.weight)
     .map(m => ({
-      date: m.metricDate,
+      date: m.date,
       weight: m.weight,
     }))
     .reverse();
 
   // Resting HR
   const restingHrData = wellnessMetrics
-    .filter(m => m.restingHr)
+    .filter(m => m.restingHR)
     .map(m => ({
-      date: m.metricDate,
-      restingHr: m.restingHr,
+      date: m.date,
+      restingHr: m.restingHR,
     }))
     .reverse();
 
   // Calculate statistics
   const stats = {
     totalActivities: activities.length,
-    totalHours: Math.round((activities.reduce((sum, a) => sum + (a.duration || 0), 0) / 3600) * 10) / 10,
-    avgFtp: activities.filter(a => a.powerData?.normalizedPower).length > 0
-      ? Math.round(activities.reduce((sum, a) => sum + (a.powerData?.normalizedPower || 0), 0) / 
-        activities.filter(a => a.powerData?.normalizedPower).length)
-      : 0,
+    totalHours: Math.round((activities.reduce((sum, a) => sum + (a.moving_time || a.elapsed_time || 0), 0) / 3600) * 10) / 10,
+    currentFtp: athleteProfile?.ftp || 0,
     maxPower: Math.max(...activities.map(a => a.powerData?.maxPower || 0)),
     avgHRV: wellnessMetrics.filter(m => m.hrv).length > 0
       ? Math.round(wellnessMetrics.reduce((sum, m) => sum + (m.hrv || 0), 0) / 
@@ -303,16 +275,6 @@ export default function WellnessDataPage() {
             <MenuItem value={180}>Last 6 months</MenuItem>
           </Select>
         </FormControl>
-        
-        <Button
-          variant="contained"
-          startIcon={syncing ? <CircularProgress size={20} color="inherit" /> : <Sync />}
-          onClick={handleSync}
-          disabled={syncing}
-        >
-          {syncing ? 'Syncing...' : 'Sync Data'}
-        </Button>
-      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -320,11 +282,8 @@ export default function WellnessDataPage() {
         </Alert>
       )}
 
-      {syncMessage && (
-        <Alert severity="success" sx={{ mb: 2}} onClose={() => setSyncMessage(null)}>
-          {syncMessage}
-        </Alert>
-      )}
+
+      </Box>
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -360,10 +319,10 @@ export default function WellnessDataPage() {
               <Box display="flex" alignItems="center" gap={1}>
                 <Bolt color="primary" />
                 <Typography variant="body2" color="text.secondary">
-                  Avg FTP (NP)
+                  Current FTP
                 </Typography>
               </Box>
-              <Typography variant="h4">{stats.avgFtp}W</Typography>
+              <Typography variant="h4">{stats.currentFtp}W</Typography>
               <Typography variant="caption" color="text.secondary">
                 Max: {stats.maxPower}W
               </Typography>
@@ -403,7 +362,7 @@ export default function WellnessDataPage() {
                   FTP Progression Over Time
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Functional Threshold Power (FTP) using Normalized Power
+                  Your Functional Threshold Power (FTP) progression over time
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={ftpProgressionData}>
@@ -416,7 +375,7 @@ export default function WellnessDataPage() {
                       type="monotone" 
                       dataKey="ftp" 
                       stroke="#8884d8" 
-                      name="FTP (Normalized Power)"
+                      name="FTP"
                       strokeWidth={3}
                     />
                     <Line 
@@ -547,7 +506,7 @@ export default function WellnessDataPage() {
                     <Tooltip />
                     <Legend />
                     <Area yAxisId="left" type="monotone" dataKey="hours" fill="#8884d8" stroke="#8884d8" name="Weekly Hours" />
-                    <Line yAxisId="right" type="monotone" dataKey="avgFtp" stroke="#ff7300" strokeWidth={3} name="Avg FTP" />
+                    <Line yAxisId="right" type="monotone" dataKey="currentFtp" stroke="#ff7300" strokeWidth={3} name="Avg FTP" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </CardContent>

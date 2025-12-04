@@ -1,21 +1,25 @@
-/**
- * Intervals.icu API Service
- * Uses backend proxy to bypass CORS restrictions
- */
+// Intervals.icu API service with CORS-safe backend proxy
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ventures.isharehow.app';
-const STORAGE_KEY = 'intervals_icu_api_key';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ventures-isharehow-app.onrender.com';
 
-export interface IntervalsActivityData {
+// Storage keys
+const API_KEY_STORAGE = 'intervals_api_key';
+const ATHLETE_ID_STORAGE = 'intervals_athlete_id';
+
+// Type definitions
+export interface IntervalsActivity {
   id: string;
-  activityId: string;
-  activityDate: string;
-  activityName: string;
-  activityType: string;
-  rpe?: number;
-  feel?: number;
-  duration?: number;
+  start_date_local: string;
+  type: string;
+  name?: string;
   distance?: number;
+  moving_time?: number;
+  elapsed_time?: number;
+  total_elevation_gain?: number;
+  icu_training_load?: number;
+  icu_intensity?: number;
+  average_speed?: number;
+  max_speed?: number;
   powerData?: {
     avgPower?: number;
     maxPower?: number;
@@ -26,159 +30,184 @@ export interface IntervalsActivityData {
     avgHr?: number;
     maxHr?: number;
   };
-  syncedAt: string;
 }
 
-export interface IntervalsWellnessMetrics {
+export interface IntervalsWellness {
   id: string;
-  metricDate: string;
-  hrv?: number;
-  restingHr?: number;
+  date: string;
   weight?: number;
-  sleepSeconds?: number;
-  sleepQuality?: number;
-  fatigue?: number;
-  mood?: number;
-  stress?: number;
-  soreness?: number;
-  syncedAt: string;
+  restingHR?: number;
+  hrv?: number;
+  mentalEnergy?: number;
+  motivation?: number;
+  sleep?: {
+    duration?: number;
+    quality?: number;
+  };
+  wellness?: {
+    fatigue?: number;
+    mood?: number;
+    stress?: number;
+    soreness?: number;
+  };
+  rpe?: number;
+  feel?: number;
 }
 
-/**
- * Get API key from localStorage
- */
-function getApiKey(): string | null {
-  try {
-    return localStorage.getItem(STORAGE_KEY);
-  } catch (error) {
-    console.error('Failed to get API key from localStorage:', error);
-    return null;
+export interface IntervalsAthlete {
+  id: string;
+  name?: string;
+  ftp?: number;
+  ftpHistory?: Array<{
+    value: number;
+    date: string;
+  }>;
+  weight?: number;
+  max_hr?: number;
+  resting_hr?: number;
+}
+
+// Storage utilities
+export const saveApiCredentials = (apiKey: string, athleteId: string) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(API_KEY_STORAGE, apiKey);
+    localStorage.setItem(ATHLETE_ID_STORAGE, athleteId);
   }
-}
+};
 
-/**
- * Get athlete ID - we use "0" which tells intervals.icu to use the athlete associated with the API key
- */
-function getAthleteId(): string {
-  // Use "0" for athlete_id to use the athlete associated with the API key
-  return "0";
-}
+export const getApiCredentials = (): { apiKey: string | null; athleteId: string | null } => {
+  if (typeof window === 'undefined') {
+    return { apiKey: null, athleteId: null };
+  }
+  return {
+    apiKey: localStorage.getItem(API_KEY_STORAGE),
+    athleteId: localStorage.getItem(ATHLETE_ID_STORAGE),
+  };
+};
 
-/**
- * Make request through backend proxy
- */
-async function proxyRequest<T>(endpoint: string): Promise<T> {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('No API key configured. Please add your Intervals.icu API key above.');
+export const clearApiCredentials = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(API_KEY_STORAGE);
+    localStorage.removeItem(ATHLETE_ID_STORAGE);
+  }
+};
+
+// API request helper
+const makeProxyRequest = async (endpoint: string, params: Record<string, string> = {}) => {
+  const { apiKey, athleteId } = getApiCredentials();
+  
+  if (!apiKey || !athleteId) {
+    throw new Error('API credentials not configured');
   }
 
-  const response = await fetch(`${BACKEND_URL}/api/intervals-proxy${endpoint}`, {
+  const queryParams = new URLSearchParams({ 
+    athleteId, 
+    ...params 
+  }).toString();
+  
+  const url = `${API_BASE}/api/intervals-proxy/${endpoint}?${queryParams}`;
+  
+  const response = await fetch(url, {
     headers: {
       'X-Intervals-API-Key': apiKey,
-      'Content-Type': 'application/json',
     },
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error('Invalid API key. Please check your Intervals.icu settings.');
-    }
-    if (response.status === 403) {
-      throw new Error('Access forbidden. Please verify your API key has the correct permissions.');
-    }
-    throw new Error(`Failed to fetch data: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`Intervals.icu API error: ${response.status} ${errorText}`);
   }
 
   return response.json();
-}
+};
 
-/**
- * Get activities from Intervals.icu via backend proxy
- */
-export async function getActivities(daysBack: number = 30): Promise<IntervalsActivityData[]> {
-  try {
-    const oldest = new Date();
-    oldest.setDate(oldest.getDate() - daysBack);
-    const oldestStr = oldest.toISOString().split('T')[0];
+// Fetch athlete profile with FTP
+export const getAthleteProfile = async (): Promise<IntervalsAthlete> => {
+  const data = await makeProxyRequest('athlete');
+  
+  return {
+    id: data.id,
+    name: data.name,
+    ftp: data.ftp,
+    ftpHistory: data.ftpHistory || [],
+    weight: data.weight,
+    max_hr: data.max_hr,
+    resting_hr: data.resting_hr,
+  };
+};
 
-    const activities = await proxyRequest<any[]>(`/activities?oldest=${oldestStr}`);
-    
-    return activities.map(a => ({
-      id: a.id,
-      activityId: a.id,
-      activityDate: a.start_date_local?.split('T')[0] || '',
-      activityName: a.name || 'Activity',
-      activityType: a.type || 'ride',
-      rpe: a.icu_rpe,
-      feel: a.icu_feel,
-      duration: a.moving_time,
-      distance: a.distance,
-      powerData: {
-        avgPower: a.average_power,
-        maxPower: a.max_power,
-        normalizedPower: a.normalized_power,
-        work: a.work,
-      },
-      hrData: {
-        avgHr: a.average_hr,
-        maxHr: a.max_hr,
-      },
-      syncedAt: new Date().toISOString(),
-    }));
-  } catch (error) {
-    console.error('Failed to fetch activities:', error);
-    throw error;
+// Fetch activities
+export const getActivities = async (oldest?: string): Promise<IntervalsActivity[]> => {
+  const params: Record<string, string> = {};
+  if (oldest) {
+    params.oldest = oldest;
   }
-}
+  
+  const data = await makeProxyRequest('activities', params);
+  
+  return Array.isArray(data) ? data.map((activity: any) => ({
+    id: activity.id,
+    start_date_local: activity.start_date_local,
+    type: activity.type,
+    name: activity.name,
+    distance: activity.distance,
+    moving_time: activity.moving_time,
+    elapsed_time: activity.elapsed_time,
+    total_elevation_gain: activity.total_elevation_gain,
+    icu_training_load: activity.icu_training_load,
+    icu_intensity: activity.icu_intensity,
+    average_speed: activity.average_speed,
+    max_speed: activity.max_speed,
+    powerData: {
+      avgPower: activity.average_watts,
+      maxPower: activity.max_watts,
+      normalizedPower: activity.weighted_average_watts,
+      work: activity.work,
+    },
+    hrData: {
+      avgHr: activity.average_heartrate,
+      maxHr: activity.max_heartrate,
+    },
+  })) : [];
+};
 
-/**
- * Get wellness metrics from Intervals.icu via backend proxy
- */
-export async function getWellnessMetrics(daysBack: number = 30): Promise<IntervalsWellnessMetrics[]> {
-  try {
-    const oldest = new Date();
-    oldest.setDate(oldest.getDate() - daysBack);
-    const oldestStr = oldest.toISOString().split('T')[0];
-
-    const wellness = await proxyRequest<any[]>(`/wellness?oldest=${oldestStr}`);
-    
-    return wellness.map(w => ({
-      id: w.id,
-      metricDate: w.id,
-      hrv: w.hrv,
-      restingHr: w.restingHR,
-      weight: w.weight,
-      sleepSeconds: w.sleepSecs,
-      sleepQuality: w.sleepQuality,
-      fatigue: w.fatigue,
-      mood: w.mood,
-      stress: w.stress,
-      soreness: w.soreness,
-      syncedAt: new Date().toISOString(),
-    }));
-  } catch (error) {
-    console.error('Failed to fetch wellness metrics:', error);
-    throw error;
+// Fetch wellness data
+export const getWellness = async (oldest?: string): Promise<IntervalsWellness[]> => {
+  const params: Record<string, string> = {};
+  if (oldest) {
+    params.oldest = oldest;
   }
-}
+  
+  const data = await makeProxyRequest('wellness', params);
+  
+  return Array.isArray(data) ? data.map((entry: any) => ({
+    id: entry.id,
+    date: entry.id, // wellness ID is the date string
+    weight: entry.weight,
+    restingHR: entry.restingHR,
+    hrv: entry.hrv,
+    mentalEnergy: entry.mentalEnergy,
+    motivation: entry.motivation,
+    sleep: {
+      duration: entry.sleepSecs ? entry.sleepSecs / 3600 : undefined,
+      quality: entry.sleepQuality,
+    },
+    wellness: {
+      fatigue: entry.fatigue,
+      mood: entry.mood,
+      stress: entry.stress,
+      soreness: entry.soreness,
+    },
+    rpe: entry.ctl,
+    feel: entry.atl,
+  })) : [];
+};
 
-/**
- * Sync data from Intervals.icu
- */
-export async function syncData(daysBack: number = 30): Promise<{ activitiesSynced: number; wellnessMetricsSynced: number }> {
-  try {
-    const [activities, wellness] = await Promise.all([
-      getActivities(daysBack),
-      getWellnessMetrics(daysBack),
-    ]);
-
-    return {
-      activitiesSynced: activities.length,
-      wellnessMetricsSynced: wellness.length,
-    };
-  } catch (error) {
-    console.error('Failed to sync data:', error);
-    throw error;
-  }
-}
+export default {
+  saveApiCredentials,
+  getApiCredentials,
+  clearApiCredentials,
+  getAthleteProfile,
+  getActivities,
+  getWellness,
+};
