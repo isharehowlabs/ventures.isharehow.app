@@ -10,133 +10,182 @@ import {
   Link,
 } from '@mui/material';
 import { Save, Check, Link as LinkIcon } from '@mui/icons-material';
-
-const STORAGE_KEY = 'intervals_icu_api_key';
+import {
+  saveApiCredentials,
+  getApiCredentials,
+  clearApiCredentials,
+} from '../../services/intervalsIcu';
 
 export default function IntervalsSettings() {
   const [apiKey, setApiKey] = useState('');
+  const [athleteId, setAthleteId] = useState('');
   const [existingKey, setExistingKey] = useState<string | null>(null);
+  const [existingAthleteId, setExistingAthleteId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    loadExistingKey();
+    loadExistingCredentials();
   }, []);
 
-  const loadExistingKey = () => {
+  const loadExistingCredentials = () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setExistingKey(saved);
+      const { apiKey: savedKey, athleteId: savedId } = getApiCredentials();
+      if (savedKey) {
+        setExistingKey(savedKey);
+      }
+      if (savedId) {
+        setExistingAthleteId(savedId);
       }
     } catch (error) {
-      console.error('Failed to load API key:', error);
+      console.error('Failed to load credentials:', error);
     }
   };
 
   const handleSave = () => {
-    if (!apiKey.trim()) {
-      setMessage({ type: 'error', text: 'Please enter an API key' });
-      return;
-    }
-
-    // Just validate that it's not empty - intervals.icu API keys are just the key itself
     try {
-      localStorage.setItem(STORAGE_KEY, apiKey.trim());
-      setExistingKey(apiKey.trim());
-      setMessage({ type: 'success', text: 'API key saved successfully!' });
+      if (!apiKey || !athleteId) {
+        setMessage({ type: 'error', text: 'Please provide both API Key and Athlete ID' });
+        return;
+      }
+
+      // Validate API key format (should be API_KEY:athlete_id or just API_KEY)
+      if (!apiKey.includes(':') && !athleteId) {
+        setMessage({ type: 'error', text: 'API Key should be in format API_KEY:athlete_id or provide Athlete ID separately' });
+        return;
+      }
+
+      // If API key contains athlete ID, extract it
+      let finalApiKey = apiKey;
+      let finalAthleteId = athleteId;
+      
+      if (apiKey.includes(':') && !athleteId) {
+        const parts = apiKey.split(':');
+        finalApiKey = apiKey; // Keep full format for auth
+        finalAthleteId = parts[1];
+      }
+
+      saveApiCredentials(finalApiKey, finalAthleteId);
+      setExistingKey(finalApiKey);
+      setExistingAthleteId(finalAthleteId);
       setApiKey('');
+      setAthleteId('');
+      setMessage({ type: 'success', text: 'API credentials saved successfully!' });
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: 'Failed to save API key. Please check your browser settings.',
-      });
+      setMessage({ type: 'error', text: 'Failed to save credentials' });
     }
   };
 
-  const handleDelete = () => {
-    if (!confirm('Are you sure you want to remove the Intervals.icu connection?')) {
-      return;
-    }
-
+  const handleClear = () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      clearApiCredentials();
       setExistingKey(null);
-      setMessage({ type: 'success', text: 'API key removed successfully!' });
+      setExistingAthleteId(null);
+      setMessage({ type: 'success', text: 'API credentials cleared' });
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: 'Failed to remove API key.',
-      });
+      setMessage({ type: 'error', text: 'Failed to clear credentials' });
     }
   };
 
   return (
-    <Card>
-      <CardContent>
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <LinkIcon color="primary" />
-          <Typography variant="h6">Intervals.icu Integration</Typography>
-        </Box>
-
-        <Typography variant="body2" color="text.secondary" paragraph>
-          Connect your Intervals.icu account to automatically sync your cycling activities,
-          wellness metrics, and performance data. Your API key is stored locally in your browser.
-        </Typography>
-
-        <Link
-          href="https://intervals.icu/settings"
-          target="_blank"
-          rel="noopener"
-          sx={{ display: 'inline-block', mb: 2 }}
-        >
-          Get your API key from Intervals.icu settings
-        </Link>
-
-        {message && (
-          <Alert severity={message.type} sx={{ mb: 2 }} onClose={() => setMessage(null)}>
-            {message.text}
-          </Alert>
-        )}
-
-        {existingKey ? (
-          <>
-            <Alert severity="success" icon={<Check />} sx={{ mb: 2 }}>
-              <Typography variant="body2">Intervals.icu is connected</Typography>
-              <Typography variant="caption" color="text.secondary">
-                API Key: {existingKey.substring(0, 15)}...
-              </Typography>
-            </Alert>
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={handleDelete}
-            >
-              Remove Connection
-            </Button>
-          </>
-        ) : (
-          <Box>
-            <TextField
-              id="intervals-api-key"
-              fullWidth
-              label="API Key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter your Intervals.icu API key"
-              helperText="Get your API key from Intervals.icu Settings > Developer Settings"
-              sx={{ mb: 2 }}
-            />
-            <Button
-              variant="contained"
-              startIcon={<Save />}
-              onClick={handleSave}
-              disabled={!apiKey.trim()}
-            >
-              Save API Key
-            </Button>
+    <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <LinkIcon color="primary" />
+            <Typography variant="h5" component="h2">
+              Intervals.icu Integration
+            </Typography>
           </Box>
-        )}
-      </CardContent>
-    </Card>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Connect your Intervals.icu account to view your training data and wellness metrics.
+            You'll need an API key from your Intervals.icu account.
+          </Typography>
+
+          {message && (
+            <Alert severity={message.type} sx={{ mb: 2 }} onClose={() => setMessage(null)}>
+              {message.text}
+            </Alert>
+          )}
+
+          {existingKey ? (
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Check color="success" />
+                <Typography variant="body1" color="success.main">
+                  API Key Configured
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                Key: {existingKey.substring(0, 8)}...
+              </Typography>
+              {existingAthleteId && (
+                <Typography variant="body2" color="text.secondary">
+                  Athlete ID: {existingAthleteId}
+                </Typography>
+              )}
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={handleClear}
+                sx={{ mt: 2 }}
+              >
+                Clear Credentials
+              </Button>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+              <TextField
+                id="api-key"
+                label="API Key"
+                placeholder="API_KEY:athlete_id or just API_KEY"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                fullWidth
+                type="password"
+              />
+              <TextField
+                id="athlete-id"
+                label="Athlete ID"
+                placeholder="i1234567"
+                value={athleteId}
+                onChange={(e) => setAthleteId(e.target.value)}
+                fullWidth
+                helperText="Your athlete ID (e.g., i1234567). Can be extracted from API key if it's in API_KEY:athlete_id format."
+              />
+              <Button
+                variant="contained"
+                startIcon={<Save />}
+                onClick={handleSave}
+                disabled={!apiKey}
+              >
+                Save API Credentials
+              </Button>
+            </Box>
+          )}
+
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              How to get your API Key:
+            </Typography>
+            <Typography variant="body2" component="div">
+              <ol style={{ margin: 0, paddingLeft: 20 }}>
+                <li>
+                  Go to{' '}
+                  <Link href="https://intervals.icu/settings" target="_blank" rel="noopener">
+                    Intervals.icu Settings
+                  </Link>
+                </li>
+                <li>Find the "Developer Settings" section</li>
+                <li>Generate or copy your API key</li>
+                <li>The key format is usually: API_KEY:athlete_id</li>
+                <li>Paste it above and save</li>
+              </ol>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
