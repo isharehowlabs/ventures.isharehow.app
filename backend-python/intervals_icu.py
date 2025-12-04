@@ -20,20 +20,17 @@ class IntervalsICUClient:
         Initialize the Intervals.icu client
         
         Args:
-            api_key: User's Intervals.icu API key (format: API_KEY:athlete_id)
+            api_key: User's Intervals.icu API key (just the key itself, e.g., "1l0nlqjq3j1obdhg08rz5rfhx")
         """
         self.api_key = api_key
         self.session = requests.Session()
         
-        # Parse API key to get athlete ID
-        if ':' in api_key:
-            key_part, athlete_id = api_key.split(':', 1)
-            self.athlete_id = athlete_id
-            self.session.auth = (key_part, '')
-        else:
-            # Try using the key as is
-            self.athlete_id = None
-            self.session.auth = (api_key, '')
+        # Intervals.icu uses basic auth with username "API_KEY" and password as the API key
+        self.session.auth = ('API_KEY', api_key)
+        
+        # Use "0" for athlete_id to use the athlete associated with the API key
+        # We'll try to get the actual athlete ID from the API
+        self.athlete_id = None
     
     def test_connection(self) -> bool:
         """
@@ -73,19 +70,15 @@ class IntervalsICUClient:
         Returns:
             List of activity dictionaries
         """
-        if not self.athlete_id:
-            self.get_athlete_info()
-        
-        if not self.athlete_id:
-            logger.error("Athlete ID not available")
-            return []
+        # Use "0" for athlete_id to use the athlete associated with the API key
+        athlete_id = "0"
         
         try:
             # Format dates
             start_str = start_date.strftime('%Y-%m-%d')
             end_str = end_date.strftime('%Y-%m-%d')
             
-            url = f"{self.BASE_URL}/athlete/{self.athlete_id}/activities"
+            url = f"{self.BASE_URL}/athlete/{athlete_id}/activities"
             params = {
                 'oldest': start_str,
                 'newest': end_str
@@ -135,18 +128,14 @@ class IntervalsICUClient:
         Returns:
             List of wellness metric dictionaries
         """
-        if not self.athlete_id:
-            self.get_athlete_info()
-        
-        if not self.athlete_id:
-            logger.error("Athlete ID not available")
-            return []
+        # Use "0" for athlete_id to use the athlete associated with the API key
+        athlete_id = "0"
         
         try:
             start_str = start_date.strftime('%Y-%m-%d')
             end_str = end_date.strftime('%Y-%m-%d')
             
-            url = f"{self.BASE_URL}/athlete/{self.athlete_id}/wellness"
+            url = f"{self.BASE_URL}/athlete/{athlete_id}/wellness"
             params = {
                 'oldest': start_str,
                 'newest': end_str
@@ -188,15 +177,11 @@ class IntervalsICUClient:
         Returns:
             Dictionary with stream data
         """
-        if not self.athlete_id:
-            self.get_athlete_info()
-        
-        if not self.athlete_id:
-            logger.error("Athlete ID not available")
-            return {}
+        # Use "0" for athlete_id to use the athlete associated with the API key
+        athlete_id = "0"
         
         try:
-            url = f"{self.BASE_URL}/athlete/{self.athlete_id}/activities/{activity_id}/streams"
+            url = f"{self.BASE_URL}/athlete/{athlete_id}/activities/{activity_id}/streams"
             response = self.session.get(url)
             response.raise_for_status()
             streams = response.json()

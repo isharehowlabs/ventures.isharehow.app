@@ -7679,22 +7679,23 @@ def intervals_proxy_activities():
     
     try:
         api_key = request.headers.get('X-Intervals-API-Key', '').strip()
-        athlete_id = request.args.get('athleteId', '').strip()
         oldest = request.args.get('oldest', '').strip()
         
-        if not api_key or ':' not in api_key:
-            app.logger.warning(f"Missing or invalid API key format")
-            return jsonify({'error': 'Missing or invalid X-Intervals-API-Key'}), 401
-        if not athlete_id or not oldest:
-            app.logger.warning(f"Missing required params: athleteId={athlete_id}, oldest={oldest}")
-            return jsonify({'error': 'athleteId and oldest are required'}), 400
+        if not api_key:
+            app.logger.warning(f"Missing API key")
+            return jsonify({'error': 'Missing X-Intervals-API-Key'}), 401
+        if not oldest:
+            app.logger.warning(f"Missing required param: oldest={oldest}")
+            return jsonify({'error': 'oldest parameter is required'}), 400
         
-        # Make request to Intervals.icu
+        # Intervals.icu uses basic auth with username "API_KEY" and password as the API key
+        # Use "0" for athlete_id to use the athlete associated with the API key
         import base64
-        auth_header = f"Basic {base64.b64encode(api_key.encode('utf-8')).decode('utf-8')}"
+        auth_string = f"API_KEY:{api_key}"
+        auth_header = f"Basic {base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')}"
         
         response = requests.get(
-            f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities',
+            f'https://intervals.icu/api/v1/athlete/0/activities',
             headers={'Authorization': auth_header},
             params={'oldest': oldest},
             timeout=(5, 30)
@@ -7732,22 +7733,23 @@ def intervals_proxy_wellness():
     
     try:
         api_key = request.headers.get('X-Intervals-API-Key', '').strip()
-        athlete_id = request.args.get('athleteId', '').strip()
         oldest = request.args.get('oldest', '').strip()
         
-        if not api_key or ':' not in api_key:
-            app.logger.warning(f"Missing or invalid API key format")
-            return jsonify({'error': 'Missing or invalid X-Intervals-API-Key'}), 401
-        if not athlete_id or not oldest:
-            app.logger.warning(f"Missing required params: athleteId={athlete_id}, oldest={oldest}")
-            return jsonify({'error': 'athleteId and oldest are required'}), 400
+        if not api_key:
+            app.logger.warning(f"Missing API key")
+            return jsonify({'error': 'Missing X-Intervals-API-Key'}), 401
+        if not oldest:
+            app.logger.warning(f"Missing required param: oldest={oldest}")
+            return jsonify({'error': 'oldest parameter is required'}), 400
         
-        # Make request to Intervals.icu
+        # Intervals.icu uses basic auth with username "API_KEY" and password as the API key
+        # Use "0" for athlete_id to use the athlete associated with the API key
         import base64
-        auth_header = f"Basic {base64.b64encode(api_key.encode('utf-8')).decode('utf-8')}"
+        auth_string = f"API_KEY:{api_key}"
+        auth_header = f"Basic {base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')}"
         
         response = requests.get(
-            f'https://intervals.icu/api/v1/athlete/{athlete_id}/wellness',
+            f'https://intervals.icu/api/v1/athlete/0/wellness',
             headers={'Authorization': auth_header},
             params={'oldest': oldest},
             timeout=(5, 30)

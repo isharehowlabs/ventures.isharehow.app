@@ -57,16 +57,11 @@ function getApiKey(): string | null {
 }
 
 /**
- * Parse API key to get athlete ID
+ * Get athlete ID - we use "0" which tells intervals.icu to use the athlete associated with the API key
  */
-function getAthleteId(): string | null {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
-  
-  const parts = apiKey.split(':');
-  if (parts.length !== 2) return null;
-  
-  return parts[1];
+function getAthleteId(): string {
+  // Use "0" for athlete_id to use the athlete associated with the API key
+  return "0";
 }
 
 /**
@@ -103,16 +98,11 @@ async function proxyRequest<T>(endpoint: string): Promise<T> {
  */
 export async function getActivities(daysBack: number = 30): Promise<IntervalsActivityData[]> {
   try {
-    const athleteId = getAthleteId();
-    if (!athleteId) {
-      throw new Error('Invalid API key format. Expected: API_KEY_xxxxx:athlete_id');
-    }
-
     const oldest = new Date();
     oldest.setDate(oldest.getDate() - daysBack);
     const oldestStr = oldest.toISOString().split('T')[0];
 
-    const activities = await proxyRequest<any[]>(`/activities?athleteId=${athleteId}&oldest=${oldestStr}`);
+    const activities = await proxyRequest<any[]>(`/activities?oldest=${oldestStr}`);
     
     return activities.map(a => ({
       id: a.id,
@@ -147,16 +137,11 @@ export async function getActivities(daysBack: number = 30): Promise<IntervalsAct
  */
 export async function getWellnessMetrics(daysBack: number = 30): Promise<IntervalsWellnessMetrics[]> {
   try {
-    const athleteId = getAthleteId();
-    if (!athleteId) {
-      throw new Error('Invalid API key format. Expected: API_KEY_xxxxx:athlete_id');
-    }
-
     const oldest = new Date();
     oldest.setDate(oldest.getDate() - daysBack);
     const oldestStr = oldest.toISOString().split('T')[0];
 
-    const wellness = await proxyRequest<any[]>(`/wellness?athleteId=${athleteId}&oldest=${oldestStr}`);
+    const wellness = await proxyRequest<any[]>(`/wellness?oldest=${oldestStr}`);
     
     return wellness.map(w => ({
       id: w.id,

@@ -39,15 +39,10 @@ export default function IntervalsSettings() {
       return;
     }
 
-    // Validate format (should be API_KEY_xxxxx:athlete_id)
-    if (!apiKey.includes(':')) {
-      setMessage({ type: 'error', text: 'Invalid format. API key should include ":" (e.g., API_KEY_xxxxx:12345)' });
-      return;
-    }
-
+    // Just validate that it's not empty - intervals.icu API keys are just the key itself
     try {
-      localStorage.setItem(STORAGE_KEY, apiKey);
-      setExistingKey(apiKey);
+      localStorage.setItem(STORAGE_KEY, apiKey.trim());
+      setExistingKey(apiKey.trim());
       setMessage({ type: 'success', text: 'API key saved successfully!' });
       setApiKey('');
     } catch (error) {
@@ -127,8 +122,8 @@ export default function IntervalsSettings() {
               label="API Key"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="API_KEY_xxxxx:athlete_id"
-              helperText="Format: API_KEY:athlete_id (e.g., API_KEY_xxxxx:12345)"
+              placeholder="Enter your Intervals.icu API key"
+              helperText="Get your API key from Intervals.icu Settings > Developer Settings"
               sx={{ mb: 2 }}
             />
             <Button
