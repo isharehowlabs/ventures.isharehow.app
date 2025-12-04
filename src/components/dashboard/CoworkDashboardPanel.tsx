@@ -28,14 +28,14 @@ interface TaskListPanelProps {
   onAdd: (text: string) => Promise<void>;
 }
 
-function TaskListPanel({ tasks, onToggle, onAdd, isLoading }: TaskListPanelProps & { isLoading: boolean }) {
+function TaskListPanel({ tasks, onToggle, onAdd }: TaskListPanelProps) {
   const [newTask, setNewTask] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedTask = newTask.trim();
-    if (trimmedTask && !isSubmitting && !isLoading) {
+    if (trimmedTask && !isSubmitting) {
       setIsSubmitting(true);
       try {
         await onAdd(trimmedTask);
@@ -92,7 +92,7 @@ function TaskListPanel({ tasks, onToggle, onAdd, isLoading }: TaskListPanelProps
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Add task…"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && newTask.trim() && !isSubmitting && !isLoading) {
+            if (e.key === 'Enter' && newTask.trim() && !isSubmitting) {
               e.preventDefault();
               handleSubmit(e as any);
             }
@@ -103,12 +103,12 @@ function TaskListPanel({ tasks, onToggle, onAdd, isLoading }: TaskListPanelProps
                 <IconButton
                   type="submit"
                   size="small"
-                  disabled={!newTask.trim() || isSubmitting || isLoading}
+                  disabled={!newTask.trim() || isSubmitting}
                   color="primary"
                   aria-label="Add task"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (newTask.trim() && !isSubmitting && !isLoading) {
+                    if (newTask.trim() && !isSubmitting) {
                       handleSubmit(e as any);
                     }
                   }}
@@ -198,7 +198,6 @@ export default function CoworkDashboardPanel() {
               tasks={tasks} 
               onToggle={handleTaskToggle} 
               onAdd={handleTaskAdd}
-              isLoading={isLoading}
             />
           </Grid>
 
