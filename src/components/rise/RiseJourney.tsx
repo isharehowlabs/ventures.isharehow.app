@@ -106,6 +106,10 @@ export default function RiseJourney() {
           setQuizCompleted(true);
           setRecommendedLevel(quizData.quiz.recommendedLevel);
         }
+      } else if (quizResponse.status === 401) {
+        setError('Please log in to access the Rise Journey. Your session may have expired.');
+        setLoading(false);
+        return;
       }
 
       // Get trial status
@@ -115,6 +119,10 @@ export default function RiseJourney() {
       if (trialResponse.ok) {
         const trialData = await trialResponse.json();
         setTrial(trialData.trial);
+      } else if (trialResponse.status === 401) {
+        setError('Please log in to access the Rise Journey. Your session may have expired.');
+        setLoading(false);
+        return;
       }
 
       // Get levels
@@ -124,6 +132,8 @@ export default function RiseJourney() {
       if (levelsResponse.ok) {
         const levelsData = await levelsResponse.json();
         setLevels(levelsData.levels || []);
+      } else if (levelsResponse.status === 401) {
+        setError('Please log in to access the Rise Journey. Your session may have expired.');
       } else {
         throw new Error('Failed to load journey levels');
       }

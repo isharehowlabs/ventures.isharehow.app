@@ -155,6 +155,12 @@ export default function RiseJourneyQuiz({ onComplete }: RiseJourneyQuizProps) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Handle authentication errors specifically
+        if (response.status === 401) {
+          throw new Error('Please log in to submit the quiz. Your session may have expired.');
+        }
+        
         throw new Error(errorData.error || `Failed to submit quiz (${response.status})`);
       }
 
