@@ -19,6 +19,26 @@ export const getBackendUrl = (): string => {
   // For browser/client-side requests, use external HTTPS URL
   // The backend is deployed on Render at https://api.ventures.isharehow.app
   return 'https://api.ventures.isharehow.app';
+}
+
+// Get task-specific backend URL - separate Python backend service for tasks only
+// This ensures tasks don't connect to Web3 or other services
+// Set NEXT_PUBLIC_TASKS_BACKEND_URL environment variable to override
+export const getTasksBackendUrl = (): string => {
+  // Check for explicit task backend URL environment variable
+  const taskBackendUrl = process.env.NEXT_PUBLIC_TASKS_BACKEND_URL;
+  if (taskBackendUrl) {
+    return taskBackendUrl.replace(/\/$/, '');
+  }
+  
+  // For Render internal communication (server-side or build-time)
+  if (typeof window === 'undefined' && process.env.RENDER) {
+    return 'http://ventures-isharehow-app:5000';
+  }
+  
+  // Default to the Python backend service (same as main backend, but explicitly for tasks)
+  // This is the Python Flask backend at https://api.ventures.isharehow.app
+  return 'https://api.ventures.isharehow.app';
   
   // Legacy logic (commented out since we always use Render now)
   /*

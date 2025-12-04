@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
-import { getSocket } from '../utils/socket';
+import { getTasksBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
+import { getTasksSocket } from '../utils/socket';
 import { Socket } from 'socket.io-client';
 
 export interface Task {
@@ -31,7 +31,7 @@ export function useTasks() {
       setIsLoading(true);
       setError(null);
       setAuthRequired(false);
-      const backendUrl = getBackendUrl();
+      const backendUrl = getTasksBackendUrl();
       const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks`, {
         method: 'GET',
       });
@@ -73,7 +73,7 @@ export function useTasks() {
       setIsLoading(true);
       setError(null);
       setAuthRequired(false);
-      const backendUrl = getBackendUrl();
+      const backendUrl = getTasksBackendUrl();
       const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks`, {
         method: 'POST',
         body: JSON.stringify({ title, description, hyperlinks, status }),
@@ -118,7 +118,7 @@ export function useTasks() {
       setIsLoading(true);
       setError(null);
       setAuthRequired(false);
-      const backendUrl = getBackendUrl();
+      const backendUrl = getTasksBackendUrl();
       const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
@@ -154,7 +154,7 @@ export function useTasks() {
       setIsLoading(true);
       setError(null);
       setAuthRequired(false);
-      const backendUrl = getBackendUrl();
+      const backendUrl = getTasksBackendUrl();
       const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks/${id}`, {
         method: 'DELETE',
       });
@@ -178,8 +178,8 @@ export function useTasks() {
   useEffect(() => {
     fetchTasks();
 
-    // Use shared Socket.IO connection
-    const socketInstance = getSocket();
+    // Use tasks-specific Socket.IO connection (separate from Web3/main backend)
+    const socketInstance = getTasksSocket();
     setSocket(socketInstance);
 
     // Connection event handlers (additional to shared handlers)
