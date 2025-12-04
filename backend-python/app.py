@@ -3880,33 +3880,50 @@ def parse_date_safely(date_string):
             return None
 
 def get_or_create_user_profile():
-    """Get or create user profile from session data"""
-    if 'user' not in session:
-        return None, jsonify({'error': 'Not authenticated'}), 401
-    
-    user_data = session['user']
-    user_id = user_data.get('id')
+    """Get or create user profile from JWT authentication"""
+    # Get user ID from JWT token (set by @jwt_required() decorator)
+    user_id = get_jwt_identity()
     
     if not user_id:
-        return None, jsonify({'error': 'Invalid session data'}), 400
+        return None, jsonify({'error': 'Not authenticated'}), 401
+    
+    # Find the User record first to get user data
+    user = None
+    user_id_str = str(user_id)
+    
+    # Try to find user by ID (could be integer ID, username, or patreon_id)
+    if user_id_str.isdigit():
+        user = User.query.get(int(user_id_str))
+    if not user:
+        user = User.query.filter_by(username=user_id_str).first()
+    if not user:
+        user = User.query.filter_by(patreon_id=user_id_str).first()
+    
+    if not user:
+        return None, jsonify({'error': 'User not found'}), 404
+    
+    # Use ENS name as profile ID if available, otherwise use user ID
+    profile_id = user.ens_name or str(user.id)
     
     # Check if profile exists
-    profile = UserProfile.query.get(user_id)
+    profile = UserProfile.query.get(profile_id)
     
     # Create profile if it doesn't exist
     if not profile:
         profile = UserProfile(
-            id=user_id,
-            email=user_data.get('email'),
-            name=user_data.get('name'),
-            avatar_url=user_data.get('avatar'),
-            patreon_id=user_data.get('patreonId'),
-            membership_tier=user_data.get('membershipTier'),
-            is_paid_member=user_data.get('isPaidMember', False)
+            id=profile_id,
+            email=user.email,
+            name=user.username or user.email or 'User',
+            patreon_id=user.patreon_id,
+            membership_tier=None,  # Will be set from Patreon if available
+            is_paid_member=user.membership_paid if hasattr(user, 'membership_paid') else False,
+            ens_name=user.ens_name,
+            crypto_address=getattr(user, 'crypto_address', None),
+            content_hash=getattr(user, 'content_hash', None)
         )
         db.session.add(profile)
         db.session.commit()
-        print(f"✓ Created new user profile: {user_id}")
+        print(f"✓ Created new user profile: {profile_id}")
     
     return profile, None, None
 
