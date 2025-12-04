@@ -7779,3 +7779,45 @@ def intervals_proxy_wellness():
         app.logger.error(f"Unexpected error in intervals_proxy_wellness: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
 
+
+# ============================================
+# Intervals.icu FTP Endpoint
+# ============================================
+
+@app.route('/api/intervals-proxy/athlete', methods=['GET', 'OPTIONS'])
+def intervals_proxy_athlete():
+    """Proxy endpoint to get athlete data including current FTP"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        api_key = request.headers.get('X-Intervals-API-Key', '').strip()
+        athlete_id = request.args.get('athleteId', '').strip()
+        
+        if not api_key or ':' not in api_key:
+            return jsonify({'error': 'Missing or invalid X-Intervals-API-Key'}), 401
+        if not athlete_id:
+            return jsonify({'error': 'athleteId is required'}), 400
+        
+        # Make request to Intervals.icu for athlete data
+        import base64
+        auth_header = f"Basic {base64.b64encode(api_key.encode('utf-8')).decode('utf-8')}"
+        
+        response = requests.get(
+            f'https://intervals.icu/api/v1/athlete/{athlete_id}',
+            headers={'Authorization': auth_header},
+            timeout=(5, 30)
+        )
+        
+        # Return response with proper status
+        return Response(
+            response.content,
+            status=response.status_code,
+            mimetype='application/json'
+        )
+        
+    except requests.RequestException as e:
+        return jsonify({'error': 'Upstream request failed', 'detail': str(e)}), 502
+    except Exception as e:
+        return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
+
