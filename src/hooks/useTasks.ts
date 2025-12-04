@@ -10,6 +10,10 @@ export interface Task {
   hyperlinks: string[];
   status: 'pending' | 'in-progress' | 'completed';
   supportRequestId?: string; // Link to support request
+  createdBy?: string; // User ID who created the task
+  createdByName?: string; // Display name of creator
+  assignedTo?: string; // User ID assigned to the task
+  assignedToName?: string; // Display name of assigned user
   createdAt?: string;
   updatedAt?: string;
   userId?: string;
@@ -71,7 +75,7 @@ export function useTasks() {
     return fetchTasks();
   }, [fetchTasks]);
 
-  const createTask = async (title: string, description: string, hyperlinks: string[], status: string) => {
+  const createTask = async (title: string, description: string, hyperlinks: string[], status: string, assignedTo?: string, assignedToName?: string) => {
     // Prevent duplicate calls
     if (isLoading) {
       console.warn('Task creation already in progress, ignoring duplicate call');
@@ -87,7 +91,7 @@ export function useTasks() {
       
       const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks`, {
         method: 'POST',
-        body: JSON.stringify({ title, description, hyperlinks, status }),
+        body: JSON.stringify({ title, description, hyperlinks, status, assignedTo, assignedToName }),
       });
 
       if (response.status === 401) {
@@ -138,7 +142,7 @@ export function useTasks() {
     }
   };
 
-  const updateTask = async (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'hyperlinks' | 'status' | 'supportRequestId'>>) => {
+  const updateTask = async (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'hyperlinks' | 'status' | 'supportRequestId' | 'assignedTo' | 'assignedToName'>>) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -275,6 +279,16 @@ export function useTasks() {
       lastUpdatedRef.current = now;
     });
 
+    socketInstance.on('task_assigned', (data: { task: Task; assignedTo: string; assignedToName?: string }) => {
+      if (!isMounted) return;
+      console.log('Task assigned notification:', data);
+      // Update the task in the list
+      const now = new Date();
+      setTasks(prev => prev.map(task => task.id === data.task.id ? data.task : task));
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
+    });
+
     // Listen for auth restoration
     socketInstance.on('auth_restored_ack', () => {
       if (!isMounted) return;
@@ -301,6 +315,7 @@ export function useTasks() {
       socketInstance.off('task_created');
       socketInstance.off('task_updated');
       socketInstance.off('task_deleted');
+      socketInstance.off('task_assigned');
       socketInstance.off('auth_restored_ack');
       clearInterval(staleInterval);
     };

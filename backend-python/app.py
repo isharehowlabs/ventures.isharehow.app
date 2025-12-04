@@ -260,6 +260,12 @@ if DB_AVAILABLE:
         hyperlinks = db.Column(db.Text)  # JSON string of array
         status = db.Column(db.String(20), default='pending')
         support_request_id = db.Column(db.String(36), db.ForeignKey('support_requests.id'), nullable=True, index=True)  # Link to support request
+        
+        # User assignment fields
+        created_by = db.Column(db.String(100), nullable=True)  # User ID who created the task
+        created_by_name = db.Column(db.String(200), nullable=True)  # Display name of creator
+        assigned_to = db.Column(db.String(100), nullable=True)  # User ID assigned to the task
+        assigned_to_name = db.Column(db.String(200), nullable=True)  # Display name of assigned user
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -271,6 +277,10 @@ if DB_AVAILABLE:
                 'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
                 'status': self.status,
                 'supportRequestId': self.support_request_id,
+                'createdBy': self.created_by,
+                'createdByName': self.created_by_name,
+                'assignedTo': self.assigned_to,
+                'assignedToName': self.assigned_to_name,
                 'createdAt': self.created_at.isoformat(),
                 'updatedAt': self.updated_at.isoformat()
             }
@@ -3772,7 +3782,13 @@ def create_task():
             description=data.get('description', '') or '',
             hyperlinks=json.dumps(data.get('hyperlinks', [])),
             status=data.get('status', 'pending'),
-            support_request_id=data.get('supportRequestId') or data.get('support_request_id')  # Link to support request if provided
+            support_request_id=data.get('supportRequestId') or data.get('support_request_id'),  # Link to support request if provided
+            # User assignment fields
+            created_by=data.get('createdBy') or (user_info['id'] if (user_info := get_user_info()) else None),
+            created_by_name=data.get('createdByName') or (user_info['name'] if user_info else None),
+            assigned_to=data.get('assignedTo'),
+            assigned_to_name=data.get('assignedToName')
+        )
         )
         
         try:
@@ -3801,6 +3817,16 @@ def create_task():
         task_data['userId'] = user_info['id'] if user_info else 'anonymous'
         task_data['userRole'] = user_info['role'] if user_info else 'mentee'
         socketio.emit('task_created', task_data)
+        
+        # Notify assigned user if task is assigned
+        if task_data.get('assignedTo'):
+            socketio.emit('task_assigned', {
+                'task': task_data,
+                'assignedTo': task_data['assignedTo'],
+                'assignedToName': task_data.get('assignedToName'),
+                'createdBy': task_data.get('createdBy'),
+                'createdByName': task_data.get('createdByName')
+            })
         return jsonify({'task': task.to_dict()}), 201
     except KeyError as e:
         print(f"Missing required field: {e}")
@@ -3826,6 +3852,13 @@ def update_task(task_id):
         task.description = data.get('description', task.description)
         task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
         task.status = data.get('status', task.status)
+        
+        # Update user assignment fields if provided
+        if 'assignedTo' in data:
+            task.assigned_to = data.get('assignedTo') or None
+        if 'assignedToName' in data:
+            task.assigned_to_name = data.get('assignedToName') or None
+        
         # Update support request link if provided
         if 'supportRequestId' in data or 'support_request_id' in data:
             task.support_request_id = data.get('supportRequestId') or data.get('support_request_id') or None
@@ -3835,6 +3868,15 @@ def update_task(task_id):
         task_data['userId'] = user_info['id'] if user_info else 'anonymous'
         task_data['userRole'] = user_info['role'] if user_info else 'mentee'
         socketio.emit('task_updated', task_data)
+        
+        # Notify assigned user if assignment changed
+        if task_data.get('assignedTo'):
+            socketio.emit('task_assigned', {
+                'task': task_data,
+                'assignedTo': task_data['assignedTo'],
+                'assignedToName': task_data.get('assignedToName'),
+                'updatedBy': user_info['id'] if user_info else 'anonymous'
+            })
         return jsonify({'task': task.to_dict()})
     except Exception as e:
         print(f"Error updating task: {e}")
