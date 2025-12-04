@@ -174,8 +174,11 @@ export default function CoworkDashboardPanel() {
 
   const handleTaskAdd = async (text: string) => {
     try {
-      await createTask(text, '', [], 'pending');
+      console.log('Creating task:', text);
+      const result = await createTask(text, '', [], 'pending');
+      console.log('Task created successfully:', result);
     } catch (err: any) {
+      console.error('Error creating task:', err);
       const errorMessage = err?.message || 'Failed to create task';
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);

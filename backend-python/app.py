@@ -3811,7 +3811,7 @@ def create_task():
         traceback.print_exc()
         return jsonify({'error': 'Failed to create task', 'message': str(e)}), 500
 
-@require_session
+# @require_session  # Tasks work without authentication
 @app.route('/api/tasks/<task_id>', methods=['PUT'])
 def update_task(task_id):
     if not DB_AVAILABLE:
@@ -3842,7 +3842,7 @@ def update_task(task_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to update task', 'message': str(e)}), 500
 
-@require_session
+# @require_session  # Tasks work without authentication
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
 def delete_task(task_id):
     if not DB_AVAILABLE:

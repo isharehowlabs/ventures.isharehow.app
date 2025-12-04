@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getTasksBackendUrl, fetchWithErrorHandling } from '../utils/backendUrl';
 import { getTasksSocket } from '../utils/socket';
 import { Socket } from 'socket.io-client';
@@ -25,6 +25,7 @@ export function useTasks() {
   const [isStale, setIsStale] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const lastUpdatedRef = useRef<Date | null>(null);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -45,8 +46,10 @@ export function useTasks() {
       }
 
       const data = await response.json();
+      const now = new Date();
       setTasks(data.tasks || []);
-      setLastUpdated(new Date());
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
       setIsStale(false);
     } catch (err: any) {
       // Check if it's an auth error
@@ -69,11 +72,19 @@ export function useTasks() {
   }, [fetchTasks]);
 
   const createTask = async (title: string, description: string, hyperlinks: string[], status: string) => {
+    // Prevent duplicate calls
+    if (isLoading) {
+      console.warn('Task creation already in progress, ignoring duplicate call');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
       setAuthRequired(false);
       const backendUrl = getTasksBackendUrl();
+      console.log('Creating task at:', `${backendUrl}/api/tasks`, { title, description, hyperlinks, status });
+      
       const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks`, {
         method: 'POST',
         body: JSON.stringify({ title, description, hyperlinks, status }),
@@ -84,11 +95,23 @@ export function useTasks() {
         throw new Error('Authentication required');
       }
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
+      }
+
       const data = await response.json();
       const newTask = data.task;
       
+      if (!newTask) {
+        throw new Error('Server did not return a task');
+      }
+
+      console.log('Task created, adding to state:', newTask);
+      
       // Add task optimistically to local state immediately
       // Socket event will update it if needed, but this ensures UI updates right away
+      const now = new Date();
       setTasks(prev => {
         // Check if task already exists (from socket event)
         const exists = prev.some(t => t.id === newTask.id);
@@ -99,10 +122,12 @@ export function useTasks() {
         // Add new task
         return [...prev, newTask];
       });
-      setLastUpdated(new Date());
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
       
       return newTask;
     } catch (err: any) {
+      console.error('Error in createTask:', err);
       if (err?.status === 401 || err?.message?.includes('Authentication required')) {
         setAuthRequired(true);
       }
@@ -134,8 +159,10 @@ export function useTasks() {
       
       // Update task optimistically in local state immediately
       // Socket event will update it if needed, but this ensures UI updates right away
+      const now = new Date();
       setTasks(prev => prev.map(task => task.id === updatedTask.id ? updatedTask : task));
-      setLastUpdated(new Date());
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
       
       return updatedTask;
     } catch (err: any) {
@@ -176,7 +203,17 @@ export function useTasks() {
   };
 
   useEffect(() => {
-    fetchTasks();
+    let isMounted = true;
+    let fetchTimeout: NodeJS.Timeout | null = null;
+
+    // Initial fetch
+    const doFetch = () => {
+      if (isMounted) {
+        fetchTasks();
+      }
+    };
+    
+    doFetch();
 
     // Use tasks-specific Socket.IO connection (separate from Web3/main backend)
     const socketInstance = getTasksSocket();
@@ -206,6 +243,8 @@ export function useTasks() {
 
     // Task event handlers
     socketInstance.on('task_created', (newTask: Task) => {
+      if (!isMounted) return;
+      const now = new Date();
       setTasks(prev => {
         // Check if task already exists (from optimistic update)
         const exists = prev.some(t => t.id === newTask.id);
@@ -216,33 +255,45 @@ export function useTasks() {
         // Add new task
         return [...prev, newTask];
       });
-      setLastUpdated(new Date());
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
     });
 
     socketInstance.on('task_updated', (updatedTask: Task) => {
+      if (!isMounted) return;
+      const now = new Date();
       setTasks(prev => prev.map(task => task.id === updatedTask.id ? updatedTask : task));
-      setLastUpdated(new Date());
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
     });
 
     socketInstance.on('task_deleted', (data: { id: string }) => {
+      if (!isMounted) return;
+      const now = new Date();
       setTasks(prev => prev.filter(task => task.id !== data.id));
-      setLastUpdated(new Date());
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
     });
 
     // Listen for auth restoration
     socketInstance.on('auth_restored_ack', () => {
+      if (!isMounted) return;
       setAuthRequired(false);
       fetchTasks();
     });
 
-    // Mark data as stale after 5 minutes
+    // Mark data as stale after 5 minutes (check every minute)
     const staleInterval = setInterval(() => {
-      if (lastUpdated && Date.now() - lastUpdated.getTime() > 5 * 60 * 1000) {
+      if (!isMounted) return;
+      const lastUpdate = lastUpdatedRef.current;
+      if (lastUpdate && Date.now() - lastUpdate.getTime() > 5 * 60 * 1000) {
         setIsStale(true);
       }
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => {
+      isMounted = false;
+      if (fetchTimeout) clearTimeout(fetchTimeout);
       // Only remove task-specific listeners, keep the socket connection alive
       socketInstance.off('connect', handleConnect);
       socketInstance.off('connect_error', handleConnectError);
@@ -253,7 +304,7 @@ export function useTasks() {
       socketInstance.off('auth_restored_ack');
       clearInterval(staleInterval);
     };
-  }, [fetchTasks, lastUpdated]);
+  }, [fetchTasks]); // Removed lastUpdated from dependencies to prevent infinite loop
 
   return {
     tasks,

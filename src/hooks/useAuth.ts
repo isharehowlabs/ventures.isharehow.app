@@ -110,9 +110,9 @@ export function useAuth() {
         // Create a timeout promise (reduced to 5 seconds for better UX)
         const timeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(() => {
-            console.log('[Auth] Request timed out after 5 seconds');
+            console.log('[Auth] Request timed out after 15 seconds');
             reject(new Error('Request timeout'));
-          }, 5000);
+          }, 15000); // Increased from 5s to 15s for slower connections
         });
 
         // JWT token is in httpOnly cookie, backend will read it automatically
