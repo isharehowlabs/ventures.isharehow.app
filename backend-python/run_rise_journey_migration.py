@@ -6,37 +6,30 @@ This can be run if flask db upgrade has issues with multiple heads
 
 import os
 import sys
-from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.engine import Engine
+from sqlalchemy import inspect, text
 
-def get_database_url():
-    """Get database URL from environment"""
-    database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        print("Error: DATABASE_URL environment variable not set")
-        print("Set it with: export DATABASE_URL='your_connection_string'")
-        sys.exit(1)
-    return database_url
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def table_exists(engine: Engine, table_name: str) -> bool:
+from app import app, db
+
+def table_exists(table_name: str) -> bool:
     """Check if a table exists in the database"""
-    inspector = inspect(engine)
+    inspector = inspect(db.engine)
     return table_name in inspector.get_table_names()
 
 def run_migration():
     """Run the Rise Journey migration directly"""
-    database_url = get_database_url()
-    engine = create_engine(database_url)
-    
-    print("Creating Rise Journey tables...")
-    
-    with engine.connect() as conn:
-        # Start a transaction
-        trans = conn.begin()
+    with app.app_context():
+        print("Creating Rise Journey tables...")
         
-        try:
-            # Rise Journey Quiz
-            if not table_exists(engine, 'rise_journey_quizzes'):
+        with db.engine.connect() as conn:
+            # Start a transaction
+            trans = conn.begin()
+            
+            try:
+                # Rise Journey Quiz
+                if not table_exists('rise_journey_quizzes'):
                 conn.execute(text("""
                     CREATE TABLE rise_journey_quizzes (
                         id VARCHAR(36) PRIMARY KEY,
@@ -46,12 +39,12 @@ def run_migration():
                         completed_at TIMESTAMP
                     )
                 """))
-                print("✓ Created table 'rise_journey_quizzes'")
-            else:
-                print("  Table 'rise_journey_quizzes' already exists")
-            
-            # Rise Journey Levels
-            if not table_exists(engine, 'rise_journey_levels'):
+                    print("✓ Created table 'rise_journey_quizzes'")
+                else:
+                    print("  Table 'rise_journey_quizzes' already exists")
+                
+                # Rise Journey Levels
+                if not table_exists('rise_journey_levels'):
                 conn.execute(text("""
                     CREATE TABLE rise_journey_levels (
                         id VARCHAR(36) PRIMARY KEY,
@@ -64,12 +57,12 @@ def run_migration():
                         created_at TIMESTAMP
                     )
                 """))
-                print("✓ Created table 'rise_journey_levels'")
-            else:
-                print("  Table 'rise_journey_levels' already exists")
-            
-            # Rise Journey Lessons
-            if not table_exists(engine, 'rise_journey_lessons'):
+                    print("✓ Created table 'rise_journey_levels'")
+                else:
+                    print("  Table 'rise_journey_levels' already exists")
+                
+                # Rise Journey Lessons
+                if not table_exists('rise_journey_lessons'):
                 conn.execute(text("""
                     CREATE TABLE rise_journey_lessons (
                         id VARCHAR(36) PRIMARY KEY,
@@ -82,12 +75,12 @@ def run_migration():
                         created_at TIMESTAMP
                     )
                 """))
-                print("✓ Created table 'rise_journey_lessons'")
-            else:
-                print("  Table 'rise_journey_lessons' already exists")
-            
-            # Rise Journey Progress
-            if not table_exists(engine, 'rise_journey_progress'):
+                    print("✓ Created table 'rise_journey_lessons'")
+                else:
+                    print("  Table 'rise_journey_lessons' already exists")
+                
+                # Rise Journey Progress
+                if not table_exists('rise_journey_progress'):
                 conn.execute(text("""
                     CREATE TABLE rise_journey_progress (
                         id VARCHAR(36) PRIMARY KEY,
@@ -101,12 +94,12 @@ def run_migration():
                         UNIQUE(user_id, level_id)
                     )
                 """))
-                print("✓ Created table 'rise_journey_progress'")
-            else:
-                print("  Table 'rise_journey_progress' already exists")
-            
-            # Rise Journey Lesson Progress
-            if not table_exists(engine, 'rise_journey_lesson_progress'):
+                    print("✓ Created table 'rise_journey_progress'")
+                else:
+                    print("  Table 'rise_journey_progress' already exists")
+                
+                # Rise Journey Lesson Progress
+                if not table_exists('rise_journey_lesson_progress'):
                 conn.execute(text("""
                     CREATE TABLE rise_journey_lesson_progress (
                         id VARCHAR(36) PRIMARY KEY,
@@ -119,12 +112,12 @@ def run_migration():
                         UNIQUE(user_id, lesson_id)
                     )
                 """))
-                print("✓ Created table 'rise_journey_lesson_progress'")
-            else:
-                print("  Table 'rise_journey_lesson_progress' already exists")
-            
-            # Rise Journey Notes
-            if not table_exists(engine, 'rise_journey_notes'):
+                    print("✓ Created table 'rise_journey_lesson_progress'")
+                else:
+                    print("  Table 'rise_journey_lesson_progress' already exists")
+                
+                # Rise Journey Notes
+                if not table_exists('rise_journey_notes'):
                 conn.execute(text("""
                     CREATE TABLE rise_journey_notes (
                         id VARCHAR(36) PRIMARY KEY,
@@ -136,12 +129,12 @@ def run_migration():
                         updated_at TIMESTAMP
                     )
                 """))
-                print("✓ Created table 'rise_journey_notes'")
-            else:
-                print("  Table 'rise_journey_notes' already exists")
-            
-            # Rise Journey Trial
-            if not table_exists(engine, 'rise_journey_trials'):
+                    print("✓ Created table 'rise_journey_notes'")
+                else:
+                    print("  Table 'rise_journey_notes' already exists")
+                
+                # Rise Journey Trial
+                if not table_exists('rise_journey_trials'):
                 conn.execute(text("""
                     CREATE TABLE rise_journey_trials (
                         id VARCHAR(36) PRIMARY KEY,
@@ -151,20 +144,20 @@ def run_migration():
                         is_active BOOLEAN
                     )
                 """))
-                print("✓ Created table 'rise_journey_trials'")
-            else:
-                print("  Table 'rise_journey_trials' already exists")
-            
-            # Commit the transaction
-            trans.commit()
-            print("\n✓ All Rise Journey tables created successfully!")
-            
-        except Exception as e:
-            trans.rollback()
-            print(f"\n✗ Error creating tables: {e}")
-            import traceback
-            traceback.print_exc()
-            sys.exit(1)
+                    print("✓ Created table 'rise_journey_trials'")
+                else:
+                    print("  Table 'rise_journey_trials' already exists")
+                
+                # Commit the transaction
+                trans.commit()
+                print("\n✓ All Rise Journey tables created successfully!")
+                
+            except Exception as e:
+                trans.rollback()
+                print(f"\n✗ Error creating tables: {e}")
+                import traceback
+                traceback.print_exc()
+                sys.exit(1)
 
 if __name__ == '__main__':
     run_migration()
