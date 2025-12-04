@@ -2699,12 +2699,18 @@ def verify_and_create_user():
                             membership_amount = amount_cents / 100
                             # If tier not found from campaign, calculate from amount
                             if not membership_tier:
-                                if membership_amount >= 10:
+                                # Check for Tier2/VIP/Vanity ($43.21/month)
+                                if abs(membership_amount - 43.21) < 0.50 or membership_amount >= 43.21:
+                                    membership_tier = 'Tier2'  # VIP/Vanity Tier2
+                                elif membership_amount >= 10:
                                     membership_tier = 'Premium'
                                 elif membership_amount >= 5:
                                     membership_tier = 'Standard'
                                 else:
                                     membership_tier = 'Basic'
+                            # Also check tier name for Tier2/VIP/Vanity variations
+                            elif membership_tier and ('tier2' in membership_tier.lower() or 'vip' in membership_tier.lower() or 'vanity' in membership_tier.lower()):
+                                membership_tier = 'Tier2'
                         break
         
         # Special handling for creator/admin
@@ -2781,7 +2787,9 @@ def verify_and_create_user():
             profile.email = user_email or profile.email
             profile.name = user_name or profile.name
             profile.avatar_url = user_avatar or profile.avatar_url
-            profile.membership_tier = membership_tier
+            profile.patreon_id = api_user_id  # Ensure patreon_id is set
+            if membership_tier:  # Only update if we have a tier from Patreon
+                profile.membership_tier = membership_tier
             profile.is_paid_member = is_paid_member
             profile.membership_renewal_date = membership_renewal_date
             if lifetime_support_cents:
@@ -3087,8 +3095,8 @@ def get_profile():
             'ensName': profile_data.get('ensName') or user_data.get('ensName') or getattr(user, 'ens_name', None),
             'cryptoAddress': profile_data.get('cryptoAddress') or user_data.get('cryptoAddress') or getattr(user, 'crypto_address', None),
             'contentHash': profile_data.get('contentHash') or user_data.get('contentHash') or getattr(user, 'content_hash', None),
-            'membershipTier': profile_data.get('membershipTier'),
-            'isPaidMember': getattr(user, 'membership_paid', False),  # Show current payment status
+            'membershipTier': profile_data.get('membershipTier') or None,  # Return None instead of 'Not Set'
+            'isPaidMember': profile_data.get('isPaidMember', False) or getattr(user, 'membership_paid', False),  # Show current payment status
             'isEmployee': profile_data.get('isEmployee', False) or getattr(user, 'is_employee', False),
             'isAdmin': is_admin,  # Use computed admin status
             'lastChecked': getattr(user, 'last_checked', None).isoformat() if getattr(user, 'last_checked', None) and hasattr(getattr(user, 'last_checked', None), 'isoformat') else user_data.get('lastChecked'),
@@ -3931,13 +3939,25 @@ def get_or_create_user_profile():
     
     # Create profile if it doesn't exist
     if not profile:
+        # Try to get membership tier from UserProfile if it exists elsewhere, or check User model
+        membership_tier = None
+        lifetime_support = None
+        
+        # Check if there's another profile with same patreon_id to get tier info
+        if user.patreon_id:
+            existing_profile = UserProfile.query.filter_by(patreon_id=user.patreon_id).first()
+            if existing_profile:
+                membership_tier = existing_profile.membership_tier
+                lifetime_support = existing_profile.lifetime_support_amount
+        
         profile = UserProfile(
             id=profile_id,
             email=user.email,
             name=user.username or user.email or 'User',
             patreon_id=user.patreon_id,
-            membership_tier=None,  # Will be set from Patreon if available
+            membership_tier=membership_tier,  # Will be synced from Patreon callback
             is_paid_member=user.membership_paid if hasattr(user, 'membership_paid') else False,
+            lifetime_support_amount=lifetime_support,
             ens_name=user.ens_name,
             crypto_address=getattr(user, 'crypto_address', None),
             content_hash=getattr(user, 'content_hash', None)
@@ -3945,6 +3965,19 @@ def get_or_create_user_profile():
         db.session.add(profile)
         db.session.commit()
         print(f"✓ Created new user profile: {profile_id}")
+    else:
+        # Update profile with latest User data if Patreon info is missing
+        if not profile.patreon_id and user.patreon_id:
+            profile.patreon_id = user.patreon_id
+        if not profile.membership_tier and user.patreon_id:
+            # Try to find another profile with same patreon_id to get tier
+            existing_profile = UserProfile.query.filter_by(patreon_id=user.patreon_id).first()
+            if existing_profile and existing_profile.membership_tier:
+                profile.membership_tier = existing_profile.membership_tier
+                profile.lifetime_support_amount = existing_profile.lifetime_support_amount
+        if hasattr(user, 'membership_paid'):
+            profile.is_paid_member = user.membership_paid
+        db.session.commit()
     
     return profile, None, None
 
@@ -5729,12 +5762,18 @@ def patreon_callback():
                             membership_amount = amount_cents / 100  # Convert cents to dollars
                             # If tier not found from campaign, calculate from amount
                             if not membership_tier:
-                                if membership_amount >= 10:
+                                # Check for Tier2/VIP/Vanity ($43.21/month)
+                                if abs(membership_amount - 43.21) < 0.50 or membership_amount >= 43.21:
+                                    membership_tier = 'Tier2'  # VIP/Vanity Tier2
+                                elif membership_amount >= 10:
                                     membership_tier = 'Premium'
                                 elif membership_amount >= 5:
                                     membership_tier = 'Standard'
                                 else:
                                     membership_tier = 'Basic'
+                            # Also check tier name for Tier2/VIP/Vanity variations
+                            elif membership_tier and ('tier2' in membership_tier.lower() or 'vip' in membership_tier.lower() or 'vanity' in membership_tier.lower()):
+                                membership_tier = 'Tier2'
                         break
         
         # Special handling for creator/admin - they shouldn't be considered paid members of their own product
@@ -5856,7 +5895,9 @@ def patreon_callback():
                     profile.email = user_email or profile.email
                     profile.name = user_name or profile.name
                     profile.avatar_url = user_avatar or profile.avatar_url
-                    profile.membership_tier = membership_tier
+                    profile.patreon_id = user_id  # Ensure patreon_id is set
+                    if membership_tier:  # Only update if we have a tier from Patreon
+                        profile.membership_tier = membership_tier
                     profile.is_paid_member = is_paid_member
                     profile.membership_renewal_date = membership_renewal_date
                     if lifetime_support_cents:

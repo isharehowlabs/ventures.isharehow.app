@@ -45,12 +45,32 @@ const RiseJourney: React.FC = () => {
   const [showQuiz, setShowQuiz] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<JourneyLevel | null>(null);
   const [showRetakeQuiz, setShowRetakeQuiz] = useState(false);
+  const [hasFullAccess, setHasFullAccess] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ventures.isharehow.app';
 
   useEffect(() => {
     loadData();
+    checkAccess();
   }, []);
+
+  const checkAccess = async () => {
+    setAccessLoading(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/rise-journey/access`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setHasFullAccess(data.hasFullAccess || false);
+      }
+    } catch (err) {
+      console.error('Failed to check access:', err);
+    } finally {
+      setAccessLoading(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -371,17 +391,25 @@ const RiseJourney: React.FC = () => {
       </div>
 
       {/* Footer CTA */}
-      <div className="mt-12 text-center max-w-3xl mx-auto">
-        <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-8 border-2 border-purple-200 shadow-lg">
-          <h3 className="text-2xl font-bold text-gray-800 mb-3">Ready to Transform Your Life?</h3>
-          <p className="text-gray-700 mb-4">
-            Unlock all 7 levels and gain lifetime access to your personal growth journey.
-          </p>
-          <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-            Upgrade to Full Access
-          </button>
+      {!hasFullAccess && (
+        <div className="mt-12 text-center max-w-3xl mx-auto">
+          <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-8 border-2 border-purple-200 shadow-lg">
+            <h3 className="text-2xl font-bold text-gray-800 mb-3">Ready to Transform Your Life?</h3>
+            <p className="text-gray-700 mb-4">
+              Unlock all 7 levels and gain lifetime access to your personal growth journey.
+            </p>
+            <button
+              onClick={() => {
+                // Redirect to Patreon VIP/Vanity Tier2 ($43.21/month)
+                window.open('https://www.patreon.com/isharehow', '_blank');
+              }}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+            >
+              Upgrade to Full Access
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
