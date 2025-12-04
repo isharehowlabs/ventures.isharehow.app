@@ -8072,6 +8072,111 @@ def get_rise_journey_trial():
         return jsonify({'error': 'Failed to get trial'}), 500
 
 @require_session
+@app.route('/api/rise-journey/access', methods=['GET'])
+def check_rise_journey_access():
+    """Check if user has full access to Rise Journey (Tier2, lifetime support > $50, admin, employee, or isharehow user)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        has_full_access = False
+        reason = None
+        
+        # Get the User object to check admin/employee status
+        user = None
+        user_id = get_jwt_identity()
+        if user_id:
+            user_id_str = str(user_id)
+            if user_id_str.isdigit():
+                user = User.query.get(int(user_id_str))
+            if not user:
+                user = User.query.filter_by(username=user_id_str).first()
+            if not user:
+                user = User.query.filter_by(patreon_id=user_id_str).first()
+        
+        # Check if user is admin
+        is_admin = False
+        is_employee = False
+        is_isharehow = False
+        
+        if user:
+            # Check is_admin field
+            if hasattr(user, 'is_admin'):
+                is_admin = bool(user.is_admin)
+            
+            # Check is_employee field
+            if hasattr(user, 'is_employee'):
+                is_employee = bool(user.is_employee)
+            
+            # Check special identifiers for admin/isharehow
+            if not is_admin:
+                # Check patreon_id
+                if hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
+                    is_admin = True
+                # Check username (case-insensitive)
+                elif hasattr(user, 'username') and user.username:
+                    username_lower = user.username.lower()
+                    if username_lower in ['isharehow', 'admin']:
+                        is_admin = True
+                        if username_lower == 'isharehow':
+                            is_isharehow = True
+                # Check email
+                elif hasattr(user, 'email') and user.email:
+                    email_lower = user.email.lower()
+                    if email_lower == 'jeliyah@isharehowlabs.com':
+                        is_admin = True
+                # Check ID (could be username, patreon_id, or ens_name)
+                elif hasattr(user, 'id'):
+                    user_id_str = str(user.id).lower()
+                    if user_id_str in ['isharehow', 'admin']:
+                        is_admin = True
+                        if user_id_str == 'isharehow':
+                            is_isharehow = True
+            
+            # Also check profile ID for isharehow
+            if profile.id and 'isharehow' in str(profile.id).lower():
+                is_isharehow = True
+        
+        # Grant access if admin, employee, or isharehow user
+        if is_admin:
+            has_full_access = True
+            reason = 'Admin access'
+        elif is_employee:
+            has_full_access = True
+            reason = 'Employee access'
+        elif is_isharehow:
+            has_full_access = True
+            reason = 'iShareHow user access'
+        # Check if user has Tier2 membership
+        elif profile.membership_tier and ('tier2' in profile.membership_tier.lower() or 'vip' in profile.membership_tier.lower() or 'vanity' in profile.membership_tier.lower()):
+            has_full_access = True
+            reason = 'Tier2 membership'
+        # Check if lifetime support is over $50
+        elif profile.lifetime_support_amount and float(profile.lifetime_support_amount) >= 50.0:
+            has_full_access = True
+            reason = 'Lifetime support over $50'
+        
+        return jsonify({
+            'hasFullAccess': has_full_access,
+            'reason': reason,
+            'membershipTier': profile.membership_tier,
+            'lifetimeSupportAmount': float(profile.lifetime_support_amount) if profile.lifetime_support_amount else 0,
+            'patreonId': profile.patreon_id,
+            'isAdmin': is_admin,
+            'isEmployee': is_employee,
+            'isIsharehow': is_isharehow
+        })
+    except Exception as e:
+        print(f"Error checking Rise Journey access: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to check access'}), 500
+
+@require_session
 @app.route('/api/rise-journey/levels', methods=['GET'])
 def get_rise_journey_levels():
     """Get all journey levels with user progress"""
