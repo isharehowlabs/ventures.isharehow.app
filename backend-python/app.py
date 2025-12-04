@@ -6292,6 +6292,156 @@ if DB_AVAILABLE:
                 'transcription': self.transcription
             }
 
+    # Rise Journey Models
+    class RiseJourneyQuiz(db.Model):
+        __tablename__ = 'rise_journey_quizzes'
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        answers = db.Column(db.Text)  # JSON string of quiz answers
+        recommended_level = db.Column(db.String(50))  # wellness, mobility, accountability, creativity, alignment, mindfulness, destiny
+        completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'answers': json.loads(self.answers) if self.answers else {},
+                'recommendedLevel': self.recommended_level,
+                'completedAt': self.completed_at.isoformat() if self.completed_at else None
+            }
+    
+    class RiseJourneyLevel(db.Model):
+        __tablename__ = 'rise_journey_levels'
+        id = db.Column(db.String(36), primary_key=True)
+        level_key = db.Column(db.String(50), unique=True, nullable=False)  # wellness, mobility, etc.
+        title = db.Column(db.String(200), nullable=False)
+        description = db.Column(db.Text)
+        focus = db.Column(db.String(200))  # e.g., "Foundational Physical Health & Energy"
+        revenue_products = db.Column(db.Text)  # JSON array of product recommendations
+        order = db.Column(db.Integer, default=0)  # Display order
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'levelKey': self.level_key,
+                'title': self.title,
+                'description': self.description,
+                'focus': self.focus,
+                'revenueProducts': json.loads(self.revenue_products) if self.revenue_products else [],
+                'order': self.order,
+                'createdAt': self.created_at.isoformat() if self.created_at else None
+            }
+    
+    class RiseJourneyLesson(db.Model):
+        __tablename__ = 'rise_journey_lessons'
+        id = db.Column(db.String(36), primary_key=True)
+        level_id = db.Column(db.String(36), db.ForeignKey('rise_journey_levels.id'), nullable=False)
+        title = db.Column(db.String(200), nullable=False)
+        description = db.Column(db.Text)
+        video_url = db.Column(db.Text)  # YouTube embed URL
+        pdf_url = db.Column(db.Text)  # PDF resource URL
+        order = db.Column(db.Integer, default=0)  # Lesson order within level
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'levelId': self.level_id,
+                'title': self.title,
+                'description': self.description,
+                'videoUrl': self.video_url,
+                'pdfUrl': self.pdf_url,
+                'order': self.order,
+                'createdAt': self.created_at.isoformat() if self.created_at else None
+            }
+    
+    class RiseJourneyProgress(db.Model):
+        __tablename__ = 'rise_journey_progress'
+        __table_args__ = (db.UniqueConstraint('user_id', 'level_id', name='unique_user_level'),)
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        level_id = db.Column(db.String(36), db.ForeignKey('rise_journey_levels.id'), nullable=False)
+        state = db.Column(db.String(20), default='locked')  # locked, in-progress, completed
+        started_at = db.Column(db.DateTime)
+        completed_at = db.Column(db.DateTime)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'levelId': self.level_id,
+                'state': self.state,
+                'startedAt': self.started_at.isoformat() if self.started_at else None,
+                'completedAt': self.completed_at.isoformat() if self.completed_at else None,
+                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+            }
+    
+    class RiseJourneyLessonProgress(db.Model):
+        __tablename__ = 'rise_journey_lesson_progress'
+        __table_args__ = (db.UniqueConstraint('user_id', 'lesson_id', name='unique_user_lesson'),)
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        lesson_id = db.Column(db.String(36), db.ForeignKey('rise_journey_lessons.id'), nullable=False)
+        completed = db.Column(db.Boolean, default=False)
+        completed_at = db.Column(db.DateTime)
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'lessonId': self.lesson_id,
+                'completed': self.completed,
+                'completedAt': self.completed_at.isoformat() if self.completed_at else None,
+                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+            }
+    
+    class RiseJourneyNote(db.Model):
+        __tablename__ = 'rise_journey_notes'
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False)
+        lesson_id = db.Column(db.String(36), db.ForeignKey('rise_journey_lessons.id'), nullable=False)
+        content = db.Column(db.Text)
+        is_shared = db.Column(db.Boolean, default=False)  # For collaborative notes
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'lessonId': self.lesson_id,
+                'content': self.content,
+                'isShared': self.is_shared,
+                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+            }
+    
+    class RiseJourneyTrial(db.Model):
+        __tablename__ = 'rise_journey_trials'
+        __table_args__ = (db.UniqueConstraint('user_id', name='unique_user_trial'),)
+        id = db.Column(db.String(36), primary_key=True)
+        user_id = db.Column(db.String(36), db.ForeignKey('user_profiles.id'), nullable=False, unique=True)
+        started_at = db.Column(db.DateTime, default=datetime.utcnow)
+        expires_at = db.Column(db.DateTime, nullable=False)
+        is_active = db.Column(db.Boolean, default=True)
+        
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'userId': self.user_id,
+                'startedAt': self.started_at.isoformat() if self.started_at else None,
+                'expiresAt': self.expires_at.isoformat() if self.expires_at else None,
+                'isActive': self.is_active,
+                'daysRemaining': max(0, (self.expires_at - datetime.utcnow()).days) if self.expires_at else 0
+            }
+
 # Wellness Module API Endpoints
 
 @require_session
@@ -7666,6 +7816,353 @@ def get_intervals_wellness():
         print(f"Error getting wellness metrics: {e}")
         return jsonify({'error': 'Failed to get wellness metrics'}), 500
 
+
+# ============================================
+# Rise Journey API Endpoints
+# ============================================
+
+@require_session
+@app.route('/api/rise-journey/quiz', methods=['POST'])
+def submit_rise_journey_quiz():
+    """Submit quiz answers and get recommended starting level"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        data = request.json
+        answers = data.get('answers', {})
+        
+        # Simple scoring algorithm - can be enhanced
+        scores = {
+            'wellness': 0,
+            'mobility': 0,
+            'accountability': 0,
+            'creativity': 0,
+            'alignment': 0,
+            'mindfulness': 0,
+            'destiny': 0
+        }
+        
+        # Map answers to level scores (simplified - should be more sophisticated)
+        for key, value in answers.items():
+            if 'physical' in key.lower() or 'health' in key.lower() or 'diet' in key.lower():
+                scores['wellness'] += value if isinstance(value, (int, float)) else 1
+            if 'movement' in key.lower() or 'exercise' in key.lower():
+                scores['mobility'] += value if isinstance(value, (int, float)) else 1
+            if 'responsibility' in key.lower() or 'self-love' in key.lower():
+                scores['accountability'] += value if isinstance(value, (int, float)) else 1
+            if 'creative' in key.lower() or 'expression' in key.lower():
+                scores['creativity'] += value if isinstance(value, (int, float)) else 1
+            if 'alignment' in key.lower() or 'intention' in key.lower():
+                scores['alignment'] += value if isinstance(value, (int, float)) else 1
+            if 'meditation' in key.lower() or 'mindful' in key.lower():
+                scores['mindfulness'] += value if isinstance(value, (int, float)) else 1
+            if 'purpose' in key.lower() or 'higher' in key.lower():
+                scores['destiny'] += value if isinstance(value, (int, float)) else 1
+        
+        # Find lowest score (area needing most work) or default to wellness
+        recommended_level = min(scores, key=scores.get) if scores else 'wellness'
+        
+        # Save quiz result
+        quiz = RiseJourneyQuiz(
+            id=str(uuid.uuid4()),
+            user_id=profile.id,
+            answers=json.dumps(answers),
+            recommended_level=recommended_level
+        )
+        db.session.add(quiz)
+        
+        # Start 7-day trial if not already started
+        trial = RiseJourneyTrial.query.filter_by(user_id=profile.id).first()
+        if not trial:
+            trial = RiseJourneyTrial(
+                id=str(uuid.uuid4()),
+                user_id=profile.id,
+                expires_at=datetime.utcnow() + timedelta(days=7)
+            )
+            db.session.add(trial)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'recommendedLevel': recommended_level,
+            'scores': scores,
+            'trial': trial.to_dict() if trial else None
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error submitting quiz: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to submit quiz'}), 500
+
+@require_session
+@app.route('/api/rise-journey/quiz', methods=['GET'])
+def get_rise_journey_quiz():
+    """Get user's quiz result if completed"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        quiz = RiseJourneyQuiz.query.filter_by(user_id=profile.id).order_by(RiseJourneyQuiz.completed_at.desc()).first()
+        if quiz:
+            return jsonify({'quiz': quiz.to_dict()})
+        return jsonify({'quiz': None})
+    except Exception as e:
+        print(f"Error getting quiz: {e}")
+        return jsonify({'error': 'Failed to get quiz'}), 500
+
+@require_session
+@app.route('/api/rise-journey/trial', methods=['GET'])
+def get_rise_journey_trial():
+    """Get user's trial status"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        trial = RiseJourneyTrial.query.filter_by(user_id=profile.id).first()
+        if trial:
+            # Check if trial is still active
+            if trial.expires_at < datetime.utcnow():
+                trial.is_active = False
+                db.session.commit()
+            return jsonify({'trial': trial.to_dict()})
+        return jsonify({'trial': None})
+    except Exception as e:
+        print(f"Error getting trial: {e}")
+        return jsonify({'error': 'Failed to get trial'}), 500
+
+@require_session
+@app.route('/api/rise-journey/levels', methods=['GET'])
+def get_rise_journey_levels():
+    """Get all journey levels with user progress"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        levels = RiseJourneyLevel.query.order_by(RiseJourneyLevel.order).all()
+        progress_records = {p.level_id: p for p in RiseJourneyProgress.query.filter_by(user_id=profile.id).all()}
+        
+        result = []
+        for level in levels:
+            level_dict = level.to_dict()
+            progress = progress_records.get(level.id)
+            level_dict['progress'] = progress.to_dict() if progress else {'state': 'locked', 'startedAt': None, 'completedAt': None}
+            result.append(level_dict)
+        
+        return jsonify({'levels': result})
+    except Exception as e:
+        print(f"Error getting levels: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to get levels'}), 500
+
+@require_session
+@app.route('/api/rise-journey/levels/<level_id>/lessons', methods=['GET'])
+def get_rise_journey_lessons(level_id):
+    """Get lessons for a specific level"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        lessons = RiseJourneyLesson.query.filter_by(level_id=level_id).order_by(RiseJourneyLesson.order).all()
+        progress_records = {p.lesson_id: p for p in RiseJourneyLessonProgress.query.filter_by(user_id=profile.id).all()}
+        
+        result = []
+        for lesson in lessons:
+            lesson_dict = lesson.to_dict()
+            progress = progress_records.get(lesson.id)
+            lesson_dict['progress'] = progress.to_dict() if progress else {'completed': False, 'completedAt': None}
+            result.append(lesson_dict)
+        
+        return jsonify({'lessons': result})
+    except Exception as e:
+        print(f"Error getting lessons: {e}")
+        return jsonify({'error': 'Failed to get lessons'}), 500
+
+@require_session
+@app.route('/api/rise-journey/lessons/<lesson_id>/notes', methods=['GET'])
+def get_rise_journey_notes(lesson_id):
+    """Get notes for a lesson (user's own and shared notes)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        # Get user's own note
+        user_note = RiseJourneyNote.query.filter_by(user_id=profile.id, lesson_id=lesson_id).first()
+        
+        # Get shared notes from other users
+        shared_notes = RiseJourneyNote.query.filter(
+            RiseJourneyNote.lesson_id == lesson_id,
+            RiseJourneyNote.is_shared == True,
+            RiseJourneyNote.user_id != profile.id
+        ).all()
+        
+        return jsonify({
+            'userNote': user_note.to_dict() if user_note else None,
+            'sharedNotes': [note.to_dict() for note in shared_notes]
+        })
+    except Exception as e:
+        print(f"Error getting notes: {e}")
+        return jsonify({'error': 'Failed to get notes'}), 500
+
+@require_session
+@app.route('/api/rise-journey/lessons/<lesson_id>/notes', methods=['POST', 'PUT'])
+def save_rise_journey_note(lesson_id):
+    """Save or update notes for a lesson"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        data = request.json
+        content = data.get('content', '')
+        is_shared = data.get('isShared', False)
+        
+        note = RiseJourneyNote.query.filter_by(user_id=profile.id, lesson_id=lesson_id).first()
+        
+        if note:
+            note.content = content
+            note.is_shared = is_shared
+            note.updated_at = datetime.utcnow()
+        else:
+            note = RiseJourneyNote(
+                id=str(uuid.uuid4()),
+                user_id=profile.id,
+                lesson_id=lesson_id,
+                content=content,
+                is_shared=is_shared
+            )
+            db.session.add(note)
+        
+        db.session.commit()
+        return jsonify({'note': note.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving note: {e}")
+        return jsonify({'error': 'Failed to save note'}), 500
+
+@require_session
+@app.route('/api/rise-journey/lessons/<lesson_id>/complete', methods=['POST'])
+def complete_rise_journey_lesson(lesson_id):
+    """Mark a lesson as completed"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        progress = RiseJourneyLessonProgress.query.filter_by(user_id=profile.id, lesson_id=lesson_id).first()
+        
+        if progress:
+            progress.completed = True
+            progress.completed_at = datetime.utcnow()
+        else:
+            progress = RiseJourneyLessonProgress(
+                id=str(uuid.uuid4()),
+                user_id=profile.id,
+                lesson_id=lesson_id,
+                completed=True,
+                completed_at=datetime.utcnow()
+            )
+            db.session.add(progress)
+        
+        # Check if all lessons in level are completed
+        lesson = RiseJourneyLesson.query.get(lesson_id)
+        if lesson:
+            all_lessons = RiseJourneyLesson.query.filter_by(level_id=lesson.level_id).all()
+            completed_lessons = RiseJourneyLessonProgress.query.filter(
+                RiseJourneyLessonProgress.user_id == profile.id,
+                RiseJourneyLessonProgress.completed == True,
+                RiseJourneyLessonProgress.lesson_id.in_([l.id for l in all_lessons])
+            ).count()
+            
+            if completed_lessons >= len(all_lessons):
+                # Mark level as completed
+                level_progress = RiseJourneyProgress.query.filter_by(user_id=profile.id, level_id=lesson.level_id).first()
+                if level_progress:
+                    level_progress.state = 'completed'
+                    level_progress.completed_at = datetime.utcnow()
+                else:
+                    level_progress = RiseJourneyProgress(
+                        id=str(uuid.uuid4()),
+                        user_id=profile.id,
+                        level_id=lesson.level_id,
+                        state='completed',
+                        completed_at=datetime.utcnow()
+                    )
+                    db.session.add(level_progress)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'progress': progress.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error completing lesson: {e}")
+        return jsonify({'error': 'Failed to complete lesson'}), 500
+
+@require_session
+@app.route('/api/rise-journey/levels/<level_id>/start', methods=['POST'])
+def start_rise_journey_level(level_id):
+    """Start a journey level"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    profile, error_response, error_code = get_or_create_user_profile()
+    if error_response:
+        return error_response, error_code
+    
+    try:
+        progress = RiseJourneyProgress.query.filter_by(user_id=profile.id, level_id=level_id).first()
+        
+        if progress:
+            if progress.state == 'locked':
+                progress.state = 'in-progress'
+                progress.started_at = datetime.utcnow()
+        else:
+            progress = RiseJourneyProgress(
+                id=str(uuid.uuid4()),
+                user_id=profile.id,
+                level_id=level_id,
+                state='in-progress',
+                started_at=datetime.utcnow()
+            )
+            db.session.add(progress)
+        
+        db.session.commit()
+        return jsonify({'progress': progress.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error starting level: {e}")
+        return jsonify({'error': 'Failed to start level'}), 500
 
 # ============================================
 # Intervals.icu Proxy Routes (CORS Bypass)

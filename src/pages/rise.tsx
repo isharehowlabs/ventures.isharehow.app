@@ -21,6 +21,7 @@ import {
   EmojiEvents as SkillsIcon,
   FitnessCenter as WellnessIcon,
   Spa as SpiritualIcon,
+  SelfImprovement as JourneyIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -32,6 +33,7 @@ import GoalDialog from '../components/wellness/GoalDialog';
 import WellnessDataPage from '../components/wellness/WellnessDataPage';
 import IntervalsSettings from '../components/wellness/IntervalsSettings';
 import SpiritualFestivals from '../components/spiritual/SpiritualFestivals';
+import RiseJourney from '../components/rise/RiseJourney';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchAuras,
@@ -231,6 +233,7 @@ export default function RiseDashboard() {
             <Tab icon={<SkillsIcon />} label="Goals & Achievements" />
             <Tab icon={<WellnessIcon />} label="Wellness" />
             <Tab icon={<SpiritualIcon />} label="Festivals" />
+            <Tab icon={<JourneyIcon />} label="Rise Journey" />
           </Tabs>
         </Paper>
 
@@ -398,6 +401,11 @@ export default function RiseDashboard() {
         {/* Tab 5: Spiritual Festivals */}
         <TabPanel value={currentTab} index={4}>
           <SpiritualFestivals />
+        </TabPanel>
+
+        {/* Tab 6: Rise Journey */}
+        <TabPanel value={currentTab} index={5}>
+          <RiseJourney />
         </TabPanel>
 
         {/* Goal Dialog */}
