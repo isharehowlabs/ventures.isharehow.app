@@ -8096,6 +8096,9 @@ def complete_rise_journey_lesson(lesson_id):
             )
             db.session.add(progress)
         
+        # Flush the session to make the current lesson's completion visible to subsequent queries
+        db.session.flush()
+        
         # Check if all lessons in level are completed
         lesson = RiseJourneyLesson.query.get(lesson_id)
         if lesson:
