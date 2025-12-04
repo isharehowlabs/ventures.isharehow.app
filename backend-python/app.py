@@ -7931,13 +7931,39 @@ def submit_rise_journey_quiz():
         print(f"Error submitting quiz - attribute error: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'Database error: {str(e)}'}), 500
+        error_msg = str(e)
+        if 'RiseJourneyQuiz' in error_msg or 'RiseJourneyTrial' in error_msg:
+            return jsonify({
+                'error': 'Database tables not found',
+                'message': 'Rise Journey tables may not exist. Please run the database migration.',
+                'detail': error_msg
+            }), 500
+        return jsonify({'error': f'Database error: {error_msg}'}), 500
     except Exception as e:
         db.session.rollback()
+        error_msg = str(e)
         print(f"Error submitting quiz: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'Failed to submit quiz: {str(e)}'}), 500
+        
+        # Check for common database errors
+        if 'relation' in error_msg.lower() and 'does not exist' in error_msg.lower():
+            return jsonify({
+                'error': 'Database tables not found',
+                'message': 'Rise Journey tables may not exist. Please run the database migration: flask db upgrade',
+                'detail': error_msg
+            }), 500
+        elif 'foreign key' in error_msg.lower():
+            return jsonify({
+                'error': 'Database constraint error',
+                'message': 'User profile may not exist. Please ensure you have a valid user profile.',
+                'detail': error_msg
+            }), 500
+        
+        return jsonify({
+            'error': 'Failed to submit quiz',
+            'message': error_msg
+        }), 500
 
 @require_session
 @app.route('/api/rise-journey/quiz', methods=['GET'])
