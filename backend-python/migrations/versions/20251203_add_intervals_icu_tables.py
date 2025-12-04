@@ -11,7 +11,7 @@ from sqlalchemy.dialects import mysql
 
 # revision identifiers
 revision = 'add_intervals_icu'
-down_revision = None  # Update with actual previous revision
+down_revision = '34_add_support_request_id'  # Chain after support_request_id migration
 branch_labels = None
 depends_on = None
 

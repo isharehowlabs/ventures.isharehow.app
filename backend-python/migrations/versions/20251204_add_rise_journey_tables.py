@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = '20251204_add_rise_journey'
-down_revision = None
+down_revision = 'add_intervals_icu'  # Chain after intervals_icu migration
 branch_labels = None
 depends_on = None
 
