@@ -13,7 +13,6 @@ import {
   FormControl,
   InputLabel,
   Chip,
-  LinearProgress,
 } from '@mui/material';
 import {
   FitnessCenter,
@@ -21,6 +20,8 @@ import {
   TrendingUp,
   Sync,
   CalendarToday,
+  Bolt,
+  DirectionsRun,
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -33,6 +34,10 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  ScatterChart,
+  Scatter,
+  ComposedChart,
+  Area,
 } from 'recharts';
 import {
   getActivities,
@@ -68,6 +73,9 @@ export default function WellnessDataPage() {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, [daysBack]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -86,12 +94,70 @@ export default function WellnessDataPage() {
     }
   };
 
-  // Load data on mount and when daysBack changes
-  useEffect(() => {
-    loadData();
-  }, [daysBack]);
+  // FTP/Power progression over time
+  const powerProgressionData = activities
+    .filter(a => a.powerData?.avgPower || a.powerData?.normalizedPower)
+    .map(a => ({
+      date: a.activityDate,
+      avgPower: a.powerData?.avgPower || 0,
+      normalizedPower: a.powerData?.normalizedPower || 0,
+      name: a.activityName?.substring(0, 15) || 'Activity',
+    }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  // Prepare chart data for RPE and Feel
+  // Activity frequency by day (for 30-day period)
+  const activityFrequencyData = (() => {
+    const dayMap = new Map<string, number>();
+    const durationMap = new Map<string, number>();
+    
+    activities.forEach(a => {
+      const date = a.activityDate;
+      dayMap.set(date, (dayMap.get(date) || 0) + 1);
+      durationMap.set(date, (durationMap.get(date) || 0) + (a.duration || 0));
+    });
+
+    const dates = Array.from(dayMap.keys()).sort();
+    return dates.map(date => ({
+      date,
+      count: dayMap.get(date) || 0,
+      duration: Math.round((durationMap.get(date) || 0) / 60), // Convert to minutes
+    }));
+  })();
+
+  // Combined: Activity volume vs Power trend
+  const volumeVsPowerData = (() => {
+    // Group by week to show correlation
+    const weeklyData = new Map<string, { activities: number; totalDuration: number; avgPower: number; powerCount: number }>();
+    
+    activities.forEach(a => {
+      const date = new Date(a.activityDate);
+      const weekStart = new Date(date.setDate(date.getDate() - date.getDay())).toISOString().split('T')[0];
+      
+      if (!weeklyData.has(weekStart)) {
+        weeklyData.set(weekStart, { activities: 0, totalDuration: 0, avgPower: 0, powerCount: 0 });
+      }
+      
+      const week = weeklyData.get(weekStart)!;
+      week.activities++;
+      week.totalDuration += (a.duration || 0) / 3600; // Convert to hours
+      
+      if (a.powerData?.normalizedPower) {
+        week.avgPower += a.powerData.normalizedPower;
+        week.powerCount++;
+      }
+    });
+
+    return Array.from(weeklyData.entries())
+      .map(([week, data]) => ({
+        week,
+        activities: data.activities,
+        hours: Math.round(data.totalDuration * 10) / 10,
+        avgPower: data.powerCount > 0 ? Math.round(data.avgPower / data.powerCount) : 0,
+      }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+  })();
+
+  // RPE and Feel data
   const rpeFeelData = activities
     .filter(a => a.rpe || a.feel)
     .map(a => ({
@@ -102,28 +168,7 @@ export default function WellnessDataPage() {
     }))
     .reverse();
 
-  // Prepare heart rate data
-  const hrData = activities
-    .filter(a => a.hrData?.avgHr)
-    .map(a => ({
-      date: a.activityDate,
-      avgHr: a.hrData?.avgHr,
-      maxHr: a.hrData?.maxHr,
-    }))
-    .reverse();
-
-  // Prepare power data
-  const powerData = activities
-    .filter(a => a.powerData?.avgPower)
-    .map(a => ({
-      date: a.activityDate,
-      avgPower: a.powerData?.avgPower,
-      maxPower: a.powerData?.maxPower,
-      normalizedPower: a.powerData?.normalizedPower,
-    }))
-    .reverse();
-
-  // Prepare wellness metrics data
+  // HRV data
   const hrvData = wellnessMetrics
     .filter(m => m.hrv)
     .map(m => ({
@@ -132,6 +177,7 @@ export default function WellnessDataPage() {
     }))
     .reverse();
 
+  // Sleep data
   const sleepData = wellnessMetrics
     .filter(m => m.sleepSeconds)
     .map(m => ({
@@ -141,6 +187,20 @@ export default function WellnessDataPage() {
     }))
     .reverse();
 
+  // Calculate statistics
+  const stats = {
+    totalActivities: activities.length,
+    totalHours: Math.round((activities.reduce((sum, a) => sum + (a.duration || 0), 0) / 3600) * 10) / 10,
+    avgPower: activities.filter(a => a.powerData?.normalizedPower).length > 0
+      ? Math.round(activities.reduce((sum, a) => sum + (a.powerData?.normalizedPower || 0), 0) / 
+        activities.filter(a => a.powerData?.normalizedPower).length)
+      : 0,
+    maxPower: Math.max(...activities.map(a => a.powerData?.maxPower || 0)),
+    avgHRV: wellnessMetrics.filter(m => m.hrv).length > 0
+      ? Math.round(wellnessMetrics.reduce((sum, m) => sum + (m.hrv || 0), 0) / 
+        wellnessMetrics.filter(m => m.hrv).length)
+      : 0,
+  };
 
   if (loading && !activities.length) {
     return (
@@ -155,8 +215,9 @@ export default function WellnessDataPage() {
       {/* Header Controls */}
       <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Time Range</InputLabel>
+          <InputLabel htmlFor="wellness-time-range">Time Range</InputLabel>
           <Select
+            id="wellness-time-range"
             value={daysBack}
             label="Time Range"
             onChange={(e) => setDaysBack(Number(e.target.value))}
@@ -197,12 +258,12 @@ export default function WellnessDataPage() {
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" gap={1}>
-                <FitnessCenter color="primary" />
+                <DirectionsRun color="primary" />
                 <Typography variant="body2" color="text.secondary">
                   Total Activities
                 </Typography>
               </Box>
-              <Typography variant="h4">{activities.length}</Typography>
+              <Typography variant="h4">{stats.totalActivities}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -210,18 +271,27 @@ export default function WellnessDataPage() {
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" gap={1}>
-                <Favorite color="error" />
+                <CalendarToday color="primary" />
                 <Typography variant="body2" color="text.secondary">
-                  Avg RPE
+                  Total Hours
                 </Typography>
               </Box>
-              <Typography variant="h4">
-                {activities.length
-                  ? (
-                      activities.reduce((sum, a) => sum + (a.rpe || 0), 0) /
-                      activities.filter(a => a.rpe).length
-                    ).toFixed(1)
-                  : '-'}
+              <Typography variant="h4">{stats.totalHours}h</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Bolt color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Avg Power (NP)
+                </Typography>
+              </Box>
+              <Typography variant="h4">{stats.avgPower}W</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Max: {stats.maxPower}W
               </Typography>
             </CardContent>
           </Card>
@@ -230,157 +300,178 @@ export default function WellnessDataPage() {
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" gap={1}>
-                <TrendingUp color="success" />
+                <Favorite color="primary" />
                 <Typography variant="body2" color="text.secondary">
-                  Avg Feel
+                  Avg HRV
                 </Typography>
               </Box>
-              <Typography variant="h4">
-                {activities.length
-                  ? (
-                      activities.reduce((sum, a) => sum + (a.feel || 0), 0) /
-                      activities.filter(a => a.feel).length
-                    ).toFixed(1)
-                  : '-'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1}>
-                <CalendarToday color="info" />
-                <Typography variant="body2" color="text.secondary">
-                  Wellness Entries
-                </Typography>
-              </Box>
-              <Typography variant="h4">{wellnessMetrics.length}</Typography>
+              <Typography variant="h4">{stats.avgHRV}</Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* RPE and Feel Chart */}
-      {rpeFeelData.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Activity RPE & Feel
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={rpeFeelData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis domain={[0, 10]} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="rpe" stroke="#8884d8" name="RPE" />
-                <Line type="monotone" dataKey="feel" stroke="#82ca9d" name="Feel" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+      {/* Charts */}
+      <Grid container spacing={3}>
+        {/* FTP/Power Progression Chart */}
+        {powerProgressionData.length > 0 && (
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Power Progression Over Time
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Track your FTP and normalized power improvements
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={powerProgressionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis label={{ value: 'Watts', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="normalizedPower" 
+                      stroke="#8884d8" 
+                      name="Normalized Power (FTP estimate)"
+                      strokeWidth={2}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="avgPower" 
+                      stroke="#82ca9d" 
+                      name="Avg Power"
+                      strokeWidth={1}
+                      opacity={0.7}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
-      {/* Heart Rate Chart */}
-      {hrData.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Heart Rate Data
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={hrData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="avgHr" stroke="#ff7300" name="Avg HR" />
-                <Line type="monotone" dataKey="maxHr" stroke="#ff0000" name="Max HR" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+        {/* Activity Frequency Chart */}
+        {activityFrequencyData.length > 0 && (
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Daily Activity Frequency
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Activities completed each day
+                </Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <ComposedChart data={activityFrequencyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" label={{ value: 'Activities', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" label={{ value: 'Minutes', angle: 90, position: 'insideRight' }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="count" fill="#8884d8" name="# Activities" />
+                    <Line yAxisId="right" type="monotone" dataKey="duration" stroke="#ff7300" name="Duration (min)" strokeWidth={2} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
-      {/* Power Data Chart */}
-      {powerData.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Power Data
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={powerData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="avgPower" fill="#8884d8" name="Avg Power (W)" />
-                <Bar dataKey="normalizedPower" fill="#82ca9d" name="Normalized Power (W)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+        {/* Weekly Volume vs Power */}
+        {volumeVsPowerData.length > 0 && (
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Training Volume vs Power Output
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  See how training volume affects your power
+                </Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <ComposedChart data={volumeVsPowerData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="week" />
+                    <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" label={{ value: 'Watts', angle: 90, position: 'insideRight' }} />
+                    <Tooltip />
+                    <Legend />
+                    <Area yAxisId="left" type="monotone" dataKey="hours" fill="#8884d8" stroke="#8884d8" name="Weekly Hours" />
+                    <Line yAxisId="right" type="monotone" dataKey="avgPower" stroke="#ff7300" strokeWidth={2} name="Avg Power" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
-      {/* HRV Chart */}
-      {hrvData.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Heart Rate Variability (HRV)
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={hrvData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="hrv" stroke="#9c27b0" name="HRV (RMSSD)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+        {/* Existing charts... */}
+        {rpeFeelData.length > 0 && (
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>RPE & Feel</Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={rpeFeelData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis domain={[0, 10]} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="rpe" stroke="#8884d8" name="RPE" />
+                    <Line type="monotone" dataKey="feel" stroke="#82ca9d" name="Feel" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
-      {/* Sleep Data Chart */}
-      {sleepData.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Sleep Tracking
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={sleepData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" domain={[0, 10]} />
-                <Tooltip />
-                <Legend />
-                <Bar yAxisId="left" dataKey="hours" fill="#2196f3" name="Sleep (hours)" />
-                <Bar yAxisId="right" dataKey="quality" fill="#4caf50" name="Quality (1-10)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+        {hrvData.length > 0 && (
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Heart Rate Variability</Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={hrvData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="hrv" stroke="#ff7300" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
-      {/* No Data Message */}
-      {activities.length === 0 && wellnessMetrics.length === 0 && !loading && (
-        <Card>
-          <CardContent>
-            <Typography variant="body1" color="text.secondary" align="center">
-              No data available. Click "Sync Data" to import your Intervals.icu data.
-            </Typography>
-          </CardContent>
-        </Card>
-      )}
+        {sleepData.length > 0 && (
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Sleep Duration & Quality</Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={sleepData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" label={{ value: 'Quality', angle: 90, position: 'insideRight' }} domain={[0, 5]} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="hours" fill="#8884d8" name="Sleep Hours" />
+                    <Line yAxisId="right" type="monotone" dataKey="quality" stroke="#82ca9d" strokeWidth={2} name="Quality" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+      </Grid>
     </Box>
   );
 }
