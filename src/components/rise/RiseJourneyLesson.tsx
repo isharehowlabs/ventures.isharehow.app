@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, BookOpen, PenTool, FileText, Check, Plus, X } from 'lucide-react';
+import { CheckSquare, BookOpen, PenTool, FileText, Check, Plus, X, ArrowLeft } from 'lucide-react';
 
 interface LessonData {
   levelId: number;
@@ -24,7 +24,19 @@ interface Task {
   completed: boolean;
 }
 
-const RiseJourneyLesson: React.FC<{ lessonData?: LessonData }> = ({ lessonData }) => {
+interface RiseJourneyLessonProps {
+  lessonData?: LessonData;
+  onBack?: () => void;
+  onComplete?: () => void;
+  backendUrl?: string;
+}
+
+const RiseJourneyLesson: React.FC<RiseJourneyLessonProps> = ({ 
+  lessonData, 
+  onBack,
+  onComplete,
+  backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ventures.isharehow.app'
+}) => {
   // Default lesson data for demonstration
   const defaultLesson: LessonData = {
     levelId: 1,
@@ -80,14 +92,22 @@ const RiseJourneyLesson: React.FC<{ lessonData?: LessonData }> = ({ lessonData }
   const handleMarkComplete = async () => {
     setSaving(true);
     try {
-      // TODO: Implement API call to mark lesson as complete
-      // await fetch(`/api/rise-journey/lessons/${lesson.lessonId}/complete`, {
-      //   method: 'POST'
-      // });
-      alert('Lesson marked as complete! 🎉');
-      // Redirect or update UI
+      const response = await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.lessonId}/complete`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        if (onComplete) {
+          onComplete();
+        } else {
+          alert('Lesson marked as complete! 🎉');
+        }
+      } else {
+        throw new Error('Failed to mark lesson complete');
+      }
     } catch (error) {
       console.error('Failed to mark lesson complete:', error);
+      alert('Failed to mark lesson as complete. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -95,12 +115,12 @@ const RiseJourneyLesson: React.FC<{ lessonData?: LessonData }> = ({ lessonData }
 
   const saveNotes = async (content: string) => {
     try {
-      // TODO: Implement auto-save for notes
-      // await fetch(`/api/rise-journey/lessons/${lesson.lessonId}/notes`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ content })
-      // });
+      await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.lessonId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      });
     } catch (error) {
       console.error('Failed to save notes:', error);
     }
@@ -111,12 +131,16 @@ const RiseJourneyLesson: React.FC<{ lessonData?: LessonData }> = ({ lessonData }
     setJournalEntry(updated);
     
     try {
-      // TODO: Save to rise_journey_notes table with pillar categorization
-      // await fetch(`/api/rise-journey/lessons/${lesson.lessonId}/journal`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ pillar, content, lessonId: lesson.lessonId })
-      // });
+      // Save to rise_journey_notes table with pillar categorization
+      await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.lessonId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          content: JSON.stringify({ pillar, content }), 
+          isShared: false 
+        }),
+      });
     } catch (error) {
       console.error('Failed to save journal entry:', error);
     }
@@ -125,58 +149,65 @@ const RiseJourneyLesson: React.FC<{ lessonData?: LessonData }> = ({ lessonData }
   const addTask = async () => {
     if (!newTaskText.trim()) return;
 
-    const newTask: Task = {
-      id: Date.now().toString(),
-      text: newTaskText,
-      completed: false
-    };
-
-    setTasks([...tasks, newTask]);
-    setNewTaskText('');
-
     try {
-      // TODO: POST to existing Task API with category="Rise Journey"
-      // await fetch('/api/tasks', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     text: newTask.text,
-      //     category: 'Rise Journey',
-      //     lessonId: lesson.lessonId,
-      //     levelId: lesson.levelId
-      //   })
-      // });
+      const response = await fetch(`${backendUrl}/api/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          text: newTaskText,
+          category: 'Rise Journey',
+          lessonId: lesson.lessonId.toString(),
+          levelId: lesson.levelId.toString(),
+        }),
+      });
+
+      if (response.ok) {
+        const newTask = await response.json();
+        setTasks([...tasks, newTask]);
+        setNewTaskText('');
+      }
     } catch (error) {
       console.error('Failed to add task:', error);
     }
   };
 
   const toggleTask = async (taskId: string) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
     );
     setTasks(updatedTasks);
 
     try {
-      // TODO: Update task completion status
-      // await fetch(`/api/tasks/${taskId}`, {
-      //   method: 'PATCH',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ completed: !task.completed })
-      // });
+      await fetch(`${backendUrl}/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ completed: !task.completed }),
+      });
     } catch (error) {
       console.error('Failed to toggle task:', error);
+      // Revert on error
+      setTasks(tasks);
     }
   };
 
   const deleteTask = async (taskId: string) => {
+    const originalTasks = tasks;
     setTasks(tasks.filter(task => task.id !== taskId));
 
     try {
-      // TODO: Delete task from API
-      // await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+      await fetch(`${backendUrl}/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
     } catch (error) {
       console.error('Failed to delete task:', error);
+      // Revert on error
+      setTasks(originalTasks);
     }
   };
 
@@ -185,9 +216,19 @@ const RiseJourneyLesson: React.FC<{ lessonData?: LessonData }> = ({ lessonData }
       
       {/* Top Bar */}
       <div className="h-16 border-b border-gray-700 flex items-center px-6 justify-between bg-gray-800 shadow-lg flex-shrink-0">
-        <h2 className="text-lg font-semibold text-gray-100">
-          Level {lesson.levelId}: {lesson.levelName} / Lesson {lesson.lessonId}: {lesson.lessonTitle}
-        </h2>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+          <h2 className="text-lg font-semibold text-gray-100">
+            Level {lesson.levelId}: {lesson.levelName} / Lesson {lesson.lessonId}: {lesson.lessonTitle}
+          </h2>
+        </div>
         <button 
           onClick={handleMarkComplete}
           disabled={saving}
