@@ -154,12 +154,14 @@ export default function RiseJourneyQuiz({ onComplete }: RiseJourneyQuizProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit quiz');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to submit quiz (${response.status})`);
       }
 
       const data = await response.json();
       onComplete(data.recommendedLevel, data.scores);
     } catch (err: any) {
+      console.error('Quiz submission error:', err);
       setError(err.message || 'Failed to submit quiz. Please try again.');
     } finally {
       setLoading(false);

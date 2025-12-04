@@ -7836,6 +7836,9 @@ def submit_rise_journey_quiz():
         data = request.json
         answers = data.get('answers', {})
         
+        if not answers:
+            return jsonify({'error': 'No answers provided'}), 400
+        
         # Simple scoring algorithm - can be enhanced
         scores = {
             'wellness': 0,
@@ -7847,25 +7850,32 @@ def submit_rise_journey_quiz():
             'destiny': 0
         }
         
-        # Map answers to level scores (simplified - should be more sophisticated)
-        for key, value in answers.items():
-            if 'physical' in key.lower() or 'health' in key.lower() or 'diet' in key.lower():
-                scores['wellness'] += value if isinstance(value, (int, float)) else 1
-            if 'movement' in key.lower() or 'exercise' in key.lower():
-                scores['mobility'] += value if isinstance(value, (int, float)) else 1
-            if 'responsibility' in key.lower() or 'self-love' in key.lower():
-                scores['accountability'] += value if isinstance(value, (int, float)) else 1
-            if 'creative' in key.lower() or 'expression' in key.lower():
-                scores['creativity'] += value if isinstance(value, (int, float)) else 1
-            if 'alignment' in key.lower() or 'intention' in key.lower():
-                scores['alignment'] += value if isinstance(value, (int, float)) else 1
-            if 'meditation' in key.lower() or 'mindful' in key.lower():
-                scores['mindfulness'] += value if isinstance(value, (int, float)) else 1
-            if 'purpose' in key.lower() or 'higher' in key.lower():
-                scores['destiny'] += value if isinstance(value, (int, float)) else 1
+        # Question ID to category mapping (matches frontend quiz structure)
+        question_categories = {
+            'q1': 'wellness',      # Physical health and energy
+            'q2': 'mobility',      # Movement/exercise
+            'q3': 'accountability', # Responsibility/self-love
+            'q4': 'creativity',    # Creative expression
+            'q5': 'alignment',     # Alignment/intention
+            'q6': 'mindfulness',   # Meditation/mindfulness
+            'q7': 'destiny'        # Higher purpose
+        }
         
-        # Find lowest score (area needing most work) or default to wellness
-        recommended_level = min(scores, key=scores.get) if scores else 'wellness'
+        # Map answers to level scores based on question categories
+        for question_id, answer_value in answers.items():
+            category = question_categories.get(question_id)
+            if category and category in scores:
+                # Lower scores indicate areas needing more work
+                # So we add the inverse (6 - value) to make lower answers = higher need
+                value = answer_value if isinstance(answer_value, (int, float)) else 1
+                scores[category] += (6 - value)  # Invert so lower answers = higher score (more need)
+        
+        # Find highest score (area needing most work) or default to wellness
+        # If all scores are 0, default to wellness
+        if all(score == 0 for score in scores.values()):
+            recommended_level = 'wellness'
+        else:
+            recommended_level = max(scores, key=scores.get)
         
         # Save quiz result
         quiz = RiseJourneyQuiz(
@@ -7893,12 +7903,24 @@ def submit_rise_journey_quiz():
             'scores': scores,
             'trial': trial.to_dict() if trial else None
         })
+    except KeyError as e:
+        db.session.rollback()
+        print(f"Error submitting quiz - missing key: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Missing required data: {str(e)}'}), 400
+    except AttributeError as e:
+        db.session.rollback()
+        print(f"Error submitting quiz - attribute error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
     except Exception as e:
         db.session.rollback()
         print(f"Error submitting quiz: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'Failed to submit quiz'}), 500
+        return jsonify({'error': f'Failed to submit quiz: {str(e)}'}), 500
 
 @require_session
 @app.route('/api/rise-journey/quiz', methods=['GET'])
