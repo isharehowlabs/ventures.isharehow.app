@@ -85,8 +85,23 @@ export function useTasks() {
       }
 
       const data = await response.json();
-      // Real-time update will be handled by socket
-      return data.task;
+      const newTask = data.task;
+      
+      // Add task optimistically to local state immediately
+      // Socket event will update it if needed, but this ensures UI updates right away
+      setTasks(prev => {
+        // Check if task already exists (from socket event)
+        const exists = prev.some(t => t.id === newTask.id);
+        if (exists) {
+          // Update existing task
+          return prev.map(t => t.id === newTask.id ? newTask : t);
+        }
+        // Add new task
+        return [...prev, newTask];
+      });
+      setLastUpdated(new Date());
+      
+      return newTask;
     } catch (err: any) {
       if (err?.status === 401 || err?.message?.includes('Authentication required')) {
         setAuthRequired(true);
@@ -115,8 +130,14 @@ export function useTasks() {
       }
 
       const data = await response.json();
-      // Real-time update will be handled by socket
-      return data.task;
+      const updatedTask = data.task;
+      
+      // Update task optimistically in local state immediately
+      // Socket event will update it if needed, but this ensures UI updates right away
+      setTasks(prev => prev.map(task => task.id === updatedTask.id ? updatedTask : task));
+      setLastUpdated(new Date());
+      
+      return updatedTask;
     } catch (err: any) {
       if (err?.status === 401 || err?.message?.includes('Authentication required')) {
         setAuthRequired(true);
@@ -185,7 +206,16 @@ export function useTasks() {
 
     // Task event handlers
     socketInstance.on('task_created', (newTask: Task) => {
-      setTasks(prev => [...prev, newTask]);
+      setTasks(prev => {
+        // Check if task already exists (from optimistic update)
+        const exists = prev.some(t => t.id === newTask.id);
+        if (exists) {
+          // Update existing task with server data
+          return prev.map(t => t.id === newTask.id ? newTask : t);
+        }
+        // Add new task
+        return [...prev, newTask];
+      });
       setLastUpdated(new Date());
     });
 
