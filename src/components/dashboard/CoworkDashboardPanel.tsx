@@ -28,20 +28,22 @@ interface TaskListPanelProps {
   onAdd: (text: string) => Promise<void>;
 }
 
-function TaskListPanel({ tasks, onToggle, onAdd }: TaskListPanelProps) {
+function TaskListPanel({ tasks, onToggle, onAdd, isLoading }: TaskListPanelProps & { isLoading: boolean }) {
   const [newTask, setNewTask] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTask.trim() && !isSubmitting) {
+    const trimmedTask = newTask.trim();
+    if (trimmedTask && !isSubmitting && !isLoading) {
       setIsSubmitting(true);
       try {
-        await onAdd(newTask.trim());
+        await onAdd(trimmedTask);
         setNewTask("");
       } catch (error) {
         // Error handling is done in parent component
         // Don't clear input on error so user can retry
+        console.error('Error adding task:', error);
       } finally {
         setIsSubmitting(false);
       }
@@ -89,14 +91,27 @@ function TaskListPanel({ tasks, onToggle, onAdd }: TaskListPanelProps) {
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Add task…"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newTask.trim() && !isSubmitting && !isLoading) {
+              e.preventDefault();
+              handleSubmit(e as any);
+            }
+          }}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
                 <IconButton
                   type="submit"
                   size="small"
-                  disabled={!newTask.trim() || isSubmitting}
+                  disabled={!newTask.trim() || isSubmitting || isLoading}
                   color="primary"
+                  aria-label="Add task"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (newTask.trim() && !isSubmitting && !isLoading) {
+                      handleSubmit(e as any);
+                    }
+                  }}
                 >
                   <Add />
                 </IconButton>
@@ -182,7 +197,8 @@ export default function CoworkDashboardPanel() {
             <TaskListPanel 
               tasks={tasks} 
               onToggle={handleTaskToggle} 
-              onAdd={handleTaskAdd} 
+              onAdd={handleTaskAdd}
+              isLoading={isLoading}
             />
           </Grid>
 
