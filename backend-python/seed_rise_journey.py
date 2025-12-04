@@ -79,9 +79,24 @@ JOURNEY_LEVELS = [
     },
 ]
 
+def check_table_exists(table_name):
+    """Check if a table exists in the database"""
+    from sqlalchemy import inspect
+    inspector = inspect(db.engine)
+    return table_name in inspector.get_table_names()
+
 def seed_journey_levels():
     """Create journey levels if they don't exist"""
     with app.app_context():
+        # Check if tables exist
+        if not check_table_exists('rise_journey_levels'):
+            print("ERROR: rise_journey_levels table does not exist!")
+            print("Please run the database migration first:")
+            print("  python3 -m flask db upgrade")
+            print("Or run the migration directly:")
+            print("  python3 migrations/versions/20251204_add_rise_journey_tables.py")
+            return
+        
         print("Seeding Rise Journey levels...")
         
         for level_data in JOURNEY_LEVELS:
@@ -108,6 +123,13 @@ def seed_journey_levels():
 def seed_sample_lessons():
     """Create sample lessons for each level"""
     with app.app_context():
+        # Check if tables exist
+        if not check_table_exists('rise_journey_lessons'):
+            print("ERROR: rise_journey_lessons table does not exist!")
+            print("Please run the database migration first:")
+            print("  python3 -m flask db upgrade")
+            return
+        
         print("\nSeeding sample lessons...")
         
         for level_data in JOURNEY_LEVELS:
