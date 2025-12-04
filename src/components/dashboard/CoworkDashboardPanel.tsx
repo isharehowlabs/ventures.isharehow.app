@@ -12,6 +12,8 @@ import {
   IconButton,
   TextField,
   InputAdornment,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import { Add, Check, Close } from '@mui/icons-material';
 import { useTasks, Task } from '../../hooks/useTasks';
@@ -23,17 +25,26 @@ const FIGMA_EMBED_URL =
 interface TaskListPanelProps {
   tasks: Task[];
   onToggle: (id: string) => void;
-  onAdd: (text: string) => void;
+  onAdd: (text: string) => Promise<void>;
 }
 
 function TaskListPanel({ tasks, onToggle, onAdd }: TaskListPanelProps) {
   const [newTask, setNewTask] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTask.trim()) {
-      onAdd(newTask.trim());
-      setNewTask("");
+    if (newTask.trim() && !isSubmitting) {
+      setIsSubmitting(true);
+      try {
+        await onAdd(newTask.trim());
+        setNewTask("");
+      } catch (error) {
+        // Error handling is done in parent component
+        // Don't clear input on error so user can retry
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -84,7 +95,7 @@ function TaskListPanel({ tasks, onToggle, onAdd }: TaskListPanelProps) {
                 <IconButton
                   type="submit"
                   size="small"
-                  disabled={!newTask.trim()}
+                  disabled={!newTask.trim() || isSubmitting}
                   color="primary"
                 >
                   <Add />
@@ -129,38 +140,68 @@ function DesignCodePanel() {
 }
 
 export default function CoworkDashboardPanel() {
-  const { tasks, createTask, updateTask, isLoading } = useTasks();
+  const { tasks, createTask, updateTask, isLoading, error } = useTasks();
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const handleTaskToggle = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (task) {
-      const newStatus = task.status === 'completed' ? 'pending' : 'completed';
-      await updateTask(id, { status: newStatus });
+      try {
+        const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+        await updateTask(id, { status: newStatus });
+      } catch (err: any) {
+        setSnackbarMessage(err?.message || 'Failed to update task');
+        setSnackbarOpen(true);
+      }
     }
   };
 
   const handleTaskAdd = async (text: string) => {
-    await createTask(text, '', [], 'pending');
+    try {
+      await createTask(text, '', [], 'pending');
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to create task';
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      throw err; // Re-throw so TaskListPanel knows it failed
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   // Layout: left = tasks, large right = design/code
   return (
-    <Box sx={{ width: "100%", minHeight: "100vh", bgcolor: "background.default", p: { xs: 1, md: 3 } }}>
-      <Grid container spacing={3}>
-        {/* Task List - left third on desktop, top on mobile */}
-        <Grid item xs={12} md={4} lg={3}>
-          <TaskListPanel 
-            tasks={tasks} 
-            onToggle={handleTaskToggle} 
-            onAdd={handleTaskAdd} 
-          />
-        </Grid>
+    <>
+      <Box sx={{ width: "100%", minHeight: "100vh", bgcolor: "background.default", p: { xs: 1, md: 3 } }}>
+        <Grid container spacing={3}>
+          {/* Task List - left third on desktop, top on mobile */}
+          <Grid item xs={12} md={4} lg={3}>
+            <TaskListPanel 
+              tasks={tasks} 
+              onToggle={handleTaskToggle} 
+              onAdd={handleTaskAdd} 
+            />
+          </Grid>
 
-        {/* Design/Code Doc - main area */}
-        <Grid item xs={12} md={8} lg={9}>
-          <DesignCodePanel />
+          {/* Design/Code Doc - main area */}
+          <Grid item xs={12} md={8} lg={9}>
+            <DesignCodePanel />
+          </Grid>
         </Grid>
-      </Grid>
-    </Box>
+      </Box>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
