@@ -146,8 +146,9 @@ const RiseJourney: React.FC = () => {
   };
 
   const handleLevelClick = async (level: JourneyLevel) => {
+    // Allow access to all levels regardless of lock status
+    // If locked, start it automatically, then show the level
     if (level.progress.state === 'locked') {
-      // Start the level
       try {
         const response = await fetch(`${backendUrl}/api/rise-journey/levels/${level.id}/start`, {
           method: 'POST',
@@ -155,9 +156,17 @@ const RiseJourney: React.FC = () => {
         });
         if (response.ok) {
           await loadData();
+          // After starting, show the level
+          const updatedLevel = { ...level, progress: { ...level.progress, state: 'in-progress' as const } };
+          setSelectedLevel(updatedLevel);
+        } else {
+          // Even if start fails, allow access to view content
+          setSelectedLevel(level);
         }
       } catch (err) {
         console.error('Failed to start level:', err);
+        // Even if start fails, allow access to view content
+        setSelectedLevel(level);
       }
     } else {
       setSelectedLevel(level);
@@ -285,9 +294,7 @@ const RiseJourney: React.FC = () => {
           return (
             <div
               key={level.id}
-              className={`relative transition-all duration-300 ${
-                isLocked ? 'opacity-60' : 'hover:scale-[1.02] hover:shadow-xl'
-              }`}
+              className="relative transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
             >
               {/* Connector Line */}
               {index !== levels.length - 1 && (
@@ -360,27 +367,19 @@ const RiseJourney: React.FC = () => {
 
                     {/* Action Button */}
                     <div className="flex-shrink-0 w-full md:w-auto">
-                      {isLocked ? (
-                        <button
-                          disabled
-                          className="w-full md:w-auto px-6 py-3 rounded-lg bg-gray-200 text-gray-500 font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
-                        >
-                          <Lock className="h-5 w-5" />
-                          Locked
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleLevelClick(level)}
-                          className={`w-full md:w-auto px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
-                            isRecommended
-                              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-                              : 'bg-gray-800 hover:bg-gray-900 text-white shadow-md hover:shadow-lg'
-                          }`}
-                        >
-                          {isCompleted ? 'Review Path' : 'Enter Path'}
-                          <ArrowRight className="h-5 w-5" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleLevelClick(level)}
+                        className={`w-full md:w-auto px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
+                          isRecommended
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                            : isLocked
+                            ? 'bg-gray-600 hover:bg-gray-700 text-white shadow-md hover:shadow-lg'
+                            : 'bg-gray-800 hover:bg-gray-900 text-white shadow-md hover:shadow-lg'
+                        }`}
+                      >
+                        {isCompleted ? 'Review Path' : isLocked ? 'Explore Path' : 'Enter Path'}
+                        <ArrowRight className="h-5 w-5" />
+                      </button>
                     </div>
                   </div>
                 </div>

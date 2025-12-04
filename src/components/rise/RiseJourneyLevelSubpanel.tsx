@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BookOpen, CheckCircle, Play, Lock, FileText, PenTool, CheckSquare, Plus, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle, Play, Lock, FileText, PenTool, CheckSquare, Plus, X, GraduationCap, ExternalLink } from 'lucide-react';
 import RiseJourneyLesson from './RiseJourneyLesson';
 
 interface JourneyLevel {
@@ -53,7 +53,7 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [activeTab, setActiveTab] = useState<'lessons' | 'tasks' | 'journal'>('lessons');
+  const [activeTab, setActiveTab] = useState<'lessons' | 'tasks' | 'journal' | 'learning'>('lessons');
 
   useEffect(() => {
     loadLevelData();
@@ -278,6 +278,17 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
             <PenTool className="inline-block mr-2 h-5 w-5" />
             Journal
           </button>
+          <button
+            onClick={() => setActiveTab('learning')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === 'learning'
+                ? 'border-b-2 border-indigo-500 text-indigo-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            <GraduationCap className="inline-block mr-2 h-5 w-5" />
+            Learning Hub
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -453,6 +464,91 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
               <button className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
                 Save Journal Entry
               </button>
+            </div>
+          )}
+
+          {/* Learning Hub Tab */}
+          {activeTab === 'learning' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 border-2 border-indigo-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <GraduationCap className="h-8 w-8 text-indigo-600" />
+                  <h3 className="text-2xl font-bold text-gray-800">Learning Hub Classes</h3>
+                </div>
+                <p className="text-gray-700 mb-6">
+                  Access comprehensive video classes and courses to deepen your understanding of this journey level.
+                </p>
+                
+                {/* Learning Hub Content Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Video Classes Card */}
+                  <div className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-200">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Play className="h-6 w-6 text-indigo-600" />
+                        <h4 className="text-xl font-bold text-gray-800">Video Classes</h4>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 mb-4 text-sm">
+                      A comprehensive collection of video classes covering various topics and learning paths.
+                    </p>
+                    <button
+                      onClick={() => {
+                        window.open('https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp', '_blank');
+                      }}
+                      className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                    >
+                      <Play className="h-5 w-5" />
+                      Watch Video Classes
+                      <ExternalLink className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* AI Development Course Card */}
+                  <div className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-200">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="h-6 w-6 text-purple-600" />
+                        <h4 className="text-xl font-bold text-gray-800">AI Development</h4>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 mb-4 text-sm">
+                      Learn the fundamentals of AI development including machine learning, neural networks, and data processing.
+                    </p>
+                    <button
+                      onClick={() => {
+                        window.open('https://www.youtube.com/playlist?list=PLwyVPJ9qE2K8vj0Wfb4rxAmZntkysHPlE', '_blank');
+                      }}
+                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                    >
+                      <Play className="h-5 w-5" />
+                      Start Course
+                      <ExternalLink className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Additional Resources */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Additional Resources</h4>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-3">
+                      For more learning resources, visit the full Learning Hub in the Creative Dashboard.
+                    </p>
+                    <button
+                      onClick={() => {
+                        // Navigate to Creative Dashboard with Learning Hub tab
+                        window.location.href = '/creative?tab=learning';
+                      }}
+                      className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-semibold flex items-center gap-2"
+                    >
+                      <GraduationCap className="h-5 w-5" />
+                      Open Full Learning Hub
+                      <ExternalLink className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
