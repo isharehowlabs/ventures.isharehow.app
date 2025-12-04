@@ -135,3 +135,109 @@ Fix tasks feature: remove auth requirements and increase timeout
 - Improve task state management with useRef for lastUpdated
 - Prevent duplicate task creation calls
 ```
+
+## Task Assignment Features (Dec 4, 2025 - Latest)
+
+### New Features Added
+- **Task Creator Tracking**: Every task now tracks who created it
+- **User Assignment**: Tasks can be assigned to specific users
+- **Real-time Notifications**: Users get notified via Socket.io when assigned a task
+- **Timestamps**: Created and updated timestamps already existed
+
+### Task Model Fields (Complete)
+```typescript
+{
+  id: string;
+  title: string;
+  description: string;
+  hyperlinks: string[];
+  status: 'pending' | 'in-progress' | 'completed';
+  supportRequestId?: string;
+  
+  // NEW: Assignment fields
+  createdBy?: string;        // User ID who created the task
+  createdByName?: string;    // Display name of creator
+  assignedTo?: string;       // User ID assigned to the task
+  assignedToName?: string;   // Display name of assigned user
+  
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### API Usage
+
+#### Create Task with Assignment
+```typescript
+const { createTask } = useTasks();
+await createTask(
+  'Task Title',
+  'Description',
+  ['https://link.com'],
+  'pending',
+  'user123',           // assignedTo (optional)
+  'John Doe'           // assignedToName (optional)
+);
+```
+
+#### Update Task Assignment
+```typescript
+const { updateTask } = useTasks();
+await updateTask(taskId, {
+  assignedTo: 'user456',
+  assignedToName: 'Jane Smith'
+});
+```
+
+### Socket.io Events
+- `task_created` - When a task is created
+- `task_updated` - When a task is updated
+- `task_deleted` - When a task is deleted
+- `task_assigned` - **NEW**: When a task is assigned to a user
+
+Listen for assignment notifications:
+```typescript
+socket.on('task_assigned', (data) => {
+  console.log('Task assigned:', data.task);
+  console.log('Assigned to:', data.assignedToName);
+  console.log('Created by:', data.createdByName);
+});
+```
+
+### Database Migration
+Before deploying, run the migration to add new columns:
+```bash
+cd backend-python
+python3 add_task_assignment_columns.py
+```
+
+This will add:
+- `created_by` (VARCHAR 100)
+- `created_by_name` (VARCHAR 200)
+- `assigned_to` (VARCHAR 100)
+- `assigned_to_name` (VARCHAR 200)
+
+All columns are nullable for backward compatibility with existing tasks.
+
+### UI Components To-Do
+- [ ] Display task creator and assigned user in task cards
+- [ ] Add user selector/dropdown for assigning tasks
+- [ ] Show toast notification when user receives an assignment
+- [ ] Filter tasks by assigned user
+- [ ] Show "My Tasks" vs "All Tasks" views
+
+## Recent Commits
+```
+commit db11cc62 (HEAD -> master, origin/master)
+Add user assignment and notifications to tasks
+- Task model updated with assignment fields
+- Socket.io notifications for task assignments
+- Database migration script included
+- Frontend Task interface updated
+
+commit a008cdef
+Fix tasks feature: remove auth requirements and increase timeout
+- Removed @require_session from UPDATE and DELETE
+- Increased auth timeout from 5s to 15s
+- Tasks work with optional authentication
+```
