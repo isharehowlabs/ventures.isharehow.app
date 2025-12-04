@@ -94,18 +94,17 @@ export const clearApiCredentials = () => {
 
 // API request helper
 const makeProxyRequest = async (endpoint: string, params: Record<string, string> = {}) => {
-  const { apiKey, athleteId } = getApiCredentials();
+  const { apiKey } = getApiCredentials();
   
-  if (!apiKey || !athleteId) {
+  if (!apiKey) {
     throw new Error('API credentials not configured');
   }
 
-  const queryParams = new URLSearchParams({ 
-    athleteId, 
-    ...params 
-  }).toString();
-  
-  const url = `${API_BASE}/api/intervals-proxy/${endpoint}?${queryParams}`;
+  // Build query params (no longer need athleteId - backend uses "0")
+  const queryParams = new URLSearchParams(params).toString();
+  const url = queryParams 
+    ? `${API_BASE}/api/intervals-proxy/${endpoint}?${queryParams}`
+    : `${API_BASE}/api/intervals-proxy/${endpoint}`;
   
   const response = await fetch(url, {
     headers: {

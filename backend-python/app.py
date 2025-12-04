@@ -8524,32 +8524,44 @@ def intervals_proxy_athlete():
     
     try:
         api_key = request.headers.get('X-Intervals-API-Key', '').strip()
-        athlete_id = request.args.get('athleteId', '').strip()
         
-        if not api_key or ':' not in api_key:
-            return jsonify({'error': 'Missing or invalid X-Intervals-API-Key'}), 401
-        if not athlete_id:
-            return jsonify({'error': 'athleteId is required'}), 400
+        if not api_key:
+            app.logger.warning(f"Missing API key")
+            return jsonify({'error': 'Missing X-Intervals-API-Key'}), 401
         
-        # Make request to Intervals.icu for athlete data
+        # Intervals.icu uses basic auth with username "API_KEY" and password as the API key
+        # Use "0" for athlete_id to use the athlete associated with the API key
         import base64
-        auth_header = f"Basic {base64.b64encode(api_key.encode('utf-8')).decode('utf-8')}"
+        auth_string = f"API_KEY:{api_key}"
+        auth_header = f"Basic {base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')}"
         
         response = requests.get(
-            f'https://intervals.icu/api/v1/athlete/{athlete_id}',
+            f'https://intervals.icu/api/v1/athlete/0',
             headers={'Authorization': auth_header},
             timeout=(5, 30)
         )
         
-        # Return response with proper status
-        return Response(
-            response.content,
-            status=response.status_code,
-            mimetype='application/json'
-        )
+        # Check if response is successful
+        if response.status_code >= 400:
+            app.logger.error(f"Intervals.icu API error: {response.status_code} - {response.text[:200]}")
+            try:
+                error_data = response.json()
+                return jsonify({'error': 'Intervals.icu API error', 'detail': error_data}), response.status_code
+            except:
+                return jsonify({'error': 'Intervals.icu API error', 'detail': response.text[:200]}), response.status_code
+        
+        # Try to parse as JSON to validate
+        try:
+            data = response.json()
+            return jsonify(data), 200
+        except ValueError as e:
+            app.logger.error(f"Failed to parse JSON response: {e}")
+            return jsonify({'error': 'Invalid JSON response from Intervals.icu'}), 502
         
     except requests.RequestException as e:
+        app.logger.error(f"Request exception in intervals_proxy_athlete: {e}")
         return jsonify({'error': 'Upstream request failed', 'detail': str(e)}), 502
     except Exception as e:
+        app.logger.error(f"Unexpected error in intervals_proxy_athlete: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
 

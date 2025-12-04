@@ -18,9 +18,7 @@ import {
 
 export default function IntervalsSettings() {
   const [apiKey, setApiKey] = useState('');
-  const [athleteId, setAthleteId] = useState('');
   const [existingKey, setExistingKey] = useState<string | null>(null);
-  const [existingAthleteId, setExistingAthleteId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -29,12 +27,9 @@ export default function IntervalsSettings() {
 
   const loadExistingCredentials = () => {
     try {
-      const { apiKey: savedKey, athleteId: savedId } = getApiCredentials();
+      const { apiKey: savedKey } = getApiCredentials();
       if (savedKey) {
         setExistingKey(savedKey);
-      }
-      if (savedId) {
-        setExistingAthleteId(savedId);
       }
     } catch (error) {
       console.error('Failed to load credentials:', error);
@@ -43,32 +38,15 @@ export default function IntervalsSettings() {
 
   const handleSave = () => {
     try {
-      if (!apiKey || !athleteId) {
-        setMessage({ type: 'error', text: 'Please provide both API Key and Athlete ID' });
+      if (!apiKey) {
+        setMessage({ type: 'error', text: 'Please provide an API Key' });
         return;
       }
 
-      // Validate API key format (should be API_KEY:athlete_id or just API_KEY)
-      if (!apiKey.includes(':') && !athleteId) {
-        setMessage({ type: 'error', text: 'API Key should be in format API_KEY:athlete_id or provide Athlete ID separately' });
-        return;
-      }
-
-      // If API key contains athlete ID, extract it
-      let finalApiKey = apiKey;
-      let finalAthleteId = athleteId;
-      
-      if (apiKey.includes(':') && !athleteId) {
-        const parts = apiKey.split(':');
-        finalApiKey = apiKey; // Keep full format for auth
-        finalAthleteId = parts[1];
-      }
-
-      saveApiCredentials(finalApiKey, finalAthleteId);
-      setExistingKey(finalApiKey);
-      setExistingAthleteId(finalAthleteId);
+      // Save API key (backend will use "0" for athlete_id automatically)
+      saveApiCredentials(apiKey, '0');
+      setExistingKey(apiKey);
       setApiKey('');
-      setAthleteId('');
       setMessage({ type: 'success', text: 'API credentials saved successfully!' });
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to save credentials' });
@@ -79,7 +57,6 @@ export default function IntervalsSettings() {
     try {
       clearApiCredentials();
       setExistingKey(null);
-      setExistingAthleteId(null);
       setMessage({ type: 'success', text: 'API credentials cleared' });
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to clear credentials' });
@@ -119,11 +96,6 @@ export default function IntervalsSettings() {
               <Typography variant="body2" color="text.secondary">
                 Key: {existingKey.substring(0, 8)}...
               </Typography>
-              {existingAthleteId && (
-                <Typography variant="body2" color="text.secondary">
-                  Athlete ID: {existingAthleteId}
-                </Typography>
-              )}
               <Button
                 variant="outlined"
                 color="error"
@@ -139,20 +111,12 @@ export default function IntervalsSettings() {
               <TextField
                 id="api-key"
                 label="API Key"
-                placeholder="API_KEY:athlete_id or just API_KEY"
+                placeholder="Enter your Intervals.icu API key"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 fullWidth
                 type="password"
-              />
-              <TextField
-                id="athlete-id"
-                label="Athlete ID"
-                placeholder="i1234567"
-                value={athleteId}
-                onChange={(e) => setAthleteId(e.target.value)}
-                fullWidth
-                helperText="Your athlete ID (e.g., i1234567). Can be extracted from API key if it's in API_KEY:athlete_id format."
+                helperText="Your API key from Intervals.icu Developer Settings (just the key, no athlete ID needed)"
               />
               <Button
                 variant="contained"
@@ -179,8 +143,8 @@ export default function IntervalsSettings() {
                 </li>
                 <li>Find the "Developer Settings" section</li>
                 <li>Generate or copy your API key</li>
-                <li>The key format is usually: API_KEY:athlete_id</li>
-                <li>Paste it above and save</li>
+                <li>Paste just the API key above (no athlete ID needed)</li>
+                <li>Save your credentials</li>
               </ol>
             </Typography>
           </Box>
