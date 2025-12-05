@@ -23,6 +23,8 @@ import {
   FormControlLabel,
   Stack,
   Divider,
+  Fab,
+  Tooltip,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -30,6 +32,8 @@ import {
   EmojiEvents as TrophyIcon,
   ThumbUp as ThumbUpIcon,
   CheckCircle as CheckIcon,
+  ExitToApp as LeaveIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useGameSocket } from '../../hooks/useGameSocket';
 
@@ -45,6 +49,7 @@ export default function GuessingGame() {
     submitGuess,
     voteForGuess,
     nextGuessingRound,
+    leaveRoom,
   } = useGameSocket();
 
   // Host word setup state
@@ -110,6 +115,37 @@ export default function GuessingGame() {
 
   if (!gameRoom) return null;
 
+  // Floating action buttons for game controls
+  const renderControls = () => (
+    <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Tooltip title="Refresh Game" placement="left">
+          <Fab 
+            color="primary" 
+            size="medium"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshIcon />
+          </Fab>
+        </Tooltip>
+        <Tooltip title="Leave Game" placement="left">
+          <Fab 
+            color="error" 
+            size="medium"
+            onClick={() => {
+              if (window.confirm('Are you sure you want to leave the game?')) {
+                leaveRoom();
+              }
+            }}
+          >
+            <LeaveIcon />
+          </Fab>
+        </Tooltip>
+      </Box>
+    </Box>
+  );
+
+
   const isHost = players.find(p => p.id === socketId)?.isHost || false;
   const currentPlayer = players.find(p => p.id === socketId);
   const phase = (gameRoom as any)?.roundPhase;
@@ -119,6 +155,7 @@ export default function GuessingGame() {
   if (!phase || gameRoom.state === 'lobby') {
     if (!isHost) {
       return (
+        <>
         <Container maxWidth="md" sx={{ py: 4 }}>
           <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h5" gutterBottom>
@@ -129,6 +166,8 @@ export default function GuessingGame() {
             </Typography>
           </Paper>
         </Container>
+          {renderControls()}
+        </>
       );
     }
 
@@ -161,6 +200,7 @@ export default function GuessingGame() {
     };
 
     return (
+      <>
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" gutterBottom textAlign="center">
@@ -205,6 +245,8 @@ export default function GuessingGame() {
           </Button>
         </Paper>
       </Container>
+        {renderControls()}
+      </>
     );
   }
 
@@ -229,6 +271,7 @@ export default function GuessingGame() {
     const totalPlayers = typeof guessData === 'object' && guessData.totalPlayers ? guessData.totalPlayers : players.filter(p => p.isActive).length;
 
     return (
+      <>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Grid container spacing={3}>
           {/* Main Game Area */}
@@ -335,6 +378,8 @@ export default function GuessingGame() {
           </Grid>
         </Grid>
       </Container>
+        {renderControls()}
+      </>
     );
   }
 
@@ -354,6 +399,7 @@ export default function GuessingGame() {
     const totalPlayers = typeof voteData === 'object' && voteData.totalPlayers ? voteData.totalPlayers : guessArray.length;
 
     return (
+      <>
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" gutterBottom textAlign="center">
@@ -418,6 +464,8 @@ export default function GuessingGame() {
           )}
         </Paper>
       </Container>
+        {renderControls()}
+      </>
     );
   }
 
@@ -426,6 +474,7 @@ export default function GuessingGame() {
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
     return (
+      <>
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Box textAlign="center" mb={4}>
@@ -495,8 +544,14 @@ export default function GuessingGame() {
           )}
         </Paper>
       </Container>
+        {renderControls()}
+      </>
     );
   }
 
-  return null;
+  return (
+    <>
+      {renderControls()}
+    </>
+  );
 }
