@@ -330,7 +330,7 @@ export default function GameLobby() {
               onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
               margin="normal"
               helperText="Enter the 9-character room code"
-              inputProps={{ maxLength: 6, style: { textTransform: 'uppercase' } }}
+              inputProps={{ maxLength: 9, style: { textTransform: 'uppercase' } }}
             />
 
             <Box mt={3} display="flex" gap={2}>

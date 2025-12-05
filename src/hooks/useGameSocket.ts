@@ -17,6 +17,7 @@ interface UseGameSocketReturn {
   players: Player[];
   isConnected: boolean;
   error: string | null;
+  socketId: string;
   createRoom: (data: CreateRoomData) => void;
   joinRoom: (data: JoinRoomData) => void;
   leaveRoom: () => void;
@@ -195,6 +196,7 @@ export const useGameSocket = (): UseGameSocketReturn => {
     players,
     isConnected,
     error,
+    socketId: socketRef.current?.id || '',
     createRoom,
     joinRoom,
     leaveRoom,

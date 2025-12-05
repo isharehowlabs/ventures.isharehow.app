@@ -38,12 +38,13 @@ import ChatPanel from './ChatPanel';
 
 
 export default function GameRoom() {
-  const { gameRoom, players, leaveRoom, startGame } = useGameSocket();
+  const { gameRoom, players, socketId, leaveRoom, startGame } = useGameSocket();
   const [selectedGameType, setSelectedGameType] = useState<GameType>('drawing');
 
   if (!gameRoom) return null;
 
-  const currentPlayer = players.find(p => p.id === gameRoom.hostId);
+  // Find current player by socket ID
+  const currentPlayer = players.find(p => p.id === socketId);
   const isHost = currentPlayer?.isHost || false;
   const isLobby = gameRoom.state === 'lobby';
   const isPlaying = gameRoom.state === 'playing';
