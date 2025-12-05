@@ -47,6 +47,7 @@ export default function GuessingGame() {
     nextGuessingRound,
   } = useGameSocket();
 
+  console.log('[GuessingGame] Component mounted', { gameRoom: !!gameRoom, players: players.length, socketId });
   // Host word setup state
   const [words, setWords] = useState(['', '', '', '', '']);
   const [wordErrors, setWordErrors] = useState<string[]>([]);
