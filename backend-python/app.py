@@ -7578,7 +7578,6 @@ def handle_create_room(data):
             'currentPuzzle': None,
             'roundStartTime': None,
             'createdAt': time.time(),
-        }
             # Guessing game fields
             'lastActivityTime': time.time(),
             'secretWords': [],
@@ -7587,7 +7586,8 @@ def handle_create_room(data):
             'votes': {},
             'roundPhase': None,
         
-        # Join socket.io room
+            'roundPhase': None,
+        }
         join_room(room_code)
         
         print(f'[LookUp.Cafe] Room created: {room_code} by {player_name}')
