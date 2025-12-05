@@ -7453,37 +7453,75 @@ def generate_room_code():
         if code not in game_rooms:
             return code
 
-def get_word_for_drawing():
-    """Get a random word for drawing game - expandable to database later"""
-    words = [
-        'cat', 'dog', 'house', 'tree', 'car', 'sun', 'moon', 'star', 'fish', 'bird',
-        'book', 'phone', 'computer', 'chair', 'table', 'flower', 'mountain', 'beach',
-        'pizza', 'apple', 'banana', 'guitar', 'camera', 'lamp', 'clock', 'door',
-        'window', 'bicycle', 'train', 'airplane', 'boat', 'umbrella', 'hat', 'shoe',
-        'coffee', 'cake', 'rainbow', 'cloud', 'lightning', 'heart', 'smile', 'music'
-    ]
-    return random.choice(words)
 
-def get_puzzle():
-    """Get a random puzzle - expandable to database later"""
-    puzzles = [
-        {
-            'question': 'What has keys but no locks, space but no room, and you can enter but not go inside?',
-            'answer': 'keyboard',
-            'hints': ['Used with computers', 'Has letters and numbers', 'You type on it']
-        },
-        {
-            'question': 'I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?',
-            'answer': 'echo',
-            'hints': ['Sound related', 'Bounces back', 'Heard in mountains']
-        },
-        {
-            'question': 'The more you take, the more you leave behind. What am I?',
-            'answer': 'footsteps',
-            'hints': ['You make them when walking', 'Leave a trail', 'On the ground']
+# Load game content on startup
+DRAWING_WORDS = {}
+PUZZLES = []
+
+def load_game_content():
+    """Load game content from JSON files"""
+    global DRAWING_WORDS, PUZZLES
+    
+    try:
+        # Load drawing words
+        words_path = os.path.join(os.path.dirname(__file__), 'game_content', 'drawing_words.json')
+        with open(words_path, 'r') as f:
+            DRAWING_WORDS = json.load(f)
+        print(f'[LookUp.Cafe] Loaded {sum(len(words) for words in DRAWING_WORDS.values())} drawing words')
+        
+        # Load puzzles
+        puzzles_path = os.path.join(os.path.dirname(__file__), 'game_content', 'puzzles.json')
+        with open(puzzles_path, 'r') as f:
+            PUZZLES = json.load(f)
+        print(f'[LookUp.Cafe] Loaded {len(PUZZLES)} puzzles')
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Warning: Could not load game content: {e}')
+        print('[LookUp.Cafe] Using fallback content')
+        # Fallback to simple lists
+        DRAWING_WORDS = {
+            'easy': ['cat', 'dog', 'house', 'tree', 'car', 'sun', 'moon', 'star']
         }
-    ]
-    return random.choice(puzzles)
+        PUZZLES = [{
+            'question': 'What has keys but no locks?',
+            'answer': 'keyboard',
+            'hints': ['Used with computers', 'Has letters'],
+            'difficulty': 'easy'
+        }]
+
+def get_word_for_drawing(difficulty='easy'):
+    """Get a random word for drawing game - now loads from database"""
+    if not DRAWING_WORDS:
+        load_game_content()
+    
+    # Select difficulty, fallback to easy
+    word_list = DRAWING_WORDS.get(difficulty, DRAWING_WORDS.get('easy', []))
+    if not word_list:
+        word_list = list(DRAWING_WORDS.values())[0] if DRAWING_WORDS else ['cat', 'dog', 'house']
+    
+    return random.choice(word_list)
+
+def get_puzzle(difficulty=None):
+    """Get a random puzzle - now loads from database"""
+    if not PUZZLES:
+        load_game_content()
+    
+    # Filter by difficulty if specified
+    if difficulty:
+        filtered = [p for p in PUZZLES if p.get('difficulty') == difficulty]
+        if filtered:
+            return random.choice(filtered)
+    
+    return random.choice(PUZZLES) if PUZZLES else {
+        'question': 'What has keys but no locks?',
+        'answer': 'keyboard',
+        'hints': ['Used with computers'],
+        'difficulty': 'easy'
+    }
+
+# Call load on import
+load_game_content()
+
 
 # ============================================================================
 # Socket Event Handlers

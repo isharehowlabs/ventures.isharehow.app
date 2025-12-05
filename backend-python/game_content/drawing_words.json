@@ -1,0 +1,47 @@
+{
+  "easy": [
+    "cat", "dog", "house", "tree", "car", "sun", "moon", "star", "fish", "bird",
+    "apple", "banana", "book", "chair", "table", "door", "window", "flower", "heart", "smile",
+    "cup", "hat", "shoe", "bed", "phone", "clock", "key", "ball", "boat", "kite",
+    "rain", "snow", "cloud", "fire", "water", "mountain", "beach", "cake", "pizza", "ice cream",
+    "guitar", "drum", "pen", "lamp", "box", "flag", "crown", "ring", "diamond", "coin"
+  ],
+  "medium": [
+    "bicycle", "airplane", "helicopter", "submarine", "volcano", "rainbow", "lightning", "thunder", "earthquake", "tornado",
+    "telescope", "microscope", "camera", "computer", "keyboard", "mouse", "headphones", "microphone", "speaker", "battery",
+    "umbrella", "backpack", "suitcase", "wallet", "glasses", "watch", "necklace", "bracelet", "earring", "perfume",
+    "sandwich", "hamburger", "hotdog", "spaghetti", "sushi", "taco", "burrito", "salad", "soup", "steak",
+    "soccer", "basketball", "baseball", "football", "tennis", "golf", "swimming", "skiing", "surfing", "skating",
+    "doctor", "teacher", "chef", "artist", "musician", "dancer", "athlete", "scientist", "engineer", "pilot",
+    "elephant", "giraffe", "zebra", "lion", "tiger", "bear", "monkey", "penguin", "dolphin", "shark"
+  ],
+  "hard": [
+    "democracy", "freedom", "justice", "equality", "opportunity", "responsibility", "determination", "inspiration", "imagination", "creativity",
+    "photosynthesis", "gravitational", "electromagnetic", "thermodynamics", "ecosystem", "biodiversity", "evolution", "genetics", "quantum", "relativity",
+    "architecture", "philosophy", "psychology", "sociology", "anthropology", "archaeology", "astronomy", "meteorology", "geology", "oceanography",
+    "meditation", "contemplation", "celebration", "procrastination", "communication", "collaboration", "negotiation", "presentation", "demonstration", "improvisation",
+    "disappointment", "embarrassment", "excitement", "frustration", "satisfaction", "confusion", "curiosity", "sympathy", "jealousy", "nostalgia",
+    "skyscraper", "pyramid", "colosseum", "lighthouse", "windmill", "fortress", "cathedral", "temple", "monument", "statue"
+  ],
+  "animals": [
+    "cat", "dog", "elephant", "giraffe", "lion", "tiger", "bear", "monkey", "zebra", "horse",
+    "cow", "pig", "sheep", "goat", "chicken", "duck", "rabbit", "mouse", "hamster", "guinea pig",
+    "fish", "shark", "whale", "dolphin", "octopus", "crab", "lobster", "starfish", "jellyfish", "seahorse",
+    "bird", "eagle", "owl", "parrot", "penguin", "flamingo", "peacock", "hummingbird", "woodpecker", "pelican",
+    "snake", "lizard", "crocodile", "turtle", "frog", "toad", "salamander", "chameleon", "gecko", "iguana"
+  ],
+  "objects": [
+    "phone", "computer", "laptop", "tablet", "camera", "television", "radio", "speaker", "headphones", "microphone",
+    "chair", "table", "bed", "sofa", "desk", "shelf", "cabinet", "drawer", "mirror", "lamp",
+    "door", "window", "wall", "floor", "ceiling", "roof", "stairs", "elevator", "escalator", "bridge",
+    "car", "bus", "train", "airplane", "helicopter", "boat", "ship", "submarine", "bicycle", "motorcycle",
+    "book", "pen", "pencil", "paper", "notebook", "calculator", "ruler", "scissors", "tape", "stapler"
+  ],
+  "actions": [
+    "running", "jumping", "swimming", "flying", "dancing", "singing", "playing", "reading", "writing", "drawing",
+    "eating", "drinking", "cooking", "baking", "cleaning", "washing", "sweeping", "mopping", "dusting", "organizing",
+    "sleeping", "waking", "stretching", "yawning", "sneezing", "coughing", "laughing", "crying", "smiling", "frowning",
+    "walking", "jogging", "sprinting", "crawling", "climbing", "sliding", "swinging", "bouncing", "spinning", "rolling",
+    "throwing", "catching", "kicking", "punching", "pushing", "pulling", "lifting", "carrying", "dragging", "dropping"
+  ]
+}

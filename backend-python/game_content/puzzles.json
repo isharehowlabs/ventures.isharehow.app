@@ -1,0 +1,302 @@
+[
+  {
+    "question": "What has keys but no locks, space but no room, and you can enter but not go inside?",
+    "answer": "keyboard",
+    "hints": ["Used with computers", "Has letters and numbers", "You type on it"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?",
+    "answer": "echo",
+    "hints": ["Sound related", "Bounces back", "Heard in mountains"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "The more you take, the more you leave behind. What am I?",
+    "answer": "footsteps",
+    "hints": ["You make them when walking", "Leave a trail", "On the ground"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What can travel around the world while staying in a corner?",
+    "answer": "stamp",
+    "hints": ["On mail", "Small square", "Postal item"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?",
+    "answer": "map",
+    "hints": ["Paper or digital", "Shows locations", "Used for navigation"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What gets wet while drying?",
+    "answer": "towel",
+    "hints": ["Bathroom item", "Made of fabric", "Used after shower"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "I have branches, but no fruit, trunk, or leaves. What am I?",
+    "answer": "bank",
+    "hints": ["Financial institution", "Stores money", "Has many locations"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What can fill a room but takes up no space?",
+    "answer": "light",
+    "hints": ["Comes from bulbs", "Opposite of dark", "You can see it"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What is always in front of you but can't be seen?",
+    "answer": "future",
+    "hints": ["Time related", "Not past or present", "What's coming"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What has a head and a tail but no body?",
+    "answer": "coin",
+    "hints": ["Currency", "Metal disc", "Used for payment"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "I'm tall when I'm young, and I'm short when I'm old. What am I?",
+    "answer": "candle",
+    "hints": ["Provides light", "Made of wax", "Burns down"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What month of the year has 28 days?",
+    "answer": "all",
+    "hints": ["Calendar question", "Not just February", "Every month"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is full of holes but still holds water?",
+    "answer": "sponge",
+    "hints": ["Cleaning item", "Absorbent", "Kitchen or bathroom"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What question can you never answer yes to?",
+    "answer": "are you asleep",
+    "hints": ["About your state", "Consciousness related", "Paradoxical"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "I shave every day, but my beard stays the same. What am I?",
+    "answer": "barber",
+    "hints": ["Profession", "Works with hair", "Uses razors"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "You see a boat filled with people, yet there isn't a single person on board. How is that possible?",
+    "answer": "married",
+    "hints": ["Relationship status", "Not single", "Couples"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "What can you break, even if you never pick it up or touch it?",
+    "answer": "promise",
+    "hints": ["Abstract concept", "Given in words", "Commitment"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What goes up but never comes down?",
+    "answer": "age",
+    "hints": ["Time related", "Everyone experiences it", "Birthday related"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "A man who was outside in the rain without an umbrella or hat didn't get a single hair on his head wet. Why?",
+    "answer": "bald",
+    "hints": ["No hair", "Head condition", "Nothing to get wet"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What can you keep after giving to someone?",
+    "answer": "word",
+    "hints": ["Promise related", "Speech", "Commitment"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "I follow you all the time and copy your every move, but you can't touch me or catch me. What am I?",
+    "answer": "shadow",
+    "hints": ["Dark shape", "Needs light", "Behind you"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What has many teeth, but can't bite?",
+    "answer": "comb",
+    "hints": ["Hair tool", "Grooming item", "Has prongs"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What has a thumb and four fingers, but is not a hand?",
+    "answer": "glove",
+    "hints": ["Worn on hands", "Keeps warm", "Clothing item"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What has legs, but doesn't walk?",
+    "answer": "table",
+    "hints": ["Furniture", "Four of them", "Flat surface"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What has one eye, but can't see?",
+    "answer": "needle",
+    "hints": ["Sewing tool", "Thread goes through", "Sharp point"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What has hands, but can't clap?",
+    "answer": "clock",
+    "hints": ["Tells time", "On walls", "Ticks"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What has a bottom at the top?",
+    "answer": "leg",
+    "hints": ["Body part", "You walk with them", "Under your torso"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "What gets bigger when more is taken away?",
+    "answer": "hole",
+    "hints": ["Empty space", "Digging makes it", "Nothing is there"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "I'm light as a feather, yet the strongest person can't hold me for five minutes. What am I?",
+    "answer": "breath",
+    "hints": ["You do it constantly", "Lungs related", "Air"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "I'm found in socks, scarves and mittens; and often in the paws of playful kittens. What am I?",
+    "answer": "yarn",
+    "hints": ["String material", "Knitting", "Comes in balls"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Where does today come before yesterday?",
+    "answer": "dictionary",
+    "hints": ["Book of words", "Alphabetical order", "Reference"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "What invention lets you look right through a wall?",
+    "answer": "window",
+    "hints": ["Made of glass", "Part of buildings", "Transparent"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "If you've got me, you want to share me; if you share me, you haven't kept me. What am I?",
+    "answer": "secret",
+    "hints": ["Private information", "Confidential", "Don't tell"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What can't be put in a saucepan?",
+    "answer": "lid",
+    "hints": ["Pot cover", "Goes on top", "Too big"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "What goes up and down but doesn't move?",
+    "answer": "stairs",
+    "hints": ["Building feature", "Steps", "Between floors"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "If you're running in a race and you pass the person in second place, what place are you in?",
+    "answer": "second",
+    "hints": ["Think carefully", "Not first", "Logic puzzle"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "It belongs to you, but other people use it more than you do. What is it?",
+    "answer": "name",
+    "hints": ["Identity", "People call you by it", "Given at birth"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What building has the most stories?",
+    "answer": "library",
+    "hints": ["Full of books", "Public place", "Quiet"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What has four wheels and flies?",
+    "answer": "garbage truck",
+    "hints": ["Vehicle", "Smelly", "Waste management"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is so fragile that saying its name breaks it?",
+    "answer": "silence",
+    "hints": ["Quiet", "No sound", "Peaceful"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What gets wetter and wetter the more it dries?",
+    "answer": "towel",
+    "hints": ["Bathroom item", "Absorbent", "Made of fabric"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "You walk into a room with a match, a kerosene lamp, a candle, and a fireplace. Which do you light first?",
+    "answer": "match",
+    "hints": ["Think logically", "First step", "Need it for others"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "A man dies of old age on his 25th birthday. How is this possible?",
+    "answer": "leap year",
+    "hints": ["February 29th", "Every 4 years", "Birthday frequency"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "I have lakes with no water, mountains with no stone, and cities with no buildings. What am I?",
+    "answer": "map",
+    "hints": ["Shows geography", "Paper or digital", "Navigation tool"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What disappears as soon as you say its name?",
+    "answer": "silence",
+    "hints": ["Absence of sound", "Peaceful", "Quiet"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "The more of this there is, the less you see. What is it?",
+    "answer": "darkness",
+    "hints": ["Absence of light", "Night time", "Can't see well"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What has words, but never speaks?",
+    "answer": "book",
+    "hints": ["Has pages", "Reading material", "Library item"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What runs all around a backyard, yet never moves?",
+    "answer": "fence",
+    "hints": ["Boundary", "Made of wood or metal", "Property line"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What can you catch, but not throw?",
+    "answer": "cold",
+    "hints": ["Illness", "Contagious", "Makes you sick"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "What kind of band never plays music?",
+    "answer": "rubber",
+    "hints": ["Stretchy", "Holds things", "Office supply"],
+    "difficulty": "hard"
+  }
+]

@@ -34,6 +34,8 @@ import { GameType } from '../../types/game';
 import GuessingGame from './GuessingGame';
 import DrawingGame from './DrawingGame';
 import PuzzleGame from './PuzzleGame';
+import ChatPanel from './ChatPanel';
+
 
 export default function GameRoom() {
   const { gameRoom, players, leaveRoom, startGame } = useGameSocket();
@@ -247,6 +249,15 @@ export default function GameRoom() {
                 </ListItem>
               ))}
             </List>
+          </Paper>
+        
+          
+          {/* Chat Panel */}
+          <Paper elevation={3} sx={{ p: 0, mt: 2, height: 300 }}>
+            <ChatPanel 
+              roomCode={gameRoom.roomCode}
+              playerName={currentPlayer?.name || 'Guest'}
+            />
           </Paper>
         </Grid>
       </Grid>
