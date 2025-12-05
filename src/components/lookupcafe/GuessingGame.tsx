@@ -383,9 +383,37 @@ export default function GuessingGame() {
                 <Typography variant="h4" gutterBottom fontWeight="bold">
                   🤔 Guess the Secret Word!
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
-                The host has chosen a secret word. Think of what word they might have picked!
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  The host has chosen a secret word. Think of what word they might have picked!
                 </Typography>
+                
+                {/* Display list of all words for this game */}
+                {(gameRoom as any)?.secretWords && Array.isArray((gameRoom as any).secretWords) && (gameRoom as any).secretWords.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
+                      Words for this game:
+                    </Typography>
+                    <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ mt: 2 }}>
+                      {(gameRoom as any).secretWords.map((word: string, index: number) => (
+                        <Chip
+                          key={index}
+                          label={`${index + 1}. ${word}`}
+                          color={index === (gameRoom.currentRound - 1) ? 'primary' : 'default'}
+                          variant={index === (gameRoom.currentRound - 1) ? 'filled' : 'outlined'}
+                          sx={{ 
+                            fontWeight: index === (gameRoom.currentRound - 1) ? 'bold' : 'normal',
+                            fontSize: '0.9rem',
+                            mb: 1
+                          }}
+                        />
+                      ))}
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Round {gameRoom.currentRound} word is highlighted
+                    </Typography>
+                  </Box>
+                )}
+                
                 <Chip 
                   label={`${guessProgress.submitted} / ${guessProgress.total} players have guessed`} 
                   sx={{ mt: 2 }}
