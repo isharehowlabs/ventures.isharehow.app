@@ -22,6 +22,10 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
+# Use SQLAlchemy's psycopg (v3) driver instead of psycopg2 for Python 3.13 compatibility
+if '://' in DATABASE_URL and not 'postgresql+' in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://')
+
 print(f"Connecting to database...")
 engine = create_engine(DATABASE_URL)
 
