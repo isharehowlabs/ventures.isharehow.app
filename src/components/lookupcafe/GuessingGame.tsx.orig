@@ -47,6 +47,7 @@ export default function GuessingGame() {
     nextGuessingRound,
   } = useGameSocket();
 
+  console.log('[GuessingGame] Component mounted', { gameRoom: !!gameRoom, players: players.length, socketId });
   // Host word setup state
   const [words, setWords] = useState(['', '', '', '', '']);
   const [wordErrors, setWordErrors] = useState<string[]>([]);
@@ -114,6 +115,7 @@ export default function GuessingGame() {
   const currentPlayer = players.find(p => p.id === socketId);
   const phase = (gameRoom as any)?.roundPhase;
   
+  console.log('[GuessingGame] Debug:', { isHost, phase, state: gameRoom.state, socketId, playersCount: players.length });
 
   // Phase 1: Host Word Setup (before game starts)
   if (!phase || gameRoom.state === 'lobby') {
@@ -271,7 +273,21 @@ export default function GuessingGame() {
               </Paper>
 
               {/* Guess Input */}
-              {!hasGuessed && timeLeft > 0 ? (
+              {isHost ? (
+                <Alert severity="info" icon={<TimerIcon />}>
+                  <Typography variant="h6" gutterBottom>
+                    Waiting for players to submit their guesses...
+                  </Typography>
+                  <Typography variant="body2">
+                    As the host, you'll vote on which guess is closest to your secret word once all players have submitted.
+                  </Typography>
+                  <Box mt={2}>
+                    <Typography variant="body2" fontWeight="bold">
+                      Your secret word: {(gameRoom as any).currentWord || '???'}
+                    </Typography>
+                  </Box>
+                </Alert>
+              ) : !hasGuessed && timeLeft > 0 ? (
                 <Box display="flex" gap={2}>
                   <TextField
                     fullWidth

@@ -48,7 +48,6 @@ export default function GameRoom() {
   const isPlaying = gameRoom.state === 'playing';
   const isGameEnd = gameRoom.state === 'gameEnd';
 
-  console.log('[GameRoom] State:', { isLobby, isPlaying, isGameEnd, gameType: gameRoom.gameType, state: gameRoom.state, roundPhase: (gameRoom as any)?.roundPhase });
 
   const handleCopyRoomCode = () => {
     navigator.clipboard.writeText(gameRoom.roomCode);
@@ -81,7 +80,6 @@ export default function GameRoom() {
   if (isPlaying) {
     switch (gameRoom.gameType) {
       case 'guessing':
-        console.log('[GameRoom] Rendering GuessingGame component');
         return <GuessingGame />;
       case 'drawing':
         return <DrawingGame />;
