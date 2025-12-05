@@ -8970,3 +8970,40 @@ def intervals_proxy_athlete():
         app.logger.error(f"Unexpected error in intervals_proxy_athlete: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
 
+
+@socketio.on('game:set-type')
+def handle_set_game_type(data):
+    """Set the game type for a room (host only, before starting)"""
+    try:
+        room_code = data.get('roomCode')
+        game_type = data.get('gameType')
+        player_id = request.sid
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        
+        # Verify host
+        if room['hostId'] != player_id:
+            emit('game:error', {'message': 'Only host can set game type'})
+            return
+        
+        # Validate game type
+        if game_type not in ['guessing', 'drawing', 'puzzle']:
+            emit('game:error', {'message': 'Invalid game type'})
+            return
+        
+        # Set game type
+        room['gameType'] = game_type
+        
+        print(f'[LookUp.Cafe] Game type set to {game_type} in room {room_code}')
+        
+        # Notify all players in room
+        emit('game:type-set', {'room': room}, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error setting game type: {e}')
+        emit('game:error', {'message': f'Failed to set game type: {str(e)}'})
+

@@ -10,7 +10,7 @@ import {
   SubmitAnswerData,
   DrawingData,
   RoundResult,
-} from '../types/game';
+, GameType} from '../types/game';
 
 interface UseGameSocketReturn {
   gameRoom: GameRoom | null;
@@ -21,6 +21,7 @@ interface UseGameSocketReturn {
   createRoom: (data: CreateRoomData) => void;
   joinRoom: (data: JoinRoomData) => void;
   leaveRoom: () => void;
+  setGameType: (roomCode: string, gameType: GameType) => void;
   startGame: (data: StartGameData) => void;
   submitAnswer: (data: SubmitAnswerData) => void;
   sendDrawing: (data: DrawingData) => void;
@@ -89,6 +90,10 @@ export const useGameSocket = (): UseGameSocketReturn => {
       setGameRoom(data.room);
     };
 
+    const handleTypeSet = (data: { room: GameRoom }) => {
+      setGameRoom(data.room);
+    };
+
     const handleRoundEnd = (data: { room: GameRoom; result: RoundResult }) => {
       setGameRoom(data.room);
       // Update players with new scores
@@ -122,6 +127,7 @@ export const useGameSocket = (): UseGameSocketReturn => {
     socket.on('game:started', handleGameStarted);
     socket.on('game:state-update', handleStateUpdate);
     socket.on('game:round-start', handleRoundStart);
+    socket.on('game:type-set', handleTypeSet);
     socket.on('game:round-end', handleRoundEnd);
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:error', handleError);
@@ -140,6 +146,7 @@ export const useGameSocket = (): UseGameSocketReturn => {
       socket.off('game:started', handleGameStarted);
       socket.off('game:state-update', handleStateUpdate);
       socket.off('game:round-start', handleRoundStart);
+      socket.off('game:type-set', handleTypeSet);
       socket.off('game:round-end', handleRoundEnd);
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:error', handleError);
@@ -166,6 +173,12 @@ export const useGameSocket = (): UseGameSocketReturn => {
       setPlayers([]);
     }
   }, [gameRoom]);
+
+  const setGameType = useCallback((roomCode: string, gameType: GameType) => {
+    if (socketRef.current) {
+      socketRef.current.emit('game:set-type', { roomCode, gameType });
+    }
+  }, []);
 
   const startGame = useCallback((data: StartGameData) => {
     if (socketRef.current) {
@@ -200,6 +213,7 @@ export const useGameSocket = (): UseGameSocketReturn => {
     createRoom,
     joinRoom,
     leaveRoom,
+    setGameType,
     startGame,
     submitAnswer,
     sendDrawing,

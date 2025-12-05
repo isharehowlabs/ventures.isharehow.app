@@ -17,8 +17,6 @@ import {
   CardContent,
   IconButton,
   Alert,
-  ToggleButtonGroup,
-  ToggleButton,
 } from '@mui/material';
 import {
   ExitToApp as LeaveIcon,
@@ -34,12 +32,12 @@ import { GameType } from '../../types/game';
 import GuessingGame from './GuessingGame';
 import DrawingGame from './DrawingGame';
 import PuzzleGame from './PuzzleGame';
+import GameTypeSelection from './GameTypeSelection';
 import ChatPanel from './ChatPanel';
 
 
 export default function GameRoom() {
-  const { gameRoom, players, socketId, leaveRoom, startGame } = useGameSocket();
-  const [selectedGameType, setSelectedGameType] = useState<GameType>('drawing');
+  const { gameRoom, players, socketId, leaveRoom, setGameType, startGame } = useGameSocket();
 
   if (!gameRoom) return null;
 
@@ -59,9 +57,15 @@ export default function GameRoom() {
     if (isHost && selectedGameType) {
       startGame({
         roomCode: gameRoom.roomCode,
-        gameType: selectedGameType,
+        gameType: gameRoom.gameType!,
         maxRounds: 5,
       });
+    }
+  };
+
+  const handleSelectGameType = (gameType: GameType) => {
+    if (gameRoom) {
+      setGameType(gameRoom.roomCode, gameType);
     }
   };
 
@@ -136,6 +140,42 @@ export default function GameRoom() {
     );
   }
 
+  // Show game type selection for host if not set
+  if (isLobby && !gameRoom.gameType && isHost) {
+    return (
+      <GameTypeSelection
+        roomCode={gameRoom.roomCode}
+        onSelectGame={handleSelectGameType}
+      />
+    );
+  }
+
+  // Show waiting for host to select game type
+  if (isLobby && !gameRoom.gameType && !isHost) {
+    return (
+      <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            Waiting for Host
+          </Typography>
+          <Typography variant="body1" color="text.secondary" paragraph>
+            The host is selecting the game type...
+          </Typography>
+          <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>
+            Room Code: {gameRoom.roomCode}
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={handleLeaveRoom}
+            sx={{ mt: 2 }}
+          >
+            Leave Room
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
   // Render lobby (waiting room)
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -169,38 +209,12 @@ export default function GameRoom() {
 
             <Divider sx={{ my: 2 }} />
 
+            <Alert severity="success" sx={{ mb: 3 }}>
+              <strong>Game Type:</strong> {gameRoom.gameType === 'guessing' ? 'Guessing Game' : gameRoom.gameType === 'drawing' ? 'Drawing Game' : 'Puzzle Game'}
+            </Alert>
+
             {isHost ? (
               <>
-                <Typography variant="h6" gutterBottom>
-                  Select Game Type
-                </Typography>
-                <ToggleButtonGroup
-                  value={selectedGameType}
-                  exclusive
-                  onChange={(e, value) => value && setSelectedGameType(value)}
-                  fullWidth
-                  sx={{ mb: 3 }}
-                >
-                  <ToggleButton value="guessing">
-                    <Box textAlign="center" p={1}>
-                      <GuessingIcon sx={{ fontSize: 40 }} />
-                      <Typography variant="body2">Guessing</Typography>
-                    </Box>
-                  </ToggleButton>
-                  <ToggleButton value="drawing">
-                    <Box textAlign="center" p={1}>
-                      <DrawingIcon sx={{ fontSize: 40 }} />
-                      <Typography variant="body2">Drawing</Typography>
-                    </Box>
-                  </ToggleButton>
-                  <ToggleButton value="puzzle">
-                    <Box textAlign="center" p={1}>
-                      <PuzzleIcon sx={{ fontSize: 40 }} />
-                      <Typography variant="body2">Puzzle</Typography>
-                    </Box>
-                  </ToggleButton>
-                </ToggleButtonGroup>
-
                 <Button
                   variant="contained"
                   size="large"
