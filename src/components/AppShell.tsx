@@ -96,8 +96,9 @@ const AppShell = ({ active, children }: AppShellProps) => {
         position="fixed"
         sx={{
           zIndex: 1201,
-          backgroundColor: 'background.paper',
-          color: 'text.primary',
+          backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}
         elevation={1}
       >
@@ -229,6 +230,8 @@ const AppShell = ({ active, children }: AppShellProps) => {
               boxSizing: 'border-box',
               width: DRAWER_WIDTH,
               zIndex: 1200,
+              backgroundColor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
             },
           }}
         >
@@ -245,6 +248,9 @@ const AppShell = ({ active, children }: AppShellProps) => {
               boxSizing: 'border-box',
               width: DRAWER_WIDTH,
               zIndex: 1200,
+              backgroundColor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              borderRight: `1px solid ${theme.palette.divider}`,
             },
           }}
           open

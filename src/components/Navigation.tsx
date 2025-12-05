@@ -7,6 +7,7 @@ import {
   Tooltip,
   Box,
   Typography,
+  useTheme,
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -123,6 +124,7 @@ interface NavigationProps {
 
 export default function Navigation({ active, isAuthenticated = false, collapsed = false, onLogin }: NavigationProps) {
   const router = useRouter();
+  const theme = useTheme();
 
   const handleNavigate = (href: string) => {
     router.push(href);
@@ -136,7 +138,16 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   });
 
   return (
-    <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box 
+      sx={{ 
+        overflow: 'auto', 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+      }}
+    >
       {!collapsed && (
         <Box sx={{ p: 2, textAlign: 'center' }}>
           <Typography variant="h6" color="primary" fontWeight="bold">
@@ -148,7 +159,14 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
         </Box>
       )}
       
-      <List sx={{ px: 1, flexGrow: 1 }}>
+      <List 
+        sx={{ 
+          px: 1, 
+          flexGrow: 1,
+          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+        }}
+      >
         {filteredItems.map((item) => (
           <Box key={item.key}>
             <Tooltip title={collapsed ? item.label : ''} placement="right">
@@ -159,6 +177,18 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                   minHeight: 48,
                   justifyContent: collapsed ? 'center' : 'initial',
                   px: 2.5,
+                  backgroundColor: active === item.key 
+                    ? theme.palette.action.selected 
+                    : 'transparent',
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover,
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: theme.palette.action.selected,
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.selected,
+                    },
+                  },
                 }}
               >
                 <ListItemIcon
@@ -182,7 +212,14 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                 )}
               </ListItemButton>
             </Tooltip>
-            {item.dividerAfter && <Divider sx={{ my: 1 }} />}
+            {item.dividerAfter && (
+              <Divider 
+                sx={{ 
+                  my: 1,
+                  borderColor: theme.palette.divider,
+                }} 
+              />
+            )}
           </Box>
         ))}
         
@@ -197,6 +234,9 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                   minHeight: 48,
                   justifyContent: collapsed ? 'center' : 'initial',
                   px: 2.5,
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover,
+                  },
                 }}
               >
                 <ListItemIcon

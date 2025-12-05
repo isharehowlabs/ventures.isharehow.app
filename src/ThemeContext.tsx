@@ -71,8 +71,14 @@ const updateDOMTheme = (resolvedMode: ResolvedThemeMode) => {
   }
   colorSchemeMetaTag.setAttribute('content', resolvedMode);
   
-  // Also update the document.body style to force re-render
-  document.body.style.backgroundColor = ''; // Clear inline styles
+  // Also update the document.body style to match theme
+  if (resolvedMode === 'dark') {
+    document.body.style.backgroundColor = '#0f172a';
+    document.body.style.color = '#f7fafc';
+  } else {
+    document.body.style.backgroundColor = '#FFFFFF';
+    document.body.style.color = '#212529';
+  }
   
   // Remove transition prevention class after a short delay
   requestAnimationFrame(() => {
@@ -95,13 +101,25 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
     return resolved;
   }, [mode, systemPreference]);
 
-  // On mount, ensure theme is correct
-  useEffect(() => {
+  // On mount, ensure theme is correct - use useLayoutEffect to run before paint
+  useLayoutEffect(() => {
     mountedRef.current = true;
     console.log('[ThemeContext] Component mounted, mode:', mode, 'resolvedMode:', resolvedMode);
     
-    // Force update DOM on mount to ensure consistency
+    // Force update DOM on mount to ensure consistency BEFORE React paints
     updateDOMTheme(resolvedMode);
+    
+    // Apply theme colors to body immediately to prevent flash
+    if (typeof window !== 'undefined') {
+      const body = document.body;
+      if (resolvedMode === 'dark') {
+        body.style.backgroundColor = '#0f172a';
+        body.style.color = '#f7fafc';
+      } else {
+        body.style.backgroundColor = '#FFFFFF';
+        body.style.color = '#212529';
+      }
+    }
   }, []);
 
   // Listen for system preference changes (single effect for system monitoring)
@@ -127,13 +145,20 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
-  // Update document when resolvedMode changes
-  useEffect(() => {
+  // Update document when resolvedMode changes - use useLayoutEffect for immediate updates
+  useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!mountedRef.current) return; // Skip on initial render
+    if (!mountedRef.current) return; // Skip on initial render (handled by mount effect)
     
     console.log('[ThemeContext] resolvedMode changed, updating DOM to:', resolvedMode);
     updateDOMTheme(resolvedMode);
+    
+    // Force MUI components to re-render with new theme
+    if (typeof window !== 'undefined') {
+      // Trigger a reflow to ensure all components update
+      const event = new Event('themechange', { bubbles: true });
+      document.dispatchEvent(event);
+    }
   }, [resolvedMode]);
 
   const setThemeMode = (newMode: ThemeMode) => {

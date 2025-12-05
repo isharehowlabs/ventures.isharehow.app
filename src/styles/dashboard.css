@@ -1,5 +1,30 @@
 /* Dashboard-specific styles and animations */
 
+/* Ensure MUI Cards and Papers respect theme on initial load */
+[data-theme="dark"] .MuiCard-root,
+[data-theme="dark"] .MuiPaper-root {
+  background-color: #1e293b !important;
+  color: #f7fafc !important;
+}
+
+[data-theme="light"] .MuiCard-root,
+[data-theme="light"] .MuiPaper-root {
+  background-color: #FFFFFF !important;
+  color: #212529 !important;
+}
+
+.dark-mode .MuiCard-root,
+.dark-mode .MuiPaper-root {
+  background-color: #1e293b !important;
+  color: #f7fafc !important;
+}
+
+.light-mode .MuiCard-root,
+.light-mode .MuiPaper-root {
+  background-color: #FFFFFF !important;
+  color: #212529 !important;
+}
+
 /* Card hover animations */
 .dashboard-card {
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;

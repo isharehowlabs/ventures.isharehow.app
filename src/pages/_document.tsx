@@ -43,6 +43,10 @@ export default function Document() {
                   
                   const theme = getInitialTheme();
                   const html = document.documentElement;
+                  const body = document.body;
+                  
+                  // Remove any existing theme classes first
+                  html.classList.remove('light-mode', 'dark-mode');
                   
                   // Set data attribute for CSS modules
                   html.setAttribute('data-theme', theme);
@@ -50,10 +54,25 @@ export default function Document() {
                   // Set class for any class-based theme selectors
                   html.classList.add(theme + '-mode');
                   
+                  // Set body background to match theme immediately
+                  if (theme === 'dark') {
+                    body.style.backgroundColor = '#0f172a';
+                    body.style.color = '#f7fafc';
+                  } else {
+                    body.style.backgroundColor = '#FFFFFF';
+                    body.style.color = '#212529';
+                  }
+                  
                   // Update color-scheme meta tag
                   const colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
                   if (colorSchemeMeta) {
                     colorSchemeMeta.setAttribute('content', theme);
+                  } else {
+                    // Create if it doesn't exist
+                    const meta = document.createElement('meta');
+                    meta.setAttribute('name', 'color-scheme');
+                    meta.setAttribute('content', theme);
+                    document.head.appendChild(meta);
                   }
                 } catch (e) {
                   console.error('Failed to initialize theme:', e);
