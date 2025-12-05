@@ -45,7 +45,7 @@ export default function GameRoom() {
   const currentPlayer = players.find(p => p.id === socketId);
   const isHost = currentPlayer?.isHost || false;
   const isLobby = gameRoom.state === 'lobby';
-  const isPlaying = gameRoom.state === 'playing';
+  console.log('[GameRoom] State:', { isLobby, isPlaying, isGameEnd, gameType: gameRoom.gameType, state: gameRoom.state, roundPhase: (gameRoom as any)?.roundPhase, fullRoom: gameRoom });
   const isGameEnd = gameRoom.state === 'gameEnd';
 
   console.log('[GameRoom] State:', { isLobby, isPlaying, isGameEnd, gameType: gameRoom.gameType, state: gameRoom.state, roundPhase: (gameRoom as any)?.roundPhase });
