@@ -130,7 +130,36 @@ socketio = SocketIO(
 CORS(app, 
      origins=allowed_origins,
      supports_credentials=True,
-     allow_headers=['Content-Type', 'Authorization', 'X-Intervals-API-Key'])
+     allow_headers=['Content-Type', 'Authorization', 'X-Intervals-API-Key'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
+
+# Add before_request handler to handle OPTIONS preflight requests globally
+@app.before_request
+def handle_options():
+    """Handle OPTIONS preflight requests before any decorators run"""
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        origin = request.headers.get('Origin')
+        if origin and origin in allowed_origins:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Intervals-API-Key')
+            response.headers.add('Access-Control-Max-Age', '3600')
+        return response
+
+# Add after_request handler to ensure CORS headers are always set, even on errors
+@app.after_request
+def after_request(response):
+    """Ensure CORS headers are always present, even on error responses"""
+    origin = request.headers.get('Origin')
+    if origin and origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Intervals-API-Key')
+        response.headers.add('Access-Control-Max-Age', '3600')
+    return response
 
 # Initialize JWT Manager (flask-jwt-extended)
 jwt = JWTManager(app)
@@ -1857,9 +1886,12 @@ def handle_general_exception(e):
     }), 500
 
 # --- Auth Endpoints (JWT-based) ---
-@app.route('/api/auth/register', methods=['POST'])
+@app.route('/api/auth/register', methods=['POST', 'OPTIONS'])
 def register():
     """Register a new user with username and password"""
+    # Handle OPTIONS preflight request
+    if request.method == 'OPTIONS':
+        return '', 200
     global DB_AVAILABLE
     
     if not DB_AVAILABLE:
@@ -2016,9 +2048,12 @@ def register():
             'details': 'Check server logs for more information'
         }), 500
 
-@app.route('/api/auth/login', methods=['POST'])
+@app.route('/api/auth/login', methods=['POST', 'OPTIONS'])
 def login():
     """Login with username/email and password"""
+    # Handle OPTIONS preflight request
+    if request.method == 'OPTIONS':
+        return '', 200
     global DB_AVAILABLE
     
     if not DB_AVAILABLE:
@@ -2318,10 +2353,14 @@ def verify_patreon():
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/auth/me', methods=['GET'])
+@app.route('/api/auth/me', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def auth_me():
     """Get current authenticated user info - optimized for speed"""
+    # Handle OPTIONS preflight request
+    if request.method == 'OPTIONS':
+        return '', 200
+    
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
@@ -2501,10 +2540,13 @@ def auth_me():
             'message': 'Unable to fetch user information. Please try again later.'
         }), 500
 
-@app.route('/api/auth/logout', methods=['POST'])
+@app.route('/api/auth/logout', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def auth_logout():
     """Logout user by clearing JWT cookie"""
+    # Handle OPTIONS preflight request (decorator allows this)
+    if request.method == 'OPTIONS':
+        return '', 200
     response = jsonify({'message': 'Logged out successfully'})
     unset_jwt_cookies(response)
     return response
@@ -2526,10 +2568,13 @@ def refresh_patreon_token(refresh_token):
         print(f"Error refreshing Patreon token: {e}")
     return None
 
-@app.route('/api/auth/refresh', methods=['POST'])
+@app.route('/api/auth/refresh', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def refresh_token():
     """Refresh Patreon access token if expired"""
+    # Handle OPTIONS preflight request (decorator allows this)
+    if request.method == 'OPTIONS':
+        return '', 200
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     

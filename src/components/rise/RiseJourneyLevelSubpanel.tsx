@@ -54,6 +54,17 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [activeTab, setActiveTab] = useState<'lessons' | 'tasks' | 'journal' | 'learning'>('lessons');
+  const [journalEntries, setJournalEntries] = useState<{
+    physical: string;
+    mental: string;
+    spiritual: string;
+    wellness: string;
+  }>({
+    physical: '',
+    mental: '',
+    spiritual: '',
+    wellness: '',
+  });
 
   useEffect(() => {
     loadLevelData();
@@ -81,8 +92,16 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
       );
       if (tasksResponse.ok) {
         const tasksData = await tasksResponse.json();
-        setTasks(tasksData || []);
+        if (Array.isArray(tasksData.tasks)) {
+          setTasks(tasksData.tasks);
+        } else if (Array.isArray(tasksData)) {
+          setTasks(tasksData);
+        }
       }
+
+      // Load journal entries for this level (if any lessons have journal entries)
+      // Note: Journal entries are typically per-lesson, but we can show level-wide reflection
+      // For now, we'll initialize empty and let users save per-level reflections
     } catch (err: any) {
       setError(err.message || 'Failed to load level data');
     } finally {
@@ -157,6 +176,34 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
       setTasks(tasks.filter(task => task.id !== taskId));
     } catch (err) {
       console.error('Failed to delete task:', err);
+    }
+  };
+
+  const saveJournalEntry = async (pillar: 'physical' | 'mental' | 'spiritual' | 'wellness', content: string) => {
+    const updated = { ...journalEntries, [pillar]: content };
+    setJournalEntries(updated);
+    
+    try {
+      // Save journal entry for the level (we'll use the first lesson ID or create a level-wide entry)
+      // For now, we'll save to a special endpoint or use the first lesson
+      if (lessons.length > 0) {
+        const response = await fetch(`${backendUrl}/api/rise-journey/lessons/${lessons[0].id}/journal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            pillar,
+            content,
+            levelId: level.id, // Include level ID for level-wide reflections
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to save journal entry');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save journal entry:', err);
     }
   };
 
@@ -430,6 +477,8 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                   💪 Physical Body
                 </label>
                 <textarea
+                  value={journalEntries.physical}
+                  onChange={(e) => saveJournalEntry('physical', e.target.value)}
                   className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   placeholder="How does this level apply to your body? Energy levels? Physical sensations?"
                 />
@@ -439,6 +488,8 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                   🧠 Mental State
                 </label>
                 <textarea
+                  value={journalEntries.mental}
+                  onChange={(e) => saveJournalEntry('mental', e.target.value)}
                   className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="What mental blocks arose? New insights? Clarity gained?"
                 />
@@ -448,6 +499,8 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                   ✨ Spiritual Connection
                 </label>
                 <textarea
+                  value={journalEntries.spiritual}
+                  onChange={(e) => saveJournalEntry('spiritual', e.target.value)}
                   className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                   placeholder="How does this align with your spirit? Intuitive feelings?"
                 />
@@ -457,13 +510,16 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                   🌿 Wellness & Balance
                 </label>
                 <textarea
+                  value={journalEntries.wellness}
+                  onChange={(e) => saveJournalEntry('wellness', e.target.value)}
                   className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 resize-none"
                   placeholder="Overall wellbeing? Self-care insights? Balance reflections?"
                 />
               </div>
-              <button className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
-                Save Journal Entry
-              </button>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                <p className="font-semibold">✓ Auto-saving enabled</p>
+                <p className="text-xs mt-1">Your reflections are automatically saved as you type.</p>
+              </div>
             </div>
           )}
 

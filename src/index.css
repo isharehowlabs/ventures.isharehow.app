@@ -1,14 +1,51 @@
 /* Minimal CSS - Material UI handles everything else */
 
+/* Default theme (light) - these are fallbacks if data-theme is not set yet */
+:root {
+  --bg-default: #FFFFFF;
+  --bg-paper: #FFFFFF;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+}
+
+/* Light mode explicit */
+html[data-theme="light"] {
+  --bg-default: #FFFFFF;
+  --bg-paper: #FFFFFF;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  background-color: #FFFFFF;
+  color: #212529;
+}
+
+/* Dark mode */
+html[data-theme="dark"] {
+  --bg-default: #0f172a;
+  --bg-paper: #1e293b;
+  --text-primary: #f7fafc;
+  --text-secondary: #cbd5e0;
+  --border-color: #334155;
+  background-color: #0f172a;
+  color: #f7fafc;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body, #root {
+html, body, #root, #__next {
   height: 100%;
   width: 100%;
+}
+
+body {
+  /* Inherit from html element */
+  background-color: inherit;
+  color: inherit;
 }
 
 /* Prevent CSS transitions during theme changes to avoid flashing */
@@ -27,7 +64,7 @@ html, body, #root {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bg-paper);
 }
 
 ::-webkit-scrollbar-thumb {

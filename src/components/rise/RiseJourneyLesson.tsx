@@ -58,10 +58,7 @@ const RiseJourneyLesson: React.FC<RiseJourneyLessonProps> = ({
     spiritual: '',
     wellness: ''
   });
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', text: 'Drink 1L water during lesson', completed: false },
-    { id: '2', text: 'Setup yoga mat', completed: true }
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -71,19 +68,74 @@ const RiseJourneyLesson: React.FC<RiseJourneyLessonProps> = ({
   }, [lesson.lessonId]);
 
   const loadLessonData = async () => {
-    // TODO: Implement API calls to load existing notes, journal entries, and tasks
     try {
-      // const notesResponse = await fetch(`/api/rise-journey/lessons/${lesson.lessonId}/notes`);
-      // const notesData = await notesResponse.json();
-      // setNotes(notesData.content);
+      // Load notes
+      try {
+        const notesResponse = await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.lessonId}/notes`, {
+          credentials: 'include',
+        });
+        if (notesResponse.ok) {
+          const notesData = await notesResponse.json();
+          if (notesData.content) {
+            setNotes(notesData.content);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load notes:', err);
+      }
 
-      // const journalResponse = await fetch(`/api/rise-journey/lessons/${lesson.lessonId}/journal`);
-      // const journalData = await journalResponse.json();
-      // setJournalEntry(journalData);
+      // Load journal entries (4 pillars)
+      try {
+        const journalResponse = await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.lessonId}/journal`, {
+          credentials: 'include',
+        });
+        if (journalResponse.ok) {
+          const journalData = await journalResponse.json();
+          if (Array.isArray(journalData)) {
+            // Journal entries come as array with pillar field
+            const entries: JournalEntry = {
+              physical: '',
+              mental: '',
+              spiritual: '',
+              wellness: '',
+            };
+            journalData.forEach((entry: any) => {
+              if (entry.pillar && entry.content) {
+                entries[entry.pillar as keyof JournalEntry] = entry.content;
+              }
+            });
+            setJournalEntry(entries);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load journal:', err);
+      }
 
-      // const tasksResponse = await fetch(`/api/tasks?category=Rise Journey&lessonId=${lesson.lessonId}`);
-      // const tasksData = await tasksResponse.json();
-      // setTasks(tasksData);
+      // Load tasks
+      try {
+        const tasksResponse = await fetch(
+          `${backendUrl}/api/tasks?category=Rise Journey&lessonId=${lesson.lessonId}`,
+          { credentials: 'include' }
+        );
+        if (tasksResponse.ok) {
+          const tasksData = await tasksResponse.json();
+          if (Array.isArray(tasksData.tasks)) {
+            setTasks(tasksData.tasks.map((t: any) => ({
+              id: t.id,
+              text: t.title || t.text,
+              completed: t.status === 'completed' || t.completed === true,
+            })));
+          } else if (Array.isArray(tasksData)) {
+            setTasks(tasksData.map((t: any) => ({
+              id: t.id,
+              text: t.title || t.text,
+              completed: t.status === 'completed' || t.completed === true,
+            })));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load tasks:', err);
+      }
     } catch (error) {
       console.error('Failed to load lesson data:', error);
     }
@@ -131,16 +183,20 @@ const RiseJourneyLesson: React.FC<RiseJourneyLessonProps> = ({
     setJournalEntry(updated);
     
     try {
-      // Save to rise_journey_notes table with pillar categorization
-      await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.lessonId}/notes`, {
+      // Save to rise_journey_notes table with pillar categorization using journal endpoint
+      const response = await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.lessonId}/journal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ 
-          content: JSON.stringify({ pillar, content }), 
-          isShared: false 
+          pillar,
+          content,
         }),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save journal entry');
+      }
     } catch (error) {
       console.error('Failed to save journal entry:', error);
     }

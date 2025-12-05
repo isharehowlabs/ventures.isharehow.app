@@ -22,8 +22,7 @@ export default function Document() {
               (function() {
                 try {
                   function getSystemPreference() {
-                    if (typeof window === 'undefined') return 'light';
-                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                   }
                   
                   function getInitialTheme() {
@@ -36,46 +35,31 @@ export default function Document() {
                         return getSystemPreference();
                       }
                     } catch (e) {
-                      console.warn('Failed to read theme from localStorage:', e);
+                      console.warn('[_document] Failed to read theme from localStorage:', e);
                     }
                     return getSystemPreference();
                   }
                   
                   const theme = getInitialTheme();
+                  console.log('[_document] Initial theme:', theme);
+                  
                   const html = document.documentElement;
-                  const body = document.body;
                   
-                  // Remove any existing theme classes first
-                  html.classList.remove('light-mode', 'dark-mode');
-                  
-                  // Set data attribute for CSS modules
+                  // Set data attribute FIRST for CSS modules
                   html.setAttribute('data-theme', theme);
                   
                   // Set class for any class-based theme selectors
                   html.classList.add(theme + '-mode');
                   
-                  // Set body background to match theme immediately
-                  if (theme === 'dark') {
-                    body.style.backgroundColor = '#0f172a';
-                    body.style.color = '#f7fafc';
-                  } else {
-                    body.style.backgroundColor = '#FFFFFF';
-                    body.style.color = '#212529';
-                  }
-                  
                   // Update color-scheme meta tag
                   const colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
                   if (colorSchemeMeta) {
                     colorSchemeMeta.setAttribute('content', theme);
-                  } else {
-                    // Create if it doesn't exist
-                    const meta = document.createElement('meta');
-                    meta.setAttribute('name', 'color-scheme');
-                    meta.setAttribute('content', theme);
-                    document.head.appendChild(meta);
                   }
+                  
+                  console.log('[_document] Theme initialized, data-theme:', html.getAttribute('data-theme'));
                 } catch (e) {
-                  console.error('Failed to initialize theme:', e);
+                  console.error('[_document] Failed to initialize theme:', e);
                   // Fallback to light mode on error
                   document.documentElement.setAttribute('data-theme', 'light');
                   document.documentElement.classList.add('light-mode');
