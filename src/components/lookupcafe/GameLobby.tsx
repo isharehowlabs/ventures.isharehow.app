@@ -42,6 +42,8 @@ export default function GameLobby() {
   const [customRoomCode, setCustomRoomCode] = useState('');
   const [view, setView] = useState<'menu' | 'create' | 'join'>('menu');
   const [isCreating, setIsCreating] = useState(false);
+  const [activeRooms, setActiveRooms] = useState<any[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
 
   // Auto-fill player name from authenticated user - check multiple fields
   useEffect(() => {
@@ -66,6 +68,36 @@ export default function GameLobby() {
     });
   }, [isAuthenticated, authLoading, user, playerName]);
 
+
+  // Fetch active rooms
+  const fetchActiveRooms = async () => {
+    try {
+      setLoadingRooms(true);
+      const response = await fetch('https://api.ventures.isharehow.app/api/game/active-rooms');
+      const data = await response.json();
+      setActiveRooms(data.rooms || []);
+    } catch (error) {
+      console.error('Error fetching active rooms:', error);
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  // Fetch on mount and when returning to menu
+  useEffect(() => {
+    if (view === 'menu') {
+      fetchActiveRooms();
+    }
+  }, [view]);
+
+  // Listen for room updates
+  useEffect(() => {
+    const socket = (window as any).socket;
+    if (socket) {
+      socket.on('game:rooms-updated', fetchActiveRooms);
+      return () => socket.off('game:rooms-updated', fetchActiveRooms);
+    }
+  }, []);
   // If already in a game room, show the game room component
   if (gameRoom) {
     return <GameRoom />;
@@ -216,48 +248,69 @@ export default function GameLobby() {
             </Card>
           </Grid>
 
-          {/* Game Types Info */}
+          {/* Current Running Games */}
           <Grid item xs={12}>
             <Divider sx={{ my: 3 }} />
             <Typography variant="h6" textAlign="center" gutterBottom>
-              Available Games
+              🎮 Current Running Games
             </Typography>
-            <Grid container spacing={2} justifyContent="center" sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={4} md={3}>
-                <Paper sx={{ p: 2, textAlign: 'center' }}>
-                  <GuessingIcon color="primary" sx={{ fontSize: 40 }} />
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Guessing Games
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Give clues, guess answers
-                  </Typography>
-                </Paper>
+            {loadingRooms ? (
+              <Box textAlign="center" py={2}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : activeRooms.length === 0 ? (
+              <Alert severity="info" sx={{ maxWidth: 600, mx: 'auto' }}>
+                No active games right now. Create a room to start playing!
+              </Alert>
+            ) : (
+              <Grid container spacing={2} justifyContent="center" sx={{ mt: 1 }}>
+                {activeRooms.map((room) => (
+                  <Grid item xs={12} sm={6} md={4} key={room.roomCode}>
+                    <Card elevation={2}>
+                      <CardContent>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                          <Chip label={room.roomCode} color="primary" sx={{ fontFamily: 'monospace' }} />
+                          <Chip 
+                            label={room.state === 'lobby' ? 'Lobby' : `Round ${room.currentRound}/${room.maxRounds}`}
+                            size="small"
+                            color={room.state === 'lobby' ? 'default' : 'success'}
+                          />
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {room.gameType === 'guessing' && '🤔 Guessing Game'}
+                          {room.gameType === 'drawing' && '🎨 Drawing Game'}
+                          {room.gameType === 'puzzle' && '🧩 Puzzle Game'}
+                          {!room.gameType && '⏳ Setting up...'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Host: {room.hostName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Players: {room.playerCount}/{room.maxPlayers}
+                        </Typography>
+                      </CardContent>
+                      <CardActions>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          fullWidth
+                          onClick={() => {
+                            setRoomCode(room.roomCode);
+                            setView('join');
+                          }}
+                          disabled={room.playerCount >= room.maxPlayers}
+                        >
+                          {room.playerCount >= room.maxPlayers ? 'Full' : room.state === 'lobby' ? 'Join' : 'Join (In Progress)'}
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Grid>
+                ))}
               </Grid>
-              <Grid item xs={12} sm={4} md={3}>
-                <Paper sx={{ p: 2, textAlign: 'center' }}>
-                  <DrawingIcon color="secondary" sx={{ fontSize: 40 }} />
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Drawing Games
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Draw and guess in realtime
-                  </Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} sm={4} md={3}>
-                <Paper sx={{ p: 2, textAlign: 'center' }}>
-                  <PuzzleIcon color="success" sx={{ fontSize: 40 }} />
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Puzzle Games
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Solve together as a team
-                  </Typography>
-                </Paper>
-              </Grid>
-            </Grid>
+            )}
           </Grid>
+
+
         </Grid>
       )}
 

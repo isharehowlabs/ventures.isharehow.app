@@ -7592,6 +7592,8 @@ def handle_create_room(data):
         
         print(f'[LookUp.Cafe] Room created: {room_code} by {player_name}')
         emit('game:room-created', {'room': game_rooms[room_code]})
+        # Broadcast room list update
+        socketio.emit('game:rooms-updated', broadcast=True)
         
     except Exception as e:
         print(f'[LookUp.Cafe] Error creating room: {e}')
@@ -7622,10 +7624,6 @@ def handle_join_room(data):
         
         # Check if game already started
         if room['state'] != 'lobby':
-            emit('game:error', {'message': 'Game already in progress. Cannot join.'})
-            return
-        
-        # Check if player already in room (reconnection)
         existing_player = next((p for p in room['players'] if p['userId'] == user_id and user_id), None)
         if existing_player:
             # Update socket ID for reconnection
@@ -9493,4 +9491,42 @@ def handle_disconnect():
     
     except Exception as e:
         print(f'[LookUp.Cafe] Error handling disconnect: {e}')
+
+
+# ============================================================================
+# Active Rooms Endpoint
+# ============================================================================
+
+@app.route('/api/game/active-rooms', methods=['GET'])
+def get_active_rooms():
+    """Get list of all active (non-finished) game rooms"""
+    try:
+        active_rooms = []
+        for room_code, room in game_rooms.items():
+            # Skip finished games
+            if room.get('state') == 'finished':
+                continue
+            
+            # Count active players
+            active_players = [p for p in room.get('players', []) if p.get('isActive', True)]
+            
+            active_rooms.append({
+                'roomCode': room_code,
+                'gameType': room.get('gameType'),
+                'state': room.get('state'),
+                'playerCount': len(active_players),
+                'maxPlayers': MAX_PLAYERS,
+                'currentRound': room.get('currentRound', 0),
+                'maxRounds': room.get('maxRounds', 5),
+                'hostName': next((p['name'] for p in room['players'] if p['id'] == room['hostId']), 'Unknown'),
+            })
+        
+        # Sort by creation time (newest first)
+        active_rooms.sort(key=lambda r: game_rooms[r['roomCode']].get('createdAt', 0), reverse=True)
+        
+        return jsonify({'rooms': active_rooms})
+    
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error fetching active rooms: {e}')
+        return jsonify({'error': str(e)}), 500
 
