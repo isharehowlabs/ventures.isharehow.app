@@ -89,7 +89,7 @@ export default function GuessingGame() {
     }
   }, [(gameRoom as any)?.roundPhase, timeLeft]);
 
-  // Reset states on phase change
+  // Reset states on phase change and initialize progress tracking
   useEffect(() => {
     const phase = (gameRoom as any)?.roundPhase;
     if (phase === 'guessing') {
@@ -99,10 +99,18 @@ export default function GuessingGame() {
       setSelectedGuess('');
       setTimeLeft(ROUND_DURATION);
       setResults(null);
+      // Initialize progress tracking from gameRoom data
+      const totalPlayers = players.filter(p => p.isActive).length;
+      setGuessProgress({ submitted: 0, total: totalPlayers });
     } else if (phase === 'voting') {
       setTimeLeft(VOTING_DURATION);
+      // Initialize vote progress from gameRoom data
+      const guessData = (gameRoom as any)?.guesses || {};
+      const guessArray = Array.isArray(guessData) ? guessData : Object.values(guessData);
+      const totalPlayers = guessArray.length || players.filter(p => p.isActive).length;
+      setVoteProgress({ submitted: 0, total: totalPlayers });
     }
-  }, [(gameRoom as any)?.roundPhase, gameRoom?.currentRound]);
+  }, [(gameRoom as any)?.roundPhase, gameRoom?.currentRound, players]);
 
   // Listen for voting complete event and guess updates
   useEffect(() => {
@@ -110,6 +118,10 @@ export default function GuessingGame() {
     if (socket) {
       const handleVotingComplete = (data: any) => {
         setResults(data);
+        // Update vote progress when voting completes
+        if (data.totalVotes !== undefined && data.totalPlayers !== undefined) {
+          setVoteProgress({ submitted: data.totalVotes, total: data.totalPlayers });
+        }
       };
       
       const handleGuessSubmitted = (data: any) => {
@@ -137,22 +149,50 @@ export default function GuessingGame() {
             setGuess(myGuess.guess || '');
           }
         }
+        // Update progress tracking if provided
+        if (data.totalGuesses !== undefined && data.totalPlayers !== undefined) {
+          setGuessProgress({ submitted: data.totalGuesses, total: data.totalPlayers });
+        }
+        if (data.totalVotes !== undefined && data.totalPlayers !== undefined) {
+          setVoteProgress({ submitted: data.totalVotes, total: data.totalPlayers });
+        }
       };
       
       socket.on('guessing:voting-complete', handleVotingComplete);
       socket.on('guessing:guess-submitted', handleGuessSubmitted);
-      socket.on('guessing:vote-received', (data: any) => {
+      const handleVoteReceived = (data: any) => {
         console.log('Vote received:', data);
         if (data.totalVotes !== undefined && data.totalPlayers !== undefined) {
           setVoteProgress({ submitted: data.totalVotes, total: data.totalPlayers });
         }
-      });
+      };
+      
+      const handleRoundStarted = (data: any) => {
+        console.log('Round started:', data);
+        // Reset states for new round
+        if (data.room) {
+          setGuess('');
+          setHasGuessed(false);
+          setHasVoted(false);
+          setSelectedGuess('');
+          setTimeLeft(ROUND_DURATION);
+          setResults(null);
+          // Initialize progress tracking
+          const totalPlayers = players.filter(p => p.isActive).length;
+          setGuessProgress({ submitted: 0, total: totalPlayers });
+        }
+      };
+      
+      socket.on('guessing:vote-received', handleVoteReceived);
       socket.on('guessing:phase-changed', handlePhaseChanged);
+      socket.on('guessing:round-started', handleRoundStarted);
       
       return () => {
         socket.off('guessing:voting-complete', handleVotingComplete);
         socket.off('guessing:guess-submitted', handleGuessSubmitted);
         socket.off('guessing:phase-changed', handlePhaseChanged);
+        socket.off('guessing:vote-received', handleVoteReceived);
+        socket.off('guessing:round-started', handleRoundStarted);
       };
     }
   }, [socketId]);
@@ -415,7 +455,7 @@ export default function GuessingGame() {
                 )}
                 
                 <Chip 
-                  label={`${guessProgress.submitted} / ${guessProgress.total} players have guessed`} 
+                  label={`${totalGuesses} / ${totalPlayers} players have guessed`} 
                   sx={{ mt: 2 }}
                   color={totalGuesses === totalPlayers ? 'success' : 'default'}
                 />
@@ -612,7 +652,7 @@ export default function GuessingGame() {
           </Alert>
 
           <Chip 
-            label={`${voteProgress.submitted} / ${voteProgress.total} players have voted`} 
+            label={`${totalVotes} / ${totalPlayers} players have voted`} 
             sx={{ mb: 3 }}
             color={totalVotes === totalPlayers ? 'success' : 'default'}
           />
@@ -700,7 +740,7 @@ export default function GuessingGame() {
           {guessArray.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Voting Progress: ${voteProgress.submitted} / ${voteProgress.total} players have voted
+                Voting Progress: {voteProgress.submitted} / {voteProgress.total} players have voted
               </Typography>
               <LinearProgress 
                 variant="determinate" 
