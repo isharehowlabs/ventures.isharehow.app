@@ -1,0 +1,17 @@
+--- src/components/lookupcafe/GameRoom.tsx
++++ src/components/lookupcafe/GameRoom.tsx
+@@ -45,12 +45,11 @@ export default function GameRoom() {
+   const currentPlayer = players.find(p => p.id === socketId);
+   const isHost = currentPlayer?.isHost || false;
+   const isLobby = gameRoom.state === 'lobby';
+-  console.log('[GameRoom] State:', { isLobby, isPlaying, isGameEnd, gameType: gameRoom.gameType, state: gameRoom.state, roundPhase: (gameRoom as any)?.roundPhase, fullRoom: gameRoom });
++  const isPlaying = gameRoom.state === 'playing';
+   const isGameEnd = gameRoom.state === 'gameEnd';
+ 
+-  console.log('[GameRoom] State:', { isLobby, isPlaying, isGameEnd, gameType: gameRoom.gameType, state: gameRoom.state, roundPhase: (gameRoom as any)?.roundPhase });
++  console.log('[GameRoom] State:', { isLobby, isPlaying, isGameEnd, gameType: gameRoom.gameType, state: gameRoom.state, roundPhase: (gameRoom as any)?.roundPhase, fullRoom: JSON.stringify(gameRoom) });
+ 
+-  const isPlaying = gameRoom.state === 'playing';
+   const handleCopyRoomCode = () => {
+     navigator.clipboard.writeText(gameRoom.roomCode);
+     // Could add a snackbar notification here
