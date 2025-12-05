@@ -39,6 +39,7 @@ export default function GameLobby() {
   
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
+  const [customRoomCode, setCustomRoomCode] = useState('');
   const [view, setView] = useState<'menu' | 'create' | 'join'>('menu');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -76,11 +77,24 @@ export default function GameLobby() {
       return;
     }
 
+    // Validate custom room code if provided
+    if (customRoomCode.trim()) {
+      const code = customRoomCode.trim().toUpperCase();
+      if (code.length !== 9) {
+        alert('Room code must be exactly 9 characters');
+        return;
+      }
+      if (!/^[A-Z0-9]+$/.test(code)) {
+        alert('Room code can only contain letters and numbers');
+        return;
+      }
+    }
+
     createRoom({
       playerName: playerName.trim(),
       userId: user?.id,
       avatar: user?.avatar,
-      roomCode: user?.id || undefined,
+      roomCode: customRoomCode.trim().toUpperCase() || undefined,
     });
   };
 
@@ -272,6 +286,20 @@ export default function GameLobby() {
               margin="normal"
               helperText={isAuthenticated ? 'Using your account name' : 'Enter a display name'}
               disabled={isAuthenticated && !!playerName}
+            />
+
+            <TextField
+              fullWidth
+              label="Custom Room Code (Optional)"
+              value={customRoomCode}
+              onChange={(e) => setCustomRoomCode(e.target.value.toUpperCase())}
+              margin="normal"
+              placeholder="Enter 9-digit code or leave blank for auto-generate"
+              helperText="Create your own 9-character code, or leave blank to auto-generate"
+              inputProps={{ 
+                maxLength: 9, 
+                style: { textTransform: 'uppercase', fontFamily: 'monospace', fontSize: '1.2rem', letterSpacing: '0.1em' } 
+              }}
             />
 
             <Box mt={3} display="flex" gap={2}>
