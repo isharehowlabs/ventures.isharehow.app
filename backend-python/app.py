@@ -7749,6 +7749,7 @@ def handle_start_game(data):
             room['currentPuzzle'] = get_puzzle()
         elif game_type == 'guessing':
             # Select first clue giver
+            room['roundPhase'] = None  # Host needs to set words first
             room['currentDrawerId'] = room['players'][0]['id']  # Reuse as clue giver
         
         print(f'[LookUp.Cafe] Game started in room {room_code}: {game_type}')
