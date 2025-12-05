@@ -80,8 +80,8 @@ export default function GameRoom() {
   // Render active game
   if (isPlaying) {
     switch (gameRoom.gameType) {
-        console.log('[GameRoom] Rendering GuessingGame component');
       case 'guessing':
+        console.log('[GameRoom] Rendering GuessingGame component');
         return <GuessingGame />;
       case 'drawing':
         return <DrawingGame />;
