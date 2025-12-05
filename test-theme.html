@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme Test</title>
+    <style>
+        html[data-theme="light"] {
+            background-color: #FFFFFF;
+            color: #000000;
+        }
+        html[data-theme="dark"] {
+            background-color: #0f172a;
+            color: #FFFFFF;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: inherit;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid currentColor;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Theme System Test</h1>
+    <p>This page tests if the theme system is working correctly.</p>
+    
+    <div>
+        <button onclick="setTheme('light')">Light</button>
+        <button onclick="setTheme('dark')">Dark</button>
+        <button onclick="setTheme('system')">System</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <script>
+        function getSystemPreference() {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        
+        function updateStatus() {
+            const savedMode = localStorage.getItem('themeMode');
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const systemPref = getSystemPreference();
+            const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+            const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+            
+            document.getElementById('status').innerHTML = `
+                <h3>Current State:</h3>
+                <ul>
+                    <li><strong>Saved Mode:</strong> ${saved Mode || 'not set'}</li>
+                    <li><strong>data-theme attribute:</strong> ${currentTheme}</li>
+                    <li><strong>System Preference:</strong> ${systemPref}</li>
+                    <li><strong>HTML background:</strong> ${htmlBg}</li>
+                    <li><strong>Body background:</strong> ${bodyBg}</li>
+                    <li><strong>Are they same?</strong> ${htmlBg === bodyBg ? '✅ YES' : '❌ NO'}</li>
+                </ul>
+            `;
+        }
+        
+        function setTheme(mode) {
+            localStorage.setItem('themeMode', mode);
+            const resolvedTheme = mode === 'system' ? getSystemPreference() : mode;
+            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            updateStatus();
+        }
+        
+        // Initialize
+        const savedMode = localStorage.getItem('themeMode') || 'system';
+        const resolvedTheme = savedMode === 'system' ? getSystemPreference() : savedMode;
+        document.documentElement.setAttribute('data-theme', resolvedTheme);
+        
+        // Update status on load
+        updateStatus();
+        
+        // Listen for system preference changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (localStorage.getItem('themeMode') === 'system') {
+                const newTheme = getSystemPreference();
+                document.documentElement.setAttribute('data-theme', newTheme);
+                updateStatus();
+            }
+        });
+    </script>
+</body>
+</html>

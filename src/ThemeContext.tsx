@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import getTheme from './isharehowTheme';
@@ -29,41 +29,92 @@ const getSystemPreference = (): ResolvedThemeMode => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
+// Helper function to get initial mode from localStorage
+const getInitialMode = (): ThemeMode => {
+  if (typeof window === 'undefined') return 'system';
+  try {
+    const savedMode = localStorage.getItem('themeMode') as ThemeMode | null;
+    console.log('[ThemeContext] Initial mode from localStorage:', savedMode);
+    if (savedMode && (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system')) {
+      return savedMode;
+    }
+  } catch (e) {
+    console.warn('[ThemeContext] Failed to read theme preference from localStorage:', e);
+  }
+  return 'system';
+};
+
+// Helper function to update DOM with theme
+const updateDOMTheme = (resolvedMode: ResolvedThemeMode) => {
+  if (typeof window === 'undefined') return;
+  
+  console.log('[ThemeContext] Updating DOM theme to:', resolvedMode);
+  
+  // Prevent CSS transitions during theme change to avoid flashing
+  document.documentElement.classList.add('theme-transitioning');
+  
+  // Remove both classes first
+  document.documentElement.classList.remove('light-mode', 'dark-mode');
+  
+  // Add the current mode class
+  document.documentElement.classList.add(`${resolvedMode}-mode`);
+  
+  // Also set a data attribute for CSS modules
+  document.documentElement.setAttribute('data-theme', resolvedMode);
+  
+  // Update color-scheme meta tag for native browser elements
+  let colorSchemeMetaTag = document.querySelector('meta[name="color-scheme"]');
+  if (!colorSchemeMetaTag) {
+    colorSchemeMetaTag = document.createElement('meta');
+    colorSchemeMetaTag.setAttribute('name', 'color-scheme');
+    document.head.appendChild(colorSchemeMetaTag);
+  }
+  colorSchemeMetaTag.setAttribute('content', resolvedMode);
+  
+  // Also update the document.body style to force re-render
+  document.body.style.backgroundColor = ''; // Clear inline styles
+  
+  // Remove transition prevention class after a short delay
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-transitioning');
+    }, 50);
+  });
+};
+
 export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<ThemeMode>('system');
+  // Initialize with saved preference synchronously to avoid flash
+  const [mode, setMode] = useState<ThemeMode>(() => getInitialMode());
   const [systemPreference, setSystemPreference] = useState<ResolvedThemeMode>(() => getSystemPreference());
+  const mountedRef = useRef(false);
 
   // Resolve the actual theme mode based on user preference
   const resolvedMode = useMemo<ResolvedThemeMode>(() => {
-    if (mode === 'system') {
-      return systemPreference;
-    }
-    return mode;
+    const resolved = mode === 'system' ? systemPreference : mode;
+    console.log('[ThemeContext] Resolved mode:', resolved, 'from mode:', mode, 'systemPref:', systemPreference);
+    return resolved;
   }, [mode, systemPreference]);
 
-  // Load saved preference on mount
+  // On mount, ensure theme is correct
   useEffect(() => {
-    const savedMode = localStorage.getItem('themeMode') as ThemeMode | null;
-    if (savedMode && (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system')) {
-      setMode(savedMode);
-    } else {
-      // Default to system if no preference is saved
-      setMode('system');
-    }
+    mountedRef.current = true;
+    console.log('[ThemeContext] Component mounted, mode:', mode, 'resolvedMode:', resolvedMode);
+    
+    // Force update DOM on mount to ensure consistency
+    updateDOMTheme(resolvedMode);
   }, []);
 
-  // Listen for system preference changes
+  // Listen for system preference changes (single effect for system monitoring)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
-      setSystemPreference(e.matches ? 'dark' : 'light');
+      const newPreference = e.matches ? 'dark' : 'light';
+      console.log('[ThemeContext] System preference changed to:', newPreference);
+      setSystemPreference(newPreference);
     };
-
-    // Set initial value
-    handleChange(mediaQuery);
 
     // Listen for changes
     if (mediaQuery.addEventListener) {
@@ -76,32 +127,36 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
-  // Update document class when resolvedMode changes
+  // Update document when resolvedMode changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!mountedRef.current) return; // Skip on initial render
     
-    // Remove both classes first
-    document.documentElement.classList.remove('light-mode', 'dark-mode');
-    
-    // Add the current mode class
-    document.documentElement.classList.add(`${resolvedMode}-mode`);
-    
-    // Also set a data attribute for CSS modules
-    document.documentElement.setAttribute('data-theme', resolvedMode);
+    console.log('[ThemeContext] resolvedMode changed, updating DOM to:', resolvedMode);
+    updateDOMTheme(resolvedMode);
   }, [resolvedMode]);
 
   const setThemeMode = (newMode: ThemeMode) => {
+    console.log('[ThemeContext] Setting theme mode to:', newMode);
     setMode(newMode);
-    localStorage.setItem('themeMode', newMode);
+    try {
+      localStorage.setItem('themeMode', newMode);
+    } catch (e) {
+      console.warn('[ThemeContext] Failed to save theme preference to localStorage:', e);
+    }
   };
 
   const toggleTheme = () => {
     // Cycle through: light -> dark -> system -> light
     const newMode: ThemeMode = mode === 'light' ? 'dark' : mode === 'dark' ? 'system' : 'light';
+    console.log('[ThemeContext] Toggling theme from', mode, 'to', newMode);
     setThemeMode(newMode);
   };
 
-  const theme = getTheme(resolvedMode);
+  const theme = useMemo(() => {
+    console.log('[ThemeContext] Creating theme for:', resolvedMode);
+    return getTheme(resolvedMode);
+  }, [resolvedMode]);
 
   return (
     <ThemeContext.Provider value={{ mode, resolvedMode, toggleTheme, setThemeMode }}>

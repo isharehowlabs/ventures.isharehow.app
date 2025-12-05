@@ -175,8 +175,17 @@ const getTheme = (mode: 'light' | 'dark') => {
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        html: {
+          transition: "none",
+          '&[data-theme="light"]': {
+            backgroundColor: "#FFFFFF",
+          },
+          '&[data-theme="dark"]': {
+            backgroundColor: "#0f172a",
+          },
+        },
         body: {
-          backgroundColor: mode === 'light' ? '#FFFFFF' : '#0f172a',
+          backgroundColor: "inherit",
           scrollbarColor: mode === 'light' ? '#4B5DBD #f8f9fa' : '#4B5DBD #0f172a',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
             width: 8,

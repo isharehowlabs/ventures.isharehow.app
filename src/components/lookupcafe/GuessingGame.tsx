@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DebugPanel from './DebugPanel';
 import {
   Box,
   Container,
@@ -99,19 +100,48 @@ export default function GuessingGame() {
     }
   }, [(gameRoom as any)?.roundPhase, gameRoom?.currentRound]);
 
-  // Listen for voting complete event
+  // Listen for voting complete event and guess updates
   useEffect(() => {
     const socket = (window as any).socket;
     if (socket) {
       const handleVotingComplete = (data: any) => {
         setResults(data);
       };
+      
+      const handleGuessSubmitted = (data: any) => {
+        console.log('Guess submitted confirmation:', data);
+        // Update hasGuessed if this is our guess
+        if (data.playerId === socketId || data.id === socketId) {
+          setHasGuessed(true);
+          if (data.guess) {
+            setGuess(data.guess);
+          }
+        }
+      };
+      
+      const handlePhaseChanged = (data: any) => {
+        console.log('Phase changed:', data);
+        // Update guesses when phase changes
+        if (data.guesses && Array.isArray(data.guesses)) {
+          const myGuess = data.guesses.find((g: any) => g.playerId === socketId || g.id === socketId);
+          if (myGuess) {
+            setHasGuessed(true);
+            setGuess(myGuess.guess || '');
+          }
+        }
+      };
+      
       socket.on('guessing:voting-complete', handleVotingComplete);
+      socket.on('guessing:guess-submitted', handleGuessSubmitted);
+      socket.on('guessing:phase-changed', handlePhaseChanged);
+      
       return () => {
         socket.off('guessing:voting-complete', handleVotingComplete);
+        socket.off('guessing:guess-submitted', handleGuessSubmitted);
+        socket.off('guessing:phase-changed', handlePhaseChanged);
       };
     }
-  }, []);
+  }, [socketId]);
 
   if (!gameRoom) return null;
 
@@ -150,6 +180,11 @@ export default function GuessingGame() {
   const currentPlayer = players.find(p => p.id === socketId);
   const phase = (gameRoom as any)?.roundPhase;
   
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("[GuessingGame] State:", { phase, state: gameRoom?.state, hasGuessed, timeLeft, isHost, round: gameRoom?.currentRound });
+  }, [phase, gameRoom?.state, hasGuessed, timeLeft, isHost, gameRoom?.currentRound]);
 
   // Phase 1: Host Word Setup (before game starts)
   if (!phase || gameRoom.state === 'lobby') {
@@ -253,22 +288,53 @@ export default function GuessingGame() {
   // Phase 2: Guessing Phase
   if (phase === 'guessing') {
     const handleSubmitGuess = () => {
-      if (!guess.trim()) return;
+      if (!guess.trim() || hasGuessed) return;
+      console.log('Submitting guess:', guess.trim());
       submitGuess(gameRoom.roomCode, guess.trim());
       setHasGuessed(true);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !hasGuessed) {
+      if (e.key === 'Enter' && !hasGuessed && guess.trim()) {
         handleSubmitGuess();
       }
     };
 
     const progress = (timeLeft / ROUND_DURATION) * 100;
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+    
+    // Get guesses - handle both object and array formats
     const guessData = (gameRoom as any).guesses || {};
-    const totalGuesses = typeof guessData === 'object' && guessData.totalGuesses ? guessData.totalGuesses : 0;
-    const totalPlayers = typeof guessData === 'object' && guessData.totalPlayers ? guessData.totalPlayers : players.filter(p => p.isActive).length;
+    let guessesArray: any[] = [];
+    let totalGuesses = 0;
+    let totalPlayers = players.filter(p => p.isActive).length;
+    
+    if (Array.isArray(guessData)) {
+      guessesArray = guessData;
+      totalGuesses = guessData.length;
+    } else if (typeof guessData === 'object') {
+      // Check if it's a progress object
+      if (guessData.totalGuesses !== undefined) {
+        totalGuesses = guessData.totalGuesses || 0;
+        totalPlayers = guessData.totalPlayers || totalPlayers;
+      } else {
+        // It might be an object with player IDs as keys
+        guessesArray = Object.values(guessData);
+        totalGuesses = guessesArray.length;
+      }
+    }
+    
+    // Check if current player has submitted a guess
+    const currentPlayerGuess = guessesArray.find((g: any) => g.playerId === socketId || g.id === socketId);
+    const playerHasGuessed = currentPlayerGuess !== undefined;
+    
+    // Update local state if server says we've guessed but local state doesn't match
+    if (playerHasGuessed && !hasGuessed) {
+      setHasGuessed(true);
+      if (currentPlayerGuess.guess) {
+        setGuess(currentPlayerGuess.guess);
+      }
+    }
 
     return (
       <>
@@ -313,36 +379,106 @@ export default function GuessingGame() {
                 />
               </Paper>
 
-              {/* Guess Input */}
-              {!hasGuessed && timeLeft > 0 ? (
-                <Box display="flex" gap={2}>
-                  <TextField
-                    fullWidth
-                    variant="outlined"
-                    placeholder="Type your guess..."
-                    value={guess}
-                    onChange={(e) => setGuess(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    autoFocus
-                  />
-                  <Button
-                    variant="contained"
-                    endIcon={<SendIcon />}
-                    onClick={handleSubmitGuess}
-                    disabled={!guess.trim()}
-                    sx={{ minWidth: 120 }}
-                  >
-                    Submit
-                  </Button>
+              {/* Guess Input Section */}
+              <Box sx={{ mb: 3 }}>
+                {!hasGuessed && timeLeft > 0 ? (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Enter your guess below. Once submitted, you cannot change it.
+                    </Typography>
+                    <Box display="flex" gap={2}>
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Type your guess..."
+                        value={guess}
+                        onChange={(e) => setGuess(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        autoFocus
+                        disabled={hasGuessed}
+                        sx={{ 
+                          '& .MuiOutlinedInput-root': {
+                            fontSize: '1.1rem',
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="contained"
+                        size="large"
+                        endIcon={<SendIcon />}
+                        onClick={handleSubmitGuess}
+                        disabled={!guess.trim() || hasGuessed}
+                        sx={{ minWidth: 140 }}
+                      >
+                        Submit Guess
+                      </Button>
+                    </Box>
+                  </Box>
+                ) : hasGuessed ? (
+                  <Alert severity="success" icon={<CheckIcon />} sx={{ mb: 2 }}>
+                    <Typography variant="body1" fontWeight="bold">
+                      Your guess has been submitted!
+                    </Typography>
+                    <Typography variant="body2">
+                      Your guess: <strong>"{currentPlayerGuess?.guess || guess}"</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      Waiting for other players to submit their guesses...
+                    </Typography>
+                  </Alert>
+                ) : (
+                  <Alert severity="info">
+                    Time's up! Waiting for all players to finish...
+                  </Alert>
+                )}
+              </Box>
+
+              {/* Show All Submitted Guesses (for transparency) */}
+              {guessesArray.length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Submitted Guesses ({guessesArray.length} / {totalPlayers})
+                  </Typography>
+                  <List dense>
+                    {guessesArray.map((g: any, index: number) => {
+                      const isCurrentPlayer = g.playerId === socketId || g.id === socketId;
+                      const playerName = g.playerName || players.find(p => p.id === (g.playerId || g.id))?.name || 'Unknown';
+                      return (
+                        <ListItem 
+                          key={g.playerId || g.id || index}
+                          sx={{ 
+                            bgcolor: isCurrentPlayer ? 'action.selected' : 'transparent',
+                            borderRadius: 1,
+                            mb: 0.5
+                          }}
+                        >
+                          <ListItemAvatar>
+                            <Avatar sx={{ width: 32, height: 32 }}>
+                              {playerName.charAt(0).toUpperCase()}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Typography variant="body1" fontWeight={isCurrentPlayer ? 'bold' : 'normal'}>
+                                  {isCurrentPlayer ? 'You' : playerName}
+                                </Typography>
+                                {isCurrentPlayer && (
+                                  <Chip label="Your guess" size="small" color="primary" />
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="body2" sx={{ fontStyle: 'italic', mt: 0.5 }}>
+                                "{g.guess}"
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
                 </Box>
-              ) : hasGuessed ? (
-                <Alert severity="success" icon={<CheckIcon />}>
-                  Your guess has been submitted! Waiting for other players...
-                </Alert>
-              ) : (
-                <Alert severity="info">
-                  Time's up! Waiting for all players to finish...
-                </Alert>
               )}
             </Paper>
           </Grid>
@@ -385,11 +521,25 @@ export default function GuessingGame() {
 
   // Phase 3: Voting Phase
   if (phase === 'voting') {
-    const guesses = (gameRoom as any).guesses || [];
-    const guessArray = Array.isArray(guesses) ? guesses : [];
+    // Get guesses - handle both object and array formats
+    const guessData = (gameRoom as any).guesses || {};
+    let guessArray: any[] = [];
+    
+    if (Array.isArray(guessData)) {
+      guessArray = guessData;
+    } else if (typeof guessData === 'object') {
+      // Check if it's an object with player IDs as keys
+      if (guessData.totalGuesses === undefined) {
+        guessArray = Object.values(guessData);
+      } else {
+        // It's a progress object, try to get guesses from elsewhere
+        guessArray = (gameRoom as any).guessList || [];
+      }
+    }
 
     const handleVoteSubmit = () => {
-      if (!selectedGuess) return;
+      if (!selectedGuess || hasVoted) return;
+      console.log('Submitting vote for:', selectedGuess);
       voteForGuess(gameRoom.roomCode, selectedGuess);
       setHasVoted(true);
     };
@@ -397,6 +547,12 @@ export default function GuessingGame() {
     const voteData = (gameRoom as any).votes || {};
     const totalVotes = typeof voteData === 'object' && voteData.totalVotes ? voteData.totalVotes : 0;
     const totalPlayers = typeof voteData === 'object' && voteData.totalPlayers ? voteData.totalPlayers : guessArray.length;
+    
+    // Check if current player has voted
+    const currentPlayerVote = voteData[socketId] || (Array.isArray(voteData) && voteData.find((v: any) => v.playerId === socketId));
+    if (currentPlayerVote && !hasVoted) {
+      setHasVoted(true);
+    }
 
     return (
       <>
@@ -419,25 +575,54 @@ export default function GuessingGame() {
             color={totalVotes === totalPlayers ? 'success' : 'default'}
           />
 
-          {!hasVoted ? (
+          {guessArray.length === 0 ? (
+            <Alert severity="warning">
+              No guesses available to vote on. Waiting for guesses to be processed...
+            </Alert>
+          ) : !hasVoted ? (
             <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select the guess you think is closest to the host's secret word. You cannot vote for your own guess.
+              </Typography>
               <RadioGroup value={selectedGuess} onChange={(e) => setSelectedGuess(e.target.value)}>
                 <Stack spacing={2} mb={3}>
-                  {guessArray.map((g: any) => {
-                    const canVote = g.id !== socketId;
+                  {guessArray.map((g: any, index: number) => {
+                    const guessId = g.id || g.playerId || `guess-${index}`;
+                    const playerId = g.playerId || g.id;
+                    const canVote = playerId !== socketId;
+                    const playerName = g.playerName || players.find(p => p.id === playerId)?.name || 'Unknown Player';
+                    
                     return (
-                      <Card key={g.id} variant="outlined" sx={{ opacity: canVote ? 1 : 0.5 }}>
+                      <Card 
+                        key={guessId} 
+                        variant="outlined" 
+                        sx={{ 
+                          opacity: canVote ? 1 : 0.6,
+                          bgcolor: canVote ? 'background.paper' : 'action.disabledBackground',
+                          '&:hover': canVote ? { bgcolor: 'action.hover' } : {}
+                        }}
+                      >
                         <CardContent>
                           <FormControlLabel
-                            value={g.id}
-                            control={<Radio />}
+                            value={guessId}
+                            control={<Radio disabled={!canVote} />}
                             label={
-                              <Typography variant="h6">
-                                {g.guess}
-                                {!canVote && <Chip label="Your guess" size="small" sx={{ ml: 2 }} />}
-                              </Typography>
+                              <Box>
+                                <Typography variant="h6" component="span">
+                                  "{g.guess}"
+                                </Typography>
+                                <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    by {playerName}
+                                  </Typography>
+                                  {!canVote && (
+                                    <Chip label="Your guess" size="small" color="primary" />
+                                  )}
+                                </Box>
+                              </Box>
                             }
                             disabled={!canVote}
+                            sx={{ width: '100%' }}
                           />
                         </CardContent>
                       </Card>
@@ -452,15 +637,36 @@ export default function GuessingGame() {
                 fullWidth
                 endIcon={<ThumbUpIcon />}
                 onClick={handleVoteSubmit}
-                disabled={!selectedGuess}
+                disabled={!selectedGuess || hasVoted}
+                sx={{ py: 1.5 }}
               >
                 Submit Vote
               </Button>
             </>
           ) : (
-            <Alert severity="success" icon={<CheckIcon />}>
-              Your vote has been recorded! Waiting for other players...
+            <Alert severity="success" icon={<CheckIcon />} sx={{ mb: 2 }}>
+              <Typography variant="body1" fontWeight="bold">
+                Your vote has been recorded!
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Waiting for other players to vote...
+              </Typography>
             </Alert>
+          )}
+          
+          {/* Show voting progress */}
+          {guessArray.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Voting Progress: {totalVotes} / {totalPlayers} players have voted
+              </Typography>
+              <LinearProgress 
+                variant="determinate" 
+                value={(totalVotes / totalPlayers) * 100} 
+                sx={{ mt: 1, height: 8, borderRadius: 1 }}
+                color={totalVotes === totalPlayers ? 'success' : 'primary'}
+              />
+            </Box>
           )}
         </Paper>
       </Container>
@@ -548,9 +754,9 @@ export default function GuessingGame() {
       </>
     );
   }
-
   return (
     <>
+      <DebugPanel gameRoom={gameRoom} players={players} socketId={socketId || ''} isConnected={true} />
       {renderControls()}
     </>
   );
