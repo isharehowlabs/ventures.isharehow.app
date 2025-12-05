@@ -69,6 +69,10 @@ export default function GuessingGame() {
   // Results state
   const [results, setResults] = useState<any>(null);
 
+  
+  // Real-time progress tracking
+  const [guessProgress, setGuessProgress] = useState({ total: 0, submitted: 0 });
+  const [voteProgress, setVoteProgress] = useState({ total: 0, submitted: 0 });
   // Timer countdown
   useEffect(() => {
     const phase = (gameRoom as any)?.roundPhase;
@@ -110,6 +114,10 @@ export default function GuessingGame() {
       
       const handleGuessSubmitted = (data: any) => {
         console.log('Guess submitted confirmation:', data);
+        // Update progress tracking
+        if (data.totalGuesses !== undefined && data.totalPlayers !== undefined) {
+          setGuessProgress({ submitted: data.totalGuesses, total: data.totalPlayers });
+        }
         // Update hasGuessed if this is our guess
         if (data.playerId === socketId || data.id === socketId) {
           setHasGuessed(true);
@@ -133,6 +141,12 @@ export default function GuessingGame() {
       
       socket.on('guessing:voting-complete', handleVotingComplete);
       socket.on('guessing:guess-submitted', handleGuessSubmitted);
+      socket.on('guessing:vote-received', (data: any) => {
+        console.log('Vote received:', data);
+        if (data.totalVotes !== undefined && data.totalPlayers !== undefined) {
+          setVoteProgress({ submitted: data.totalVotes, total: data.totalPlayers });
+        }
+      });
       socket.on('guessing:phase-changed', handlePhaseChanged);
       
       return () => {
@@ -373,7 +387,7 @@ export default function GuessingGame() {
                 The host has chosen a secret word. Think of what word they might have picked!
                 </Typography>
                 <Chip 
-                  label={`${totalGuesses} / ${totalPlayers} players have guessed`} 
+                  label={`${guessProgress.submitted} / ${guessProgress.total} players have guessed`} 
                   sx={{ mt: 2 }}
                   color={totalGuesses === totalPlayers ? 'success' : 'default'}
                 />
@@ -570,7 +584,7 @@ export default function GuessingGame() {
           </Alert>
 
           <Chip 
-            label={`${totalVotes} / ${totalPlayers} players have voted`} 
+            label={`${voteProgress.submitted} / ${voteProgress.total} players have voted`} 
             sx={{ mb: 3 }}
             color={totalVotes === totalPlayers ? 'success' : 'default'}
           />
@@ -658,7 +672,7 @@ export default function GuessingGame() {
           {guessArray.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Voting Progress: {totalVotes} / {totalPlayers} players have voted
+                Voting Progress: ${voteProgress.submitted} / ${voteProgress.total} players have voted
               </Typography>
               <LinearProgress 
                 variant="determinate" 
