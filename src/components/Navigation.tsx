@@ -149,11 +149,29 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
       }}
     >
       {!collapsed && (
-        <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography variant="h6" color="primary" fontWeight="bold">
+        <Box 
+          sx={{ 
+            p: 2, 
+            textAlign: 'center',
+            backgroundColor: theme.palette.background.paper,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: theme.palette.primary.main,
+              fontWeight: 'bold',
+            }}
+          >
             iShareHow
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: theme.palette.text.secondary,
+            }}
+          >
             Ventures
           </Typography>
         </Box>
@@ -196,7 +214,9 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                     minWidth: 0,
                     mr: collapsed ? 0 : 3,
                     justifyContent: 'center',
-                    color: active === item.key ? 'primary.main' : 'inherit',
+                    color: active === item.key 
+                      ? theme.palette.primary.main 
+                      : theme.palette.text.primary,
                   }}
                 >
                   {item.icon}
@@ -206,7 +226,11 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                     primary={item.label}
                     primaryTypographyProps={{
                       fontWeight: active === item.key ? 600 : 400,
-                      color: active === item.key ? 'primary.main' : 'inherit',
+                      sx: {
+                        color: active === item.key 
+                          ? theme.palette.primary.main 
+                          : theme.palette.text.primary,
+                      },
                     }}
                   />
                 )}
@@ -226,7 +250,12 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
         {/* Sign In button for unauthenticated users */}
         {!isAuthenticated && onLogin && (
           <>
-            <Divider sx={{ my: 1 }} />
+            <Divider 
+              sx={{ 
+                my: 1,
+                borderColor: theme.palette.divider,
+              }} 
+            />
             <Tooltip title={collapsed ? 'Sign In' : ''} placement="right">
               <ListItemButton
                 onClick={onLogin}
@@ -244,7 +273,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                     minWidth: 0,
                     mr: collapsed ? 0 : 3,
                     justifyContent: 'center',
-                    color: 'primary.main',
+                    color: theme.palette.primary.main,
                   }}
                 >
                   <LoginIcon />
@@ -254,7 +283,9 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                     primary="Sign In"
                     primaryTypographyProps={{
                       fontWeight: 600,
-                      color: 'primary.main',
+                      sx: {
+                        color: theme.palette.primary.main,
+                      },
                     }}
                   />
                 )}

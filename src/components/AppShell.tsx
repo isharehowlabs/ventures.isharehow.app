@@ -164,7 +164,13 @@ const AppShell = ({ active, children }: AppShellProps) => {
                   transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                   anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                   PaperProps={{
-                    sx: { minWidth: 200, mt: 1 },
+                    sx: { 
+                      minWidth: 200, 
+                      mt: 1,
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      border: `1px solid ${theme.palette.divider}`,
+                    },
                   }}
                 >
                   <Box sx={{ px: 2, py: 1.5 }}>
@@ -175,25 +181,46 @@ const AppShell = ({ active, children }: AppShellProps) => {
                       {user?.email}
                     </Typography>
                   </Box>
-                  <Divider />
-                  <MenuItem onClick={handleProfileClick}>
+                  <Divider sx={{ borderColor: theme.palette.divider }} />
+                  <MenuItem 
+                    onClick={handleProfileClick}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                      },
+                    }}
+                  >
                     <ListItemIcon>
-                      <PersonIcon fontSize="small" />
+                      <PersonIcon fontSize="small" sx={{ color: theme.palette.text.primary }} />
                     </ListItemIcon>
-                    Profile
+                    <Typography sx={{ color: theme.palette.text.primary }}>Profile</Typography>
                   </MenuItem>
-                  <MenuItem onClick={handleSettingsClick}>
+                  <MenuItem 
+                    onClick={handleSettingsClick}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                      },
+                    }}
+                  >
                     <ListItemIcon>
-                      <SettingsIcon fontSize="small" />
+                      <SettingsIcon fontSize="small" sx={{ color: theme.palette.text.primary }} />
                     </ListItemIcon>
-                    Settings
+                    <Typography sx={{ color: theme.palette.text.primary }}>Settings</Typography>
                   </MenuItem>
-                  <Divider />
-                  <MenuItem onClick={handleLogout}>
+                  <Divider sx={{ borderColor: theme.palette.divider }} />
+                  <MenuItem 
+                    onClick={handleLogout}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                      },
+                    }}
+                  >
                     <ListItemIcon>
-                      <LogoutIcon fontSize="small" />
+                      <LogoutIcon fontSize="small" sx={{ color: theme.palette.text.primary }} />
                     </ListItemIcon>
-                    Logout
+                    <Typography sx={{ color: theme.palette.text.primary }}>Logout</Typography>
                   </MenuItem>
                 </Menu>
               </>
@@ -232,10 +259,17 @@ const AppShell = ({ active, children }: AppShellProps) => {
               zIndex: 1200,
               backgroundColor: theme.palette.background.paper,
               color: theme.palette.text.primary,
+              borderRight: `1px solid ${theme.palette.divider}`,
             },
           }}
         >
-          <Toolbar sx={{ minHeight: APPBAR_HEIGHT }} />
+          <Toolbar 
+            sx={{ 
+              minHeight: APPBAR_HEIGHT,
+              backgroundColor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+            }} 
+          />
           {drawerContent}
         </Drawer>
 
@@ -255,7 +289,13 @@ const AppShell = ({ active, children }: AppShellProps) => {
           }}
           open
         >
-          <Toolbar sx={{ minHeight: APPBAR_HEIGHT }} />
+          <Toolbar 
+            sx={{ 
+              minHeight: APPBAR_HEIGHT,
+              backgroundColor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+            }} 
+          />
           {drawerContent}
         </Drawer>
       </Box>
@@ -268,6 +308,8 @@ const AppShell = ({ active, children }: AppShellProps) => {
           width: { xs: '100%', md: `calc(100% - ${DRAWER_WIDTH}px)` },
           minHeight: '100vh',
           mt: `${APPBAR_HEIGHT}px`,
+          backgroundColor: theme.palette.background.default,
+          color: theme.palette.text.primary,
         }}
       >
         {children}

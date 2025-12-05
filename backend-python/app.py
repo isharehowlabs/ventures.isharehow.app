@@ -9293,14 +9293,14 @@ def handle_next_guessing_round(data):
             
             # Sort players by score
             sorted_players = sorted(room['players'], key=lambda p: p['score'], reverse=True)
-            
-            print(f'[LookUp.Cafe] Game finished in room {room_code}')
-            
             emit('game:finished', {
+                'room': room,
                 'winner': sorted_players[0] if sorted_players else None,
                 'players': sorted_players,
                 'message': f"Game Over! {sorted_players[0]['name']} wins!" if sorted_players else "Game Over!"
             }, room=room_code)
+            print(f'[LookUp.Cafe] Game finished in room {room_code}')
+            
             return
         
         # Start next round

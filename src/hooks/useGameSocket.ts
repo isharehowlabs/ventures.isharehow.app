@@ -183,6 +183,9 @@ export const useGameSocket = (): UseGameSocketReturn => {
     socket.on('guessing:voting-complete', handleVotingComplete);
     socket.on('guessing:round-started', handleGuessingRoundStarted);
 
+    socket.on('game:finished', (data: any) => {
+      setGameRoom(data.room || { ...gameRoom, state: 'gameEnd' });
+    });
     setIsConnected(socket.connected);
 
     // Cleanup
@@ -207,6 +210,7 @@ export const useGameSocket = (): UseGameSocketReturn => {
       socket.off('guessing:vote-received', handleVoteReceived);
       socket.off('guessing:voting-complete', handleVotingComplete);
       socket.off('guessing:round-started', handleGuessingRoundStarted);
+      socket.off('game:finished');
     };
   }, [gameRoom]);
 
