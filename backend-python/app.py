@@ -7580,6 +7580,7 @@ def handle_create_room(data):
             'createdAt': time.time(),
         }
             # Guessing game fields
+            'lastActivityTime': time.time(),
             'secretWords': [],
             'currentWord': None,
             'guesses': {},
@@ -9319,4 +9320,177 @@ def handle_next_guessing_round(data):
     except Exception as e:
         print(f'[LookUp.Cafe] Error starting next round: {e}')
         emit('game:error', {'message': f'Failed to start next round: {str(e)}'})
+
+
+# ============================================================================
+# Room Management & Cleanup
+# ============================================================================
+
+import threading
+
+def cleanup_inactive_rooms():
+    """Background task to clean up rooms with all inactive players for >60 seconds"""
+    while True:
+        try:
+            time.sleep(30)  # Run every 30 seconds
+            current_time = time.time()
+            rooms_to_delete = []
+            
+            for room_code, room in list(game_rooms.items()):
+                # Check if all players are inactive for more than 60 seconds
+                all_inactive = True
+                for player in room.get('players', []):
+                    if player.get('isActive', False):
+                        all_inactive = False
+                        break
+                    
+                    disconnect_time = player.get('disconnectTime', 0)
+                    if disconnect_time == 0 or (current_time - disconnect_time) < 60:
+                        all_inactive = False
+                        break
+                
+                # If all players inactive for >60s, mark for deletion
+                if all_inactive and (current_time - room.get('lastActivityTime', current_time)) > 60:
+                    rooms_to_delete.append(room_code)
+            
+            # Delete inactive rooms
+            for room_code in rooms_to_delete:
+                if room_code in game_rooms:
+                    print(f'[LookUp.Cafe] Auto-deleting inactive room: {room_code}')
+                    # Notify any remaining connected players
+                    socketio.emit('game:room-closed', {
+                        'roomCode': room_code,
+                        'reason': 'Room inactive for too long'
+                    }, room=room_code)
+                    del game_rooms[room_code]
+        
+        except Exception as e:
+            print(f'[LookUp.Cafe] Error in cleanup task: {e}')
+
+# Start cleanup thread
+cleanup_thread = threading.Thread(target=cleanup_inactive_rooms, daemon=True)
+cleanup_thread.start()
+print('[LookUp.Cafe] Room cleanup task started')
+
+
+@socketio.on('game:rejoin-room')
+def handle_rejoin_room(data):
+    """Host rejoins their room after disconnecting"""
+    try:
+        room_code = data.get('roomCode', '').strip().upper()
+        player_name = data.get('playerName', 'Guest')
+        user_id = data.get('userId')
+        avatar = data.get('avatar')
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found or has been closed'})
+            return
+        
+        room = game_rooms[room_code]
+        player_id = request.sid
+        
+        # Find if this player was the host
+        was_host = False
+        host_player = None
+        for player in room['players']:
+            if player['id'] == room['hostId']:
+                # Match by userId or name
+                if (user_id and player.get('userId') == user_id) or player['name'] == player_name:
+                    was_host = True
+                    host_player = player
+                    break
+        
+        if not was_host:
+            emit('game:error', {'message': 'Only the original host can rejoin this room'})
+            return
+        
+        # Update host player with new socket ID
+        host_player['id'] = player_id
+        host_player['isActive'] = True
+        host_player['disconnectTime'] = None
+        room['hostId'] = player_id
+        room['lastActivityTime'] = time.time()
+        
+        # Join socket.io room
+        join_room(room_code)
+        
+        print(f'[LookUp.Cafe] Host {player_name} rejoined room {room_code}')
+        
+        # Send room state to rejoining host
+        emit('game:room-joined', {'room': room})
+        
+        # Notify other players
+        emit('game:player-rejoined', {
+            'player': host_player,
+            'room': room
+        }, room=room_code, skip_sid=player_id)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error rejoining room: {e}')
+        emit('game:error', {'message': f'Failed to rejoin room: {str(e)}'})
+
+
+@socketio.on('game:delete-room')
+def handle_delete_room(data):
+    """Host manually deletes/closes the room"""
+    try:
+        room_code = data.get('roomCode', '').strip().upper()
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        player_id = request.sid
+        
+        # Only host can delete room
+        if player_id != room['hostId']:
+            emit('game:error', {'message': 'Only the host can delete the room'})
+            return
+        
+        print(f'[LookUp.Cafe] Host manually deleted room {room_code}')
+        
+        # Notify all players before deletion
+        emit('game:room-closed', {
+            'roomCode': room_code,
+            'reason': 'Host closed the room'
+        }, room=room_code)
+        
+        # Delete room
+        del game_rooms[room_code]
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error deleting room: {e}')
+        emit('game:error', {'message': f'Failed to delete room: {str(e)}'})
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle player disconnect - mark as inactive instead of removing"""
+    try:
+        player_id = request.sid
+        current_time = time.time()
+        
+        # Find player in any room
+        for room_code, room in game_rooms.items():
+            for player in room['players']:
+                if player['id'] == player_id:
+                    # Mark player as inactive
+                    player['isActive'] = False
+                    player['disconnectTime'] = current_time
+                    room['lastActivityTime'] = current_time
+                    
+                    print(f'[LookUp.Cafe] Player {player["name"]} disconnected from room {room_code}')
+                    
+                    # Notify other players
+                    socketio.emit('game:player-disconnected', {
+                        'playerId': player_id,
+                        'playerName': player['name'],
+                        'room': room
+                    }, room=room_code)
+                    
+                    return
+    
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error handling disconnect: {e}')
 
