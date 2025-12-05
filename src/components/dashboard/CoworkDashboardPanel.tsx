@@ -67,7 +67,24 @@ function TaskListPanel({ tasks, onToggle, onAdd }: TaskListPanelProps) {
             }}
             disablePadding
           >
-            <ListItemText primary={task.title} />
+            <ListItemText 
+              primary={task.title}
+              secondary={
+                <>
+                  {task.createdAt && (
+                    <span style={{ marginRight: '8px' }}>
+                      📅 {new Date(task.createdAt).toLocaleDateString()}
+                    </span>
+                  )}
+                  {task.assignedToName && (
+                    <span>👤 {task.assignedToName}</span>
+                  )}
+                  {task.createdByName && !task.assignedToName && (
+                    <span style={{ opacity: 0.7 }}>by {task.createdByName}</span>
+                  )}
+                </>
+              }
+            />
             {task.status === 'completed' ? (
               <IconButton color="success" size="small"><Check /></IconButton>
             ) : (
