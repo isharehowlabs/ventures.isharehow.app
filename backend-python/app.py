@@ -7585,8 +7585,6 @@ def handle_create_room(data):
             'guesses': {},
             'votes': {},
             'roundPhase': None,
-        
-            'roundPhase': None,
         }
         join_room(room_code)
         
@@ -7622,8 +7620,6 @@ def handle_join_room(data):
             emit('game:error', {'message': f'Room is full. Maximum {MAX_PLAYERS} players allowed.'})
             return
         
-        # Check if game already started
-        if room['state'] != 'lobby':
         existing_player = next((p for p in room['players'] if p['userId'] == user_id and user_id), None)
         if existing_player:
             # Update socket ID for reconnection
