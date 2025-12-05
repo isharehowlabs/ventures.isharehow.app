@@ -165,9 +165,13 @@ export default function GuessingGame() {
           <Typography variant="h4" gutterBottom textAlign="center">
             🤔 Set Up Your Guessing Game
           </Typography>
-          <Typography variant="body1" color="text.secondary" textAlign="center" mb={4}>
+          <Typography variant="body1" color="text.secondary" textAlign="center" mb={2}>
             Enter 5 words that players will try to guess. Each word will be used for one round.
           </Typography>
+          <Alert severity="info" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
+            <strong>How it works:</strong> Players will try to guess your secret word. After everyone guesses,
+            they vote on which guess is closest. The player with the most votes wins points!
+          </Alert>
 
           {wordErrors.length > 0 && (
             <Alert severity="error" sx={{ mb: 3 }}>
@@ -256,7 +260,7 @@ export default function GuessingGame() {
                   🤔 Guess the Secret Word!
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  The host has chosen a secret word. What do you think it is?
+                The host has chosen a secret word. Think of what word they might have picked!
                 </Typography>
                 <Chip 
                   label={`${totalGuesses} / ${totalPlayers} players have guessed`} 
@@ -354,9 +358,13 @@ export default function GuessingGame() {
           <Typography variant="h4" gutterBottom textAlign="center">
             👍 Vote for the Best Guess!
           </Typography>
-          <Typography variant="body1" color="text.secondary" textAlign="center" mb={3}>
-            Which guess do you think is closest to the secret word?
+          <Typography variant="body1" color="text.secondary" textAlign="center" mb={2}>
+            Vote for the guess you think is CLOSEST to what the host chose. You cannot vote for your own guess.
           </Typography>
+          <Alert severity="warning" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
+            <strong>Remember:</strong> You're voting for the guess that is most similar or related to the host's word,
+            NOT necessarily the "best" word. The player with the most votes wins this round!
+          </Alert>
 
           <Chip 
             label={`${totalVotes} / ${totalPlayers} players have voted`} 
