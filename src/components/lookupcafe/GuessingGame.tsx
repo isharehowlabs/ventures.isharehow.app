@@ -113,6 +113,8 @@ export default function GuessingGame() {
   const isHost = players.find(p => p.id === socketId)?.isHost || false;
   const currentPlayer = players.find(p => p.id === socketId);
   const phase = (gameRoom as any)?.roundPhase;
+  
+  console.log('[GuessingGame] Debug:', { isHost, phase, state: gameRoom.state, socketId, playersCount: players.length });
 
   // Phase 1: Host Word Setup (before game starts)
   if (!phase || gameRoom.state === 'lobby') {
