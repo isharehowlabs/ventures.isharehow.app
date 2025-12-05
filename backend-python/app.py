@@ -9099,6 +9099,11 @@ def handle_submit_guess(data):
             emit('game:error', {'message': 'You are not in this room'})
             return
         
+        
+        # Prevent host from guessing (they set the word)
+        if player_id == room['hostId']:
+            emit('game:error', {'message': 'Host cannot submit guesses'})
+            return
         # Check game state
         if room.get('state') != 'playing':
             emit('game:error', {'message': 'Game is not in progress'})
@@ -9128,13 +9133,12 @@ def handle_submit_guess(data):
         # Notify all players (anonymized - don't show which player guessed what yet)
         emit('guessing:guess-submitted', {
             'totalGuesses': len(room['guesses']),
-            'totalPlayers': len([p for p in room['players'] if p['isActive']]),
+            'totalPlayers': len([p for p in room['players'] if p['isActive'] and p['id'] != room['hostId']]),
             'playerId': player_id  # Only send to that player so they know it was received
         }, room=room_code)
         
-        # Check if all active players have guessed
-        active_players = [p for p in room['players'] if p['isActive']]
-        if len(room['guesses']) >= len(active_players):
+        active_non_host_players = [p for p in room['players'] if p['isActive'] and p['id'] != room['hostId']]
+        if len(room['guesses']) >= len(active_non_host_players):
             # Move to voting phase
             room['roundPhase'] = 'voting'
             room['votes'] = {}
@@ -9185,6 +9189,11 @@ def handle_vote(data):
         # Check phase
         if room.get('roundPhase') != 'voting':
             emit('game:error', {'message': 'Not in voting phase'})
+        
+        # Prevent host from voting
+        if player_id == room['hostId']:
+            emit('game:error', {'message': 'Host cannot vote'})
+            return
             return
         
         # Can't vote for yourself
