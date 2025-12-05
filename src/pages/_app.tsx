@@ -6,6 +6,7 @@ import { NotificationProvider } from '../contexts/NotificationContext';
 import { TimerProvider } from '../contexts/TimerContext';
 import { initAnalytics, trackPageView } from '../utils/analytics';
 import ErrorBoundary from '../components/ErrorBoundary';
+import '../index.css';
 import '../styles/dashboard.css';
 
 function AppContent({ Component, pageProps }: AppProps) {
