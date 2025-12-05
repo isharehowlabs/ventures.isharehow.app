@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect, session, url_for
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -7424,16 +7424,71 @@ import string
 from datetime import datetime
 
 # In-memory storage for game rooms (use Redis for production)
+# ============================================================================
+# LookUp.Cafe Game Handlers - Complete Implementation
+# Fixed version with 9-digit codes, proper room management, and all handlers
+# ============================================================================
+
+import random
+import string
+import hashlib
+import time
+from datetime import datetime
+from flask_socketio import emit, join_room, leave_room
+from flask import request
+
+# Game room storage (in-memory for now, Redis later)
 game_rooms = {}
 
+# Maximum players per room
+MAX_PLAYERS = 16
+
+# Room code length
+ROOM_CODE_LENGTH = 9
+
 def generate_room_code():
-    """Generate a unique 6-character room code"""
+    """Generate a unique 9-character room code"""
     while True:
-        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=ROOM_CODE_LENGTH))
         if code not in game_rooms:
             return code
 
-@socketio.on('game:create-room')
+def get_word_for_drawing():
+    """Get a random word for drawing game - expandable to database later"""
+    words = [
+        'cat', 'dog', 'house', 'tree', 'car', 'sun', 'moon', 'star', 'fish', 'bird',
+        'book', 'phone', 'computer', 'chair', 'table', 'flower', 'mountain', 'beach',
+        'pizza', 'apple', 'banana', 'guitar', 'camera', 'lamp', 'clock', 'door',
+        'window', 'bicycle', 'train', 'airplane', 'boat', 'umbrella', 'hat', 'shoe',
+        'coffee', 'cake', 'rainbow', 'cloud', 'lightning', 'heart', 'smile', 'music'
+    ]
+    return random.choice(words)
+
+def get_puzzle():
+    """Get a random puzzle - expandable to database later"""
+    puzzles = [
+        {
+            'question': 'What has keys but no locks, space but no room, and you can enter but not go inside?',
+            'answer': 'keyboard',
+            'hints': ['Used with computers', 'Has letters and numbers', 'You type on it']
+        },
+        {
+            'question': 'I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?',
+            'answer': 'echo',
+            'hints': ['Sound related', 'Bounces back', 'Heard in mountains']
+        },
+        {
+            'question': 'The more you take, the more you leave behind. What am I?',
+            'answer': 'footsteps',
+            'hints': ['You make them when walking', 'Leave a trail', 'On the ground']
+        }
+    ]
+    return random.choice(puzzles)
+
+# ============================================================================
+# Socket Event Handlers
+# ============================================================================
+
 @socketio.on('game:create-room')
 def handle_create_room(data):
     """Create a new game room"""
@@ -7445,12 +7500,11 @@ def handle_create_room(data):
         
         # Determine room code
         if custom_room_code:
-            # If roomCode is provided (from userId), convert it to 6-char code
-            # Use first 6 chars of hash for consistency
-            if len(custom_room_code) > 6:
-                # Hash the userId to create a consistent 6-char code
+            # If roomCode is provided (from userId), convert it to 9-char code
+            if len(custom_room_code) > ROOM_CODE_LENGTH:
+                # Hash the userId to create a consistent 9-char code
                 hash_obj = hashlib.md5(custom_room_code.encode())
-                room_code = hash_obj.hexdigest()[:6].upper()
+                room_code = hash_obj.hexdigest()[:ROOM_CODE_LENGTH].upper()
             else:
                 room_code = custom_room_code.upper()
             
@@ -7483,16 +7537,85 @@ def handle_create_room(data):
             'maxRounds': 5,
             'currentDrawerId': None,
             'currentWord': None,
+            'currentPuzzle': None,
             'roundStartTime': None,
+            'createdAt': time.time(),
         }
         
         # Join socket.io room
         join_room(room_code)
         
+        print(f'[LookUp.Cafe] Room created: {room_code} by {player_name}')
         emit('game:room-created', {'room': game_rooms[room_code]})
         
     except Exception as e:
+        print(f'[LookUp.Cafe] Error creating room: {e}')
         emit('game:error', {'message': f'Failed to create room: {str(e)}'})
+
+
+@socketio.on('game:join-room')
+def handle_join_room(data):
+    """Join an existing game room"""
+    try:
+        room_code = data.get('roomCode', '').strip().upper()
+        player_name = data.get('playerName', 'Guest')
+        user_id = data.get('userId')
+        avatar = data.get('avatar')
+        player_id = request.sid
+        
+        # Validate room exists
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found. Please check the code.'})
+            return
+        
+        room = game_rooms[room_code]
+        
+        # Check if room is full
+        if len(room['players']) >= MAX_PLAYERS:
+            emit('game:error', {'message': f'Room is full. Maximum {MAX_PLAYERS} players allowed.'})
+            return
+        
+        # Check if game already started
+        if room['state'] != 'lobby':
+            emit('game:error', {'message': 'Game already in progress. Cannot join.'})
+            return
+        
+        # Check if player already in room (reconnection)
+        existing_player = next((p for p in room['players'] if p['userId'] == user_id and user_id), None)
+        if existing_player:
+            # Update socket ID for reconnection
+            existing_player['id'] = player_id
+            existing_player['isActive'] = True
+        else:
+            # Add new player
+            new_player = {
+                'id': player_id,
+                'name': player_name,
+                'score': 0,
+                'isHost': False,
+                'isActive': True,
+                'avatar': avatar,
+                'userId': user_id,
+            }
+            room['players'].append(new_player)
+        
+        # Join socket.io room
+        join_room(room_code)
+        
+        print(f'[LookUp.Cafe] Player {player_name} joined room {room_code}')
+        
+        # Emit to the joining player
+        emit('game:room-joined', {'room': room})
+        
+        # Notify all players in room (including sender)
+        emit('game:player-joined', {
+            'player': next(p for p in room['players'] if p['id'] == player_id),
+            'room': room
+        }, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error joining room: {e}')
+        emit('game:error', {'message': f'Failed to join room: {str(e)}'})
 
 
 @socketio.on('game:leave-room')
@@ -7507,27 +7630,40 @@ def handle_leave_room(data):
         
         room = game_rooms[room_code]
         
+        # Get player name before removing
+        leaving_player = next((p for p in room['players'] if p['id'] == player_id), None)
+        player_name = leaving_player['name'] if leaving_player else 'Unknown'
+        
         # Remove player
         room['players'] = [p for p in room['players'] if p['id'] != player_id]
+        
+        # Leave socket.io room
+        leave_room(room_code)
         
         # If room is empty, delete it
         if not room['players']:
             del game_rooms[room_code]
+            print(f'[LookUp.Cafe] Room {room_code} deleted (empty)')
             return
         
         # If host left, assign new host
         if room['hostId'] == player_id and room['players']:
             room['players'][0]['isHost'] = True
             room['hostId'] = room['players'][0]['id']
+            print(f'[LookUp.Cafe] New host assigned in room {room_code}: {room["players"][0]["name"]}')
+        
+        print(f'[LookUp.Cafe] Player {player_name} left room {room_code}')
         
         # Notify others
         emit('game:player-left', {
             'playerId': player_id,
+            'playerName': player_name,
             'room': room
         }, room=room_code)
         
     except Exception as e:
-        print(f'Error leaving room: {e}')
+        print(f'[LookUp.Cafe] Error leaving room: {e}')
+
 
 @socketio.on('game:start-game')
 def handle_start_game(data):
@@ -7551,7 +7687,12 @@ def handle_start_game(data):
         
         # Check minimum players
         if len(room['players']) < 2:
-            emit('game:error', {'message': 'Need at least 2 players'})
+            emit('game:error', {'message': 'Need at least 2 players to start'})
+            return
+        
+        # Validate game type
+        if game_type not in ['guessing', 'drawing', 'puzzle']:
+            emit('game:error', {'message': 'Invalid game type'})
             return
         
         # Update room state
@@ -7559,23 +7700,57 @@ def handle_start_game(data):
         room['state'] = 'playing'
         room['currentRound'] = 1
         room['maxRounds'] = max_rounds
-        room['roundStartTime'] = datetime.now().timestamp()
+        room['roundStartTime'] = time.time()
         
-        # For drawing game, select first drawer
+        # Game-specific setup
         if game_type == 'drawing':
             room['currentDrawerId'] = room['players'][0]['id']
-            # In production, fetch from word list
-            room['currentWord'] = random.choice(['cat', 'house', 'tree', 'car', 'sun'])
+            room['currentWord'] = get_word_for_drawing()
+        elif game_type == 'puzzle':
+            room['currentPuzzle'] = get_puzzle()
+        elif game_type == 'guessing':
+            # Select first clue giver
+            room['currentDrawerId'] = room['players'][0]['id']  # Reuse as clue giver
+        
+        print(f'[LookUp.Cafe] Game started in room {room_code}: {game_type}')
         
         # Notify all players
         emit('game:started', {'room': room}, room=room_code)
-        emit('game:round-start', {
-            'room': room,
-            'word': room['currentWord'] if game_type == 'drawing' else None
-        }, room=room_code)
+        
+        # Send round start with word only to drawer (for drawing game)
+        if game_type == 'drawing':
+            # Send word to drawer
+            emit('game:round-start', {
+                'room': room,
+                'word': room['currentWord'],
+                'isDrawer': True
+            }, room=room['currentDrawerId'])
+            
+            # Send round start without word to others
+            for player in room['players']:
+                if player['id'] != room['currentDrawerId']:
+                    emit('game:round-start', {
+                        'room': room,
+                        'word': None,
+                        'isDrawer': False
+                    }, room=player['id'])
+        elif game_type == 'puzzle':
+            # Send puzzle to everyone
+            emit('game:round-start', {
+                'room': room,
+                'puzzle': room['currentPuzzle']
+            }, room=room_code)
+        else:
+            # Guessing game
+            emit('game:round-start', {
+                'room': room,
+                'clueGiverId': room['currentDrawerId']
+            }, room=room_code)
         
     except Exception as e:
+        print(f'[LookUp.Cafe] Error starting game: {e}')
         emit('game:error', {'message': f'Failed to start game: {str(e)}'})
+
 
 @socketio.on('game:submit-answer')
 def handle_submit_answer(data):
@@ -7590,27 +7765,62 @@ def handle_submit_answer(data):
         
         room = game_rooms[room_code]
         
-        # For drawing game, check if answer is correct
+        # Get player info
+        player = next((p for p in room['players'] if p['id'] == player_id), None)
+        if not player:
+            return
+        
+        correct = False
+        points = 0
+        
+        # Check answer based on game type
         if room['gameType'] == 'drawing':
             correct_word = room.get('currentWord', '').lower()
-            if answer == correct_word:
-                # Award points
-                for player in room['players']:
-                    if player['id'] == player_id:
-                        player['score'] += 100
-                        break
+            if answer == correct_word and player_id != room['currentDrawerId']:
+                correct = True
+                points = 100
+                player['score'] += points
                 
-                # Notify correct answer
+                print(f'[LookUp.Cafe] Correct answer in room {room_code}: {player["name"]} guessed {answer}')
+                
+                # Notify all players
                 emit('game:correct-answer', {
                     'playerId': player_id,
-                    'answer': answer
+                    'playerName': player['name'],
+                    'answer': answer,
+                    'points': points
                 }, room=room_code)
         
-        # For other games, store answer for later evaluation
-        # In production, implement proper game logic
+        elif room['gameType'] == 'puzzle':
+            correct_answer = room.get('currentPuzzle', {}).get('answer', '').lower()
+            if answer == correct_answer:
+                correct = True
+                points = 200  # Team points for puzzle
+                # Award points to all players
+                for p in room['players']:
+                    p['score'] += points
+                
+                print(f'[LookUp.Cafe] Puzzle solved in room {room_code} by {player["name"]}')
+                
+                # Notify all players
+                emit('game:puzzle-solved', {
+                    'playerId': player_id,
+                    'playerName': player['name'],
+                    'answer': answer,
+                    'points': points
+                }, room=room_code)
+        
+        elif room['gameType'] == 'guessing':
+            # Store guess for evaluation (implement proper logic based on your game rules)
+            emit('game:guess-submitted', {
+                'playerId': player_id,
+                'playerName': player['name'],
+                'guess': answer
+            }, room=room_code)
         
     except Exception as e:
-        print(f'Error submitting answer: {e}')
+        print(f'[LookUp.Cafe] Error submitting answer: {e}')
+
 
 @socketio.on('game:draw')
 def handle_draw(data):
@@ -7632,7 +7842,8 @@ def handle_draw(data):
         emit('game:drawing-update', data, room=room_code, skip_sid=request.sid)
         
     except Exception as e:
-        print(f'Error handling draw: {e}')
+        print(f'[LookUp.Cafe] Error handling draw: {e}')
+
 
 @socketio.on('game:clear-canvas')
 def handle_clear_canvas(data):
@@ -7643,12 +7854,127 @@ def handle_clear_canvas(data):
         if room_code not in game_rooms:
             return
         
+        room = game_rooms[room_code]
+        player_id = request.sid
+        
+        # Only drawer can clear canvas
+        if room.get('currentDrawerId') != player_id:
+            return
+        
         emit('game:canvas-cleared', {}, room=room_code)
         
     except Exception as e:
-        print(f'Error clearing canvas: {e}')
+        print(f'[LookUp.Cafe] Error clearing canvas: {e}')
+
+
+@socketio.on('game:next-round')
+def handle_next_round(data):
+    """Start the next round"""
+    try:
+        room_code = data.get('roomCode')
+        player_id = request.sid
+        
+        if room_code not in game_rooms:
+            return
+        
+        room = game_rooms[room_code]
+        
+        # Only host can advance rounds
+        if room['hostId'] != player_id:
+            return
+        
+        # Check if game is over
+        if room['currentRound'] >= room['maxRounds']:
+            room['state'] = 'gameEnd'
+            emit('game:ended', {'room': room}, room=room_code)
+            return
+        
+        # Advance round
+        room['currentRound'] += 1
+        room['roundStartTime'] = time.time()
+        
+        # Rotate drawer/clue giver
+        if room['gameType'] in ['drawing', 'guessing']:
+            current_index = next((i for i, p in enumerate(room['players']) if p['id'] == room['currentDrawerId']), 0)
+            next_index = (current_index + 1) % len(room['players'])
+            room['currentDrawerId'] = room['players'][next_index]['id']
+            
+            if room['gameType'] == 'drawing':
+                room['currentWord'] = get_word_for_drawing()
+        
+        elif room['gameType'] == 'puzzle':
+            room['currentPuzzle'] = get_puzzle()
+        
+        # Emit round start
+        emit('game:round-start', {'room': room}, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error starting next round: {e}')
+
+
+@socketio.on('game:chat')
+def handle_chat(data):
+    """Handle chat messages"""
+    try:
+        room_code = data.get('roomCode')
+        message = data.get('message', '').strip()
+        player_id = request.sid
+        
+        if not message or room_code not in game_rooms:
+            return
+        
+        room = game_rooms[room_code]
+        player = next((p for p in room['players'] if p['id'] == player_id), None)
+        
+        if not player:
+            return
+        
+        # Broadcast chat message
+        emit('game:chat-message', {
+            'playerId': player_id,
+            'playerName': player['name'],
+            'message': message,
+            'timestamp': time.time()
+        }, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error handling chat: {e}')
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle player disconnect"""
+    try:
+        player_id = request.sid
+        
+        # Find and remove player from any room they're in
+        for room_code, room in list(game_rooms.items()):
+            player = next((p for p in room['players'] if p['id'] == player_id), None)
+            if player:
+                player_name = player['name']
+                
+                # Mark as inactive instead of removing immediately (allow reconnection)
+                player['isActive'] = False
+                
+                print(f'[LookUp.Cafe] Player {player_name} disconnected from room {room_code}')
+                
+                # Notify others
+                emit('game:player-disconnected', {
+                    'playerId': player_id,
+                    'playerName': player_name
+                }, room=room_code)
+                
+                # Clean up after 30 seconds if still inactive
+                # (In production, use a background task)
+                break
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error handling disconnect: {e}')
+
+
 
 # ==================== End LookUp.Cafe Game Handlers ====================
+
 
 
 # ===== Intervals.icu Integration Endpoints =====

@@ -90,8 +90,8 @@ export default function GameLobby() {
       return;
     }
 
-    if (!roomCode.trim() || roomCode.length !== 6) {
-      alert('Please enter a valid 6-character room code');
+    if (!roomCode.trim() || roomCode.length !== 9) {
+      alert('Please enter a valid 9-character room code');
       return;
     }
 
@@ -329,7 +329,7 @@ export default function GameLobby() {
               value={roomCode}
               onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
               margin="normal"
-              helperText="Enter the 6-character room code"
+              helperText="Enter the 9-character room code"
               inputProps={{ maxLength: 6, style: { textTransform: 'uppercase' } }}
             />
 
@@ -345,7 +345,7 @@ export default function GameLobby() {
                 variant="contained"
                 onClick={handleJoinRoom}
                 fullWidth
-                disabled={!playerName.trim() || roomCode.length !== 6 || !isConnected}
+                disabled={!playerName.trim() || roomCode.length !== 9 || !isConnected}
                 startIcon={!isConnected ? <CircularProgress size={20} color="inherit" /> : null}
               >
                 {!isConnected ? 'Connecting...' : 'Join Room'}
