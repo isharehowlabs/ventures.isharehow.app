@@ -7579,6 +7579,12 @@ def handle_create_room(data):
             'roundStartTime': None,
             'createdAt': time.time(),
         }
+            # Guessing game fields
+            'secretWords': [],
+            'currentWord': None,
+            'guesses': {},
+            'votes': {},
+            'roundPhase': None,
         
         # Join socket.io room
         join_room(room_code)
@@ -9006,4 +9012,311 @@ def handle_set_game_type(data):
     except Exception as e:
         print(f'[LookUp.Cafe] Error setting game type: {e}')
         emit('game:error', {'message': f'Failed to set game type: {str(e)}'})
+
+
+# ============================================================================
+# Guessing Game Handlers
+# ============================================================================
+
+@socketio.on('guessing:set-words')
+def handle_set_words(data):
+    """Host sets the 5 secret words for all rounds"""
+    try:
+        room_code = data.get('roomCode', '').strip().upper()
+        words = data.get('words', [])
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        player_id = request.sid
+        
+        # Only host can set words
+        if player_id != room['hostId']:
+            emit('game:error', {'message': 'Only host can set words'})
+            return
+        
+        # Validate words
+        if not isinstance(words, list) or len(words) != 5:
+            emit('game:error', {'message': 'Must provide exactly 5 words'})
+            return
+        
+        # Clean and validate each word
+        cleaned_words = []
+        for word in words:
+            if not word or not isinstance(word, str):
+                emit('game:error', {'message': 'All words must be non-empty strings'})
+                return
+            cleaned = word.strip().lower()
+            if not cleaned:
+                emit('game:error', {'message': 'Words cannot be empty'})
+                return
+            cleaned_words.append(cleaned)
+        
+        # Check for duplicates
+        if len(set(cleaned_words)) != len(cleaned_words):
+            emit('game:error', {'message': 'All words must be unique'})
+            return
+        
+        # Initialize guessing game state
+        room['secretWords'] = cleaned_words
+        room['currentWord'] = cleaned_words[0]  # Start with first word
+        room['guesses'] = {}  # {playerId: {guess: str, timestamp: float}}
+        room['votes'] = {}  # {playerId: votedForPlayerId}
+        room['roundPhase'] = 'guessing'  # 'guessing' | 'voting' | 'results'
+        room['state'] = 'playing'
+        room['currentRound'] = 1
+        room['roundStartTime'] = time.time()
+        
+        print(f'[LookUp.Cafe] Words set for room {room_code}: {len(cleaned_words)} words')
+        
+        # Notify all players words are set and game is starting
+        emit('guessing:words-set', {
+            'room': room,
+            'message': 'Game starting! Round 1 begins now.',
+            'roundPhase': 'guessing'
+        }, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error setting words: {e}')
+        emit('game:error', {'message': f'Failed to set words: {str(e)}'})
+
+
+@socketio.on('guessing:submit-guess')
+def handle_submit_guess(data):
+    """Player submits their guess for the current word"""
+    try:
+        room_code = data.get('roomCode', '').strip().upper()
+        guess = data.get('guess', '').strip()
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        player_id = request.sid
+        
+        # Validate player is in room
+        player = next((p for p in room['players'] if p['id'] == player_id), None)
+        if not player:
+            emit('game:error', {'message': 'You are not in this room'})
+            return
+        
+        # Check game state
+        if room.get('state') != 'playing':
+            emit('game:error', {'message': 'Game is not in progress'})
+            return
+        
+        if room.get('roundPhase') != 'guessing':
+            emit('game:error', {'message': 'Not in guessing phase'})
+            return
+        
+        # Validate guess
+        if not guess:
+            emit('game:error', {'message': 'Guess cannot be empty'})
+            return
+        
+        # Store guess
+        if 'guesses' not in room:
+            room['guesses'] = {}
+        
+        room['guesses'][player_id] = {
+            'guess': guess.lower(),
+            'playerName': player['name'],
+            'timestamp': time.time()
+        }
+        
+        print(f'[LookUp.Cafe] Player {player["name"]} submitted guess in room {room_code}')
+        
+        # Notify all players (anonymized - don't show which player guessed what yet)
+        emit('guessing:guess-submitted', {
+            'totalGuesses': len(room['guesses']),
+            'totalPlayers': len([p for p in room['players'] if p['isActive']]),
+            'playerId': player_id  # Only send to that player so they know it was received
+        }, room=room_code)
+        
+        # Check if all active players have guessed
+        active_players = [p for p in room['players'] if p['isActive']]
+        if len(room['guesses']) >= len(active_players):
+            # Move to voting phase
+            room['roundPhase'] = 'voting'
+            room['votes'] = {}
+            
+            print(f'[LookUp.Cafe] Moving to voting phase in room {room_code}')
+            
+            # Send all guesses for voting (still anonymized until results)
+            guesses_for_voting = [
+                {
+                    'id': pid,
+                    'guess': g['guess'],
+                    'canVote': pid != player_id  # Can't vote for yourself
+                }
+                for pid, g in room['guesses'].items()
+            ]
+            
+            emit('guessing:phase-changed', {
+                'roundPhase': 'voting',
+                'guesses': guesses_for_voting,
+                'message': 'All guesses are in! Time to vote for the best guess.'
+            }, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error submitting guess: {e}')
+        emit('game:error', {'message': f'Failed to submit guess: {str(e)}'})
+
+
+@socketio.on('guessing:vote')
+def handle_vote(data):
+    """Player votes for the best guess"""
+    try:
+        room_code = data.get('roomCode', '').strip().upper()
+        voted_for_player_id = data.get('votedForPlayerId')
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        player_id = request.sid
+        
+        # Validate player is in room
+        player = next((p for p in room['players'] if p['id'] == player_id), None)
+        if not player:
+            emit('game:error', {'message': 'You are not in this room'})
+            return
+        
+        # Check phase
+        if room.get('roundPhase') != 'voting':
+            emit('game:error', {'message': 'Not in voting phase'})
+            return
+        
+        # Can't vote for yourself
+        if voted_for_player_id == player_id:
+            emit('game:error', {'message': 'Cannot vote for your own guess'})
+            return
+        
+        # Validate the voted player exists and has a guess
+        if voted_for_player_id not in room.get('guesses', {}):
+            emit('game:error', {'message': 'Invalid vote target'})
+            return
+        
+        # Store vote
+        if 'votes' not in room:
+            room['votes'] = {}
+        
+        room['votes'][player_id] = voted_for_player_id
+        
+        print(f'[LookUp.Cafe] Player {player["name"]} voted in room {room_code}')
+        
+        # Notify vote received
+        emit('guessing:vote-received', {
+            'totalVotes': len(room['votes']),
+            'totalPlayers': len([p for p in room['players'] if p['isActive'] and p['id'] in room['guesses']])
+        }, room=room_code)
+        
+        # Check if all players who guessed have voted (can't vote if you didn't guess)
+        players_who_guessed = list(room['guesses'].keys())
+        if len(room['votes']) >= len(players_who_guessed):
+            # Calculate results
+            vote_counts = {}
+            for voted_for in room['votes'].values():
+                vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
+            
+            # Find winner (most votes)
+            if vote_counts:
+                winner_id = max(vote_counts.items(), key=lambda x: x[1])[0]
+                winner_guess = room['guesses'][winner_id]
+                winner_player = next((p for p in room['players'] if p['id'] == winner_id), None)
+                
+                # Award points
+                if winner_player:
+                    winner_player['score'] += 10
+                
+                # Prepare results
+                results = {
+                    'winnerId': winner_id,
+                    'winnerName': winner_player['name'] if winner_player else 'Unknown',
+                    'winnerGuess': winner_guess['guess'],
+                    'voteCount': vote_counts[winner_id],
+                    'secretWord': room['currentWord'],
+                    'allGuesses': [
+                        {
+                            'playerId': pid,
+                            'playerName': room['guesses'][pid]['playerName'],
+                            'guess': room['guesses'][pid]['guess'],
+                            'votes': vote_counts.get(pid, 0)
+                        }
+                        for pid in room['guesses'].keys()
+                    ],
+                    'updatedPlayers': room['players']
+                }
+                
+                room['roundPhase'] = 'results'
+                
+                print(f'[LookUp.Cafe] Voting complete in room {room_code}, winner: {winner_player["name"] if winner_player else "Unknown"}')
+                
+                emit('guessing:voting-complete', results, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error processing vote: {e}')
+        emit('game:error', {'message': f'Failed to process vote: {str(e)}'})
+
+
+@socketio.on('guessing:next-round')
+def handle_next_guessing_round(data):
+    """Progress to the next round or end the game"""
+    try:
+        room_code = data.get('roomCode', '').strip().upper()
+        
+        if room_code not in game_rooms:
+            emit('game:error', {'message': 'Room not found'})
+            return
+        
+        room = game_rooms[room_code]
+        player_id = request.sid
+        
+        # Only host can progress rounds
+        if player_id != room['hostId']:
+            emit('game:error', {'message': 'Only host can start next round'})
+            return
+        
+        # Check if game is over
+        if room['currentRound'] >= room['maxRounds']:
+            # Game over
+            room['state'] = 'finished'
+            
+            # Sort players by score
+            sorted_players = sorted(room['players'], key=lambda p: p['score'], reverse=True)
+            
+            print(f'[LookUp.Cafe] Game finished in room {room_code}')
+            
+            emit('game:finished', {
+                'winner': sorted_players[0] if sorted_players else None,
+                'players': sorted_players,
+                'message': f"Game Over! {sorted_players[0]['name']} wins!" if sorted_players else "Game Over!"
+            }, room=room_code)
+            return
+        
+        # Start next round
+        room['currentRound'] += 1
+        room['currentWord'] = room['secretWords'][room['currentRound'] - 1]
+        room['guesses'] = {}
+        room['votes'] = {}
+        room['roundPhase'] = 'guessing'
+        room['roundStartTime'] = time.time()
+        
+        print(f'[LookUp.Cafe] Starting round {room["currentRound"]} in room {room_code}')
+        
+        emit('guessing:round-started', {
+            'room': room,
+            'currentRound': room['currentRound'],
+            'maxRounds': room['maxRounds'],
+            'roundPhase': 'guessing',
+            'message': f'Round {room["currentRound"]} starting!'
+        }, room=room_code)
+        
+    except Exception as e:
+        print(f'[LookUp.Cafe] Error starting next round: {e}')
+        emit('game:error', {'message': f'Failed to start next round: {str(e)}'})
 

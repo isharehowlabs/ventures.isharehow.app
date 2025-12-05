@@ -27,6 +27,11 @@ interface UseGameSocketReturn {
   submitAnswer: (data: SubmitAnswerData) => void;
   sendDrawing: (data: DrawingData) => void;
   clearCanvas: (roomCode: string) => void;
+  // Guessing game functions
+  setSecretWords: (roomCode: string, words: string[]) => void;
+  submitGuess: (roomCode: string, guess: string) => void;
+  voteForGuess: (roomCode: string, votedForPlayerId: string) => void;
+  nextGuessingRound: (roomCode: string) => void;
 }
 
 export const useGameSocket = (): UseGameSocketReturn => {
@@ -113,6 +118,43 @@ export const useGameSocket = (): UseGameSocketReturn => {
       // Just emit a custom event for components to listen to
     };
 
+    // Guessing game event handlers
+    const handleWordsSet = (data: { room: GameRoom; roundPhase: string }) => {
+      setGameRoom(data.room);
+    };
+
+    const handleGuessSubmitted = (data: { totalGuesses: number; totalPlayers: number }) => {
+      // Update UI to show progress
+      if (gameRoom) {
+        setGameRoom({ ...gameRoom, guesses: data as any });
+      }
+    };
+
+    const handlePhaseChanged = (data: { roundPhase: string; guesses?: any[]; message: string }) => {
+      if (gameRoom) {
+        setGameRoom({ ...gameRoom, roundPhase: data.roundPhase as any, guesses: data.guesses as any });
+      }
+    };
+
+    const handleVoteReceived = (data: { totalVotes: number; totalPlayers: number }) => {
+      // Update vote progress
+      if (gameRoom) {
+        setGameRoom({ ...gameRoom, votes: data as any });
+      }
+    };
+
+    const handleVotingComplete = (data: any) => {
+      // Update with results
+      if (gameRoom) {
+        setGameRoom({ ...gameRoom, roundPhase: 'results', players: data.updatedPlayers });
+        setPlayers(data.updatedPlayers);
+      }
+    };
+
+    const handleGuessingRoundStarted = (data: { room: GameRoom }) => {
+      setGameRoom(data.room);
+    };
+
     const handleError = (data: { message: string }) => {
       setError(data.message);
     };
@@ -132,6 +174,14 @@ export const useGameSocket = (): UseGameSocketReturn => {
     socket.on('game:round-end', handleRoundEnd);
     socket.on('game:drawing-update', handleDrawingUpdate);
     socket.on('game:error', handleError);
+    
+    // Guessing game events
+    socket.on('guessing:words-set', handleWordsSet);
+    socket.on('guessing:guess-submitted', handleGuessSubmitted);
+    socket.on('guessing:phase-changed', handlePhaseChanged);
+    socket.on('guessing:vote-received', handleVoteReceived);
+    socket.on('guessing:voting-complete', handleVotingComplete);
+    socket.on('guessing:round-started', handleGuessingRoundStarted);
 
     setIsConnected(socket.connected);
 
@@ -151,8 +201,14 @@ export const useGameSocket = (): UseGameSocketReturn => {
       socket.off('game:round-end', handleRoundEnd);
       socket.off('game:drawing-update', handleDrawingUpdate);
       socket.off('game:error', handleError);
+      socket.off('guessing:words-set', handleWordsSet);
+      socket.off('guessing:guess-submitted', handleGuessSubmitted);
+      socket.off('guessing:phase-changed', handlePhaseChanged);
+      socket.off('guessing:vote-received', handleVoteReceived);
+      socket.off('guessing:voting-complete', handleVotingComplete);
+      socket.off('guessing:round-started', handleGuessingRoundStarted);
     };
-  }, []);
+  }, [gameRoom]);
 
   // Action functions
   const createRoom = useCallback((data: CreateRoomData) => {
@@ -205,6 +261,31 @@ export const useGameSocket = (): UseGameSocketReturn => {
     }
   }, []);
 
+  // Guessing game functions
+  const setSecretWords = useCallback((roomCode: string, words: string[]) => {
+    if (socketRef.current) {
+      socketRef.current.emit('guessing:set-words', { roomCode, words });
+    }
+  }, []);
+
+  const submitGuess = useCallback((roomCode: string, guess: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('guessing:submit-guess', { roomCode, guess });
+    }
+  }, []);
+
+  const voteForGuess = useCallback((roomCode: string, votedForPlayerId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('guessing:vote', { roomCode, votedForPlayerId });
+    }
+  }, []);
+
+  const nextGuessingRound = useCallback((roomCode: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('guessing:next-round', { roomCode });
+    }
+  }, []);
+
   return {
     gameRoom,
     players,
@@ -219,5 +300,9 @@ export const useGameSocket = (): UseGameSocketReturn => {
     submitAnswer,
     sendDrawing,
     clearCanvas,
+    setSecretWords,
+    submitGuess,
+    voteForGuess,
+    nextGuessingRound,
   };
 };

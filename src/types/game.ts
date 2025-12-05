@@ -2,6 +2,7 @@
 
 export type GameType = 'guessing' | 'drawing' | 'puzzle';
 export type GameState = 'lobby' | 'playing' | 'roundEnd' | 'gameEnd';
+export type RoundPhase = 'guessing' | 'voting' | 'results';
 
 export interface Player {
   id: string;
@@ -24,6 +25,11 @@ export interface GameRoom {
   currentDrawerId?: string;
   currentWord?: string;
   roundStartTime?: number;
+  // Guessing game specific fields
+  secretWords?: string[];
+  guesses?: Record<string, any> | any;
+  votes?: Record<string, string> | any;
+  roundPhase?: RoundPhase;
 }
 
 // Drawing game specific
