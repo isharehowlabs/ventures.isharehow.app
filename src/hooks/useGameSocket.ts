@@ -10,7 +10,8 @@ import {
   SubmitAnswerData,
   DrawingData,
   RoundResult,
-, GameType} from '../types/game';
+  GameType,
+} from '../types/game';
 
 interface UseGameSocketReturn {
   gameRoom: GameRoom | null;

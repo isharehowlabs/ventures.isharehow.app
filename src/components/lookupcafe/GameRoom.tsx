@@ -54,7 +54,7 @@ export default function GameRoom() {
   };
 
   const handleStartGame = () => {
-    if (isHost && selectedGameType) {
+    if (isHost && gameRoom.gameType) {
       startGame({
         roomCode: gameRoom.roomCode,
         gameType: gameRoom.gameType!,
