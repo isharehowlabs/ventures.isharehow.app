@@ -9289,7 +9289,7 @@ def handle_next_guessing_round(data):
         # Check if game is over
         if room['currentRound'] >= room['maxRounds']:
             # Game over
-            room['state'] = 'finished'
+            room['state'] = 'gameEnd'
             
             # Sort players by score
             sorted_players = sorted(room['players'], key=lambda p: p['score'], reverse=True)
