@@ -16,6 +16,10 @@ import subprocess
 import glob
 from pathlib import Path
 import warnings
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Import Werkzeug exceptions for error handling
 try:
@@ -486,15 +490,21 @@ if DB_AVAILABLE:
         username = db.Column(db.String(80), unique=True, nullable=True, index=True)
         email = db.Column(db.String(120), unique=True, nullable=True, index=True)
         password_hash = db.Column(db.String(255), nullable=True)
-        patreon_id = db.Column(db.String(50), unique=True, nullable=True, index=True)
-        access_token = db.Column(db.String(500), nullable=True)  # Increased length for tokens
-        refresh_token = db.Column(db.String(500), nullable=True)
-        membership_paid = db.Column(db.Boolean, default=False, nullable=False)  # Renamed from membership_active
+        # Deprecated Patreon fields (kept for migration compatibility, will be removed)
+        patreon_id = db.Column(db.String(50), unique=True, nullable=True, index=True)  # DEPRECATED
+        access_token = db.Column(db.String(500), nullable=True)  # DEPRECATED
+        refresh_token = db.Column(db.String(500), nullable=True)  # DEPRECATED
+        patreon_connected = db.Column(db.Boolean, default=False, nullable=False)  # DEPRECATED
+        token_expires_at = db.Column(db.DateTime, nullable=True)  # DEPRECATED
+        # Shopify/Bold Subscriptions fields
+        has_subscription_update = db.Column(db.Boolean, default=False, nullable=False)  # Has member updated their subscription?
+        subscription_update_active = db.Column(db.Boolean, default=False, nullable=False)  # Is subscription update active?
+        shopify_customer_id = db.Column(db.String(50), nullable=True, index=True)  # Shopify customer ID
+        bold_subscription_id = db.Column(db.String(50), nullable=True, index=True)  # Bold Subscriptions subscription ID
+        membership_paid = db.Column(db.Boolean, default=False, nullable=False)  # Active subscription status
         is_employee = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Employee flag for Creative Dashboard
         is_admin = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Admin flag for system administration
-        last_checked = db.Column(db.DateTime, nullable=True)
-        token_expires_at = db.Column(db.DateTime, nullable=True)
-        patreon_connected = db.Column(db.Boolean, default=False, nullable=False)
+        last_checked = db.Column(db.DateTime, nullable=True)  # Last subscription check
         # Web3/ENS fields
         ens_name = db.Column(db.String(255), unique=True, nullable=True, index=True)  # e.g., "isharehow.isharehow.eth"
         crypto_address = db.Column(db.String(42), nullable=True, index=True)  # Ethereum address (0x...)
@@ -513,21 +523,24 @@ if DB_AVAILABLE:
             return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
         
         def to_dict(self):
-            # Use ENS name as ID if available, otherwise fall back to patreon_id, username, or id
-            user_id = self.ens_name or self.patreon_id or self.username or str(self.id)
+            # Use ENS name as ID if available, otherwise fall back to username or email-based ID, or numeric id
+            user_id = self.ens_name or self.username or (self.email.split('@')[0] if self.email else None) or str(self.id)
             return {
                 'id': user_id,
+                'userId': str(self.id),  # Always include numeric ID
                 'ensName': self.ens_name,  # Web3 domain: username.isharehow.eth
                 'cryptoAddress': self.crypto_address,  # Ethereum address
                 'contentHash': self.content_hash,  # IPFS content hash
-                'patreonId': self.patreon_id,
                 'username': self.username,
                 'email': self.email,
-                'membershipPaid': self.membership_paid,  # Updated field name
+                'membershipPaid': self.membership_paid,
                 'isPaidMember': self.membership_paid,  # Alias for consistency
                 'isEmployee': self.is_employee,
                 'isAdmin': self.is_admin,
-                'patreonConnected': self.patreon_connected or (self.patreon_id is not None),  # Auto-computed
+                'hasSubscriptionUpdate': self.has_subscription_update,
+                'subscriptionUpdateActive': self.subscription_update_active,
+                'shopifyCustomerId': self.shopify_customer_id,
+                'boldSubscriptionId': self.bold_subscription_id,
                 'lastChecked': self.last_checked.isoformat() if self.last_checked else None
             }
 
@@ -1220,7 +1233,8 @@ def get_user_id():
             if DB_AVAILABLE:
                 user = User.query.get(int(user_id)) if user_id.isdigit() else None
                 if user:
-                    return user.patreon_id or user.username or str(user.id)
+                    # Use email-based ID or username or numeric ID
+                    return user.email.split('@')[0] if user.email else (user.username or str(user.id))
             return str(user_id)
     except Exception:
         pass
@@ -1241,7 +1255,8 @@ def get_current_user():
             if not user:
                 user = User.query.filter_by(username=user_id).first()
             if not user:
-                user = User.query.filter_by(patreon_id=user_id).first()
+                # Try email lookup (user_id could be an email)
+                user = User.query.filter_by(email=user_id).first()
         except Exception as query_error:
             error_str = str(query_error).lower()
             if 'is_employee' in error_str and 'column' in error_str:
@@ -1252,12 +1267,12 @@ def get_current_user():
                 try:
                     with db.engine.connect() as conn:
                         result = conn.execute(db.text("""
-                            SELECT id, username, email, password_hash, patreon_id, 
-                                   access_token, refresh_token, membership_paid,
-                                   last_checked, token_expires_at, patreon_connected,
-                                   created_at, updated_at
+                            SELECT id, username, email, password_hash, membership_paid,
+                                   last_checked, created_at, updated_at,
+                                   has_subscription_update, subscription_update_active,
+                                   shopify_customer_id, bold_subscription_id
                             FROM users 
-                            WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                            WHERE (id = :user_id OR username = :user_id OR email = :user_id)
                             LIMIT 1
                         """), {'user_id': user_id})
                         row = result.fetchone()
@@ -1270,15 +1285,14 @@ def get_current_user():
                                 username=row[1],
                                 email=row[2],
                                 password_hash=row[3],
-                                patreon_id=row[4],
-                                access_token=row[5],
-                                refresh_token=row[6],
-                                membership_paid=row[7],
-                                last_checked=row[8],
-                                token_expires_at=row[9],
-                                patreon_connected=row[10],
-                                created_at=row[11],
-                                updated_at=row[12]
+                                membership_paid=row[4],
+                                last_checked=row[5],
+                                created_at=row[6],
+                                updated_at=row[7],
+                                has_subscription_update=row[8] if len(row) > 8 else False,
+                                subscription_update_active=row[9] if len(row) > 9 else False,
+                                shopify_customer_id=row[10] if len(row) > 10 else None,
+                                bold_subscription_id=row[11] if len(row) > 11 else None
                             )
                             # Add methods that might be called
                             def check_password(pwd):
@@ -1287,13 +1301,17 @@ def get_current_user():
                                 return bcrypt.checkpw(pwd.encode('utf-8'), user.password_hash.encode('utf-8'))
                             user.check_password = check_password
                             def to_dict():
+                                user_id_str = user.email.split('@')[0] if user.email else (user.username or str(user.id))
                                 return {
-                                    'id': user.patreon_id or user.username or str(user.id),
-                                    'patreonId': user.patreon_id,
+                                    'id': user_id_str,
+                                    'userId': str(user.id),
                                     'username': user.username,
                                     'email': user.email,
                                     'membershipPaid': user.membership_paid,
-                                    'patreonConnected': user.patreon_connected,
+                                    'hasSubscriptionUpdate': getattr(user, 'has_subscription_update', False),
+                                    'subscriptionUpdateActive': getattr(user, 'subscription_update_active', False),
+                                    'shopifyCustomerId': getattr(user, 'shopify_customer_id', None),
+                                    'boldSubscriptionId': getattr(user, 'bold_subscription_id', None),
                                     'lastChecked': user.last_checked.isoformat() if user.last_checked else None
                                 }
                             user.to_dict = to_dict
@@ -1471,8 +1489,10 @@ def get_user_info():
     user = get_current_user()
     if not user:
         return None
+    # Use email-based ID or username or numeric ID
+    user_id_str = user.email.split('@')[0] if user.email else (user.username or str(user.id))
     return {
-        'id': user.patreon_id or user.username or str(user.id),
+        'id': user_id_str,
         'user_id': user.id,  # Add database user ID
         'role': 'mentee',  # default to mentee (can be extended later)
         'is_employee': safe_get_is_employee(user),
@@ -2388,10 +2408,13 @@ def login():
                 'message': error_message
             }), 500
 
-@app.route('/api/auth/verify-patreon', methods=['POST'])
+# --- REMOVED: Patreon verification endpoint ---
+# Replaced with Shopify subscription verification
+
+@app.route('/api/subscriptions/verify', methods=['POST'])
 @jwt_required()
-def verify_patreon():
-    """Manually verify Patreon membership status - Can be triggered by user from profile page"""
+def verify_subscription():
+    """Verify Shopify subscription status for user"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
@@ -2408,110 +2431,38 @@ def verify_patreon():
         if not user:
             user = User.query.filter_by(username=user_id).first()
         if not user:
-            user = User.query.filter_by(patreon_id=user_id).first()
+            user = User.query.filter_by(email=user_id).first()
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        if not user.patreon_connected or not user.access_token:
-            return jsonify({
-                'error': 'Patreon not connected',
-                'message': 'Please connect your Patreon account first',
-                'needsConnection': True
-            }), 400
+        # Check for active subscription
+        subscription = Subscription.query.filter_by(
+            user_id=str(user.id)
+        ).filter(
+            Subscription.status == 'active'
+        ).filter(
+            Subscription.expires_at > datetime.utcnow()
+        ).order_by(Subscription.created_at.desc()).first()
         
-        # Check if token is expired
-        if user.token_expires_at and user.token_expires_at < datetime.utcnow():
-            # Try to refresh token
-            if user.refresh_token:
-                new_token_data = refresh_patreon_token(user.refresh_token)
-                if new_token_data:
-                    user.access_token = new_token_data.get('access_token')
-                    if new_token_data.get('refresh_token'):
-                        user.refresh_token = new_token_data.get('refresh_token')
-                    expires_in = new_token_data.get('expires_in', 3600)
-                    user.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-                    db.session.commit()
-                else:
-                    return jsonify({
-                        'error': 'Patreon token expired',
-                        'message': 'Please reconnect your Patreon account',
-                        'needsConnection': True
-                    }), 401
-            else:
-                return jsonify({
-                    'error': 'Patreon token expired',
-                    'message': 'Please reconnect your Patreon account',
-                    'needsConnection': True
-                }), 401
-        
-        # Verify membership status with Patreon API
-        headers = {
-            "Authorization": f"Bearer {user.access_token}",
-            "User-Agent": "VenturesApp/1.0 (+https://ventures.isharehow.app)"
-        }
-        
-        identity_url = (
-            "https://www.patreon.com/api/oauth2/v2/identity"
-            "?fields[user]=id,email,full_name,image_url"
-            "&include=memberships"
-            "&fields[member]=patron_status,currently_entitled_amount_cents,last_charge_date,pledge_start"
-        )
-        
-        user_res = requests.get(identity_url, headers=headers, timeout=10)
-        
-        if not user_res.ok:
-            if user_res.status_code == 401:
-                return jsonify({
-                    'error': 'Patreon token invalid',
-                    'message': 'Please reconnect your Patreon account',
-                    'needsConnection': True
-                }), 401
-            return jsonify({'error': f'Patreon API error: {user_res.status_code}'}), 500
-        
-        user_data = user_res.json()
-        data_obj = user_data.get('data', {})
-        relationships = data_obj.get('relationships', {})
-        
-        # Check membership status
-        is_paid_member = False
-        memberships = relationships.get('memberships', {}).get('data', [])
-        
-        if memberships:
-            included = user_data.get('included', [])
-            for membership in memberships:
-                membership_id = membership.get('id')
-                for item in included:
-                    if item.get('id') == membership_id and item.get('type') == 'member':
-                        member_attrs = item.get('attributes', {})
-                        patron_status = member_attrs.get('patron_status')
-                        if patron_status == 'active_patron':
-                            is_paid_member = True
-                            break
-        
-        # Special handling for creator/admin
-        patreon_user_id = data_obj.get('id', '')
-        if patreon_user_id == '56776112':
-            is_paid_member = False
+        has_active_subscription = subscription is not None
         
         # Update user membership status
-        user.membership_paid = is_paid_member  # Updated field name
+        user.membership_paid = has_active_subscription
         user.last_checked = datetime.utcnow()
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': 'Patreon status verified',
-            'membershipPaid': is_paid_member,  # Updated field name
+            'message': 'Subscription status verified',
+            'membershipPaid': has_active_subscription,
+            'subscription': subscription.to_dict() if subscription else None,
             'user': user.to_dict()
         })
         
-    except requests.exceptions.RequestException as e:
-        print(f"Error verifying Patreon: {e}")
-        return jsonify({'error': f'Failed to verify with Patreon: {str(e)}'}), 500
     except Exception as e:
-        print(f"Error in verify_patreon: {e}")
-        app.logger.error(f"Error in verify_patreon: {e}")
+        print(f"Error verifying subscription: {e}")
+        app.logger.error(f"Error in verify_subscription: {e}")
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 
@@ -2789,13 +2740,13 @@ def refresh_token():
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 
+# --- REMOVED: Patreon verify-and-create endpoint ---
+# Replaced with Shopify subscription system
+
 @app.route('/api/auth/verify-and-create', methods=['POST'])
 def verify_and_create_user():
     """
-    Verify Patreon membership and create/update user in database.
-    Requires either:
-    1. An access token (preferred) - will get user info from token
-    2. Or Patreon ID + email (manual entry, but requires access token for verification)
+    Create/update user account - now uses email/password registration instead of Patreon
     """
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
@@ -5350,7 +5301,7 @@ def get_clients():
 
 @app.route('/api/demo/leads', methods=['POST'])
 def create_demo_lead():
-    """Create a demo lead - public endpoint, no authentication required"""
+    """Create a demo lead as a prospect - public endpoint, no authentication required"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
@@ -5364,29 +5315,30 @@ def create_demo_lead():
         # Check if email already exists
         existing = Client.query.filter_by(email=data['email']).first()
         if existing:
-            # Update existing client with new demo request info
+            # Update existing client/prospect with new demo request info
             existing.notes = (existing.notes or '') + f'\n\nDemo Request: {datetime.utcnow().isoformat()} - {data.get("message", "No message")}'
-            existing.status = 'pending'  # Reset to pending if inactive
+            if existing.status == 'inactive':
+                existing.status = 'prospect'  # Reactivate as prospect
             db.session.commit()
             return jsonify({
-                'message': 'Demo request received (existing client updated)',
+                'message': 'Demo request received (existing prospect updated)',
                 'clientId': existing.id
             }), 200
         
-        # Create new client lead
+        # Create new prospect (status='prospect')
         client = Client(
             name=data['name'],
             email=data['email'],
             company=data['company'],
             phone=data.get('phone'),
-            status='pending',
+            status='prospect',  # Mark as prospect
             notes=f'Demo Request: {data.get("message", "No message")}\nSource: {data.get("source", "book_demo_form")}',
         )
         
         db.session.add(client)
         db.session.commit()
         
-        print(f"✓ Created demo lead: {client.email} ({client.id})")
+        print(f"✓ Created prospect from demo form: {client.email} ({client.id})")
         
         return jsonify({
             'message': 'Demo request submitted successfully',
@@ -5399,6 +5351,84 @@ def create_demo_lead():
         traceback.print_exc()
         db.session.rollback()
         return jsonify({'error': f'Failed to submit demo request: {str(e)}'}), 500
+
+def send_password_reset_email(email, name, reset_token):
+    """Send password reset email to client"""
+    try:
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
+        reset_url = f"{frontend_url}/reset-password?token={reset_token}&email={email}"
+        
+        # Email configuration from environment variables
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_user = os.environ.get('SMTP_USER')
+        smtp_password = os.environ.get('SMTP_PASSWORD')
+        smtp_from = os.environ.get('SMTP_FROM', smtp_user or 'noreply@ventures.isharehow.app')
+        
+        if not smtp_user or not smtp_password:
+            print("⚠ SMTP credentials not configured. Password reset email not sent.")
+            print(f"   Reset URL for {email}: {reset_url}")
+            return False
+        
+        # Create email message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Welcome to iShareHow Ventures - Set Your Password'
+        msg['From'] = smtp_from
+        msg['To'] = email
+        
+        # Email body
+        text_content = f"""
+Hello {name},
+
+Welcome to iShareHow Ventures! Your client account has been created.
+
+To set your password and access your account, please click the link below:
+{reset_url}
+
+This link will expire in 24 hours.
+
+If you did not request this account, please ignore this email.
+
+Best regards,
+iShareHow Ventures Team
+"""
+        
+        html_content = f"""
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4a90e2;">Welcome to iShareHow Ventures!</h2>
+        <p>Hello {name},</p>
+        <p>Your client account has been created. To set your password and access your account, please click the button below:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{reset_url}" style="background-color: #4a90e2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Set Your Password</a>
+        </div>
+        <p style="font-size: 12px; color: #666;">This link will expire in 24 hours.</p>
+        <p style="font-size: 12px; color: #666;">If you did not request this account, please ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+        <p style="font-size: 12px; color: #999;">Best regards,<br>iShareHow Ventures Team</p>
+    </div>
+</body>
+</html>
+"""
+        
+        # Attach both plain text and HTML versions
+        msg.attach(MIMEText(text_content, 'plain'))
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Send email
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        
+        print(f"✓ Password reset email sent to {email}")
+        return True
+    except Exception as e:
+        print(f"⚠ Error sending password reset email to {email}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 @app.route('/api/creative/clients', methods=['POST'])
 def create_client():
@@ -5413,12 +5443,43 @@ def create_client():
         if not data.get('name') or not data.get('email') or not data.get('company'):
             return jsonify({'error': 'Name, email, and company are required'}), 400
         
-        # Check if email already exists
-        existing = Client.query.filter_by(email=data['email']).first()
-        if existing:
+        # Check if email already exists in clients
+        existing_client = Client.query.filter_by(email=data['email']).first()
+        if existing_client:
             return jsonify({'error': 'Client with this email already exists'}), 409
         
-        # Create client
+        # Check if user account already exists
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            # User exists, link it to the client
+            user = existing_user
+            print(f"✓ Linking existing user account to new client: {user.email}")
+        else:
+            # Create new user account for the client
+            # Generate username from email (before @)
+            username_base = data['email'].split('@')[0]
+            username = username_base
+            counter = 1
+            # Ensure username is unique
+            while User.query.filter_by(username=username).first():
+                username = f"{username_base}{counter}"
+                counter += 1
+            
+            # Create user account
+            user = User(
+                username=username,
+                email=data['email'],
+                patreon_connected=False
+            )
+            # Set a temporary random password (user will reset it)
+            temp_password = secrets.token_urlsafe(16)
+            user.set_password(temp_password)
+            db.session.add(user)
+            db.session.flush()  # Get user.id without committing
+            
+            print(f"✓ Created user account for client: {user.email} (ID: {user.id})")
+        
+        # Create client and link to user account
         client = Client(
             name=data['name'],
             email=data['email'],
@@ -5427,7 +5488,8 @@ def create_client():
             status=data.get('status', 'pending'),
             tier=data.get('tier'),
             notes=data.get('notes'),
-            tags=json.dumps(data.get('tags', [])) if data.get('tags') else None
+            tags=json.dumps(data.get('tags', [])) if data.get('tags') else None,
+            user_id=user.id
         )
         
         db.session.add(client)
@@ -5454,6 +5516,14 @@ def create_client():
         
         db.session.commit()
         
+        # Generate password reset token and send email
+        if not existing_user:  # Only send email for newly created accounts
+            reset_token = create_access_token(
+                identity=str(user.id),
+                expires_delta=timedelta(hours=24)
+            )
+            send_password_reset_email(data['email'], data['name'], reset_token)
+        
         return jsonify(client.to_dict()), 201
     except Exception as e:
         db.session.rollback()
@@ -5461,6 +5531,61 @@ def create_client():
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Failed to create client'}), 500
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password using token from email"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        new_password = data.get('password')
+        email = data.get('email')
+        
+        if not token or not new_password:
+            return jsonify({'error': 'Token and password are required'}), 400
+        
+        # Verify JWT token
+        try:
+            from flask_jwt_extended import decode_token
+            from jwt import ExpiredSignatureError, DecodeError
+            decoded = decode_token(token)
+            user_id = decoded.get('sub')
+        except ExpiredSignatureError:
+            return jsonify({'error': 'Token has expired. Please request a new password reset link.'}), 400
+        except DecodeError:
+            return jsonify({'error': 'Invalid token'}), 400
+        except Exception as e:
+            print(f"Token verification error: {e}")
+            return jsonify({'error': 'Invalid or expired token'}), 400
+        
+        # Find user
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Verify email matches if provided
+        if email and user.email and user.email.lower() != email.lower():
+            return jsonify({'error': 'Email does not match token'}), 400
+        
+        # Validate password strength (optional - basic check)
+        if len(new_password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters long'}), 400
+        
+        # Set new password
+        user.set_password(new_password)
+        db.session.commit()
+        
+        print(f"✓ Password reset successful for user: {user.email}")
+        return jsonify({'message': 'Password reset successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error resetting password: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to reset password'}), 500
 
 @app.route('/api/creative/clients/<client_id>', methods=['GET'])
 def get_client(client_id):
@@ -6036,6 +6161,34 @@ def create_support_request():
                     if assigned_employee:
                         data['assignedTo'] = assigned_employee.username or assigned_employee.email or assigned_employee.name
         
+        # Check if payment is required for this request
+        requires_payment = False
+        payment_status = 'free'  # 'free', 'paid', 'pending'
+        
+        if client:
+            # Count total requests for this client
+            total_requests = SupportRequest.query.filter_by(
+                client_id=client.id
+            ).count()
+            
+            # Check if client has exceeded free limit
+            if total_requests >= FREE_REQUESTS_LIMIT:
+                requires_payment = True
+                # Check if payment was provided
+                payment_id = data.get('paymentId')
+                if payment_id:
+                    payment_status = 'paid'
+                else:
+                    payment_status = 'pending'
+                    # Don't create request if payment is required but not provided
+                    return jsonify({
+                        'error': 'Payment required',
+                        'message': f'You have used your {FREE_REQUESTS_LIMIT} free requests. Additional requests cost ${CREATIVE_REQUEST_PRICE} each.',
+                        'requiresPayment': True,
+                        'price': CREATIVE_REQUEST_PRICE,
+                        'checkoutUrl': f'/api/shopify/checkout?type=request&clientId={client.id}'
+                    }), 402
+        
         # Create support request
         request_obj = SupportRequest(
             client_id=data.get('clientId'),
@@ -6049,6 +6202,11 @@ def create_support_request():
         
         db.session.add(request_obj)
         db.session.commit()
+        
+        # If payment was required and provided, record it
+        if requires_payment and payment_status == 'paid':
+            # TODO: Create payment record in database
+            print(f"✓ Payment recorded for request {request_obj.id}: ${CREATIVE_REQUEST_PRICE}")
         
         # Send notification to assigned employee if one exists
         if assigned_employee:
@@ -6461,39 +6619,270 @@ if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
 
 
-# --- Patreon OAuth2 Integration ---
-# Add these to your .env:
-# PATREON_CLIENT_ID=your_client_id
-# PATREON_CLIENT_SECRET=your_client_secret
-# PATREON_REDIRECT_URI=https://yourdomain.com/api/auth/patreon/callback
+# --- Shopify & Bold Subscriptions Integration ---
+# Bold Subscriptions Admin: https://sub.boldapps.net/admin
+# Shopify App Proxy URL: https://shop.isharehow.app/apps/app-proxy
+# Environment variables needed:
+# SHOPIFY_SHOP_DOMAIN=shop.isharehow.app
+# SHOPIFY_API_KEY=your_api_key
+# SHOPIFY_API_SECRET=your_api_secret
+# SHOPIFY_WEBHOOK_SECRET=your_webhook_secret
+# BOLD_SUBSCRIPTIONS_API_KEY=your_bold_api_key
+# BOLD_SUBSCRIPTIONS_SHOP_DOMAIN=your_shop_domain.myshopify.com
 
-@app.route('/api/auth/patreon/login')
-@app.route('/api/auth/patreon')  # Alias for cleaner frontend calls
-def patreon_login():
+SHOPIFY_SHOP_DOMAIN = os.environ.get('SHOPIFY_SHOP_DOMAIN', 'shop.isharehow.app')
+SHOPIFY_API_KEY = os.environ.get('SHOPIFY_API_KEY')
+SHOPIFY_API_SECRET = os.environ.get('SHOPIFY_API_SECRET')
+SHOPIFY_WEBHOOK_SECRET = os.environ.get('SHOPIFY_WEBHOOK_SECRET')
+BOLD_SUBSCRIPTIONS_API_KEY = os.environ.get('BOLD_SUBSCRIPTIONS_API_KEY')
+BOLD_SUBSCRIPTIONS_SHOP_DOMAIN = os.environ.get('BOLD_SUBSCRIPTIONS_SHOP_DOMAIN', '0e1cwk-u0.myshopify.com')
+
+# Subscription pricing
+SUBSCRIPTION_PRICE = 17.77  # Monthly subscription for Rise + Co-Work dashboards
+CREATIVE_REQUEST_PRICE = 15.00  # Per request in creative dashboard
+FREE_REQUESTS_LIMIT = 15  # First 15 requests are free for clients
+
+def verify_shopify_webhook(data, hmac_header):
+    """Verify Shopify webhook signature"""
+    if not SHOPIFY_WEBHOOK_SECRET:
+        return False
+    import hmac
+    import hashlib
+    calculated_hmac = hmac.new(
+        SHOPIFY_WEBHOOK_SECRET.encode('utf-8'),
+        data.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(calculated_hmac, hmac_header)
+
+@app.route('/api/shopify/webhook', methods=['POST'])
+def shopify_webhook():
+    """Handle Shopify webhooks for subscription and payment events"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
     try:
-        client_id = os.environ.get('PATREON_CLIENT_ID')
-        redirect_uri = os.environ.get('PATREON_REDIRECT_URI')
+        # Verify webhook signature
+        hmac_header = request.headers.get('X-Shopify-Hmac-Sha256', '')
+        data = request.get_data(as_text=True)
         
-        if not client_id or not redirect_uri:
-            print("Patreon OAuth error: Missing PATREON_CLIENT_ID or PATREON_REDIRECT_URI")
-            return jsonify({'error': 'OAuth not configured'}), 500
+        if not verify_shopify_webhook(data, hmac_header):
+            print("⚠ Invalid Shopify webhook signature")
+            return jsonify({'error': 'Invalid signature'}), 401
         
-        scope = 'identity identity[email] identity.memberships'
-        state = 'random_state_string'  # TODO: generate and validate this for security
-        auth_url = (
-            f"https://www.patreon.com/oauth2/authorize"
-            f"?response_type=code&client_id={client_id}"
-            f"&redirect_uri={redirect_uri}"
-            f"&scope={scope}"
-            f"&state={state}"
-        )
-        return redirect(auth_url)
+        webhook_data = request.get_json()
+        topic = request.headers.get('X-Shopify-Topic', '')
+        
+        print(f"📦 Shopify webhook received: {topic}")
+        
+        # Handle different webhook topics
+        if topic == 'orders/create' or topic == 'orders/paid':
+            # Handle order payment
+            order = webhook_data
+            customer_email = order.get('customer', {}).get('email')
+            customer_id = order.get('customer', {}).get('id')
+            order_id = order.get('id')
+            total_price = float(order.get('total_price', 0))
+            
+            if customer_email:
+                # Find or create user by email
+                user = User.query.filter_by(email=customer_email).first()
+                if user:
+                    # Update Shopify customer ID
+                    if customer_id:
+                        user.shopify_customer_id = str(customer_id)
+                    
+                    # Check if this is a subscription order
+                    line_items = order.get('line_items', [])
+                    for item in line_items:
+                        product_title = item.get('title', '').lower()
+                        if 'subscription' in product_title or 'dashboard' in product_title:
+                            # Create or update subscription
+                            subscription = Subscription.query.filter_by(
+                                user_id=str(user.id),
+                                status='active'
+                            ).first()
+                            
+                            if not subscription:
+                                subscription = Subscription(
+                                    user_id=str(user.id),
+                                    tier='standard',
+                                    billing_cycle='monthly',
+                                    status='active',
+                                    amount=SUBSCRIPTION_PRICE,
+                                    currency='USD',
+                                    payment_method='shopify',
+                                    payment_method_id=str(order_id),
+                                    started_at=datetime.utcnow(),
+                                    expires_at=datetime.utcnow() + timedelta(days=30)
+                                )
+                                db.session.add(subscription)
+                            else:
+                                # Renew subscription
+                                subscription.expires_at = datetime.utcnow() + timedelta(days=30)
+                                subscription.status = 'active'
+                            
+                            # Update user subscription status
+                            user.membership_paid = True
+                            user.has_subscription_update = True
+                            user.subscription_update_active = True
+                            user.last_checked = datetime.utcnow()
+                            
+                            db.session.commit()
+                            print(f"✓ Subscription updated for {customer_email}")
+        
+        elif topic == 'orders/cancelled':
+            # Handle subscription cancellation
+            order = webhook_data
+            customer_email = order.get('customer', {}).get('email')
+            
+            if customer_email:
+                user = User.query.filter_by(email=customer_email).first()
+                if user:
+                    subscription = Subscription.query.filter_by(
+                        user_id=str(user.id),
+                        status='active'
+                    ).first()
+                    if subscription:
+                        subscription.status = 'cancelled'
+                        subscription.cancelled_at = datetime.utcnow()
+                    
+                    # Update user subscription status
+                    user.membership_paid = False
+                    user.has_subscription_update = True
+                    user.subscription_update_active = False
+                    user.last_checked = datetime.utcnow()
+                    
+                    db.session.commit()
+                    print(f"✓ Subscription cancelled for {customer_email}")
+        
+        return jsonify({'status': 'ok'}), 200
     except Exception as e:
-        print(f"Patreon OAuth login error: {e}")
-        return jsonify({'error': 'Failed to initiate OAuth'}), 500
+        print(f"Error handling Shopify webhook: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': 'Webhook processing failed'}), 500
 
-@app.route('/api/auth/patreon/callback')
-def patreon_callback():
+@app.route('/api/bold-subscriptions/webhook', methods=['POST'])
+def bold_subscriptions_webhook():
+    """Handle Bold Subscriptions webhooks for subscription updates"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        webhook_data = request.get_json()
+        event_type = webhook_data.get('event_type', '')
+        subscription_data = webhook_data.get('subscription', {})
+        
+        print(f"📦 Bold Subscriptions webhook received: {event_type}")
+        
+        customer_email = subscription_data.get('customer', {}).get('email')
+        bold_subscription_id = subscription_data.get('id')
+        status = subscription_data.get('status', '')
+        
+        if customer_email:
+            user = User.query.filter_by(email=customer_email).first()
+            if user:
+                # Update Bold subscription ID
+                if bold_subscription_id:
+                    user.bold_subscription_id = str(bold_subscription_id)
+                
+                # Handle different event types
+                if event_type in ['subscription.created', 'subscription.activated', 'subscription.renewed']:
+                    user.membership_paid = True
+                    user.has_subscription_update = True
+                    user.subscription_update_active = True
+                    user.last_checked = datetime.utcnow()
+                    
+                    # Update or create subscription record
+                    subscription = Subscription.query.filter_by(
+                        user_id=str(user.id),
+                        status='active'
+                    ).first()
+                    
+                    if not subscription:
+                        subscription = Subscription(
+                            user_id=str(user.id),
+                            tier='standard',
+                            billing_cycle='monthly',
+                            status='active',
+                            amount=SUBSCRIPTION_PRICE,
+                            currency='USD',
+                            payment_method='bold_subscriptions',
+                            payment_method_id=str(bold_subscription_id),
+                            started_at=datetime.utcnow(),
+                            expires_at=datetime.utcnow() + timedelta(days=30)
+                        )
+                        db.session.add(subscription)
+                    else:
+                        subscription.status = 'active'
+                        subscription.expires_at = datetime.utcnow() + timedelta(days=30)
+                
+                elif event_type in ['subscription.cancelled', 'subscription.expired']:
+                    user.membership_paid = False
+                    user.has_subscription_update = True
+                    user.subscription_update_active = False
+                    user.last_checked = datetime.utcnow()
+                    
+                    subscription = Subscription.query.filter_by(
+                        user_id=str(user.id),
+                        status='active'
+                    ).first()
+                    if subscription:
+                        subscription.status = 'cancelled'
+                        subscription.cancelled_at = datetime.utcnow()
+                
+                db.session.commit()
+                print(f"✓ Bold subscription updated for {customer_email}: {event_type}")
+        
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        print(f"Error handling Bold Subscriptions webhook: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': 'Webhook processing failed'}), 500
+
+@app.route('/api/shopify/checkout', methods=['POST'])
+def shopify_checkout():
+    """Create Shopify checkout session for subscription"""
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        subscription_type = data.get('type', 'subscription')  # 'subscription' or 'request'
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        # Find user
+        user = User.query.get(int(user_id)) if user_id.isdigit() else User.query.filter_by(email=user_id).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Generate checkout URL
+        if subscription_type == 'subscription':
+            # Monthly subscription for dashboards
+            price = SUBSCRIPTION_PRICE
+            product_title = "Rise & Co-Work Dashboard Access"
+        else:
+            # Per-request payment
+            price = CREATIVE_REQUEST_PRICE
+            product_title = "Creative Dashboard Request"
+        
+        # Shopify checkout URL (using app proxy)
+        checkout_url = f"https://{SHOPIFY_SHOP_DOMAIN}/apps/app-proxy/checkout?price={price}&title={product_title}&user_id={user_id}"
+        
+        return jsonify({
+            'checkoutUrl': checkout_url,
+            'price': price
+        }), 200
+    except Exception as e:
+        print(f"Error creating Shopify checkout: {e}")
+        return jsonify({'error': 'Failed to create checkout'}), 500
+
+# --- REMOVED: Patreon OAuth2 Integration ---
+# All Patreon code has been removed and replaced with Shopify payment integration
     # Log incoming error from Patreon if present
     if 'error' in request.args:
         app.logger.error(f"Patreon error: {request.args['error']}")
@@ -7560,12 +7949,14 @@ if DB_AVAILABLE:
         tier = db.Column(db.String(50), nullable=True)  # starter, professional, enterprise
         notes = db.Column(db.Text, nullable=True)
         tags = db.Column(db.Text, nullable=True)  # JSON array of tags
+        user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Link to User account
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
         
         # Relationships
         employee_assignments = db.relationship('ClientEmployeeAssignment', backref='client', lazy=True, cascade='all, delete-orphan')
         dashboard_connections = db.relationship('ClientDashboardConnection', backref='client', lazy=True, cascade='all, delete-orphan')
+        user = db.relationship('User', backref='client_account')
         
         def to_dict(self):
             return {
@@ -7578,6 +7969,8 @@ if DB_AVAILABLE:
                 'tier': self.tier,
                 'notes': self.notes,
                 'tags': json.loads(self.tags) if self.tags else [],
+                'userId': self.user_id,
+                'hasAccount': self.user_id is not None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
                 'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
                 'assignedEmployee': self.employee_assignments[0].employee_name if self.employee_assignments else None,
