@@ -3958,8 +3958,26 @@ def get_tasks():
     try:
         # Get all tasks, ordered by most recent first
         tasks = Task.query.order_by(Task.created_at.desc()).all()
-        print(f"Fetched {len(tasks)} tasks from database")
-        return jsonify({'tasks': [task.to_dict() for task in tasks]})
+        total_count = len(tasks)
+        print(f"Fetched {total_count} tasks from database")
+        
+        # Log task status breakdown for debugging
+        if total_count > 0:
+            status_counts = {}
+            for task in tasks:
+                status = task.status or 'unknown'
+                status_counts[status] = status_counts.get(status, 0) + 1
+            print(f"Task status breakdown: {status_counts}")
+        else:
+            print("WARNING: No tasks found in database. This could indicate:")
+            print("  1. Tasks were deleted")
+            print("  2. Database was reset")
+            print("  3. Tasks table is empty")
+        
+        return jsonify({
+            'tasks': [task.to_dict() for task in tasks],
+            'totalCount': total_count
+        })
     except Exception as e:
         print(f"Error fetching tasks: {e}")
         import traceback
@@ -4118,28 +4136,54 @@ def delete_task(task_id):
 
 
 
+# Track active/logged-in users via Socket.io connections
+active_users = {}  # user_id -> { name, email, last_seen, socket_id }
+
 @app.route('/api/users/workspace', methods=['GET'])
 @jwt_required()
 def get_workspace_users():
-    """Get list of users for task assignment"""
+    """Get list of logged-in/active users for task assignment and co-drawing"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        # Get all active users (you can add more filters like workspace membership later)
-        users = User.query.filter_by(is_active=True).all()
+        # Get all users from database (not just active, since we track active via Socket.io)
+        users = User.query.all()
         
+        # Also include currently active users from Socket.io
         users_data = []
+        user_ids_seen = set()
+        
+        # First, add all database users
         for user in users:
-            # Create a simple user object for task assignment
             user_id = user.patreon_id or user.username or str(user.id)
             username = user.username or user.email or 'Unknown'
+            
+            # Check if user is currently active (connected via Socket.io)
+            is_active = user_id in active_users
             
             users_data.append({
                 'id': user_id,
                 'name': username,
-                'email': user.email if hasattr(user, 'email') else None
+                'email': user.email if hasattr(user, 'email') else None,
+                'isActive': is_active,
+                'lastSeen': active_users[user_id]['last_seen'].isoformat() if is_active else None
             })
+            user_ids_seen.add(user_id)
+        
+        # Add any active users not in database (anonymous or not yet in DB)
+        for user_id, user_data in active_users.items():
+            if user_id not in user_ids_seen:
+                users_data.append({
+                    'id': user_id,
+                    'name': user_data['name'],
+                    'email': user_data.get('email'),
+                    'isActive': True,
+                    'lastSeen': user_data['last_seen'].isoformat()
+                })
+        
+        # Sort by active status first, then by name
+        users_data.sort(key=lambda u: (not u.get('isActive', False), u['name'].lower()))
         
         return jsonify(users_data), 200
         
@@ -5162,11 +5206,58 @@ def gemini_chat():
 
 @socketio.on('connect')
 def handle_connect():
+    """Track user when they connect (for notifications and user list)"""
     print('Client connected')
+    try:
+        # Try to get user info from JWT if available
+        user_id = None
+        user_name = 'Anonymous'
+        user_email = None
+        
+        # Check if there's a JWT token in the connection
+        try:
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+            verify_jwt_in_request(optional=True)
+            user_id = get_jwt_identity()
+            if user_id and DB_AVAILABLE:
+                # Get user from database
+                user = None
+                if str(user_id).isdigit():
+                    user = User.query.get(int(user_id))
+                if not user:
+                    user = User.query.filter_by(username=str(user_id)).first()
+                if not user:
+                    user = User.query.filter_by(patreon_id=str(user_id)).first()
+                
+                if user:
+                    user_id = user.patreon_id or user.username or str(user.id)
+                    user_name = user.username or user.email or 'Unknown'
+                    user_email = user.email
+        except:
+            pass  # Not authenticated, use anonymous
+        
+        if user_id:
+            active_users[user_id] = {
+                'name': user_name,
+                'email': user_email,
+                'last_seen': datetime.utcnow(),
+                'socket_id': request.sid
+            }
+            print(f"User {user_id} ({user_name}) connected and tracked")
 
 @socketio.on('disconnect')
 def handle_disconnect():
+    """Remove user when they disconnect"""
     print('Client disconnected')
+    try:
+        # Find and remove user by socket ID
+        for user_id, user_data in list(active_users.items()):
+            if user_data.get('socket_id') == request.sid:
+                del active_users[user_id]
+                print(f"User {user_id} disconnected and removed from active users")
+                break
+    except Exception as e:
+        print(f"Error tracking user disconnection: {e}")
 
 @socketio.on('join_notifications')
 def handle_join_notifications(data):

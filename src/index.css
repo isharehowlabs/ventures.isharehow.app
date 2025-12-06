@@ -42,11 +42,8 @@ html, body, #root, #__next {
   width: 100%;
 }
 
-body {
-  /* Inherit from html element */
-  background-color: inherit;
-  color: inherit;
-}
+/* Body styles are handled by MUI CssBaseline based on theme mode */
+/* Removing inherit to prevent conflicts with theme switching */
 
 /* Prevent CSS transitions during theme changes to avoid flashing */
 .theme-transitioning,
