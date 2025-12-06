@@ -6123,6 +6123,110 @@ def get_current_subscription():
 
 # Run new scripts automatically at startup
 # This happens before the app starts serving requests
+def seed_rise_journey_levels():
+    """Seed the 7 journey levels if they don't exist"""
+    if not DB_AVAILABLE or not db:
+        print("⚠ Database not available, skipping Rise Journey levels seeding")
+        return
+    
+    try:
+        with app.app_context():
+            # Check if levels already exist
+            existing_count = RiseJourneyLevel.query.count()
+            if existing_count > 0:
+                print(f"✓ Rise Journey levels already exist ({existing_count} levels)")
+                return
+            
+            print("🌱 Seeding Rise Journey levels...")
+            
+            # Define the 7 journey levels
+            levels_data = [
+                {
+                    'level_key': 'wellness',
+                    'title': 'Wellness',
+                    'description': 'Foundational physical health and energy management. Build the base for all other journeys.',
+                    'focus': 'Foundational Physical Health & Energy',
+                    'revenue_products': ['Wellness Products', 'Nutrition Plans'],
+                    'order': 1
+                },
+                {
+                    'level_key': 'mobility',
+                    'title': 'Mobility',
+                    'description': 'Physical movement, flexibility, and body awareness. Connect your mind and body.',
+                    'focus': 'Physical Movement & Body Awareness',
+                    'revenue_products': ['Fitness Programs', 'Movement Classes'],
+                    'order': 2
+                },
+                {
+                    'level_key': 'accountability',
+                    'title': 'Accountability',
+                    'description': 'Build systems and habits that keep you on track. Create sustainable change.',
+                    'focus': 'Systems & Habit Formation',
+                    'revenue_products': ['Coaching Programs', 'Accountability Tools'],
+                    'order': 3
+                },
+                {
+                    'level_key': 'creativity',
+                    'title': 'Creativity',
+                    'description': 'Unlock your creative potential. Express yourself and innovate.',
+                    'focus': 'Creative Expression & Innovation',
+                    'revenue_products': ['Creative Workshops', 'Art Supplies'],
+                    'order': 4
+                },
+                {
+                    'level_key': 'alignment',
+                    'title': 'Alignment',
+                    'description': 'Align your actions with your values. Live with purpose and intention.',
+                    'focus': 'Values & Purpose Alignment',
+                    'revenue_products': ['Life Coaching', 'Alignment Tools'],
+                    'order': 5
+                },
+                {
+                    'level_key': 'mindfulness',
+                    'title': 'Mindfulness',
+                    'description': 'Cultivate present-moment awareness. Develop inner peace and clarity.',
+                    'focus': 'Present-Moment Awareness & Clarity',
+                    'revenue_products': ['Meditation Programs', 'Mindfulness Tools'],
+                    'order': 6
+                },
+                {
+                    'level_key': 'destiny',
+                    'title': 'Destiny',
+                    'description': 'Step into your highest potential. Manifest your true calling.',
+                    'focus': 'Highest Potential & True Calling',
+                    'revenue_products': ['Mastermind Programs', 'Destiny Coaching'],
+                    'order': 7
+                }
+            ]
+            
+            for level_data in levels_data:
+                level = RiseJourneyLevel(
+                    id=str(uuid.uuid4()),
+                    level_key=level_data['level_key'],
+                    title=level_data['title'],
+                    description=level_data['description'],
+                    focus=level_data['focus'],
+                    revenue_products=json.dumps(level_data['revenue_products']),
+                    order=level_data['order']
+                )
+                db.session.add(level)
+            
+            db.session.commit()
+            print(f"✓ Successfully seeded {len(levels_data)} Rise Journey levels")
+    except Exception as e:
+        print(f"✗ Error seeding Rise Journey levels: {e}")
+        import traceback
+        traceback.print_exc()
+        if db:
+            db.session.rollback()
+
+# Seed Rise Journey levels at startup
+if DB_AVAILABLE and db:
+    try:
+        seed_rise_journey_levels()
+    except Exception as e:
+        print(f"⚠ Could not seed Rise Journey levels at startup: {e}")
+
 run_new_scripts_at_startup()
 
 if __name__ == '__main__':
