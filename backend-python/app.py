@@ -3968,6 +3968,10 @@ def parse_date_safely(date_string):
     try:
         # Try full ISO format first (with time)
         return datetime.fromisoformat(date_string)
+    except (ValueError, TypeError):
+        # If parsing fails, return None
+        return None
+
 
 # Socket.io handler for real-time task notes updates
 @socketio.on('task_notes_update')
