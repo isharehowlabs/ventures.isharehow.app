@@ -17,6 +17,17 @@ import glob
 from pathlib import Path
 import warnings
 
+# Import Werkzeug exceptions for error handling
+try:
+    from werkzeug.exceptions import HTTPException, MethodNotAllowed
+except ImportError:
+    # Fallback for different Werkzeug versions
+    try:
+        from werkzeug import HTTPException, MethodNotAllowed
+    except ImportError:
+        HTTPException = None
+        MethodNotAllowed = None
+
 # Suppress eth_utils network chain ID warnings
 warnings.filterwarnings('ignore', message=".*Network.*does not have a valid ChainId.*", category=UserWarning, module='eth_utils.network')
 
@@ -1998,13 +2009,11 @@ def handle_500_error(e):
 @app.errorhandler(Exception)
 def handle_general_exception(e):
     """Handle unhandled exceptions and return JSON error response"""
-    from werkzeug.exceptions import HTTPException, MethodNotAllowed
-    
     # Handle HTTP exceptions for API routes
-    if isinstance(e, HTTPException):
+    if HTTPException and isinstance(e, HTTPException):
         if request.path.startswith('/api/'):
             # Special handling for 405 Method Not Allowed
-            if isinstance(e, MethodNotAllowed) or e.code == 405:
+            if (MethodNotAllowed and isinstance(e, MethodNotAllowed)) or (hasattr(e, 'code') and e.code == 405):
                 print(f"MethodNotAllowed caught in general handler: {request.method} for {request.path}")
                 return jsonify({
                     'error': 'method_not_allowed',
