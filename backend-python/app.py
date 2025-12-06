@@ -100,7 +100,8 @@ try:
     print(f"✓ SQLAlchemy initialized")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
     
-    # Set DB_AVAILABLE to True by default - connection will be tested on first use
+    # Set DB_AVAILABLE to True by default - we'll test on actual use
+    # Don't block database operations based on startup connection test
     DB_AVAILABLE = True
     
     # Test database connection by attempting a simple query (non-blocking)
@@ -111,13 +112,13 @@ try:
             with db.engine.connect() as conn:
                 result = conn.execute(text("SELECT 1"))
                 result.fetchone()  # Consume the result
-        print(f"✓ Database connection verified")
+        print(f"✓ Database connection verified at startup")
     except Exception as conn_error:
         print(f"⚠ Database connection test failed at startup: {conn_error}")
-        print("  Database will still be available - connection will be tested on first use")
+        print("  Database operations will still be attempted - connection will be tested on actual use")
         print("  This is normal if the database server is starting up or temporarily unavailable")
-        # Don't disable DB_AVAILABLE - let it work if connection succeeds later
-        DB_AVAILABLE = True  # Keep it True, test on actual use
+        # Keep DB_AVAILABLE = True so we don't block operations
+        DB_AVAILABLE = True
 except Exception as e:
     print(f"✗ Warning: Database initialization failed: {e}")
     print("Database features will be disabled. This may be due to:")
@@ -3955,10 +3956,9 @@ def unsubscribe_push():
 @require_session
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
-    # Test connection on-demand if DB_AVAILABLE is False
-    if not DB_AVAILABLE:
-        if not test_db_connection():
-            return jsonify({'tasks': [], 'error': 'Database not available. Please check database configuration.'}), 503
+    if not db:
+        return jsonify({'tasks': [], 'error': 'Database not configured'}), 503
+    
     try:
         # Get all tasks, ordered by most recent first
         tasks = Task.query.order_by(Task.created_at.desc()).all()
@@ -3983,22 +3983,26 @@ def get_tasks():
             'totalCount': total_count
         })
     except Exception as e:
+        error_str = str(e).lower()
         print(f"Error fetching tasks: {e}")
         import traceback
         traceback.print_exc()
-        # Return empty list if database is unavailable
+        
+        # Check if it's a database connection error
+        if 'connection' in error_str or 'operational' in error_str or 'database' in error_str:
+            return jsonify({'tasks': [], 'error': 'Database connection failed. Please check your database configuration.'}), 503
+        # Return empty list for other errors
         return jsonify({'tasks': [], 'error': 'Database temporarily unavailable'}), 200
 
 @require_session
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
-    # Test connection on-demand if DB_AVAILABLE is False
-    if not DB_AVAILABLE:
-        if not test_db_connection():
-            return jsonify({
-                'error': 'Database not available',
-                'message': 'Database is not configured or unavailable. Please check your database configuration and ensure psycopg is properly installed.'
-            }), 503
+    if not db:
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database is not configured. Please check your database configuration.'
+        }), 503
+    
     try:
         data = request.get_json()
         if not data:
@@ -4027,23 +4031,32 @@ def create_task():
         try:
             db.session.add(task)
             db.session.commit()
+            print(f"✓ Task created successfully: {task.id}")
         except Exception as db_error:
             if db and hasattr(db, 'session'):
                 try:
                     db.session.rollback()
                 except:
                     pass  # Ignore rollback errors if session is broken
-            print(f"Database error creating task: {db_error}")
+            print(f"✗ Database error creating task: {db_error}")
+            print(f"  Error type: {type(db_error).__name__}")
             import traceback
             traceback.print_exc()
             # Check if it's a connection error
             error_str = str(db_error).lower()
-            if 'connection' in error_str or 'database' in error_str or 'operational' in error_str or 'import' in error_str or 'psycopg' in error_str:
+            error_type_str = str(type(db_error).__name__).lower()
+            if ('connection' in error_str or 'database' in error_str or 'operational' in error_str or 
+                'import' in error_str or 'psycopg' in error_str or 'operationalerror' in error_type_str or
+                'connectionerror' in error_type_str):
                 return jsonify({
                     'error': 'Database unavailable', 
-                    'message': 'Database connection failed. Please check your database configuration and ensure psycopg is properly installed.'
+                    'message': f'Database connection failed: {str(db_error)[:200]}. Please check your database configuration.'
                 }), 503
-            raise db_error
+            # For other database errors, return 500
+            return jsonify({
+                'error': 'Database error',
+                'message': f'Failed to create task: {str(db_error)[:200]}'
+            }), 500
         
         user_info = get_user_info()
         task_data = task.to_dict()
@@ -4122,10 +4135,10 @@ def update_task(task_id):
 # @require_session  # Tasks work without authentication
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
 def delete_task(task_id):
-    if not DB_AVAILABLE:
+    if not db:
         return jsonify({
             'error': 'Database not available',
-            'message': 'Database is not configured or unavailable. Please check your database configuration.'
+            'message': 'Database is not configured. Please check your database configuration.'
         }), 503
     try:
         task = Task.query.get_or_404(task_id)
