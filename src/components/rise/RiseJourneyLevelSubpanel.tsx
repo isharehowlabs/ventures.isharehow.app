@@ -607,14 +607,14 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
           {/* Learning Hub Tab */}
           {activeTab === 'learning' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Paper
-                elevation={2}
+              <Box
                 sx={{
                   p: 3,
                   background: 'linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%)',
                   border: 2,
                   borderColor: 'secondary.light',
                   borderRadius: 2,
+                  boxShadow: 2,
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -725,7 +725,7 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                     </Button>
                   </Paper>
                 </Box>
-              </Paper>
+              </Box>
             </Box>
           )}
         </Paper>
