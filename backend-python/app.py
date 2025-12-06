@@ -5899,19 +5899,80 @@ def get_support_requests():
         client_id = request.args.get('client_id', None)
         priority = request.args.get('priority', None)
         
-        # Build query
-        query = SupportRequest.query
-        
-        if status != 'all':
-            query = query.filter(SupportRequest.status == status)
-        
-        if client_id:
-            query = query.filter(SupportRequest.client_id == client_id)
-        
-        if priority:
-            query = query.filter(SupportRequest.priority == priority)
-        
-        requests = query.order_by(SupportRequest.created_at.desc()).all()
+        # Build query - handle missing client_id column gracefully
+        try:
+            query = SupportRequest.query
+            
+            if status != 'all':
+                query = query.filter(SupportRequest.status == status)
+            
+            if client_id:
+                # Only filter by client_id if the column exists
+                try:
+                    query = query.filter(SupportRequest.client_id == client_id)
+                except Exception as col_error:
+                    # Column doesn't exist, skip client_id filtering
+                    if 'client_id' in str(col_error).lower() or 'does not exist' in str(col_error).lower():
+                        print("⚠ client_id column not found in support_requests table, skipping client filter")
+                    else:
+                        raise
+            
+            if priority:
+                query = query.filter(SupportRequest.priority == priority)
+            
+            requests = query.order_by(SupportRequest.created_at.desc()).all()
+        except Exception as query_error:
+            # Handle case where client_id column doesn't exist in the table
+            error_msg = str(query_error)
+            if 'client_id' in error_msg.lower() and ('does not exist' in error_msg.lower() or 'undefinedcolumn' in error_msg.lower()):
+                # Use raw SQL to query without client_id column
+                from sqlalchemy import text
+                sql = "SELECT * FROM support_requests"
+                conditions = []
+                params = {}
+                
+                if status != 'all':
+                    conditions.append("status = :status")
+                    params['status'] = status
+                
+                if priority:
+                    conditions.append("priority = :priority")
+                    params['priority'] = priority
+                
+                if conditions:
+                    sql += " WHERE " + " AND ".join(conditions)
+                
+                sql += " ORDER BY created_at DESC"
+                
+                result = db.session.execute(text(sql), params)
+                rows = result.fetchall()
+                
+                # Convert rows to SupportRequest-like objects
+                requests = []
+                for row in rows:
+                    req_dict = dict(row._mapping)
+                    # Create a simple object with the data
+                    class SimpleRequest:
+                        def __init__(self, data):
+                            for key, value in data.items():
+                                setattr(self, key, value)
+                        def to_dict(self):
+                            return {
+                                'id': getattr(self, 'id', None),
+                                'client': getattr(self, 'client_name', None) or 'N/A',
+                                'clientId': getattr(self, 'client_id', None),
+                                'subject': getattr(self, 'subject', ''),
+                                'description': getattr(self, 'description', ''),
+                                'priority': getattr(self, 'priority', 'medium'),
+                                'status': getattr(self, 'status', 'open'),
+                                'assignedTo': getattr(self, 'assigned_to', None),
+                                'linkedTasksCount': 0,
+                                'createdAt': getattr(self, 'created_at', None).isoformat() if hasattr(getattr(self, 'created_at', None), 'isoformat') else None,
+                                'updatedAt': getattr(self, 'updated_at', None).isoformat() if hasattr(getattr(self, 'updated_at', None), 'isoformat') else None
+                            }
+                    requests.append(SimpleRequest(req_dict))
+            else:
+                raise
         
         # Return all requests without filtering
         return jsonify({
@@ -5921,6 +5982,12 @@ def get_support_requests():
         print(f"Error fetching support requests: {e}")
         import traceback
         traceback.print_exc()
+        error_msg = str(e)
+        if 'support_requests' in error_msg.lower() or 'does not exist' in error_msg.lower():
+            return jsonify({
+                'error': 'Support requests table not found. Please run database migrations.',
+                'details': 'The support_requests table needs to be created. Run: flask db upgrade'
+            }), 500
         return jsonify({'error': 'Failed to fetch support requests'}), 500
 
 @app.route('/api/creative/support-requests', methods=['POST'])
