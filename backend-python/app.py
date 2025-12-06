@@ -6345,8 +6345,20 @@ def run_database_upgrade():
         traceback.print_exc()
         # Don't fail startup if upgrade fails - might be a connection issue
 
-if __name__ == '__main__':
-    # Run database upgrade at startup (inside app context)
+# Run database upgrade at startup (works for both 'python app.py' and 'flask run')
+# Use a flag and lock to ensure it only runs once
+_db_upgrade_run = False
+import threading
+_db_upgrade_lock = threading.Lock()
+
+def ensure_database_upgrade():
+    """Ensure database upgrade runs once at startup"""
+    global _db_upgrade_run
+    with _db_upgrade_lock:
+        if _db_upgrade_run:
+            return
+        _db_upgrade_run = True
+    
     if DB_AVAILABLE and db:
         run_database_upgrade()
         
@@ -6358,6 +6370,17 @@ if __name__ == '__main__':
             print(f"⚠ Could not seed Rise Journey levels at startup: {e}")
             import traceback
             traceback.print_exc()
+
+# Register to run on first request (works with 'flask run')
+# The flag ensures it only runs once, so it's efficient
+@app.before_request
+def initialize_on_first_request():
+    """Initialize database and seed data on first request"""
+    ensure_database_upgrade()
+
+if __name__ == '__main__':
+    # Run database upgrade at startup (for 'python app.py')
+    ensure_database_upgrade()
     
     port = int(os.environ.get('PORT', 5000))
     # Allow Werkzeug for development/production (or use gunicorn for true production)
