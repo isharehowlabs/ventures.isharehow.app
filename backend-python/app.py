@@ -4241,7 +4241,7 @@ def handle_drawing_join():
     socketio.emit('drawing:user_joined', {
         'userId': user_id,
         'userName': 'User'  # Could get from session
-    }, broadcast=True, include_self=False)
+    }, broadcast=True, skip_sid=request.sid)
 
 @socketio.on('drawing:leave')
 def handle_drawing_leave():
@@ -4254,7 +4254,7 @@ def handle_drawing_leave():
         # Notify other users
         socketio.emit('drawing:user_left', {
             'userId': user_id
-        }, broadcast=True, include_self=False)
+        }, broadcast=True, skip_sid=request.sid)
 
 @socketio.on('drawing:stroke')
 def handle_drawing_stroke(data):
@@ -4277,7 +4277,7 @@ def handle_drawing_stroke(data):
             'stroke': stroke,
             'userId': data.get('userId', 'anonymous'),
             'userName': data.get('userName', 'Anonymous')
-        }, broadcast=True, include_self=False)
+        }, broadcast=True, skip_sid=request.sid)
 
 @socketio.on('drawing:clear')
 def handle_drawing_clear():
@@ -4287,7 +4287,7 @@ def handle_drawing_clear():
         drawing_sessions[session_id]['strokes'] = []
     
     # Broadcast clear to all users
-    socketio.emit('drawing:clear', broadcast=True, include_self=False)
+    socketio.emit('drawing:clear', broadcast=True, skip_sid=request.sid)
 
 @socketio.on('drawing:assign_user')
 def handle_drawing_assign_user(data):
