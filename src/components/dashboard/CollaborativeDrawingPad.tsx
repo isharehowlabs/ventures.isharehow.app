@@ -19,6 +19,7 @@ import {
   Brush as BrushIcon,
   Person as PersonIcon,
   Save as SaveIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { getTasksSocket } from '../../utils/socket';
 import { Socket } from 'socket.io-client';
@@ -265,6 +266,17 @@ export default function CollaborativeDrawingPad({ height = 500 }: CollaborativeD
       setIsSaving(false);
     }
   };
+
+  // Handle refresh - request current drawing state from server
+  const handleRefresh = () => {
+    if (socketRef.current && isConnected) {
+      // Request current drawing state from server
+      socketRef.current.emit('drawing:refresh');
+    } else {
+      setError('Not connected to server. Please wait for connection.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
   
   // Load saved drawing on mount
   useEffect(() => {
@@ -343,6 +355,11 @@ export default function CollaborativeDrawingPad({ height = 500 }: CollaborativeD
           )}
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Refresh drawing (sync with other users)">
+            <IconButton onClick={handleRefresh} disabled={!isConnected} size="small">
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Save drawing">
             <IconButton onClick={handleSave} disabled={isSaving} size="small">
               <SaveIcon />

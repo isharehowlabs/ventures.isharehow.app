@@ -4243,6 +4243,16 @@ def handle_drawing_join():
         'userName': 'User'  # Could get from session
     }, broadcast=True, skip_sid=request.sid)
 
+@socketio.on('drawing:refresh')
+def handle_drawing_refresh():
+    """Handle refresh request - send current drawing state"""
+    session_id = 'default'
+    if session_id in drawing_sessions:
+        # Send current canvas state to the requesting user
+        emit('drawing:state', {
+            'strokes': drawing_sessions[session_id]['strokes']
+        })
+
 @socketio.on('drawing:leave')
 def handle_drawing_leave():
     """Handle user leaving drawing session"""
