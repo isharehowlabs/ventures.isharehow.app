@@ -12,6 +12,9 @@ import json
 from dotenv import load_dotenv
 import requests
 import bcrypt
+import subprocess
+import glob
+from pathlib import Path
 
 # Try to import pywebpush for push notifications (optional)
 try:
@@ -179,6 +182,172 @@ def get_frontend_url():
     """Get the frontend URL from environment or default to production"""
     frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
     return frontend_url.rstrip('/')
+
+# ============================================================================
+# AUTOMATIC SCRIPT RUNNER - Runs new scripts found in backend directory
+# ============================================================================
+
+def get_script_tracking_file():
+    """Get the path to the script tracking file"""
+    backend_dir = Path(__file__).parent
+    return backend_dir / '.executed_scripts.json'
+
+def load_executed_scripts():
+    """Load the list of executed scripts from tracking file"""
+    tracking_file = get_script_tracking_file()
+    if tracking_file.exists():
+        try:
+            with open(tracking_file, 'r') as f:
+                data = json.load(f)
+                return set(data.get('executed_scripts', []))
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not load script tracking file: {e}")
+            return set()
+    return set()
+
+def save_executed_script(script_path):
+    """Mark a script as executed in the tracking file"""
+    tracking_file = get_script_tracking_file()
+    executed = load_executed_scripts()
+    executed.add(script_path)
+    
+    try:
+        with open(tracking_file, 'w') as f:
+            json.dump({'executed_scripts': list(executed)}, f, indent=2)
+    except IOError as e:
+        print(f"Warning: Could not save script tracking file: {e}")
+
+def find_runnable_scripts():
+    """Find all Python scripts in the backend directory that should be auto-run"""
+    backend_dir = Path(__file__).parent
+    scripts = []
+    
+    # Files to exclude from auto-execution
+    excluded_files = {
+        'app.py',  # Main application file
+        'verify_members.py',  # Scheduled cron job, not a one-time script
+        'intervals_icu.py',  # Library module, not a script
+    }
+    
+    # Directories to exclude
+    excluded_dirs = {
+        '__pycache__',
+        'migrations',
+        'instance',
+        'game_content',
+    }
+    
+    # Find all .py files in the backend directory
+    for py_file in backend_dir.glob('*.py'):
+        if py_file.name not in excluded_files:
+            scripts.append(py_file)
+    
+    return scripts
+
+def is_script_runnable(script_path):
+    """Check if a script looks like it should be auto-run"""
+    try:
+        with open(script_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+            # Skip if it's a library module (has class/function definitions but no main execution)
+            # Look for common patterns that indicate it's a runnable script
+            has_main_block = 'if __name__' in content and '__main__' in content
+            has_shebang = content.startswith('#!/')
+            has_executable_content = 'def main(' in content or 'if __name__' in content
+            
+            # If it has a main block or shebang, it's likely a runnable script
+            # Also check if it imports app/db (migration scripts often do)
+            imports_app = 'from app import' in content or 'import app' in content
+            
+            return has_main_block or has_shebang or (has_executable_content and imports_app)
+    except Exception as e:
+        print(f"Warning: Could not read script {script_path}: {e}")
+        return False
+    
+    return False
+
+def run_script_safely(script_path):
+    """Run a script safely with error handling"""
+    script_name = script_path.name
+    print(f"\n{'='*80}")
+    print(f"Running new script: {script_name}")
+    print(f"{'='*80}")
+    
+    try:
+        # Run the script using subprocess
+        result = subprocess.run(
+            ['python3', str(script_path)],
+            cwd=str(script_path.parent),
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+            env=os.environ.copy()
+        )
+        
+        if result.returncode == 0:
+            print(f"✓ Script {script_name} executed successfully")
+            if result.stdout:
+                print(f"Output:\n{result.stdout}")
+            return True
+        else:
+            print(f"✗ Script {script_name} failed with return code {result.returncode}")
+            if result.stderr:
+                print(f"Error output:\n{result.stderr}")
+            if result.stdout:
+                print(f"Standard output:\n{result.stdout}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print(f"✗ Script {script_name} timed out after 5 minutes")
+        return False
+    except Exception as e:
+        print(f"✗ Error running script {script_name}: {e}")
+        return False
+
+def run_new_scripts_at_startup():
+    """Scan for new scripts and run them automatically"""
+    print("\n" + "="*80)
+    print("AUTOMATIC SCRIPT RUNNER - Checking for new scripts...")
+    print("="*80)
+    
+    # Check if auto-run is disabled via environment variable
+    if os.environ.get('DISABLE_AUTO_SCRIPT_RUN', '').lower() in ('true', '1', 'yes'):
+        print("Auto-script execution is disabled (DISABLE_AUTO_SCRIPT_RUN is set)")
+        return
+    
+    executed_scripts = load_executed_scripts()
+    all_scripts = find_runnable_scripts()
+    
+    new_scripts = []
+    for script in all_scripts:
+        script_path = str(script)
+        if script_path not in executed_scripts:
+            if is_script_runnable(script):
+                new_scripts.append(script)
+    
+    if not new_scripts:
+        print("No new scripts found to execute.")
+        return
+    
+    print(f"Found {len(new_scripts)} new script(s) to execute:")
+    for script in new_scripts:
+        print(f"  - {script.name}")
+    
+    # Run each new script
+    for script in new_scripts:
+        script_path = str(script)
+        success = run_script_safely(script)
+        
+        # Mark as executed regardless of success/failure to avoid retrying failed scripts
+        # (You can manually remove from .executed_scripts.json if you want to retry)
+        save_executed_script(script_path)
+        
+        if not success:
+            print(f"Warning: Script {script.name} failed, but marked as executed.")
+            print("  To retry, remove it from .executed_scripts.json")
+    
+    print("="*80 + "\n")
 
 # Web3/ENS Configuration
 ENS_DOMAIN = 'isharehow.eth'  # Your ENS domain
@@ -5732,6 +5901,10 @@ def get_current_subscription():
     except Exception as e:
         print(f"Error fetching subscription: {e}")
         return jsonify({'error': 'Failed to fetch subscription'}), 500
+
+# Run new scripts automatically at startup
+# This happens before the app starts serving requests
+run_new_scripts_at_startup()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
