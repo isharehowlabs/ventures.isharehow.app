@@ -22,6 +22,7 @@ import {
   DialogActions,
   TextField,
   Alert,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -33,6 +34,13 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
+
+interface Client {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+}
 
 interface SupportRequest {
   id: string;
@@ -47,10 +55,12 @@ interface SupportRequest {
 
 export default function SupportRequests() {
   const [requests, setRequests] = useState<SupportRequest[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [newRequest, setNewRequest] = useState({
     client: '',
     subject: '',
@@ -58,10 +68,26 @@ export default function SupportRequests() {
     priority: 'medium' as 'low' | 'medium' | 'high',
   });
 
-  // Fetch support requests on mount
+  // Fetch support requests and clients on mount
   useEffect(() => {
     fetchRequests();
+    fetchClients();
   }, []);
+
+  const fetchClients = async () => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/clients`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClients(data.clients || []);
+      }
+    } catch (err) {
+      console.error('Error fetching clients:', err);
+    }
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -108,7 +134,8 @@ export default function SupportRequests() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          client: newRequest.client,
+          client: selectedClient ? (selectedClient.company || selectedClient.name) : newRequest.client,
+          client_id: selectedClient?.id,
           subject: newRequest.subject,
           description: newRequest.description,
           priority: newRequest.priority,
@@ -127,6 +154,7 @@ export default function SupportRequests() {
         description: '',
         priority: 'medium',
       });
+      setSelectedClient(null);
       setDialogOpen(false);
     } catch (err: any) {
       console.error('Error creating support request:', err);
@@ -240,7 +268,17 @@ export default function SupportRequests() {
       {/* View/Create Dialog */}
       <Dialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          setDialogOpen(false);
+          setSelectedRequest(null);
+          setSelectedClient(null);
+          setNewRequest({
+            client: '',
+            subject: '',
+            description: '',
+            priority: 'medium',
+          });
+        }}
         maxWidth="md"
         fullWidth
       >
@@ -293,13 +331,32 @@ export default function SupportRequests() {
             </Box>
           ) : (
             <Stack spacing={3} sx={{ mt: 1 }}>
-              <TextField
+              <Autocomplete
                 fullWidth
-                label="Client"
-                value={newRequest.client}
-                onChange={(e) =>
-                  setNewRequest({ ...newRequest, client: e.target.value })
-                }
+                options={clients}
+                getOptionLabel={(option) => option.company || option.name || ''}
+                value={selectedClient}
+                onChange={(_, newValue) => {
+                  setSelectedClient(newValue);
+                  setNewRequest({ ...newRequest, client: newValue ? (newValue.company || newValue.name) : '' });
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Client"
+                    placeholder="Select a client..."
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Stack>
+                      <Typography variant="body1">{option.company || option.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                )}
               />
               <TextField
                 fullWidth
@@ -340,7 +397,17 @@ export default function SupportRequests() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>
+          <Button onClick={() => {
+            setDialogOpen(false);
+            setSelectedRequest(null);
+            setSelectedClient(null);
+            setNewRequest({
+              client: '',
+              subject: '',
+              description: '',
+              priority: 'medium',
+            });
+          }}>
             {selectedRequest ? 'Close' : 'Cancel'}
           </Button>
           {!selectedRequest && (

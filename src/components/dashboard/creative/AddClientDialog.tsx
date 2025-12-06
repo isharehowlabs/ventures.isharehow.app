@@ -88,8 +88,6 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to create client' }));
-        }
-        
         throw new Error(errorData.error || 'Failed to create client');
       }
 

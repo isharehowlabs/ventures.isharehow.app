@@ -15,7 +15,6 @@ import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
   Analytics as AnalyticsIcon,
-  Settings as SettingsIcon,
   Support as SupportIcon,
   School as SchoolIcon,
   SmartToy as SmartToyIcon,
@@ -23,7 +22,6 @@ import {
 } from '@mui/icons-material';
 import ClientList from './creative/ClientList';
 import AddClientDialog from './creative/AddClientDialog';
-import DashboardConnections from './creative/DashboardConnections';
 import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import DashboardMetrics from './DashboardMetrics';
@@ -122,46 +120,39 @@ export default function CreativeDashboardPanel() {
               aria-controls="creative-tabpanel-2"
             />
             <Tab
-              icon={<SettingsIcon />}
-              iconPosition="start"
-              label="Dashboard Connections"
-              id="creative-tab-3"
-              aria-controls="creative-tabpanel-3"
-            />
-            <Tab
               icon={<SupportIcon />}
               iconPosition="start"
               label="Support Requests"
-              id="creative-tab-4"
-              aria-controls="creative-tabpanel-4"
+              id="creative-tab-3"
+              aria-controls="creative-tabpanel-3"
             />
             <Tab
               icon={<PeopleIcon />}
               iconPosition="start"
               label="Match Clients & Employees"
-              id="creative-tab-5"
-              aria-controls="creative-tabpanel-5"
+              id="creative-tab-4"
+              aria-controls="creative-tabpanel-4"
             />
             <Tab
               icon={<SchoolIcon />}
               iconPosition="start"
               label="Learning Hub"
-              id="creative-tab-6"
-              aria-controls="creative-tabpanel-6"
+              id="creative-tab-5"
+              aria-controls="creative-tabpanel-5"
             />
             <Tab
               icon={<SmartToyIcon />}
               iconPosition="start"
               label="AI Agent"
-              id="creative-tab-7"
-              aria-controls="creative-tabpanel-7"
+              id="creative-tab-6"
+              aria-controls="creative-tabpanel-6"
             />
             <Tab
               icon={<TrendingUpIcon />}
               iconPosition="start"
               label="Opportunities"
-              id="creative-tab-8"
-              aria-controls="creative-tabpanel-8"
+              id="creative-tab-7"
+              aria-controls="creative-tabpanel-7"
             />
           </Tabs>
         </Container>
@@ -180,21 +171,18 @@ export default function CreativeDashboardPanel() {
             <AnalyticsActivity />
           </TabPanel>
           <TabPanel value={activeTab} index={3}>
-            <DashboardConnections />
-          </TabPanel>
-          <TabPanel value={activeTab} index={4}>
             <SupportRequests />
           </TabPanel>
-          <TabPanel value={activeTab} index={5}>
+          <TabPanel value={activeTab} index={4}>
             <ClientEmployeeMatcher />
           </TabPanel>
-          <TabPanel value={activeTab} index={6}>
+          <TabPanel value={activeTab} index={5}>
             <LearningPanel />
           </TabPanel>
-          <TabPanel value={activeTab} index={7}>
+          <TabPanel value={activeTab} index={6}>
             <AiAgentPanel />
           </TabPanel>
-          <TabPanel value={activeTab} index={8}>
+          <TabPanel value={activeTab} index={7}>
             <OpportunitiesPanel />
           </TabPanel>
         </Container>

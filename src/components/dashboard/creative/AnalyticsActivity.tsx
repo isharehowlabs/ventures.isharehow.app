@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -20,11 +20,42 @@ import {
   Download as DownloadIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import { getBackendUrl } from '../../../utils/backendUrl';
+
+interface Client {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  status: string;
+}
 
 export default function AnalyticsActivity() {
   const [selectedClient, setSelectedClient] = useState<string>('all');
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingClients, setLoadingClients] = useState(true);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const backendUrl = getBackendUrl();
+        const response = await fetch(`${backendUrl}/api/creative/clients`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setClients(data.clients || []);
+        }
+      } catch (err) {
+        console.error('Error fetching clients:', err);
+      } finally {
+        setLoadingClients(false);
+      }
+    };
+    fetchClients();
+  }, []);
 
   const handleSync = async () => {
     setLoading(true);
@@ -110,11 +141,14 @@ export default function AnalyticsActivity() {
             value={selectedClient}
             label="Select Client"
             onChange={(e) => setSelectedClient(e.target.value)}
+            disabled={loadingClients}
           >
             <MenuItem value="all">All Clients</MenuItem>
-            <MenuItem value="example">Example Inc.</MenuItem>
-            <MenuItem value="beta">Beta Corp.</MenuItem>
-            <MenuItem value="kabloom">Kabloom LLC.</MenuItem>
+            {clients.map((client) => (
+              <MenuItem key={client.id} value={client.id}>
+                {client.company || client.name}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Paper>
