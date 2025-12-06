@@ -5244,6 +5244,8 @@ def handle_connect():
                 'socket_id': request.sid
             }
             print(f"User {user_id} ({user_name}) connected and tracked")
+    except Exception as e:
+        print(f"Error tracking user connection: {e}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
