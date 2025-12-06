@@ -165,10 +165,11 @@ export default function CollaborativeDrawingPad({ height = 500 }: CollaborativeD
     if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
+    // Calculate position relative to canvas display size
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    return { x, y };
   };
   
   // Drawing handlers
@@ -280,28 +281,53 @@ export default function CollaborativeDrawingPad({ height = 500 }: CollaborativeD
     }
   }, []);
   
-  // Set canvas size
+  // Set canvas size to match display size
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = height - 100; // Account for controls
-    
-    // Redraw saved content if exists
-    const saved = localStorage.getItem('workspace_drawing');
-    if (saved) {
-      const img = new Image();
-      img.onload = () => {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      
+      // Set canvas internal size to match display size exactly
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Redraw saved content if exists
+        const saved = localStorage.getItem('workspace_drawing');
+        if (saved) {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, rect.width, rect.height);
+          };
+          img.src = saved;
         }
-      };
-      img.src = saved;
+      }
+    };
+    
+    // Initial resize
+    resizeCanvas();
+    
+    // Resize on window resize or container resize
+    const resizeObserver = new ResizeObserver(() => {
+      // Use setTimeout to ensure DOM has updated
+      setTimeout(resizeCanvas, 0);
+    });
+    
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
     }
-  }, [height]);
+    
+    // Also listen to window resize
+    window.addEventListener('resize', resizeCanvas);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, []);
   
   return (
     <Paper elevation={2} sx={{ p: 3, height, display: 'flex', flexDirection: 'column' }}>
