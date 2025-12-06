@@ -3834,7 +3834,7 @@ def create_task():
             created_by=data.get('createdBy') or (user_info['id'] if (user_info := get_user_info()) else None),
             created_by_name=data.get('createdByName') or (user_info['name'] if user_info else None),
             assigned_to=data.get('assignedTo'),
-            assigned_to_name=data.get('assignedToName')
+            assigned_to_name=data.get('assignedToName'),
             notes=data.get('notes', '') or ''
         )
         
