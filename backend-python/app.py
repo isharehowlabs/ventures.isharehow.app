@@ -5880,10 +5880,11 @@ def get_creative_metrics():
 
 @app.route('/api/creative/support-requests', methods=['GET'])
 def get_support_requests():
-    """Get all support requests with optional filtering - requires authentication"""
+    """Get all support requests with optional filtering - no authentication required"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
+    try:
         # Get query parameters
         status = request.args.get('status', 'all')
         client_id = request.args.get('client_id', None)
@@ -5903,18 +5904,7 @@ def get_support_requests():
         
         requests = query.order_by(SupportRequest.created_at.desc()).all()
         
-        # If not an employee, filter to only show requests for clients assigned to this user
-        if not is_employee:
-            # Get client IDs assigned to this user
-            assigned_clients = [
-                a.client_id for a in ClientEmployeeAssignment.query.filter_by(employee_id=user.id).all()
-            ]
-            requests = [
-                r for r in requests 
-                if (r.client_id and r.client_id in assigned_clients) or 
-                   (not r.client_id and r.client_name)  # Allow requests without client_id
-            ]
-        
+        # Return all requests without filtering
         return jsonify({
             'requests': [req.to_dict() for req in requests]
         }), 200
