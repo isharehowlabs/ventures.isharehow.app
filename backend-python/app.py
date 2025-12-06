@@ -5778,24 +5778,32 @@ def get_creative_metrics():
         
         # Count active clients assigned to this employee
         # Active = status = 'active' and assigned to this employee
-        active_clients_query = db.session.query(Client).join(
-            ClientEmployeeAssignment,
-            Client.id == ClientEmployeeAssignment.client_id
-        ).filter(
-            ClientEmployeeAssignment.employee_id == employee_db_id,
-            Client.status == 'active'
-        )
-        active_clients_count = active_clients_query.count()
+        try:
+            active_clients_query = db.session.query(Client).join(
+                ClientEmployeeAssignment,
+                Client.id == ClientEmployeeAssignment.client_id
+            ).filter(
+                ClientEmployeeAssignment.employee_id == employee_db_id,
+                Client.status == 'active'
+            )
+            active_clients_count = active_clients_query.count()
+        except Exception as e:
+            app.logger.warning(f"Error counting active clients: {e}")
+            active_clients_count = 0
         
         # Count clients created this month (assigned to employee)
-        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        clients_this_month = db.session.query(Client).join(
-            ClientEmployeeAssignment,
-            Client.id == ClientEmployeeAssignment.client_id
-        ).filter(
-            ClientEmployeeAssignment.employee_id == employee_db_id,
-            Client.created_at >= first_day_of_month
-        ).count()
+        try:
+            first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            clients_this_month = db.session.query(Client).join(
+                ClientEmployeeAssignment,
+                Client.id == ClientEmployeeAssignment.client_id
+            ).filter(
+                ClientEmployeeAssignment.employee_id == employee_db_id,
+                Client.created_at >= first_day_of_month
+            ).count()
+        except Exception as e:
+            app.logger.warning(f"Error counting clients this month: {e}")
+            clients_this_month = 0
         
         # Count support requests with status 'open' or 'in-progress' (assigned to employee's clients)
         # Handle case where client_id column might not exist in support_requests table
@@ -5808,19 +5816,33 @@ def get_creative_metrics():
                 ClientEmployeeAssignment.employee_id == employee_db_id,
                 SupportRequest.status.in_(['open', 'in-progress'])
             ).count()
-        except Exception:
+        except Exception as e:
+            # Check if it's a column error
+            error_str = str(e).lower()
+            if 'client_id' in error_str or 'column' in error_str or 'undefinedcolumn' in error_str:
+                app.logger.info("client_id column not found in support_requests, using fallback")
+            else:
+                app.logger.warning(f"Error counting support requests: {e}")
             # Fallback: count all open/in-progress support requests if client_id column doesn't exist
-            open_support_requests = db.session.query(SupportRequest).filter(
-                SupportRequest.status.in_(['open', 'in-progress'])
-            ).count()
+            try:
+                open_support_requests = db.session.query(SupportRequest).filter(
+                    SupportRequest.status.in_(['open', 'in-progress'])
+                ).count()
+            except Exception as e2:
+                app.logger.warning(f"Error in fallback support request count: {e2}")
+                open_support_requests = 0
         
         # Count total clients assigned to employee (for progress calculation)
-        total_clients = db.session.query(Client).join(
-            ClientEmployeeAssignment,
-            Client.id == ClientEmployeeAssignment.client_id
-        ).filter(
-            ClientEmployeeAssignment.employee_id == employee_db_id
-        ).count()
+        try:
+            total_clients = db.session.query(Client).join(
+                ClientEmployeeAssignment,
+                Client.id == ClientEmployeeAssignment.client_id
+            ).filter(
+                ClientEmployeeAssignment.employee_id == employee_db_id
+            ).count()
+        except Exception as e:
+            app.logger.warning(f"Error counting total clients: {e}")
+            total_clients = 0
         
         # Calculate progress: percentage of active clients out of total
         # Or use a different metric - for now, use active/total * 100
@@ -5840,12 +5862,22 @@ def get_creative_metrics():
                 SupportRequest.status == 'resolved',
                 SupportRequest.updated_at >= today_start
             ).count()
-        except Exception:
+        except Exception as e:
+            # Check if it's a column error
+            error_str = str(e).lower()
+            if 'client_id' in error_str or 'column' in error_str or 'undefinedcolumn' in error_str:
+                app.logger.info("client_id column not found in support_requests, using fallback for tasks")
+            else:
+                app.logger.warning(f"Error counting tasks completed today: {e}")
             # Fallback: count all resolved support requests from today if client_id column doesn't exist
-            tasks_completed_today = db.session.query(SupportRequest).filter(
-                SupportRequest.status == 'resolved',
-                SupportRequest.updated_at >= today_start
-            ).count()
+            try:
+                tasks_completed_today = db.session.query(SupportRequest).filter(
+                    SupportRequest.status == 'resolved',
+                    SupportRequest.updated_at >= today_start
+                ).count()
+            except Exception as e2:
+                app.logger.warning(f"Error in fallback task count: {e2}")
+                tasks_completed_today = 0
         
         return jsonify({
             'clients': active_clients_count,
@@ -5856,11 +5888,16 @@ def get_creative_metrics():
             'totalClients': total_clients
         })
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
         print(f"Error fetching creative metrics: {e}")
+        print(f"Traceback: {error_trace}")
         app.logger.error(f"Error fetching creative metrics: {e}")
-        return jsonify({'error': 'Failed to fetch metrics'}), 500
+        app.logger.error(f"Traceback: {error_trace}")
+        return jsonify({'error': 'Failed to fetch metrics', 'details': str(e)}), 500
 
 @app.route('/api/creative/support-requests', methods=['GET'])
+@jwt_required(optional=True)
 def get_support_requests():
     """Get all support requests with optional filtering - requires authentication"""
     if not DB_AVAILABLE:
@@ -5869,7 +5906,22 @@ def get_support_requests():
     try:
         user = get_current_user()
         if not user:
-            return jsonify({'error': 'Authentication required'}), 401
+            # Try to get user info from JWT if available
+            try:
+                user_id = get_jwt_identity()
+                if user_id:
+                    # Try to find user one more time
+                    if user_id.isdigit():
+                        user = User.query.get(int(user_id))
+                    if not user:
+                        user = User.query.filter_by(username=user_id).first()
+                    if not user:
+                        user = User.query.filter_by(patreon_id=user_id).first()
+            except Exception as e:
+                app.logger.debug(f"Could not get user from JWT: {e}")
+            
+            if not user:
+                return jsonify({'error': 'Authentication required'}), 401
         
         user_info = get_user_info()
         is_employee = hasattr(user, 'is_employee') and user.is_employee
