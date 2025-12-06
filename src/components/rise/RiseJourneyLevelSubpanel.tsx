@@ -360,9 +360,135 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
         </Paper>
 
         {/* Tab Content */}
-        <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-          {/* Lessons Tab */}
-          {activeTab === 'lessons' && (
+        {activeTab === 'learning' ? (
+          <Box>
+            {/* Learning Hub Tab - no white background wrapper */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box
+                sx={{
+                  p: 3,
+                  background: 'linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%)',
+                  border: 2,
+                  borderColor: 'secondary.light',
+                  borderRadius: 2,
+                  boxShadow: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <GraduationCap className="h-8 w-8" style={{ color: '#5c6bc0' }} />
+                  <Typography variant="h5" fontWeight="bold">
+                    Learning Hub Classes
+                  </Typography>
+                </Box>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Access comprehensive video classes and courses to deepen your understanding of this journey level.
+                </Typography>
+                
+                {/* Learning Hub Content Cards */}
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  {/* Video Classes Card */}
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                          <Play className="h-6 w-6" style={{ color: '#5c6bc0' }} />
+                          <Typography variant="h6" fontWeight="bold">
+                            Video Classes
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          A comprehensive collection of video classes covering various topics and learning paths.
+                        </Typography>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          startIcon={<Play className="h-5 w-5" />}
+                          endIcon={<ExternalLink className="h-4 w-4" />}
+                          onClick={() => {
+                            window.open('https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp', '_blank');
+                          }}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            bgcolor: '#5c6bc0',
+                            '&:hover': { bgcolor: '#455a64' },
+                          }}
+                        >
+                          Watch Video Classes
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* AI Development Course Card */}
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                          <BookOpen className="h-6 w-6" style={{ color: '#9c27b0' }} />
+                          <Typography variant="h6" fontWeight="bold">
+                            AI Development
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          Learn the fundamentals of AI development including machine learning, neural networks, and data processing.
+                        </Typography>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          startIcon={<Play className="h-5 w-5" />}
+                          endIcon={<ExternalLink className="h-4 w-4" />}
+                          onClick={() => {
+                            window.open('https://www.youtube.com/playlist?list=PLwyVPJ9qE2K8vj0Wfb4rxAmZntkysHPlE', '_blank');
+                          }}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            bgcolor: '#9c27b0',
+                            '&:hover': { bgcolor: '#7b1fa2' },
+                          }}
+                        >
+                          Start Course
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+
+                {/* Additional Resources */}
+                <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                  <Typography variant="h6" fontWeight="semibold" gutterBottom>
+                    Additional Resources
+                  </Typography>
+                  <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      For more learning resources, visit the full Learning Hub in the Creative Dashboard.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<GraduationCap className="h-5 w-5" />}
+                      endIcon={<ExternalLink className="h-4 w-4" />}
+                      onClick={() => {
+                        window.location.href = '/creative?tab=learning';
+                      }}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        bgcolor: 'grey.800',
+                        '&:hover': { bgcolor: 'grey.900' },
+                      }}
+                    >
+                      Open Full Learning Hub
+                    </Button>
+                  </Paper>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        ) : (
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+            {/* Lessons Tab */}
+            {activeTab === 'lessons' && (
             <Box>
               {lessons.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
@@ -603,132 +729,8 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
               </Alert>
             </Box>
           )}
-
-          {/* Learning Hub Tab */}
-          {activeTab === 'learning' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box
-                sx={{
-                  p: 3,
-                  background: 'linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%)',
-                  border: 2,
-                  borderColor: 'secondary.light',
-                  borderRadius: 2,
-                  boxShadow: 2,
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <GraduationCap className="h-8 w-8" style={{ color: '#5c6bc0' }} />
-                  <Typography variant="h5" fontWeight="bold">
-                    Learning Hub Classes
-                  </Typography>
-                </Box>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                  Access comprehensive video classes and courses to deepen your understanding of this journey level.
-                </Typography>
-                
-                {/* Learning Hub Content Cards */}
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                  {/* Video Classes Card */}
-                  <Grid item xs={12} md={6}>
-                    <Card variant="outlined" sx={{ height: '100%' }}>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                          <Play className="h-6 w-6" style={{ color: '#5c6bc0' }} />
-                          <Typography variant="h6" fontWeight="bold">
-                            Video Classes
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          A comprehensive collection of video classes covering various topics and learning paths.
-                        </Typography>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          startIcon={<Play className="h-5 w-5" />}
-                          endIcon={<ExternalLink className="h-4 w-4" />}
-                          onClick={() => {
-                            window.open('https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp', '_blank');
-                          }}
-                          sx={{
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            bgcolor: '#5c6bc0',
-                            '&:hover': { bgcolor: '#455a64' },
-                          }}
-                        >
-                          Watch Video Classes
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  {/* AI Development Course Card */}
-                  <Grid item xs={12} md={6}>
-                    <Card variant="outlined" sx={{ height: '100%' }}>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                          <BookOpen className="h-6 w-6" style={{ color: '#9c27b0' }} />
-                          <Typography variant="h6" fontWeight="bold">
-                            AI Development
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          Learn the fundamentals of AI development including machine learning, neural networks, and data processing.
-                        </Typography>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          startIcon={<Play className="h-5 w-5" />}
-                          endIcon={<ExternalLink className="h-4 w-4" />}
-                          onClick={() => {
-                            window.open('https://www.youtube.com/playlist?list=PLwyVPJ9qE2K8vj0Wfb4rxAmZntkysHPlE', '_blank');
-                          }}
-                          sx={{
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            bgcolor: '#9c27b0',
-                            '&:hover': { bgcolor: '#7b1fa2' },
-                          }}
-                        >
-                          Start Course
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-
-                {/* Additional Resources */}
-                <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-                  <Typography variant="h6" fontWeight="semibold" gutterBottom>
-                    Additional Resources
-                  </Typography>
-                  <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      For more learning resources, visit the full Learning Hub in the Creative Dashboard.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<GraduationCap className="h-5 w-5" />}
-                      endIcon={<ExternalLink className="h-4 w-4" />}
-                      onClick={() => {
-                        window.location.href = '/creative?tab=learning';
-                      }}
-                      sx={{
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        bgcolor: 'grey.800',
-                        '&:hover': { bgcolor: 'grey.900' },
-                      }}
-                    >
-                      Open Full Learning Hub
-                    </Button>
-                  </Paper>
-                </Box>
-              </Box>
-            </Box>
-          )}
         </Paper>
+        )}
       </Box>
     </Box>
   );
