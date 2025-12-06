@@ -9207,6 +9207,21 @@ def get_rise_journey_levels():
     
     try:
         levels = RiseJourneyLevel.query.order_by(RiseJourneyLevel.order).all()
+        
+        # If no levels exist, try to seed them
+        if len(levels) == 0:
+            print("⚠ No levels found, attempting to seed...")
+            try:
+                with app.app_context():
+                    seed_rise_journey_levels()
+                # Query again after seeding
+                levels = RiseJourneyLevel.query.order_by(RiseJourneyLevel.order).all()
+                print(f"✓ After seeding, found {len(levels)} levels")
+            except Exception as seed_error:
+                print(f"⚠ Failed to seed levels: {seed_error}")
+                import traceback
+                traceback.print_exc()
+        
         progress_records = {p.level_id: p for p in RiseJourneyProgress.query.filter_by(user_id=profile.id).all()}
         
         result = []

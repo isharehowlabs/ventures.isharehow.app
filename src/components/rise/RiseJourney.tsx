@@ -281,9 +281,10 @@ const RiseJourney: React.FC = () => {
       )}
 
       {/* Journey Cards Grid - Similar to Learning Hub */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <Grid container spacing={3}>
-          {levels.map((level) => {
+      {levels.length > 0 && (
+        <div className="max-w-7xl mx-auto mb-8">
+          <Grid container spacing={3}>
+            {levels.map((level) => {
             const colors = levelColors[level.levelKey] || levelColors.wellness;
             const isRecommended = level.levelKey === recommendedLevel;
             const isLocked = level.progress.state === 'locked';
@@ -438,6 +439,7 @@ const RiseJourney: React.FC = () => {
           })}
         </Grid>
       </div>
+      )}
 
       {/* The Journey Path - Card Layout */}
       <div className="space-y-6 max-w-5xl mx-auto">
