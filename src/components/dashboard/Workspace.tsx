@@ -34,7 +34,6 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Code as CodeIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
@@ -141,7 +140,6 @@ export default function Workspace() {
   const fetchMcpTokens = mcpHook?.fetchTokens || (() => Promise.resolve());
   
   // State
-  const [markdownContent, setMarkdownContent] = useState<string>('');
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -171,22 +169,6 @@ export default function Workspace() {
   const [codeComponentName, setCodeComponentName] = useState('');
   const [loadingComponents, setLoadingComponents] = useState(false);
   
-  const markdownRef = useRef<HTMLTextAreaElement>(null);
-
-  // Load markdown from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('workspace_markdown');
-    if (saved) {
-      setMarkdownContent(saved);
-    }
-  }, []);
-
-  // Save markdown to localStorage
-  useEffect(() => {
-    if (markdownContent !== '') {
-      localStorage.setItem('workspace_markdown', markdownContent);
-    }
-  }, [markdownContent]);
 
   // Fetch support requests for task linking
   useEffect(() => {
@@ -360,7 +342,8 @@ export default function Workspace() {
           hyperlinksArray, 
           taskStatus,
           selectedAssignee?.id,
-          selectedAssignee?.name
+          selectedAssignee?.name,
+          taskNotes.trim()
         );
         if (taskSupportRequestId && newTask?.id) {
           await updateTask(newTask.id, { supportRequestId: taskSupportRequestId });
@@ -393,19 +376,6 @@ export default function Workspace() {
     }
   };
 
-  const handleCopyMarkdown = () => {
-    if (markdownRef.current) {
-      markdownRef.current.select();
-      document.execCommand('copy');
-    } else {
-      navigator.clipboard.writeText(markdownContent);
-    }
-  };
-
-  const handleClearMarkdown = () => {
-    setMarkdownContent('');
-    localStorage.removeItem('workspace_markdown');
-  };
 
   // Figma handlers
   const handleRefreshFigma = () => {
@@ -452,41 +422,6 @@ export default function Workspace() {
     <Box sx={{ width: '100%' }}>
       <Grid container spacing={3}>
         
-        {/* Notes Section */}
-        <Grid item xs={12} lg={6}>
-          <Paper elevation={2} sx={{ p: 3, height: 500 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h5" fontWeight={700}>Collaborative Notes</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Tooltip title="Copy all">
-                  <IconButton onClick={handleCopyMarkdown} size="small">
-                    <CodeIcon />
-                  </IconButton>
-                </Tooltip>
-                <Button variant="outlined" size="small" onClick={handleClearMarkdown}>
-                  Clear
-                </Button>
-              </Box>
-            </Box>
-            <TextField
-              fullWidth
-              multiline
-              rows={15}
-              variant="outlined"
-              placeholder="Write your collaborative notes here..."
-              value={markdownContent}
-              onChange={(e) => setMarkdownContent(e.target.value)}
-              inputRef={markdownRef}
-              sx={{ 
-                '& .MuiInputBase-root': { 
-                  height: '100%', 
-                  alignItems: 'flex-start' 
-                }
-              }}
-            />
-          </Paper>
-        </Grid>
-
         {/* Tasks Section */}
         <Grid item xs={12} lg={6}>
           <Paper elevation={2} sx={{ p: 3, height: 500, display: 'flex', flexDirection: 'column' }}>
@@ -778,26 +713,22 @@ export default function Workspace() {
             )}
             sx={{ mb: 2 }}
           />
-          {editMode === 'edit' && (
-            <>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                Collaborative Notes {isSavingNotes && '(Saving...)'}
-              </Typography>
-              <TextField
-                margin="dense"
-                label="Notes (Shared Workspace)"
-                fullWidth
-                variant="outlined"
-                multiline
-                rows={6}
-                value={taskNotes}
-                onChange={(e) => handleNotesChange(e.target.value)}
-                placeholder="Start typing to collaborate with your team..."
-                sx={{ mb: 2 }}
-                helperText="Changes auto-save. Shared with assigned user in real-time."
-              />
-            </>
-          )}
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Collaborative Notes {isSavingNotes && '(Saving...)'}
+          </Typography>
+          <TextField
+            margin="dense"
+            label="Notes (Shared Workspace)"
+            fullWidth
+            variant="outlined"
+            multiline
+            rows={6}
+            value={taskNotes}
+            onChange={(e) => handleNotesChange(e.target.value)}
+            placeholder="Start typing to collaborate with your team..."
+            sx={{ mb: 2 }}
+            helperText={editMode === 'edit' ? "Changes auto-save. Shared with assigned user in real-time." : "Add notes that will be shared with your team."}
+          />
           <TextField
             margin="dense"
             label="Hyperlinks (comma-separated)"

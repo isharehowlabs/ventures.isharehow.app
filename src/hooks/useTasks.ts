@@ -77,7 +77,7 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
     return fetchTasks();
   }, [fetchTasks]);
 
-  const createTask = async (title: string, description: string, hyperlinks: string[], status: string, assignedTo?: string, assignedToName?: string) => {
+  const createTask = async (title: string, description: string, hyperlinks: string[], status: string, assignedTo?: string, assignedToName?: string, notes?: string) => {
     // Prevent duplicate calls
     if (isLoading) {
       console.warn('Task creation already in progress, ignoring duplicate call');
@@ -89,11 +89,11 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
       setError(null);
       setAuthRequired(false);
       const backendUrl = getTasksBackendUrl();
-      console.log('Creating task at:', `${backendUrl}/api/tasks`, { title, description, hyperlinks, status });
+      console.log('Creating task at:', `${backendUrl}/api/tasks`, { title, description, hyperlinks, status, notes });
       
       const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks`, {
         method: 'POST',
-        body: JSON.stringify({ title, description, hyperlinks, status, assignedTo, assignedToName }),
+        body: JSON.stringify({ title, description, hyperlinks, status, assignedTo, assignedToName, notes: notes || '' }),
       });
 
       if (response.status === 401) {

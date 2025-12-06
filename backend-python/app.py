@@ -96,10 +96,26 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 try:
     db = SQLAlchemy(app)
-    DB_AVAILABLE = True
     migrate = Migrate(app, db)
     print(f"✓ SQLAlchemy initialized")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
+    
+    # Test database connection by attempting a simple query
+    try:
+        from sqlalchemy import text
+        with app.app_context():
+            with db.engine.connect() as conn:
+                result = conn.execute(text("SELECT 1"))
+                result.fetchone()  # Consume the result
+        DB_AVAILABLE = True
+        print(f"✓ Database connection verified")
+    except Exception as conn_error:
+        print(f"✗ Database connection test failed: {conn_error}")
+        import traceback
+        traceback.print_exc()
+        print("Database features will be disabled.")
+        DB_AVAILABLE = False
+        db = None
 except Exception as e:
     print(f"✗ Warning: Database initialization failed: {e}")
     print("Database features will be disabled. This may be due to:")
