@@ -5879,35 +5879,11 @@ def get_creative_metrics():
         return jsonify({'error': 'Failed to fetch metrics', 'details': str(e)}), 500
 
 @app.route('/api/creative/support-requests', methods=['GET'])
-@jwt_required(optional=True)
 def get_support_requests():
     """Get all support requests with optional filtering - requires authentication"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
-    try:
-        user = get_current_user()
-        if not user:
-            # Try to get user info from JWT if available
-            try:
-                user_id = get_jwt_identity()
-                if user_id:
-                    # Try to find user one more time
-                    if user_id.isdigit():
-                        user = User.query.get(int(user_id))
-                    if not user:
-                        user = User.query.filter_by(username=user_id).first()
-                    if not user:
-                        user = User.query.filter_by(patreon_id=user_id).first()
-            except Exception as e:
-                app.logger.debug(f"Could not get user from JWT: {e}")
-            
-            if not user:
-                return jsonify({'error': 'Authentication required'}), 401
-        
-        user_info = get_user_info()
-        is_employee = hasattr(user, 'is_employee') and user.is_employee
-        
         # Get query parameters
         status = request.args.get('status', 'all')
         client_id = request.args.get('client_id', None)
@@ -5949,34 +5925,12 @@ def get_support_requests():
         return jsonify({'error': 'Failed to fetch support requests'}), 500
 
 @app.route('/api/creative/support-requests', methods=['POST'])
-@jwt_required(optional=True)
 def create_support_request():
-    """Create a new support request - requires authentication"""
+    """Create a new support request - no authentication required"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user = get_current_user()
-        if not user:
-            # Try to get user info from JWT if available
-            try:
-                user_id = get_jwt_identity()
-                if user_id:
-                    # Try to find user one more time
-                    if user_id.isdigit():
-                        user = User.query.get(int(user_id))
-                    if not user:
-                        user = User.query.filter_by(username=user_id).first()
-                    if not user:
-                        user = User.query.filter_by(patreon_id=user_id).first()
-            except Exception as e:
-                app.logger.debug(f"Could not get user from JWT: {e}")
-            
-            if not user:
-                return jsonify({'error': 'Authentication required'}), 401
-        
-        user_info = get_user_info()
-        
         data = request.get_json()
         
         # Validate required fields
