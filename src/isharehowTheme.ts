@@ -185,7 +185,14 @@ const getTheme = (mode: 'light' | 'dark') => {
           },
         },
         body: {
-          backgroundColor: "inherit",
+          margin: 0,
+          color: mode === 'light' ? '#212529' : '#f7fafc',
+          fontWeight: 400,
+          fontSize: '0.875rem',
+          letterSpacing: '0.15px',
+          lineHeight: 1.5,
+          fontFamily: '"Urbanist", "Inter", "DM Sans", "Roboto", "Helvetica", "Arial", sans-serif',
+          backgroundColor: mode === 'light' ? '#FFFFFF' : '#0f172a',
           scrollbarColor: mode === 'light' ? '#4B5DBD #f8f9fa' : '#4B5DBD #0f172a',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
             width: 8,

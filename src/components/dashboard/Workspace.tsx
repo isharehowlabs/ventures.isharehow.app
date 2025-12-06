@@ -51,6 +51,7 @@ import { useWorkspaceUsers } from '../../hooks/useWorkspaceUsers';
 import { trackTaskCompleted } from '../../utils/analytics';
 import { useAuth } from '../../hooks/useAuth';
 import { getBackendUrl } from '../../utils/backendUrl';
+import CollaborativeDrawingPad from './CollaborativeDrawingPad';
 
 // Optional imports for Figma/MCP features
 let useFigmaHook: any = null;
@@ -421,6 +422,11 @@ export default function Workspace() {
   return (
     <Box sx={{ width: '100%' }}>
       <Grid container spacing={3}>
+        
+        {/* Collaborative Drawing Pad */}
+        <Grid item xs={12} lg={6}>
+          <CollaborativeDrawingPad height={500} />
+        </Grid>
         
         {/* Tasks Section */}
         <Grid item xs={12} lg={6}>

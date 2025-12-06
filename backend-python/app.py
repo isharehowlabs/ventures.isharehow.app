@@ -3956,7 +3956,9 @@ def get_tasks():
     if not DB_AVAILABLE:
         return jsonify({'tasks': [], 'error': 'Database not available. Please check database configuration.'}), 503
     try:
-        tasks = Task.query.all()
+        # Get all tasks, ordered by most recent first
+        tasks = Task.query.order_by(Task.created_at.desc()).all()
+        print(f"Fetched {len(tasks)} tasks from database")
         return jsonify({'tasks': [task.to_dict() for task in tasks]})
     except Exception as e:
         print(f"Error fetching tasks: {e}")
@@ -4165,6 +4167,93 @@ def parse_date_safely(date_string):
         # If parsing fails, return None
         return None
 
+
+# ============================================================================
+# COLLABORATIVE DRAWING PAD - Socket.io handlers
+# ============================================================================
+
+# Store drawing state in memory (could be moved to database for persistence)
+drawing_sessions = {}  # session_id -> { strokes: [], users: set() }
+
+@socketio.on('drawing:join')
+def handle_drawing_join():
+    """Handle user joining drawing session"""
+    session_id = 'default'  # Could be per-workspace or per-user
+    if session_id not in drawing_sessions:
+        drawing_sessions[session_id] = {'strokes': [], 'users': set()}
+    
+    user_id = request.sid
+    drawing_sessions[session_id]['users'].add(user_id)
+    
+    # Send current canvas state to the new user
+    emit('drawing:state', {
+        'strokes': drawing_sessions[session_id]['strokes']
+    })
+    
+    # Notify other users
+    socketio.emit('drawing:user_joined', {
+        'userId': user_id,
+        'userName': 'User'  # Could get from session
+    }, broadcast=True, include_self=False)
+
+@socketio.on('drawing:leave')
+def handle_drawing_leave():
+    """Handle user leaving drawing session"""
+    session_id = 'default'
+    if session_id in drawing_sessions:
+        user_id = request.sid
+        drawing_sessions[session_id]['users'].discard(user_id)
+        
+        # Notify other users
+        socketio.emit('drawing:user_left', {
+            'userId': user_id
+        }, broadcast=True, include_self=False)
+
+@socketio.on('drawing:stroke')
+def handle_drawing_stroke(data):
+    """Handle drawing stroke from client"""
+    session_id = 'default'
+    if session_id not in drawing_sessions:
+        drawing_sessions[session_id] = {'strokes': [], 'users': set()}
+    
+    stroke = data.get('stroke')
+    if stroke:
+        # Store stroke
+        drawing_sessions[session_id]['strokes'].append(stroke)
+        
+        # Limit stored strokes to prevent memory issues (keep last 1000)
+        if len(drawing_sessions[session_id]['strokes']) > 1000:
+            drawing_sessions[session_id]['strokes'] = drawing_sessions[session_id]['strokes'][-1000:]
+        
+        # Broadcast to all other users
+        socketio.emit('drawing:stroke', {
+            'stroke': stroke,
+            'userId': data.get('userId', 'anonymous'),
+            'userName': data.get('userName', 'Anonymous')
+        }, broadcast=True, include_self=False)
+
+@socketio.on('drawing:clear')
+def handle_drawing_clear():
+    """Handle canvas clear request"""
+    session_id = 'default'
+    if session_id in drawing_sessions:
+        drawing_sessions[session_id]['strokes'] = []
+    
+    # Broadcast clear to all users
+    socketio.emit('drawing:clear', broadcast=True, include_self=False)
+
+@socketio.on('drawing:assign_user')
+def handle_drawing_assign_user(data):
+    """Handle user assignment for co-drawing"""
+    assigned_user_id = data.get('assignedUserId')
+    assigned_user_name = data.get('assignedUserName')
+    
+    # Broadcast assignment to all users
+    socketio.emit('drawing:user_assigned', {
+        'assignedUserId': assigned_user_id,
+        'assignedUserName': assigned_user_name,
+        'assignedBy': request.sid
+    }, broadcast=True)
 
 # Socket.io handler for real-time task notes updates
 @socketio.on('task_notes_update')

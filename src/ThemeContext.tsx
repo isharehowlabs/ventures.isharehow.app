@@ -71,14 +71,8 @@ const updateDOMTheme = (resolvedMode: ResolvedThemeMode) => {
   }
   colorSchemeMetaTag.setAttribute('content', resolvedMode);
   
-  // Also update the document.body style to match theme
-  if (resolvedMode === 'dark') {
-    document.body.style.backgroundColor = '#0f172a';
-    document.body.style.color = '#f7fafc';
-  } else {
-    document.body.style.backgroundColor = '#FFFFFF';
-    document.body.style.color = '#212529';
-  }
+  // Body styles are handled by MUI CssBaseline, no need to set inline styles
+  // This prevents conflicts between inline styles and CSS classes
   
   // Remove transition prevention class after a short delay
   requestAnimationFrame(() => {
@@ -109,17 +103,8 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
     // Force update DOM on mount to ensure consistency BEFORE React paints
     updateDOMTheme(resolvedMode);
     
-    // Apply theme colors to body immediately to prevent flash
-    if (typeof window !== 'undefined') {
-      const body = document.body;
-      if (resolvedMode === 'dark') {
-        body.style.backgroundColor = '#0f172a';
-        body.style.color = '#f7fafc';
-      } else {
-        body.style.backgroundColor = '#FFFFFF';
-        body.style.color = '#212529';
-      }
-    }
+    // Body styles are handled by MUI CssBaseline based on theme mode
+    // No need to set inline styles here to avoid conflicts
   }, []);
 
   // Listen for system preference changes (single effect for system monitoring)
