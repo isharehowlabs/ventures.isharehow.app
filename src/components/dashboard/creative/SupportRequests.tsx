@@ -61,6 +61,7 @@ export default function SupportRequests() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [editingRequest, setEditingRequest] = useState<SupportRequest | null>(null);
@@ -225,11 +226,13 @@ export default function SupportRequests() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create support request');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to create support request' }));
+        throw new Error(errorData.error || errorData.details || 'Failed to create support request');
       }
 
       const data = await response.json();
-      setRequests([...requests, data]);
+      setRequests([data, ...requests]);
+      setSuccess('Support request created successfully');
       setNewRequest({
         client: '',
         subject: '',
@@ -238,6 +241,9 @@ export default function SupportRequests() {
       });
       setSelectedClient(null);
       setDialogOpen(false);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       console.error('Error creating support request:', err);
       setError(err.message || 'Failed to create support request');
@@ -270,6 +276,16 @@ export default function SupportRequests() {
 
   return (
     <Box>
+      {success && (
+        <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2 }}>
+          {success}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Box>
           <Typography variant="h5" fontWeight={700} gutterBottom>

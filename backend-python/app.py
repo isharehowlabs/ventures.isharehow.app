@@ -5915,22 +5915,57 @@ def get_support_requests():
         return jsonify({'error': 'Failed to fetch support requests'}), 500
 
 @app.route('/api/creative/support-requests', methods=['POST'])
+@jwt_required(optional=True)
 def create_support_request():
-    """Create a new support request - no authentication required"""
+    """Create a new support request - requires authentication"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
+        # Get current user for authentication
+        user = get_current_user()
+        if not user:
+            # Try to get user from JWT
+            try:
+                user_id = get_jwt_identity()
+                if user_id:
+                    if user_id.isdigit():
+                        user = User.query.get(int(user_id))
+                    if not user:
+                        user = User.query.filter_by(username=user_id).first()
+                    if not user:
+                        user = User.query.filter_by(patreon_id=user_id).first()
+            except Exception as e:
+                app.logger.debug(f"Could not get user from JWT: {e}")
+            
+            if not user:
+                return jsonify({'error': 'Authentication required'}), 401
+        
         data = request.get_json()
         
         # Validate required fields
         if not data.get('subject') or not data.get('description'):
             return jsonify({'error': 'Subject and description are required'}), 400
         
+        # Get client if client_id is provided
+        client = None
+        assigned_employee = None
+        if data.get('clientId'):
+            client = Client.query.get(data.get('clientId'))
+            if client:
+                # Find assigned employee for this client
+                assignment = ClientEmployeeAssignment.query.filter_by(
+                    client_id=client.id
+                ).first()
+                if assignment:
+                    assigned_employee = User.query.get(assignment.employee_id)
+                    if assigned_employee:
+                        data['assignedTo'] = assigned_employee.username or assigned_employee.email or assigned_employee.name
+        
         # Create support request
         request_obj = SupportRequest(
             client_id=data.get('clientId'),
-            client_name=data.get('client'),
+            client_name=data.get('client') or (client.name if client else None),
             subject=data['subject'],
             description=data['description'],
             priority=data.get('priority', 'medium'),
@@ -5940,6 +5975,40 @@ def create_support_request():
         
         db.session.add(request_obj)
         db.session.commit()
+        
+        # Send notification to assigned employee if one exists
+        if assigned_employee:
+            try:
+                notification = Notification(
+                    user_id=assigned_employee.id,
+                    type='support-request',
+                    title=f'New Support Request: {request_obj.subject}',
+                    message=f'A new support request has been created for client {request_obj.client_name or "Unknown"}. Priority: {request_obj.priority}',
+                    read=False,
+                    notification_metadata=json.dumps({
+                        'link': f'/creative?tab=support',
+                        'support_request_id': request_obj.id,
+                        'client_id': request_obj.client_id,
+                        'priority': request_obj.priority
+                    })
+                )
+                db.session.add(notification)
+                db.session.commit()
+                
+                # Emit socket.io event for real-time notification
+                socketio.emit('notification:new', notification.to_dict(), room=f'user_{assigned_employee.id}')
+                
+                # Send push notification if available
+                try:
+                    if WEBPUSH_AVAILABLE:
+                        send_push_notification(assigned_employee.id, notification)
+                except Exception as push_error:
+                    app.logger.warning(f"Failed to send push notification: {push_error}")
+                
+                print(f"✓ Sent notification to employee {assigned_employee.id} for support request {request_obj.id}")
+            except Exception as notif_error:
+                app.logger.error(f"Failed to send notification: {notif_error}")
+                # Don't fail the request creation if notification fails
         
         print(f"✓ Created support request: {request_obj.id} for client {request_obj.client_name or request_obj.client_id}")
         return jsonify(request_obj.to_dict()), 201
@@ -6010,6 +6079,41 @@ def update_support_request(request_id):
         db.session.rollback()
         print(f"Error updating support request: {e}")
         return jsonify({'error': 'Failed to update support request'}), 500
+
+@app.route('/api/creative/support-requests/<request_id>/tasks', methods=['GET'])
+@jwt_required(optional=True)
+def get_support_request_tasks(request_id):
+    """Get all tasks linked to a support request"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        # Verify support request exists
+        request_obj = SupportRequest.query.get(request_id)
+        if not request_obj:
+            return jsonify({'error': 'Support request not found'}), 404
+        
+        # Get all tasks linked to this support request
+        try:
+            tasks = Task.query.filter_by(support_request_id=request_id).order_by(Task.created_at.desc()).all()
+            return jsonify({
+                'tasks': [task.to_dict() for task in tasks],
+                'count': len(tasks)
+            }), 200
+        except Exception as e:
+            # If support_request_id column doesn't exist, return empty list
+            error_str = str(e).lower()
+            if 'support_request_id' in error_str or 'column' in error_str:
+                return jsonify({
+                    'tasks': [],
+                    'count': 0,
+                    'message': 'Task linking not available yet'
+                }), 200
+            raise
+    
+    except Exception as e:
+        app.logger.error(f"Error fetching tasks for support request: {e}")
+        return jsonify({'error': 'Failed to fetch tasks'}), 500
 
 # Subscription Management API Endpoints
 
@@ -7412,14 +7516,23 @@ if DB_AVAILABLE:
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
         
         def to_dict(self):
+            # Count linked tasks
+            linked_tasks_count = 0
+            try:
+                linked_tasks_count = Task.query.filter_by(support_request_id=self.id).count()
+            except Exception:
+                pass  # Ignore if tasks table doesn't exist or column doesn't exist
+            
             return {
                 'id': self.id,
                 'client': self.client_name or (self.client_id if self.client_id else 'N/A'),
+                'clientId': self.client_id,
                 'subject': self.subject,
                 'description': self.description,
                 'priority': self.priority,
                 'status': self.status,
                 'assignedTo': self.assigned_to,
+                'linkedTasksCount': linked_tasks_count,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
                 'updatedAt': self.updated_at.isoformat() if self.updated_at else None
             }
