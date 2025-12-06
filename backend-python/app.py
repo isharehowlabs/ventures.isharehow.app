@@ -5397,6 +5397,10 @@ def create_client():
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
+    try:
+        user_info = get_user_info()
+        if not user_info:
+            return jsonify({'error': 'Authentication required'}), 401
         
         data = request.get_json()
         
