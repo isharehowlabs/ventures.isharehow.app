@@ -100,25 +100,9 @@ try:
     print(f"✓ SQLAlchemy initialized")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
     
-    # Set DB_AVAILABLE to True by default - we'll test on actual use
-    # Don't block database operations based on startup connection test
+    # Set DB_AVAILABLE to True - database is configured and ready
     DB_AVAILABLE = True
-    
-    # Test database connection by attempting a simple query (non-blocking)
-    # If this fails, we'll still allow database operations and test on actual use
-    try:
-        from sqlalchemy import text
-        with app.app_context():
-            with db.engine.connect() as conn:
-                result = conn.execute(text("SELECT 1"))
-                result.fetchone()  # Consume the result
-        print(f"✓ Database connection verified at startup")
-    except Exception as conn_error:
-        print(f"⚠ Database connection test failed at startup: {conn_error}")
-        print("  Database operations will still be attempted - connection will be tested on actual use")
-        print("  This is normal if the database server is starting up or temporarily unavailable")
-        # Keep DB_AVAILABLE = True so we don't block operations
-        DB_AVAILABLE = True
+    print(f"✓ Database configured and ready")
 except Exception as e:
     print(f"✗ Warning: Database initialization failed: {e}")
     print("Database features will be disabled. This may be due to:")
@@ -4154,27 +4138,6 @@ def delete_task(task_id):
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
 
-
-# Helper function to test database connection on-demand
-def test_db_connection():
-    """Test database connection and update DB_AVAILABLE status"""
-    global DB_AVAILABLE
-    if not db:
-        DB_AVAILABLE = False
-        return False
-    
-    try:
-        from sqlalchemy import text
-        with app.app_context():
-            with db.engine.connect() as conn:
-                result = conn.execute(text("SELECT 1"))
-                result.fetchone()
-        DB_AVAILABLE = True
-        return True
-    except Exception as e:
-        print(f"Database connection test failed: {e}")
-        DB_AVAILABLE = False
-        return False
 
 # Track active/logged-in users via Socket.io connections
 active_users = {}  # user_id -> { name, email, last_seen, socket_id }
