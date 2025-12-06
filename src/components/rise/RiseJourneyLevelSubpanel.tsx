@@ -102,6 +102,11 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
       if (lessonsResponse.ok) {
         const lessonsData = await lessonsResponse.json();
         setLessons(lessonsData.lessons || []);
+      } else if (lessonsResponse.status === 401) {
+        // Don't show error for auth issues - user might be logged in but token expired
+        // Just log it and continue with empty data
+        console.warn('Authentication issue loading lessons, continuing with empty data');
+        setLessons([]);
       }
 
       // Load tasks for this level
@@ -116,13 +121,22 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
         } else if (Array.isArray(tasksData)) {
           setTasks(tasksData);
         }
+      } else if (tasksResponse.status === 401) {
+        // Don't show error for auth issues
+        console.warn('Authentication issue loading tasks, continuing with empty data');
+        setTasks([]);
       }
 
       // Load journal entries for this level (if any lessons have journal entries)
       // Note: Journal entries are typically per-lesson, but we can show level-wide reflection
       // For now, we'll initialize empty and let users save per-level reflections
     } catch (err: any) {
-      setError(err.message || 'Failed to load level data');
+      // Only set error for non-auth issues
+      if (!err.message?.includes('Authentication') && !err.message?.includes('401')) {
+        setError(err.message || 'Failed to load level data');
+      } else {
+        console.warn('Authentication issue, continuing with empty data:', err);
+      }
     } finally {
       setLoading(false);
     }

@@ -102,9 +102,10 @@ const RiseJourney: React.FC = () => {
           setQuizCompleted(false);
         }
       } else if (quizResponse.status === 401) {
-        setError('Please log in to access the Rise Journey. Your session may have expired.');
-        setLoading(false);
-        return;
+        // Don't show error - user might be logged in but token expired
+        // Just continue without quiz data
+        console.warn('Authentication issue loading quiz, continuing without quiz data');
+        setQuizCompleted(false);
       }
 
       // Get trial status
@@ -125,9 +126,8 @@ const RiseJourney: React.FC = () => {
           });
         }
       } else if (trialResponse.status === 401) {
-        setError('Please log in to access the Rise Journey. Your session may have expired.');
-        setLoading(false);
-        return;
+        // Don't show error - just continue without trial data
+        console.warn('Authentication issue loading trial, continuing without trial data');
       }
 
       // Get levels
@@ -138,7 +138,9 @@ const RiseJourney: React.FC = () => {
         const levelsData = await levelsResponse.json();
         setLevels(levelsData.levels || []);
       } else if (levelsResponse.status === 401) {
-        setError('Please log in to access the Rise Journey. Your session may have expired.');
+        // Don't show error - just continue with empty levels
+        console.warn('Authentication issue loading levels, continuing with empty levels');
+        setLevels([]);
       } else {
         throw new Error('Failed to load journey levels');
       }
