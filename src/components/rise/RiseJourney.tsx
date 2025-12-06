@@ -102,10 +102,9 @@ const RiseJourney: React.FC = () => {
           setQuizCompleted(false);
         }
       } else if (quizResponse.status === 401) {
-        // Don't show error - user might be logged in but token expired
-        // Just continue without quiz data
-        console.warn('Authentication issue loading quiz, continuing without quiz data');
-        setQuizCompleted(false);
+        // On protected route but got 401 - redirect to login silently
+        window.location.href = '/?login=true';
+        return;
       }
 
       // Get trial status
@@ -126,8 +125,9 @@ const RiseJourney: React.FC = () => {
           });
         }
       } else if (trialResponse.status === 401) {
-        // Don't show error - just continue without trial data
-        console.warn('Authentication issue loading trial, continuing without trial data');
+        // On protected route but got 401 - redirect to login silently
+        window.location.href = '/?login=true';
+        return;
       }
 
       // Get levels
@@ -138,9 +138,9 @@ const RiseJourney: React.FC = () => {
         const levelsData = await levelsResponse.json();
         setLevels(levelsData.levels || []);
       } else if (levelsResponse.status === 401) {
-        // Don't show error - just continue with empty levels
-        console.warn('Authentication issue loading levels, continuing with empty levels');
-        setLevels([]);
+        // On protected route but got 401 - redirect to login silently
+        window.location.href = '/?login=true';
+        return;
       } else {
         throw new Error('Failed to load journey levels');
       }

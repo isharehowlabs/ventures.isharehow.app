@@ -88,6 +88,15 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to create client' }));
+        
+        // Handle authentication errors - if on protected route, redirect to login instead of showing error
+        if (response.status === 401) {
+          // User is on protected route but got 401 - redirect to login
+          // Don't show error, just redirect
+          window.location.href = '/?login=true';
+          return;
+        }
+        
         throw new Error(errorData.error || 'Failed to create client');
       }
 

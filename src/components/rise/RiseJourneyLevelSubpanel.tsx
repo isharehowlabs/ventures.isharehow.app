@@ -103,10 +103,9 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
         const lessonsData = await lessonsResponse.json();
         setLessons(lessonsData.lessons || []);
       } else if (lessonsResponse.status === 401) {
-        // Don't show error for auth issues - user might be logged in but token expired
-        // Just log it and continue with empty data
-        console.warn('Authentication issue loading lessons, continuing with empty data');
-        setLessons([]);
+        // On protected route but got 401 - redirect to login silently
+        window.location.href = '/?login=true';
+        return;
       }
 
       // Load tasks for this level
@@ -122,9 +121,9 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
           setTasks(tasksData);
         }
       } else if (tasksResponse.status === 401) {
-        // Don't show error for auth issues
-        console.warn('Authentication issue loading tasks, continuing with empty data');
-        setTasks([]);
+        // On protected route but got 401 - redirect to login silently
+        window.location.href = '/?login=true';
+        return;
       }
 
       // Load journal entries for this level (if any lessons have journal entries)
@@ -135,7 +134,9 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
       if (!err.message?.includes('Authentication') && !err.message?.includes('401')) {
         setError(err.message || 'Failed to load level data');
       } else {
-        console.warn('Authentication issue, continuing with empty data:', err);
+        // On protected route but got auth error - redirect to login silently
+        window.location.href = '/?login=true';
+        return;
       }
     } finally {
       setLoading(false);
