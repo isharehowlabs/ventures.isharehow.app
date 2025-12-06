@@ -29,7 +29,8 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Checkbox,
-  Autocomplete
+  Autocomplete,
+  Snackbar
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -79,6 +80,22 @@ interface SupportRequest {
 
 export default function Workspace() {
   const { user } = useAuth();
+
+
+  const handleCloseToast = () => {
+    setToastOpen(false);
+  };
+
+  // Handle task assignment notifications
+  const handleTaskAssigned = (task: any, assignedToUserId: string) => {
+    if (user && assignedToUserId === user.id) {
+      setToastMessage(`You've been assigned: ${task.title}`);
+      setToastSeverity('info');
+      setToastOpen(true);
+    }
+  };
+
+
   const { users: workspaceUsers } = useWorkspaceUsers();
   const { tasks, createTask, updateTask, deleteTask, updateTaskNotes, isLoading: tasksLoading, error: tasksErrorMsg, authRequired, refresh, isStale } = useTasks();
   
@@ -132,6 +149,9 @@ export default function Workspace() {
   const [taskDescription, setTaskDescription] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<{id: string, name: string} | null>(null);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastSeverity, setToastSeverity] = useState<'success' | 'info' | 'warning' | 'error'>('info');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const notesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [taskHyperlinks, setTaskHyperlinks] = useState('');
@@ -881,6 +901,18 @@ export default function Workspace() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Toast notification for task assignments */}
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseToast}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseToast} severity={toastSeverity} sx={{ width: '100%' }}>
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

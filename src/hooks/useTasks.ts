@@ -22,11 +22,12 @@ export interface Task {
 }
 
 // Hook for team tasks with real-time updates
-export function useTasks() {
+export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string) => void) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authRequired, setAuthRequired] = useState(false);
+  const onTaskAssignedRef = useRef<((task: Task, assignedToUserId: string) => void) | undefined>(onTaskAssigned);
   const [isStale, setIsStale] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -298,6 +299,11 @@ export function useTasks() {
       setTasks(prev => prev.map(task => task.id === data.task.id ? data.task : task));
       setLastUpdated(now);
       lastUpdatedRef.current = now;
+      
+      // Notify parent component if callback provided
+      if (onTaskAssignedRef.current) {
+        onTaskAssignedRef.current(data.task, data.assignedTo);
+      }
     });
 
     // Listen for auth restoration
@@ -332,6 +338,11 @@ export function useTasks() {
       clearInterval(staleInterval);
     };
   }, [fetchTasks]); // Removed lastUpdated from dependencies to prevent infinite loop
+
+  // Keep ref updated with latest callback
+  useEffect(() => {
+    onTaskAssignedRef.current = onTaskAssigned;
+  }, [onTaskAssigned]);
 
 
   const updateTaskNotes = (id: string, notes: string) => {
