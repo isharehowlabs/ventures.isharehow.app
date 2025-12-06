@@ -6324,9 +6324,33 @@ def seed_rise_journey_levels():
 
 run_new_scripts_at_startup()
 
+def run_database_upgrade():
+    """Run database migrations automatically at startup"""
+    if not DB_AVAILABLE or not db:
+        print("⚠ Database not available, skipping database upgrade")
+        return
+    
+    try:
+        print("\n" + "="*80)
+        print("DATABASE MIGRATION - Running automatic upgrade...")
+        print("="*80)
+        
+        with app.app_context():
+            from flask_migrate import upgrade
+            upgrade()
+            print("✓ Database upgrade completed successfully")
+    except Exception as e:
+        print(f"⚠ Could not run database upgrade: {e}")
+        import traceback
+        traceback.print_exc()
+        # Don't fail startup if upgrade fails - might be a connection issue
+
 if __name__ == '__main__':
-    # Seed Rise Journey levels at startup (inside app context)
+    # Run database upgrade at startup (inside app context)
     if DB_AVAILABLE and db:
+        run_database_upgrade()
+        
+        # Seed Rise Journey levels at startup (inside app context)
         try:
             with app.app_context():
                 seed_rise_journey_levels()
