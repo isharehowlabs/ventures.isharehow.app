@@ -136,33 +136,8 @@ CORS(app,
      allow_headers=['Content-Type', 'Authorization', 'X-Intervals-API-Key'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
 
-# Add before_request handler to handle OPTIONS preflight requests globally
-@app.before_request
-def handle_options():
-    """Handle OPTIONS preflight requests before any decorators run"""
-    if request.method == 'OPTIONS':
-        response = app.make_default_options_response()
-        origin = request.headers.get('Origin')
-        if origin and origin in allowed_origins:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Intervals-API-Key')
-            response.headers.add('Access-Control-Max-Age', '3600')
-        return response
-
-# Add after_request handler to ensure CORS headers are always set, even on errors
-@app.after_request
-def after_request(response):
-    """Ensure CORS headers are always present, even on error responses"""
-    origin = request.headers.get('Origin')
-    if origin and origin in allowed_origins:
-        response.headers.add('Access-Control-Allow-Origin', origin)
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Intervals-API-Key')
-        response.headers.add('Access-Control-Max-Age', '3600')
-    return response
+# Note: Flask-CORS handles all CORS headers automatically, including OPTIONS preflight
+# and error responses. No need for manual header setting which causes duplicate headers.
 
 # Initialize JWT Manager (flask-jwt-extended)
 jwt = JWTManager(app)
