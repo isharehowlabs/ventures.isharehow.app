@@ -27,12 +27,15 @@ import {
 import {
   Add as AddIcon,
   Visibility as VisibilityIcon,
+  Edit as EditIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
 import {
   Select,
   MenuItem,
   FormControl,
   InputLabel,
+  Menu,
 } from '@mui/material';
 
 interface Client {
@@ -60,12 +63,21 @@ export default function SupportRequests() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
+  const [editingRequest, setEditingRequest] = useState<SupportRequest | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [menuRequestId, setMenuRequestId] = useState<string | null>(null);
   const [newRequest, setNewRequest] = useState({
     client: '',
     subject: '',
     description: '',
     priority: 'medium' as 'low' | 'medium' | 'high',
+  });
+  const [editRequest, setEditRequest] = useState({
+    subject: '',
+    description: '',
+    priority: 'medium' as 'low' | 'medium' | 'high',
+    status: 'open' as 'open' | 'in-progress' | 'resolved',
   });
 
   // Fetch support requests and clients on mount
@@ -116,7 +128,77 @@ export default function SupportRequests() {
 
   const handleView = (request: SupportRequest) => {
     setSelectedRequest(request);
+    setEditingRequest(null);
     setDialogOpen(true);
+  };
+
+  const handleEdit = (request: SupportRequest) => {
+    setEditingRequest(request);
+    setSelectedRequest(null);
+    setEditRequest({
+      subject: request.subject,
+      description: request.description,
+      priority: request.priority,
+      status: request.status,
+    });
+    setDialogOpen(true);
+    setMenuAnchor(null);
+    setMenuRequestId(null);
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, requestId: string) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+    setMenuRequestId(requestId);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+    setMenuRequestId(null);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingRequest || !editRequest.subject || !editRequest.description) {
+      setError('Subject and description are required');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/support-requests/${editingRequest.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          subject: editRequest.subject,
+          description: editRequest.description,
+          priority: editRequest.priority,
+          status: editRequest.status,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update support request');
+      }
+
+      const data = await response.json();
+      setRequests(requests.map(r => r.id === editingRequest.id ? data : r));
+      setEditingRequest(null);
+      setEditRequest({
+        subject: '',
+        description: '',
+        priority: 'medium',
+        status: 'open',
+      });
+      setDialogOpen(false);
+    } catch (err: any) {
+      console.error('Error updating support request:', err);
+      setError(err.message || 'Failed to update support request');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -249,13 +331,13 @@ export default function SupportRequests() {
                       color={getPriorityColor(request.priority)}
                     />
                   </TableCell>
-                  <TableCell>{request.createdAt}</TableCell>
+                  <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
-                      onClick={() => handleView(request)}
+                      onClick={(e) => handleMenuOpen(e, request.id)}
                     >
-                      <VisibilityIcon />
+                      <MoreVertIcon />
                     </IconButton>
                   </TableCell>
                 </TableRow>
@@ -265,12 +347,43 @@ export default function SupportRequests() {
         </Table>
       </TableContainer>
 
-      {/* View/Create Dialog */}
+      {/* Actions Menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem
+          onClick={() => {
+            const request = requests.find(r => r.id === menuRequestId);
+            if (request) {
+              handleView(request);
+            }
+          }}
+        >
+          <VisibilityIcon sx={{ mr: 1, fontSize: 20 }} />
+          View Details
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            const request = requests.find(r => r.id === menuRequestId);
+            if (request) {
+              handleEdit(request);
+            }
+          }}
+        >
+          <EditIcon sx={{ mr: 1, fontSize: 20 }} />
+          Edit
+        </MenuItem>
+      </Menu>
+
+      {/* View/Create/Edit Dialog */}
       <Dialog
         open={dialogOpen}
         onClose={() => {
           setDialogOpen(false);
           setSelectedRequest(null);
+          setEditingRequest(null);
           setSelectedClient(null);
           setNewRequest({
             client: '',
@@ -278,15 +391,76 @@ export default function SupportRequests() {
             description: '',
             priority: 'medium',
           });
+          setEditRequest({
+            subject: '',
+            description: '',
+            priority: 'medium',
+            status: 'open',
+          });
         }}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>
-          {selectedRequest ? 'Support Request Details' : 'Create Support Request'}
+          {selectedRequest ? 'Support Request Details' : editingRequest ? 'Edit Support Request' : 'Create Support Request'}
         </DialogTitle>
         <DialogContent>
-          {selectedRequest ? (
+          {editingRequest ? (
+            <Stack spacing={3} sx={{ mt: 1 }}>
+              <TextField
+                fullWidth
+                label="Subject"
+                value={editRequest.subject}
+                onChange={(e) =>
+                  setEditRequest({ ...editRequest, subject: e.target.value })
+                }
+              />
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={4}
+                value={editRequest.description}
+                onChange={(e) =>
+                  setEditRequest({ ...editRequest, description: e.target.value })
+                }
+              />
+              <FormControl fullWidth>
+                <InputLabel>Priority</InputLabel>
+                <Select
+                  value={editRequest.priority}
+                  label="Priority"
+                  onChange={(e) =>
+                    setEditRequest({
+                      ...editRequest,
+                      priority: e.target.value as 'low' | 'medium' | 'high',
+                    })
+                  }
+                >
+                  <MenuItem value="low">Low</MenuItem>
+                  <MenuItem value="medium">Medium</MenuItem>
+                  <MenuItem value="high">High</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={editRequest.status}
+                  label="Status"
+                  onChange={(e) =>
+                    setEditRequest({
+                      ...editRequest,
+                      status: e.target.value as 'open' | 'in-progress' | 'resolved',
+                    })
+                  }
+                >
+                  <MenuItem value="open">Open</MenuItem>
+                  <MenuItem value="in-progress">In Progress</MenuItem>
+                  <MenuItem value="resolved">Resolved</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
+          ) : selectedRequest ? (
             <Box>
               <Stack spacing={2} sx={{ mt: 1 }}>
                 <Box>
@@ -400,6 +574,7 @@ export default function SupportRequests() {
           <Button onClick={() => {
             setDialogOpen(false);
             setSelectedRequest(null);
+            setEditingRequest(null);
             setSelectedClient(null);
             setNewRequest({
               client: '',
@@ -407,10 +582,20 @@ export default function SupportRequests() {
               description: '',
               priority: 'medium',
             });
+            setEditRequest({
+              subject: '',
+              description: '',
+              priority: 'medium',
+              status: 'open',
+            });
           }}>
-            {selectedRequest ? 'Close' : 'Cancel'}
+            {selectedRequest ? 'Close' : editingRequest ? 'Cancel' : 'Cancel'}
           </Button>
-          {!selectedRequest && (
+          {editingRequest ? (
+            <Button variant="contained" onClick={handleUpdate}>
+              Update Request
+            </Button>
+          ) : !selectedRequest && (
             <Button variant="contained" onClick={handleCreate}>
               Create Request
             </Button>

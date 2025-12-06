@@ -5967,6 +5967,7 @@ def get_support_requests():
         return jsonify({'error': 'Failed to fetch support requests'}), 500
 
 @app.route('/api/creative/support-requests', methods=['POST'])
+@jwt_required(optional=True)
 def create_support_request():
     """Create a new support request - requires authentication"""
     if not DB_AVAILABLE:
@@ -5975,7 +5976,22 @@ def create_support_request():
     try:
         user = get_current_user()
         if not user:
-            return jsonify({'error': 'Authentication required'}), 401
+            # Try to get user info from JWT if available
+            try:
+                user_id = get_jwt_identity()
+                if user_id:
+                    # Try to find user one more time
+                    if user_id.isdigit():
+                        user = User.query.get(int(user_id))
+                    if not user:
+                        user = User.query.filter_by(username=user_id).first()
+                    if not user:
+                        user = User.query.filter_by(patreon_id=user_id).first()
+            except Exception as e:
+                app.logger.debug(f"Could not get user from JWT: {e}")
+            
+            if not user:
+                return jsonify({'error': 'Authentication required'}), 401
         
         user_info = get_user_info()
         
@@ -5999,13 +6015,26 @@ def create_support_request():
         db.session.add(request_obj)
         db.session.commit()
         
+        print(f"✓ Created support request: {request_obj.id} for client {request_obj.client_name or request_obj.client_id}")
         return jsonify(request_obj.to_dict()), 201
     except Exception as e:
         db.session.rollback()
+        error_msg = str(e)
         print(f"Error creating support request: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'Failed to create support request'}), 500
+        
+        # Check if it's a table doesn't exist error
+        if 'support_requests' in error_msg.lower() or 'does not exist' in error_msg.lower():
+            return jsonify({
+                'error': 'Support requests table not found. Please run database migrations.',
+                'details': 'The support_requests table needs to be created. Run: flask db upgrade'
+            }), 500
+        
+        return jsonify({
+            'error': 'Failed to create support request',
+            'details': error_msg
+        }), 500
 
 @app.route('/api/creative/support-requests/<request_id>', methods=['PUT'])
 def update_support_request(request_id):
