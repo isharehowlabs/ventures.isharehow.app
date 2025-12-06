@@ -5398,10 +5398,6 @@ def create_client():
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
-        if not user_info:
-            return jsonify({'error': 'Authentication required'}), 401
-        
         data = request.get_json()
         
         # Validate required fields
@@ -7190,10 +7186,6 @@ def activate_wellness_module():
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
-        if not user_info:
-            return jsonify({'error': 'Authentication required'}), 401
-        
         data = request.get_json()
         module_id = data.get('moduleId')
         activation_key = data.get('activationKey')
@@ -7481,10 +7473,6 @@ def award_crypto():
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user_info = get_user_info()
-        if not user_info:
-            return jsonify({'error': 'Authentication required'}), 401
-        
         data = request.get_json()
         amount = data.get('amount')
         reason = data.get('reason', 'Task completion')
