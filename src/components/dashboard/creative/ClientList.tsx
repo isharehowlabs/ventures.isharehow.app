@@ -51,6 +51,7 @@ export interface Client {
 import { getBackendUrl } from '../../../utils/backendUrl';
 import { useEffect } from 'react';
 import AssignEmployeeDialog from './AssignEmployeeDialog';
+import EditClientDialog from './EditClientDialog';
 
 interface ClientListProps {
   onAddClient: () => void;
@@ -63,6 +64,9 @@ export default function ClientList({ onAddClient }: ClientListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [employeeFilter, setEmployeeFilter] = useState<string>('all');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -124,14 +128,14 @@ export default function ClientList({ onAddClient }: ClientListProps) {
   };
 
   const handleView = () => {
-    // Navigate to client details
+    setSelectedClient(clients.find(c => c.id === selectedClientId));
+    setViewDialogOpen(true);
     handleMenuClose();
-  };
 
   const handleEdit = () => {
-    // Open edit dialog
+    setSelectedClient(clients.find(c => c.id === selectedClientId));
+    setEditDialogOpen(true);
     handleMenuClose();
-  };
 
   const handleDelete = async () => {
     if (!selectedClient) {

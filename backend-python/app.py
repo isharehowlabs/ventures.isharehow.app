@@ -5485,18 +5485,9 @@ def update_client(client_id):
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Authentication required'}), 401
-        
         client = Client.query.get(client_id)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
-        
-        # Check access - only employees or assigned employees can update
-        has_access, error_msg = check_employee_client_access(user, client_id)
-        if not has_access:
-            return jsonify({'error': error_msg}), 403
         
         data = request.get_json()
         
@@ -5645,18 +5636,9 @@ def update_dashboard_connections(client_id):
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Authentication required'}), 401
-        
         client = Client.query.get(client_id)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
-        
-        # Check access - only employees or assigned employees can update
-        has_access, error_msg = check_employee_client_access(user, client_id)
-        if not has_access:
-            return jsonify({'error': error_msg}), 403
         
         data = request.get_json()
         dashboard_types = data.get('dashboardTypes', [])
