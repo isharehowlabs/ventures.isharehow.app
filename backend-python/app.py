@@ -5290,23 +5290,13 @@ def handle_join_notifications(data):
 # Creative Dashboard - Client Management API Endpoints
 
 @app.route('/api/creative/clients', methods=['GET'])
-@jwt_required()
 def get_clients():
-    """Get all clients with optional filtering - requires authentication"""
+    """Get all clients with optional filtering - no authentication required"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Authentication required'}), 401
-        
-        # Safely get employee status
-        is_employee = safe_get_is_employee(user)
-        user_db_id = getattr(user, 'id', None)
-        
-        if not user_db_id:
-            return jsonify({'error': 'Unable to identify user'}), 401
+        # No authentication required - anyone can view clients
         
         # Get query parameters
         status = request.args.get('status', 'all')
@@ -5330,29 +5320,9 @@ def get_clients():
         
         clients = query.order_by(Client.created_at.desc()).all()
         
-        # Check if user is admin (admins see all clients)
-        is_admin = False
-        if hasattr(user, 'is_admin'):
-            is_admin = bool(user.is_admin)
-        if not is_admin:
-            # Check special identifiers
-            if hasattr(user, 'patreon_id') and user.patreon_id == '56776112':
-                is_admin = True
-            elif hasattr(user, 'username') and user.username:
-                username_lower = user.username.lower()
-                if username_lower in ['isharehow', 'admin']:
-                    is_admin = True
-        
-        # If admin, show all clients (no filtering)
-        # If not an employee, filter to only show clients assigned to this user
-        if not is_admin and not is_employee:
-            clients = [
-                c for c in clients 
-                if c.employee_assignments and 
-                any(a.employee_id == user_db_id for a in c.employee_assignments)
-            ]
-        # Filter by employee if specified (only employees/admins can filter by other employees)
-        elif employee_id and not is_admin:
+        # No user filtering - show all clients
+        # Optional employee filter if specified
+        if employee_id:
             try:
                 emp_id_int = int(employee_id)
                 clients = [c for c in clients if c.employee_assignments and 
@@ -5421,7 +5391,6 @@ def create_demo_lead():
         db.session.rollback()
         return jsonify({'error': f'Failed to submit demo request: {str(e)}'}), 500
 
-@require_employee
 @app.route('/api/creative/clients', methods=['POST'])
 def create_client():
     """Create a new client - requires employee access"""
@@ -5488,7 +5457,6 @@ def create_client():
         traceback.print_exc()
         return jsonify({'error': 'Failed to create client'}), 500
 
-@jwt_required()
 @app.route('/api/creative/clients/<client_id>', methods=['GET'])
 def get_client(client_id):
     """Get a specific client by ID - requires authentication and access"""
@@ -5514,7 +5482,6 @@ def get_client(client_id):
         print(f"Error fetching client: {e}")
         return jsonify({'error': 'Failed to fetch client'}), 500
 
-@jwt_required()
 @app.route('/api/creative/clients/<client_id>', methods=['PUT'])
 def update_client(client_id):
     """Update a client - requires authentication and access"""
@@ -5568,7 +5535,6 @@ def update_client(client_id):
         print(f"Error updating client: {e}")
         return jsonify({'error': 'Failed to update client'}), 500
 
-@require_employee
 @app.route('/api/creative/clients/<client_id>', methods=['DELETE'])
 def delete_client(client_id):
     """Delete a client - requires employee access"""
@@ -5589,7 +5555,6 @@ def delete_client(client_id):
         print(f"Error deleting client: {e}")
         return jsonify({'error': 'Failed to delete client'}), 500
 
-@require_employee
 @app.route('/api/creative/clients/<client_id>/assign-employee', methods=['POST'])
 def assign_employee(client_id):
     """Assign or update employee assignment for a client - requires employee access"""
@@ -5653,7 +5618,6 @@ def assign_employee(client_id):
         print(f"Error assigning employee: {e}")
         return jsonify({'error': 'Failed to assign employee'}), 500
 
-@jwt_required()
 @app.route('/api/creative/clients/<client_id>/dashboard-connections', methods=['GET'])
 def get_client_dashboard_connections(client_id):
     """Get dashboard connections for a client - requires authentication and access"""
@@ -5678,7 +5642,6 @@ def get_client_dashboard_connections(client_id):
         print(f"Error fetching dashboard connections: {e}")
         return jsonify({'error': 'Failed to fetch connections'}), 500
 
-@jwt_required()
 @app.route('/api/creative/clients/<client_id>/dashboard-connections', methods=['POST'])
 def update_dashboard_connections(client_id):
     """Update dashboard connections for a client - requires authentication and access"""
@@ -5939,7 +5902,6 @@ def get_support_requests():
         traceback.print_exc()
         return jsonify({'error': 'Failed to fetch support requests'}), 500
 
-@jwt_required()
 @app.route('/api/creative/support-requests', methods=['POST'])
 def create_support_request():
     """Create a new support request - requires authentication"""
@@ -5981,7 +5943,6 @@ def create_support_request():
         traceback.print_exc()
         return jsonify({'error': 'Failed to create support request'}), 500
 
-@jwt_required()
 @app.route('/api/creative/support-requests/<request_id>', methods=['PUT'])
 def update_support_request(request_id):
     """Update a support request - requires authentication and access"""
