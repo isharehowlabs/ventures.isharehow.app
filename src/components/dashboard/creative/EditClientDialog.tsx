@@ -135,6 +135,7 @@ export default function EditClientDialog({ open, onClose, client, onSave, readOn
               <MenuItem value="pending">Pending</MenuItem>
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="inactive">Inactive</MenuItem>
+              <MenuItem value="prospect">Prospect</MenuItem>
             </Select>
           </FormControl>
           

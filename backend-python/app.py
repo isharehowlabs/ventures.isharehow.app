@@ -7331,7 +7331,7 @@ if DB_AVAILABLE:
         email = db.Column(db.String(255), nullable=False, unique=True, index=True)
         company = db.Column(db.String(200), nullable=False)
         phone = db.Column(db.String(50), nullable=True)
-        status = db.Column(db.String(20), default='pending', nullable=False)  # pending, active, inactive
+        status = db.Column(db.String(20), default='pending', nullable=False)  # pending, active, inactive, prospect
         tier = db.Column(db.String(50), nullable=True)  # starter, professional, enterprise
         notes = db.Column(db.Text, nullable=True)
         tags = db.Column(db.Text, nullable=True)  # JSON array of tags

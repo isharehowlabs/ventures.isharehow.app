@@ -20,7 +20,6 @@ import {
   SmartToy as SmartToyIcon,
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
-import ClientList from './creative/ClientList';
 import AddClientDialog from './creative/AddClientDialog';
 import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
@@ -28,7 +27,6 @@ import DashboardMetrics from './DashboardMetrics';
 import { getBackendUrl } from '../../utils/backendUrl';
 import LearningPanel from './LearningPanel';
 import AiAgentPanel from './AiAgentPanel';
-import OpportunitiesPanel from './OpportunitiesPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
 
 interface TabPanelProps {
@@ -106,53 +104,39 @@ export default function CreativeDashboardPanel() {
               aria-controls="creative-tabpanel-0"
             />
             <Tab
-              icon={<PeopleIcon />}
-              iconPosition="start"
-              label="Client List"
-              id="creative-tab-1"
-              aria-controls="creative-tabpanel-1"
-            />
-            <Tab
               icon={<AnalyticsIcon />}
               iconPosition="start"
               label="Analytics & Activity"
-              id="creative-tab-2"
-              aria-controls="creative-tabpanel-2"
+              id="creative-tab-1"
+              aria-controls="creative-tabpanel-1"
             />
             <Tab
               icon={<SupportIcon />}
               iconPosition="start"
               label="Support Requests"
-              id="creative-tab-3"
-              aria-controls="creative-tabpanel-3"
+              id="creative-tab-2"
+              aria-controls="creative-tabpanel-2"
             />
             <Tab
               icon={<PeopleIcon />}
               iconPosition="start"
               label="Match Clients & Employees"
-              id="creative-tab-4"
-              aria-controls="creative-tabpanel-4"
+              id="creative-tab-3"
+              aria-controls="creative-tabpanel-3"
             />
             <Tab
               icon={<SchoolIcon />}
               iconPosition="start"
               label="Learning Hub"
-              id="creative-tab-5"
-              aria-controls="creative-tabpanel-5"
+              id="creative-tab-4"
+              aria-controls="creative-tabpanel-4"
             />
             <Tab
               icon={<SmartToyIcon />}
               iconPosition="start"
               label="AI Agent"
-              id="creative-tab-6"
-              aria-controls="creative-tabpanel-6"
-            />
-            <Tab
-              icon={<TrendingUpIcon />}
-              iconPosition="start"
-              label="Opportunities"
-              id="creative-tab-7"
-              aria-controls="creative-tabpanel-7"
+              id="creative-tab-5"
+              aria-controls="creative-tabpanel-5"
             />
           </Tabs>
         </Container>
@@ -165,25 +149,19 @@ export default function CreativeDashboardPanel() {
             <OverviewTab onAddClient={() => setAddClientOpen(true)} />
           </TabPanel>
           <TabPanel value={activeTab} index={1}>
-            <ClientList onAddClient={() => setAddClientOpen(true)} />
-          </TabPanel>
-          <TabPanel value={activeTab} index={2}>
             <AnalyticsActivity />
           </TabPanel>
-          <TabPanel value={activeTab} index={3}>
+          <TabPanel value={activeTab} index={2}>
             <SupportRequests />
           </TabPanel>
-          <TabPanel value={activeTab} index={4}>
-            <ClientEmployeeMatcher />
+          <TabPanel value={activeTab} index={3}>
+            <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
           </TabPanel>
-          <TabPanel value={activeTab} index={5}>
+          <TabPanel value={activeTab} index={4}>
             <LearningPanel />
           </TabPanel>
-          <TabPanel value={activeTab} index={6}>
+          <TabPanel value={activeTab} index={5}>
             <AiAgentPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={7}>
-            <OpportunitiesPanel />
           </TabPanel>
         </Container>
       </Box>
