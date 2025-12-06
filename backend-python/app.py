@@ -15,6 +15,10 @@ import bcrypt
 import subprocess
 import glob
 from pathlib import Path
+import warnings
+
+# Suppress eth_utils network chain ID warnings
+warnings.filterwarnings('ignore', message=".*Network.*does not have a valid ChainId.*", category=UserWarning, module='eth_utils.network')
 
 # Try to import pywebpush for push notifications (optional)
 try:
