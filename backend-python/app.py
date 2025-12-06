@@ -6124,15 +6124,18 @@ def get_current_subscription():
 # Run new scripts automatically at startup
 # This happens before the app starts serving requests
 def seed_rise_journey_levels():
-    """Seed the 7 journey levels if they don't exist"""
+    """Seed the 7 journey levels if they don't exist - uses raw SQL to avoid model access issues"""
     if not DB_AVAILABLE or not db:
         print("⚠ Database not available, skipping Rise Journey levels seeding")
         return
     
     try:
-        with app.app_context():
-            # Check if levels already exist
-            existing_count = RiseJourneyLevel.query.count()
+        from sqlalchemy import text
+        
+        # Check if levels already exist using raw SQL
+        with db.engine.connect() as conn:
+            result = conn.execute(text("SELECT COUNT(*) FROM rise_journey_levels"))
+            existing_count = result.scalar()
             if existing_count > 0:
                 print(f"✓ Rise Journey levels already exist ({existing_count} levels)")
                 return
@@ -6146,7 +6149,7 @@ def seed_rise_journey_levels():
                     'title': 'Wellness',
                     'description': 'Foundational physical health and energy management. Build the base for all other journeys.',
                     'focus': 'Foundational Physical Health & Energy',
-                    'revenue_products': ['Wellness Products', 'Nutrition Plans'],
+                    'revenue_products': '["Wellness Products", "Nutrition Plans"]',
                     'order': 1
                 },
                 {
@@ -6154,7 +6157,7 @@ def seed_rise_journey_levels():
                     'title': 'Mobility',
                     'description': 'Physical movement, flexibility, and body awareness. Connect your mind and body.',
                     'focus': 'Physical Movement & Body Awareness',
-                    'revenue_products': ['Fitness Programs', 'Movement Classes'],
+                    'revenue_products': '["Fitness Programs", "Movement Classes"]',
                     'order': 2
                 },
                 {
@@ -6162,7 +6165,7 @@ def seed_rise_journey_levels():
                     'title': 'Accountability',
                     'description': 'Build systems and habits that keep you on track. Create sustainable change.',
                     'focus': 'Systems & Habit Formation',
-                    'revenue_products': ['Coaching Programs', 'Accountability Tools'],
+                    'revenue_products': '["Coaching Programs", "Accountability Tools"]',
                     'order': 3
                 },
                 {
@@ -6170,7 +6173,7 @@ def seed_rise_journey_levels():
                     'title': 'Creativity',
                     'description': 'Unlock your creative potential. Express yourself and innovate.',
                     'focus': 'Creative Expression & Innovation',
-                    'revenue_products': ['Creative Workshops', 'Art Supplies'],
+                    'revenue_products': '["Creative Workshops", "Art Supplies"]',
                     'order': 4
                 },
                 {
@@ -6178,7 +6181,7 @@ def seed_rise_journey_levels():
                     'title': 'Alignment',
                     'description': 'Align your actions with your values. Live with purpose and intention.',
                     'focus': 'Values & Purpose Alignment',
-                    'revenue_products': ['Life Coaching', 'Alignment Tools'],
+                    'revenue_products': '["Life Coaching", "Alignment Tools"]',
                     'order': 5
                 },
                 {
@@ -6186,7 +6189,7 @@ def seed_rise_journey_levels():
                     'title': 'Mindfulness',
                     'description': 'Cultivate present-moment awareness. Develop inner peace and clarity.',
                     'focus': 'Present-Moment Awareness & Clarity',
-                    'revenue_products': ['Meditation Programs', 'Mindfulness Tools'],
+                    'revenue_products': '["Meditation Programs", "Mindfulness Tools"]',
                     'order': 6
                 },
                 {
@@ -6194,42 +6197,56 @@ def seed_rise_journey_levels():
                     'title': 'Destiny',
                     'description': 'Step into your highest potential. Manifest your true calling.',
                     'focus': 'Highest Potential & True Calling',
-                    'revenue_products': ['Mastermind Programs', 'Destiny Coaching'],
+                    'revenue_products': '["Mastermind Programs", "Destiny Coaching"]',
                     'order': 7
                 }
             ]
             
+            # Insert levels using raw SQL
             for level_data in levels_data:
-                level = RiseJourneyLevel(
-                    id=str(uuid.uuid4()),
-                    level_key=level_data['level_key'],
-                    title=level_data['title'],
-                    description=level_data['description'],
-                    focus=level_data['focus'],
-                    revenue_products=json.dumps(level_data['revenue_products']),
-                    order=level_data['order']
+                level_id = str(uuid.uuid4())
+                conn.execute(
+                    text("""
+                        INSERT INTO rise_journey_levels 
+                        (id, level_key, title, description, focus, revenue_products, "order", created_at)
+                        VALUES (:id, :level_key, :title, :description, :focus, :revenue_products, :order, NOW())
+                    """),
+                    {
+                        'id': level_id,
+                        'level_key': level_data['level_key'],
+                        'title': level_data['title'],
+                        'description': level_data['description'],
+                        'focus': level_data['focus'],
+                        'revenue_products': level_data['revenue_products'],
+                        'order': level_data['order']
+                    }
                 )
-                db.session.add(level)
             
-            db.session.commit()
+            conn.commit()
             print(f"✓ Successfully seeded {len(levels_data)} Rise Journey levels")
     except Exception as e:
         print(f"✗ Error seeding Rise Journey levels: {e}")
         import traceback
         traceback.print_exc()
-        if db:
-            db.session.rollback()
-
-# Seed Rise Journey levels at startup
-if DB_AVAILABLE and db:
-    try:
-        seed_rise_journey_levels()
-    except Exception as e:
-        print(f"⚠ Could not seed Rise Journey levels at startup: {e}")
+        try:
+            if db:
+                db.session.rollback()
+        except:
+            pass
 
 run_new_scripts_at_startup()
 
 if __name__ == '__main__':
+    # Seed Rise Journey levels at startup (inside app context)
+    if DB_AVAILABLE and db:
+        try:
+            with app.app_context():
+                seed_rise_journey_levels()
+        except Exception as e:
+            print(f"⚠ Could not seed Rise Journey levels at startup: {e}")
+            import traceback
+            traceback.print_exc()
+    
     port = int(os.environ.get('PORT', 5000))
     # Allow Werkzeug for development/production (or use gunicorn for true production)
     socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
