@@ -3904,9 +3904,9 @@ def update_task(task_id):
         if 'assignedTo' in data:
             task.assigned_to = data.get('assignedTo') or None
         if 'assignedToName' in data:
+            task.assigned_to_name = data.get('assignedToName') or None
         if 'notes' in data:
             task.notes = data.get('notes') or ''
-            task.assigned_to_name = data.get('assignedToName') or None
         
         # Update support request link if provided
         if 'supportRequestId' in data or 'support_request_id' in data:
