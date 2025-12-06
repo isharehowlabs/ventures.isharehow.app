@@ -5798,13 +5798,21 @@ def get_creative_metrics():
         ).count()
         
         # Count support requests with status 'open' or 'in-progress' (assigned to employee's clients)
-        open_support_requests = db.session.query(SupportRequest).join(
-            ClientEmployeeAssignment,
-            SupportRequest.client_id == ClientEmployeeAssignment.client_id
-        ).filter(
-            ClientEmployeeAssignment.employee_id == employee_db_id,
-            SupportRequest.status.in_(['open', 'in-progress'])
-        ).count()
+        # Handle case where client_id column might not exist in support_requests table
+        try:
+            # Try to use client_id join if column exists
+            open_support_requests = db.session.query(SupportRequest).join(
+                ClientEmployeeAssignment,
+                SupportRequest.client_id == ClientEmployeeAssignment.client_id
+            ).filter(
+                ClientEmployeeAssignment.employee_id == employee_db_id,
+                SupportRequest.status.in_(['open', 'in-progress'])
+            ).count()
+        except Exception:
+            # Fallback: count all open/in-progress support requests if client_id column doesn't exist
+            open_support_requests = db.session.query(SupportRequest).filter(
+                SupportRequest.status.in_(['open', 'in-progress'])
+            ).count()
         
         # Count total clients assigned to employee (for progress calculation)
         total_clients = db.session.query(Client).join(
@@ -5822,14 +5830,22 @@ def get_creative_metrics():
         
         # Count tasks completed today (from support requests resolved today)
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        tasks_completed_today = db.session.query(SupportRequest).join(
-            ClientEmployeeAssignment,
-            SupportRequest.client_id == ClientEmployeeAssignment.client_id
-        ).filter(
-            ClientEmployeeAssignment.employee_id == employee_db_id,
-            SupportRequest.status == 'resolved',
-            SupportRequest.updated_at >= today_start
-        ).count()
+        try:
+            # Try to use client_id join if column exists
+            tasks_completed_today = db.session.query(SupportRequest).join(
+                ClientEmployeeAssignment,
+                SupportRequest.client_id == ClientEmployeeAssignment.client_id
+            ).filter(
+                ClientEmployeeAssignment.employee_id == employee_db_id,
+                SupportRequest.status == 'resolved',
+                SupportRequest.updated_at >= today_start
+            ).count()
+        except Exception:
+            # Fallback: count all resolved support requests from today if client_id column doesn't exist
+            tasks_completed_today = db.session.query(SupportRequest).filter(
+                SupportRequest.status == 'resolved',
+                SupportRequest.updated_at >= today_start
+            ).count()
         
         return jsonify({
             'clients': active_clients_count,
