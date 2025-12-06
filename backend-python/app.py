@@ -100,22 +100,24 @@ try:
     print(f"✓ SQLAlchemy initialized")
     print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
     
-    # Test database connection by attempting a simple query
+    # Set DB_AVAILABLE to True by default - connection will be tested on first use
+    DB_AVAILABLE = True
+    
+    # Test database connection by attempting a simple query (non-blocking)
+    # If this fails, we'll still allow database operations and test on actual use
     try:
         from sqlalchemy import text
         with app.app_context():
             with db.engine.connect() as conn:
                 result = conn.execute(text("SELECT 1"))
                 result.fetchone()  # Consume the result
-        DB_AVAILABLE = True
         print(f"✓ Database connection verified")
     except Exception as conn_error:
-        print(f"✗ Database connection test failed: {conn_error}")
-        import traceback
-        traceback.print_exc()
-        print("Database features will be disabled.")
-        DB_AVAILABLE = False
-        db = None
+        print(f"⚠ Database connection test failed at startup: {conn_error}")
+        print("  Database will still be available - connection will be tested on first use")
+        print("  This is normal if the database server is starting up or temporarily unavailable")
+        # Don't disable DB_AVAILABLE - let it work if connection succeeds later
+        DB_AVAILABLE = True  # Keep it True, test on actual use
 except Exception as e:
     print(f"✗ Warning: Database initialization failed: {e}")
     print("Database features will be disabled. This may be due to:")
@@ -3953,8 +3955,10 @@ def unsubscribe_push():
 @require_session
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
+    # Test connection on-demand if DB_AVAILABLE is False
     if not DB_AVAILABLE:
-        return jsonify({'tasks': [], 'error': 'Database not available. Please check database configuration.'}), 503
+        if not test_db_connection():
+            return jsonify({'tasks': [], 'error': 'Database not available. Please check database configuration.'}), 503
     try:
         # Get all tasks, ordered by most recent first
         tasks = Task.query.order_by(Task.created_at.desc()).all()
@@ -3988,11 +3992,13 @@ def get_tasks():
 @require_session
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
+    # Test connection on-demand if DB_AVAILABLE is False
     if not DB_AVAILABLE:
-        return jsonify({
-            'error': 'Database not available',
-            'message': 'Database is not configured or unavailable. Please check your database configuration and ensure psycopg is properly installed.'
-        }), 503
+        if not test_db_connection():
+            return jsonify({
+                'error': 'Database not available',
+                'message': 'Database is not configured or unavailable. Please check your database configuration and ensure psycopg is properly installed.'
+            }), 503
     try:
         data = request.get_json()
         if not data:
@@ -4135,6 +4141,27 @@ def delete_task(task_id):
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
 
+
+# Helper function to test database connection on-demand
+def test_db_connection():
+    """Test database connection and update DB_AVAILABLE status"""
+    global DB_AVAILABLE
+    if not db:
+        DB_AVAILABLE = False
+        return False
+    
+    try:
+        from sqlalchemy import text
+        with app.app_context():
+            with db.engine.connect() as conn:
+                result = conn.execute(text("SELECT 1"))
+                result.fetchone()
+        DB_AVAILABLE = True
+        return True
+    except Exception as e:
+        print(f"Database connection test failed: {e}")
+        DB_AVAILABLE = False
+        return False
 
 # Track active/logged-in users via Socket.io connections
 active_users = {}  # user_id -> { name, email, last_seen, socket_id }
