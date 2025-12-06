@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Play, CheckCircle, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Card, CardContent, Box, Typography, Chip, Grid } from '@mui/material';
 import RiseJourneyQuiz from './RiseJourneyQuiz';
 import RiseJourneyLevelSubpanel from './RiseJourneyLevelSubpanel';
 
@@ -25,14 +26,14 @@ interface Trial {
   expiresAt: string;
 }
 
-const levelColors: Record<string, { bg: string; border: string; text: string }> = {
-  wellness: { bg: 'bg-green-500', border: 'border-green-500', text: 'text-green-500' },
-  mobility: { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-blue-500' },
-  accountability: { bg: 'bg-indigo-500', border: 'border-indigo-500', text: 'text-indigo-500' },
-  creativity: { bg: 'bg-purple-500', border: 'border-purple-500', text: 'text-purple-500' },
-  alignment: { bg: 'bg-pink-500', border: 'border-pink-500', text: 'text-pink-500' },
-  mindfulness: { bg: 'bg-yellow-500', border: 'border-yellow-500', text: 'text-yellow-500' },
-  destiny: { bg: 'bg-orange-500', border: 'border-orange-500', text: 'text-orange-500' },
+const levelColors: Record<string, { bg: string; border: string; text: string; muiColor: string }> = {
+  wellness: { bg: 'bg-green-500', border: 'border-green-500', text: 'text-green-500', muiColor: '#10b981' },
+  mobility: { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-blue-500', muiColor: '#3b82f6' },
+  accountability: { bg: 'bg-indigo-500', border: 'border-indigo-500', text: 'text-indigo-500', muiColor: '#6366f1' },
+  creativity: { bg: 'bg-purple-500', border: 'border-purple-500', text: 'text-purple-500', muiColor: '#a855f7' },
+  alignment: { bg: 'bg-pink-500', border: 'border-pink-500', text: 'text-pink-500', muiColor: '#ec4899' },
+  mindfulness: { bg: 'bg-yellow-500', border: 'border-yellow-500', text: 'text-yellow-500', muiColor: '#eab308' },
+  destiny: { bg: 'bg-orange-500', border: 'border-orange-500', text: 'text-orange-500', muiColor: '#f97316' },
 };
 
 const RiseJourney: React.FC = () => {
@@ -278,6 +279,165 @@ const RiseJourney: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Journey Cards Grid - Similar to Learning Hub */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <Grid container spacing={3}>
+          {levels.map((level) => {
+            const colors = levelColors[level.levelKey] || levelColors.wellness;
+            const isRecommended = level.levelKey === recommendedLevel;
+            const isLocked = level.progress.state === 'locked';
+            const isCompleted = level.progress.state === 'completed';
+            const isInProgress = level.progress.state === 'in-progress';
+
+            return (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={level.id}>
+                <Card
+                  variant="outlined"
+                  onClick={() => handleLevelClick(level)}
+                  sx={{
+                    borderRadius: 3,
+                    height: '100%',
+                    p: 0,
+                    borderColor: isRecommended ? 'primary.main' : 'divider',
+                    borderWidth: isRecommended ? 2 : 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 4,
+                    },
+                  }}
+                >
+                  {/* Color accent bar */}
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: 6,
+                      bgcolor: colors.muiColor,
+                      background: `linear-gradient(90deg, ${colors.muiColor} 0%, ${colors.muiColor}dd 100%)`,
+                    }}
+                  />
+                  
+                  <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
+                    {/* Status badges */}
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                      {isRecommended && (
+                        <Chip
+                          label="✨ Recommended"
+                          size="small"
+                          color="primary"
+                          sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+                        />
+                      )}
+                      {isCompleted && (
+                        <Chip
+                          label="✓ Complete"
+                          size="small"
+                          color="success"
+                          sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+                        />
+                      )}
+                      {isInProgress && (
+                        <Chip
+                          label="In Progress"
+                          size="small"
+                          color="warning"
+                          sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+                        />
+                      )}
+                      {isLocked && (
+                        <Chip
+                          label="Locked"
+                          size="small"
+                          color="default"
+                          sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+                        />
+                      )}
+                    </Box>
+
+                    {/* Title */}
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 1,
+                        color: isLocked ? 'text.secondary' : 'text.primary',
+                      }}
+                    >
+                      {level.title}
+                    </Typography>
+
+                    {/* Description */}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        mb: 2,
+                        flexGrow: 1,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {level.focus || level.description}
+                    </Typography>
+
+                    {/* Progress indicator */}
+                    {!isLocked && (
+                      <Box sx={{ mb: 2 }}>
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: 4,
+                            bgcolor: 'grey.200',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: `${isCompleted ? 100 : isInProgress ? 50 : 0}%`,
+                              height: '100%',
+                              bgcolor: isCompleted ? 'success.main' : 'primary.main',
+                              transition: 'width 0.3s ease',
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Action button area */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        mt: 'auto',
+                        pt: 2,
+                        borderTop: 1,
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        {isCompleted ? 'Review' : isLocked ? 'Explore' : 'Enter'} Path
+                      </Typography>
+                      <ArrowRight
+                        className={`h-5 w-5 ${isLocked ? 'text-gray-400' : 'text-gray-600'}`}
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </div>
 
       {/* The Journey Path - Card Layout */}
       <div className="space-y-6 max-w-5xl mx-auto">
