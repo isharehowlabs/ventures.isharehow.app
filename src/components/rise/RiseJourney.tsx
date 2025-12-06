@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Play, CheckCircle, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
-import { Card, CardContent, Box, Typography, Chip, Grid } from '@mui/material';
+import { 
+  Card, 
+  CardContent, 
+  Box, 
+  Typography, 
+  Chip, 
+  Grid, 
+  Button,
+  Paper,
+  Alert,
+  CircularProgress
+} from '@mui/material';
 import RiseJourneyQuiz from './RiseJourneyQuiz';
 import RiseJourneyLevelSubpanel from './RiseJourneyLevelSubpanel';
 
@@ -182,23 +193,24 @@ const RiseJourney: React.FC = () => {
   // Show quiz if not completed or if user wants to retake
   if (!quizCompleted || showRetakeQuiz) {
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-        <div className="max-w-4xl mx-auto">
+      <Box sx={{ p: 3, minHeight: '100vh' }}>
+        <Box sx={{ maxWidth: '900px', mx: 'auto' }}>
           {showRetakeQuiz && (
-            <button
+            <Button
               onClick={() => {
                 setShowRetakeQuiz(false);
                 setShowQuiz(false);
               }}
-              className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+              startIcon={<ArrowLeft className="h-5 w-5" />}
+              sx={{ mb: 2, textTransform: 'none' }}
+              variant="text"
             >
-              <ArrowLeft className="h-5 w-5" />
               Back to Journey
-            </button>
+            </Button>
           )}
           <RiseJourneyQuiz onComplete={handleQuizComplete} />
-        </div>
-      </div>
+        </Box>
+      </Box>
     );
   }
 
@@ -216,73 +228,103 @@ const RiseJourney: React.FC = () => {
   // Show loading state
   if (loading) {
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-gray-600">Loading your journey...</p>
-        </div>
-      </div>
+      <Box sx={{ p: 6, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={48} sx={{ mb: 2 }} />
+          <Typography variant="body1" color="text.secondary">
+            Loading your journey...
+          </Typography>
+        </Box>
+      </Box>
     );
   }
 
   // Show error state
   if (error) {
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <p className="text-red-800">{error}</p>
-          </div>
-          <button
+      <Box sx={{ p: 6, minHeight: '100vh' }}>
+        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          <Button
             onClick={loadData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            variant="contained"
+            color="primary"
+            sx={{ textTransform: 'none' }}
           >
             Retry
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
     );
   }
 
   // Main journey view with cards
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+    <Box sx={{ p: 3, minHeight: '100vh' }}>
       {/* Header & Trial Status */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Your Rise Journey</h1>
-          <p className="text-lg text-gray-600">The path to higher consciousness.</p>
-        </div>
-        <div className="flex items-center gap-4">
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', md: 'row' }, 
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'flex-start', md: 'center' }, 
+        mb: 4, 
+        gap: 2 
+      }}>
+        <Box>
+          <Typography variant="h3" fontWeight="bold" gutterBottom>
+            Your Rise Journey
+          </Typography>
+          <Typography variant="h6" color="text.secondary">
+            The path to higher consciousness.
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {trial && trial.isActive && (
-            <div className="bg-gradient-to-r from-orange-100 to-red-100 px-6 py-3 rounded-lg border-2 border-orange-200 shadow-md">
-              <span className="text-orange-800 font-bold text-lg">{trial.daysRemaining} Days Remaining</span>
-              <span className="text-orange-700 ml-2">in Free Trial</span>
-            </div>
+            <Paper 
+              elevation={2}
+              sx={{ 
+                px: 3, 
+                py: 1.5, 
+                bgcolor: 'warning.light',
+                border: 2,
+                borderColor: 'warning.main'
+              }}
+            >
+              <Typography variant="h6" component="span" sx={{ fontWeight: 700, color: 'warning.dark' }}>
+                {trial.daysRemaining} Days Remaining
+              </Typography>
+              <Typography variant="body2" component="span" sx={{ ml: 1, color: 'warning.dark' }}>
+                in Free Trial
+              </Typography>
+            </Paper>
           )}
-          <button
+          <Button
             onClick={() => setShowRetakeQuiz(true)}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+            variant="outlined"
+            size="small"
+            sx={{ textTransform: 'none' }}
           >
             Retake Assessment
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
 
       {recommendedLevel && (
-        <div className="max-w-5xl mx-auto mb-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800">
+        <Box sx={{ maxWidth: '1200px', mx: 'auto', mb: 3 }}>
+          <Alert severity="info" sx={{ borderRadius: 2 }}>
+            <Typography>
               <strong>Recommended Starting Point:</strong>{' '}
               {levels.find(l => l.levelKey === recommendedLevel)?.title || recommendedLevel}
-            </p>
-          </div>
-        </div>
+            </Typography>
+          </Alert>
+        </Box>
       )}
 
       {/* Journey Cards Grid - Similar to Learning Hub */}
       {levels.length > 0 && (
-        <div className="max-w-7xl mx-auto mb-8">
+        <Box sx={{ maxWidth: '1400px', mx: 'auto', mb: 4 }}>
           <Grid container spacing={3}>
             {levels.map((level) => {
             const colors = levelColors[level.levelKey] || levelColors.wellness;
@@ -438,30 +480,54 @@ const RiseJourney: React.FC = () => {
             );
           })}
         </Grid>
-      </div>
+      </Box>
       )}
 
       {/* Footer CTA */}
       {!hasFullAccess && (
-        <div className="mt-12 text-center max-w-3xl mx-auto">
-          <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-8 border-2 border-purple-200 shadow-lg">
-            <h3 className="text-2xl font-bold text-gray-800 mb-3">Ready to Transform Your Life?</h3>
-            <p className="text-gray-700 mb-4">
+        <Box sx={{ mt: 6, textAlign: 'center', maxWidth: '900px', mx: 'auto' }}>
+          <Paper 
+            elevation={4}
+            sx={{ 
+              p: 4, 
+              background: 'linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)',
+              border: 2,
+              borderColor: 'secondary.light'
+            }}
+          >
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              Ready to Transform Your Life?
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
               Unlock all 7 levels and gain lifetime access to your personal growth journey.
-            </p>
-            <button
+            </Typography>
+            <Button
               onClick={() => {
                 // Redirect to Patreon VIP/Vanity Tier2 ($43.21/month)
                 window.open('https://www.patreon.com/isharehow', '_blank');
               }}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+              variant="contained"
+              size="large"
+              sx={{ 
+                textTransform: 'none', 
+                fontWeight: 700,
+                px: 4,
+                py: 1.5,
+                background: 'linear-gradient(135deg, #9c27b0 0%, #e91e63 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #7b1fa2 0%, #c2185b 100%)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: 6,
+                },
+                transition: 'all 0.2s ease',
+              }}
             >
               Upgrade to Full Access
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Paper>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 
