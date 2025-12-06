@@ -4254,7 +4254,7 @@ def handle_drawing_join():
     socketio.emit('drawing:user_joined', {
         'userId': user_id,
         'userName': 'User'  # Could get from session
-    }, broadcast=True, skip_sid=request.sid)
+    }, skip_sid=request.sid)
 
 @socketio.on('drawing:refresh')
 def handle_drawing_refresh():
@@ -4277,7 +4277,7 @@ def handle_drawing_leave():
         # Notify other users
         socketio.emit('drawing:user_left', {
             'userId': user_id
-        }, broadcast=True, skip_sid=request.sid)
+        }, skip_sid=request.sid)
 
 @socketio.on('drawing:stroke')
 def handle_drawing_stroke(data):
@@ -4300,7 +4300,7 @@ def handle_drawing_stroke(data):
             'stroke': stroke,
             'userId': data.get('userId', 'anonymous'),
             'userName': data.get('userName', 'Anonymous')
-        }, broadcast=True, skip_sid=request.sid)
+        }, skip_sid=request.sid)
 
 @socketio.on('drawing:clear')
 def handle_drawing_clear():
@@ -4310,7 +4310,7 @@ def handle_drawing_clear():
         drawing_sessions[session_id]['strokes'] = []
     
     # Broadcast clear to all users
-    socketio.emit('drawing:clear', broadcast=True, skip_sid=request.sid)
+    socketio.emit('drawing:clear', skip_sid=request.sid)
 
 @socketio.on('drawing:assign_user')
 def handle_drawing_assign_user(data):
@@ -4323,7 +4323,7 @@ def handle_drawing_assign_user(data):
         'assignedUserId': assigned_user_id,
         'assignedUserName': assigned_user_name,
         'assignedBy': request.sid
-    }, broadcast=True)
+    })
 
 # Socket.io handler for real-time task notes updates
 @socketio.on('task_notes_update')
@@ -4350,7 +4350,7 @@ def handle_task_notes_update(data):
                     'task_id': task_id,
                     'notes': notes,
                     'updated_at': task.updated_at.isoformat() if task.updated_at else None
-                }, broadcast=True)
+                })
                 
                 print(f"Task notes updated: {task_id}")
             else:
@@ -5899,82 +5899,80 @@ def get_support_requests():
         client_id = request.args.get('client_id', None)
         priority = request.args.get('priority', None)
         
-        # Build query - handle missing client_id column gracefully
+        # Check if client_id column exists before using ORM
+        from sqlalchemy import inspect, text
+        inspector = inspect(db.engine)
+        has_client_id_column = False
         try:
+            columns = [col['name'] for col in inspector.get_columns('support_requests')]
+            has_client_id_column = 'client_id' in columns
+        except Exception:
+            # Table might not exist
+            pass
+        
+        # If client_id column doesn't exist, use raw SQL
+        if not has_client_id_column:
+            print("⚠ client_id column not found in support_requests table, using raw SQL query")
+            sql = "SELECT id, client_name, subject, description, priority, status, assigned_to, created_at, updated_at FROM support_requests"
+            conditions = []
+            params = {}
+            
+            if status != 'all':
+                conditions.append("status = :status")
+                params['status'] = status
+            
+            if priority:
+                conditions.append("priority = :priority")
+                params['priority'] = priority
+            
+            if conditions:
+                sql += " WHERE " + " AND ".join(conditions)
+            
+            sql += " ORDER BY created_at DESC"
+            
+            result = db.session.execute(text(sql), params)
+            rows = result.fetchall()
+            
+            # Convert rows to SupportRequest-like objects
+            requests = []
+            for row in rows:
+                req_dict = dict(row._mapping)
+                # Create a simple object with the data
+                class SimpleRequest:
+                    def __init__(self, data):
+                        for key, value in data.items():
+                            setattr(self, key, value)
+                    def to_dict(self):
+                        return {
+                            'id': getattr(self, 'id', None),
+                            'client': getattr(self, 'client_name', None) or 'N/A',
+                            'clientId': None,  # Column doesn't exist
+                            'subject': getattr(self, 'subject', ''),
+                            'description': getattr(self, 'description', ''),
+                            'priority': getattr(self, 'priority', 'medium'),
+                            'status': getattr(self, 'status', 'open'),
+                            'assignedTo': getattr(self, 'assigned_to', None),
+                            'linkedTasksCount': 0,
+                            'createdAt': getattr(self, 'created_at', None).isoformat() if hasattr(getattr(self, 'created_at', None), 'isoformat') else None,
+                            'updatedAt': getattr(self, 'updated_at', None).isoformat() if hasattr(getattr(self, 'updated_at', None), 'isoformat') else None
+                        }
+                requests.append(SimpleRequest(req_dict))
+        else:
+            # Use ORM since column exists
             query = SupportRequest.query
             
             if status != 'all':
                 query = query.filter(SupportRequest.status == status)
             
             if client_id:
-                # Only filter by client_id if the column exists
-                try:
-                    query = query.filter(SupportRequest.client_id == client_id)
-                except Exception as col_error:
-                    # Column doesn't exist, skip client_id filtering
-                    if 'client_id' in str(col_error).lower() or 'does not exist' in str(col_error).lower():
-                        print("⚠ client_id column not found in support_requests table, skipping client filter")
-                    else:
-                        raise
+                query = query.filter(SupportRequest.client_id == client_id)
             
             if priority:
                 query = query.filter(SupportRequest.priority == priority)
             
             requests = query.order_by(SupportRequest.created_at.desc()).all()
-        except Exception as query_error:
-            # Handle case where client_id column doesn't exist in the table
-            error_msg = str(query_error)
-            if 'client_id' in error_msg.lower() and ('does not exist' in error_msg.lower() or 'undefinedcolumn' in error_msg.lower()):
-                # Use raw SQL to query without client_id column
-                from sqlalchemy import text
-                sql = "SELECT * FROM support_requests"
-                conditions = []
-                params = {}
-                
-                if status != 'all':
-                    conditions.append("status = :status")
-                    params['status'] = status
-                
-                if priority:
-                    conditions.append("priority = :priority")
-                    params['priority'] = priority
-                
-                if conditions:
-                    sql += " WHERE " + " AND ".join(conditions)
-                
-                sql += " ORDER BY created_at DESC"
-                
-                result = db.session.execute(text(sql), params)
-                rows = result.fetchall()
-                
-                # Convert rows to SupportRequest-like objects
-                requests = []
-                for row in rows:
-                    req_dict = dict(row._mapping)
-                    # Create a simple object with the data
-                    class SimpleRequest:
-                        def __init__(self, data):
-                            for key, value in data.items():
-                                setattr(self, key, value)
-                        def to_dict(self):
-                            return {
-                                'id': getattr(self, 'id', None),
-                                'client': getattr(self, 'client_name', None) or 'N/A',
-                                'clientId': getattr(self, 'client_id', None),
-                                'subject': getattr(self, 'subject', ''),
-                                'description': getattr(self, 'description', ''),
-                                'priority': getattr(self, 'priority', 'medium'),
-                                'status': getattr(self, 'status', 'open'),
-                                'assignedTo': getattr(self, 'assigned_to', None),
-                                'linkedTasksCount': 0,
-                                'createdAt': getattr(self, 'created_at', None).isoformat() if hasattr(getattr(self, 'created_at', None), 'isoformat') else None,
-                                'updatedAt': getattr(self, 'updated_at', None).isoformat() if hasattr(getattr(self, 'updated_at', None), 'isoformat') else None
-                            }
-                    requests.append(SimpleRequest(req_dict))
-            else:
-                raise
         
-        # Return all requests without filtering
+        # Return all requests
         return jsonify({
             'requests': [req.to_dict() for req in requests]
         }), 200
@@ -8410,7 +8408,7 @@ def handle_create_room(data):
         print(f'[LookUp.Cafe] Room created: {room_code} by {player_name}')
         emit('game:room-created', {'room': game_rooms[room_code]})
         # Broadcast room list update
-        socketio.emit('game:rooms-updated', broadcast=True)
+        socketio.emit('game:rooms-updated')
         
     except Exception as e:
         print(f'[LookUp.Cafe] Error creating room: {e}')
