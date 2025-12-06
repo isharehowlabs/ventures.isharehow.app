@@ -29,6 +29,7 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Checkbox,
+  Autocomplete
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -46,6 +47,7 @@ import {
   PersonOutline as PersonOutlineIcon,
 } from '@mui/icons-material';
 import { useTasks, Task } from '../../hooks/useTasks';
+import { useWorkspaceUsers } from '../../hooks/useWorkspaceUsers';
 import { trackTaskCompleted } from '../../utils/analytics';
 import { useAuth } from '../../hooks/useAuth';
 import { getBackendUrl } from '../../utils/backendUrl';
@@ -77,6 +79,7 @@ interface SupportRequest {
 
 export default function Workspace() {
   const { user } = useAuth();
+  const { users: workspaceUsers } = useWorkspaceUsers();
   const { tasks, createTask, updateTask, deleteTask, updateTaskNotes, isLoading: tasksLoading, error: tasksErrorMsg, authRequired, refresh, isStale } = useTasks();
   
   // Figma hooks (optional - try to load)
@@ -128,6 +131,7 @@ export default function Workspace() {
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
+  const [selectedAssignee, setSelectedAssignee] = useState<{id: string, name: string} | null>(null);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const notesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [taskHyperlinks, setTaskHyperlinks] = useState('');
@@ -330,7 +334,14 @@ export default function Workspace() {
       const hyperlinksArray = taskHyperlinks.split(',').map(h => h.trim()).filter(h => h);
       
       if (editMode === 'create') {
-        const newTask = await createTask(taskTitle.trim(), taskDescription.trim(), hyperlinksArray, taskStatus);
+        const newTask = await createTask(
+          taskTitle.trim(), 
+          taskDescription.trim(), 
+          hyperlinksArray, 
+          taskStatus,
+          selectedAssignee?.id,
+          selectedAssignee?.name
+        );
         if (taskSupportRequestId && newTask?.id) {
           await updateTask(newTask.id, { supportRequestId: taskSupportRequestId });
         }
@@ -730,6 +741,21 @@ export default function Workspace() {
             rows={3}
             value={taskDescription}
             onChange={(e) => setTaskDescription(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <Autocomplete
+            options={workspaceUsers}
+            getOptionLabel={(option) => option.name}
+            value={selectedAssignee}
+            onChange={(_, newValue) => setSelectedAssignee(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                margin="dense"
+                label="Assign To (Optional)"
+                variant="outlined"
+              />
+            )}
             sx={{ mb: 2 }}
           />
           {editMode === 'edit' && (

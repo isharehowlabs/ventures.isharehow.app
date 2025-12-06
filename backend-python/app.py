@@ -4099,6 +4099,39 @@ def delete_task(task_id):
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
 
+
+@app.route('/api/users/workspace', methods=['GET'])
+@jwt_required()
+def get_workspace_users():
+    """Get list of users for task assignment"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        # Get all active users (you can add more filters like workspace membership later)
+        users = User.query.filter_by(is_active=True).all()
+        
+        users_data = []
+        for user in users:
+            # Create a simple user object for task assignment
+            user_id = user.patreon_id or user.username or str(user.id)
+            username = user.username or user.email or 'Unknown'
+            
+            users_data.append({
+                'id': user_id,
+                'name': username,
+                'email': user.email if hasattr(user, 'email') else None
+            })
+        
+        return jsonify(users_data), 200
+        
+    except Exception as e:
+        print(f"Error fetching workspace users: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch users', 'message': str(e)}), 500
+
+
 # ============================================================================
 # WELLNESS API ENDPOINTS
 # ============================================================================
