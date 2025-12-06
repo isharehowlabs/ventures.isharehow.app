@@ -4009,8 +4009,8 @@ def create_task():
             status=data.get('status', 'pending'),
             support_request_id=data.get('supportRequestId') or data.get('support_request_id'),  # Link to support request if provided
             # User assignment fields
-            created_by=data.get('createdBy') or (user_info['id'] if (user_info := get_user_info()) else None),
-            created_by_name=data.get('createdByName') or (user_info['name'] if user_info else None),
+            created_by=data.get('createdBy'),
+            created_by_name=data.get('createdByName'),
             assigned_to=data.get('assignedTo'),
             assigned_to_name=data.get('assignedToName'),
             notes=data.get('notes', '') or ''
