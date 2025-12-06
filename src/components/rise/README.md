@@ -119,22 +119,6 @@ The components are ready to integrate with these backend endpoints:
 ### User Status
 - `GET /api/user/trial-status` - Get trial days remaining
 
-## Integration Checklist
-
-- [ ] Connect backend API endpoints listed above
-- [ ] Implement authentication/user context
-- [ ] Add error handling and loading states
-- [ ] Connect to goals dashboard
-- [ ] Connect to achievements system
-- [ ] Link wellness journal entries
-- [ ] Integrate podcast recommendations
-- [ ] Add celebration animations for completions
-- [ ] Implement offline support (PWA)
-- [ ] Add push notifications for daily activities
-- [ ] Optimize video loading (lazy loading)
-- [ ] Add PDF viewer component (react-pdf)
-- [ ] Implement keyboard shortcuts
-- [ ] Add accessibility features (ARIA labels, focus management)
 
 ## Usage
 
@@ -212,3 +196,11 @@ The backend should have these tables (already created via migrations):
 ## Support
 
 For questions or issues, contact the development team or refer to the main project documentation.
+
+---
+
+## 📋 Prioritized TODO
+
+**See [../../TODO_PRIORITIZED.md](../../TODO_PRIORITIZED.md) for the complete, prioritized task list.**
+
+Integration checklist items above are **HIGH PRIORITY** - frontend is complete and waiting for backend connection.

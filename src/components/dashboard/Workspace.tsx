@@ -26,6 +26,8 @@ import {
   CircularProgress,
   Card,
   CardContent,
+  ToggleButtonGroup,
+  ToggleButton,
   Checkbox,
 } from '@mui/material';
 import {
@@ -40,6 +42,8 @@ import {
   Favorite as FavoriteIcon,
   Bookmark as BookmarkIcon,
   Refresh as RefreshIcon,
+  Person as PersonIcon,
+  PersonOutline as PersonOutlineIcon,
 } from '@mui/icons-material';
 import { useTasks, Task } from '../../hooks/useTasks';
 import { trackTaskCompleted } from '../../utils/analytics';
@@ -73,7 +77,7 @@ interface SupportRequest {
 
 export default function Workspace() {
   const { user } = useAuth();
-  const { tasks, createTask, updateTask, deleteTask, isLoading: tasksLoading, error: tasksErrorMsg, authRequired, refresh, isStale } = useTasks();
+  const { tasks, createTask, updateTask, deleteTask, updateTaskNotes, isLoading: tasksLoading, error: tasksErrorMsg, authRequired, refresh, isStale } = useTasks();
   
   // Figma hooks (optional - try to load)
   let figmaHook: any = null;
@@ -123,9 +127,15 @@ export default function Workspace() {
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
+  const [taskNotes, setTaskNotes] = useState('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const notesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [taskHyperlinks, setTaskHyperlinks] = useState('');
   const [taskStatus, setTaskStatus] = useState<'pending' | 'in-progress' | 'completed'>('pending');
   const [taskSupportRequestId, setTaskSupportRequestId] = useState<string>('');
+  const [taskFilter, setTaskFilter] = useState<'all' | 'my-tasks' | 'created-by-me'>(
+    (localStorage.getItem('taskFilter') as any) || 'all'
+  );
   const [supportRequests, setSupportRequests] = useState<SupportRequest[]>([]);
   const [loadingSupportRequests, setLoadingSupportRequests] = useState(false);
   
@@ -235,6 +245,28 @@ export default function Workspace() {
   };
 
   // Task handlers
+
+  // Handle filter change
+  const handleFilterChange = (event: React.MouseEvent<HTMLElement>, newFilter: 'all' | 'my-tasks' | 'created-by-me' | null) => {
+    if (newFilter !== null) {
+      setTaskFilter(newFilter);
+      localStorage.setItem('taskFilter', newFilter);
+    }
+  };
+
+  // Filter tasks based on selected view
+  const filteredTasks = tasks.filter(task => {
+    if (taskFilter === 'my-tasks') {
+      return task.assignedTo === user?.id;
+    } else if (taskFilter === 'created-by-me') {
+      return task.createdBy === user?.id;
+    }
+    return true; // 'all'
+  });
+
+  // Count tasks for each filter
+  const myTasksCount = tasks.filter(t => t.assignedTo === user?.id).length;
+  const createdByMeCount = tasks.filter(t => t.createdBy === user?.id).length;
   const handleTaskToggle = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -269,7 +301,26 @@ export default function Workspace() {
     setTaskHyperlinks(task.hyperlinks.join(', '));
     setTaskStatus(task.status);
     setTaskSupportRequestId(task.supportRequestId || '');
+    setTaskNotes(task.notes || '');
     setTaskDialogOpen(true);
+  };
+
+  const handleNotesChange = (newNotes: string) => {
+    setTaskNotes(newNotes);
+    setIsSavingNotes(true);
+    
+    // Clear existing timeout
+    if (notesTimeoutRef.current) {
+      clearTimeout(notesTimeoutRef.current);
+    }
+    
+    // Debounce: save 500ms after user stops typing
+    notesTimeoutRef.current = setTimeout(() => {
+      if (currentTaskId) {
+        updateTaskNotes(currentTaskId, newNotes);
+        setIsSavingNotes(false);
+      }
+    }, 500);
   };
 
   const handleSaveTask = async () => {
@@ -440,7 +491,26 @@ export default function Workspace() {
             )}
 
             <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-              {tasks.map((task) => (
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+                <ToggleButtonGroup
+                  value={taskFilter}
+                  exclusive
+                  onChange={handleFilterChange}
+                  size="small"
+                  aria-label="task filter"
+                >
+                  <ToggleButton value="all" aria-label="all tasks">
+                    All Tasks ({tasks.length})
+                  </ToggleButton>
+                  <ToggleButton value="my-tasks" aria-label="my tasks">
+                    My Tasks ({myTasksCount})
+                  </ToggleButton>
+                  <ToggleButton value="created-by-me" aria-label="created by me">
+                    Created by Me ({createdByMeCount})
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              {filteredTasks.map((task) => (
                 <Card key={task.id} sx={{ mb: 2 }} elevation={1}>
                   <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -467,6 +537,32 @@ export default function Workspace() {
                           <Chip label={task.status} size="small" color={getStatusColor(task.status) as any} />
                           {task.hyperlinks && task.hyperlinks.length > 0 && (
                             <Chip icon={<LinkIcon />} label={`${task.hyperlinks.length}`} size="small" variant="outlined" />
+                          )}
+                          {task.createdByName && (
+                            <Chip 
+                              icon={<PersonOutlineIcon />} 
+                              label={`By: ${task.createdByName}`} 
+                              size="small" 
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem' }}
+                            />
+                          )}
+                          {task.assignedToName ? (
+                            <Chip 
+                              icon={<PersonIcon />} 
+                              label={`→ ${task.assignedToName}`} 
+                              size="small" 
+                              color="primary"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem' }}
+                            />
+                          ) : task.assignedTo === undefined && (
+                            <Chip 
+                              label="Unassigned" 
+                              size="small" 
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem', opacity: 0.6 }}
+                            />
                           )}
                         </Box>
                       </Box>
@@ -636,6 +732,26 @@ export default function Workspace() {
             onChange={(e) => setTaskDescription(e.target.value)}
             sx={{ mb: 2 }}
           />
+          {editMode === 'edit' && (
+            <>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                Collaborative Notes {isSavingNotes && '(Saving...)'}
+              </Typography>
+              <TextField
+                margin="dense"
+                label="Notes (Shared Workspace)"
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={6}
+                value={taskNotes}
+                onChange={(e) => handleNotesChange(e.target.value)}
+                placeholder="Start typing to collaborate with your team..."
+                sx={{ mb: 2 }}
+                helperText="Changes auto-save. Shared with assigned user in real-time."
+              />
+            </>
+          )}
           <TextField
             margin="dense"
             label="Hyperlinks (comma-separated)"

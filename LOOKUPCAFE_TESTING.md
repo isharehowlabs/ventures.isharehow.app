@@ -73,40 +73,6 @@ Navigate to: `https://ventures.isharehow.app/lookupcafe`
 4. **Multiple Devices**: Test with phones, tablets, and desktops
 5. **Different Browsers**: Chrome, Firefox, Safari, Edge
 
-## Testing Checklist
-
-### Functionality
-- [ ] Room creation generates unique code
-- [ ] Room joining works with valid code
-- [ ] Invalid room code shows error
-- [ ] Room full (16 players) rejection
-- [ ] Player list updates in realtime
-- [ ] Host can start game
-- [ ] Non-host cannot start game
-- [ ] Timer counts down correctly
-- [ ] Drawing syncs across all players
-- [ ] Answers submitted successfully
-- [ ] Scores update correctly
-- [ ] Game end shows final results
-- [ ] Leave room works properly
-- [ ] Host migration works
-
-### UI/UX
-- [ ] Navigation shows LookUp.Cafe
-- [ ] Icons display correctly
-- [ ] Colors match theme
-- [ ] Responsive on mobile
-- [ ] Loading states visible
-- [ ] Error messages clear
-- [ ] Success feedback shown
-- [ ] Buttons disabled appropriately
-
-### Performance
-- [ ] Low latency drawing
-- [ ] Smooth timer animation
-- [ ] No lag with 16 players
-- [ ] Canvas renders smoothly
-- [ ] Quick room switching
 
 ## Troubleshooting
 
@@ -149,3 +115,11 @@ For bugs or issues, check browser console and network tab, then contact the deve
 - Error messages
 - Steps to reproduce
 - Number of players in room
+
+---
+
+## 📋 Prioritized TODO
+
+**See [TODO_PRIORITIZED.md](TODO_PRIORITIZED.md) for the complete, prioritized task list.**
+
+Testing checklist items above are **HIGH PRIORITY** - must be completed before production deployment.

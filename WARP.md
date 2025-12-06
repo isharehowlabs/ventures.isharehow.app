@@ -219,12 +219,6 @@ This will add:
 
 All columns are nullable for backward compatibility with existing tasks.
 
-### UI Components To-Do
-- [ ] Display task creator and assigned user in task cards
-- [ ] Add user selector/dropdown for assigning tasks
-- [ ] Show toast notification when user receives an assignment
-- [ ] Filter tasks by assigned user
-- [ ] Show "My Tasks" vs "All Tasks" views
 
 ## Recent Commits
 ```
@@ -241,3 +235,138 @@ Fix tasks feature: remove auth requirements and increase timeout
 - Increased auth timeout from 5s to 15s
 - Tasks work with optional authentication
 ```
+
+---
+
+## 📋 Prioritized TODO
+
+**See [TODO_PRIORITIZED.md](TODO_PRIORITIZED.md) for the complete, prioritized task list across all projects.**
+
+The UI Components listed above are **CRITICAL PRIORITY** items - backend is complete and ready for frontend implementation.
+
+---
+
+## 📋 Project TODOs - Consolidated Priority List
+
+### 🔴 CRITICAL PRIORITY - Tasks Feature UI (This Week)
+**Status**: Backend 100% complete (deployed Dec 4), UI pending
+**Effort**: 4-6 hours
+**Files**: `src/components/tasks/`, `src/hooks/useTasks.ts`
+
+- [ ] Display task creator and assigned user in task cards
+- [ ] Add user selector/dropdown for assigning tasks
+- [ ] Show toast notification when user receives an assignment
+- [ ] Filter tasks by assigned user
+- [ ] Show "My Tasks" vs "All Tasks" views
+
+**Backend ready**: `createdBy`, `createdByName`, `assignedTo`, `assignedToName` fields exist
+**Socket event ready**: `task_assigned`
+
+---
+
+### 🟠 HIGH PRIORITY - Rise Journey Backend Integration
+**Status**: Frontend complete, needs backend APIs
+**Effort**: 8-12 hours
+**Files**: `backend-python/app.py`, `src/hooks/useRiseJourney.ts`
+
+#### Phase 1 - Core APIs (5-6 hours)
+- [ ] GET /api/rise-journey/levels - Fetch all 7 levels
+- [ ] GET /api/rise-journey/progress - Fetch user progress
+- [ ] GET /api/rise-journey/lessons/:id - Fetch lesson details
+- [ ] POST /api/rise-journey/lessons/:id/complete - Mark complete
+- [ ] Implement authentication/user context
+- [ ] Add error handling and loading states
+
+#### Phase 2 - Notes & Journal (3-4 hours)
+- [ ] GET/POST /api/rise-journey/lessons/:id/notes
+- [ ] GET/POST /api/rise-journey/lessons/:id/journal (with pillar)
+- [ ] Connect to wellness journal entries
+- [ ] Connect to goals dashboard
+
+#### Phase 3 - Polish (2-3 hours)
+- [ ] Add celebration animations for completions
+- [ ] Integrate podcast recommendations
+- [ ] Connect to achievements system
+
+**Database tables**: Already exist (migration complete)
+**Frontend hooks**: Ready - `useRiseJourney()`, `useLessonData()`, `useTasks()`
+
+---
+
+### 🟠 HIGH PRIORITY - LookUp.Cafe Critical Testing
+**Status**: Feature complete, untested with real users
+**Effort**: 3-4 hours testing
+**Action**: Manual testing with multiple devices
+
+#### Must-Pass Tests
+- [ ] Room creation generates unique code
+- [ ] Room joining works with valid code
+- [ ] Invalid room code shows error
+- [ ] Room full (16 players) rejection
+- [ ] Player list updates in realtime
+- [ ] Host can start game
+- [ ] Non-host cannot start game
+- [ ] Timer counts down correctly
+- [ ] Drawing syncs across all players
+- [ ] Answers submitted successfully
+- [ ] Scores update correctly
+- [ ] Game end shows final results
+- [ ] Leave room works properly
+- [ ] Host migration works
+
+**Testing plan**: Use multiple browsers/devices, monitor Socket.io in dev tools
+
+---
+
+### 🟡 MEDIUM PRIORITY - Rise Journey UX Enhancements
+**Effort**: 6-8 hours (do after backend integration)
+
+- [ ] Add accessibility features (ARIA labels, focus management)
+- [ ] Optimize video loading (lazy loading)
+- [ ] Implement offline support (PWA)
+- [ ] Add push notifications for daily activities
+- [ ] Add PDF viewer component (react-pdf)
+- [ ] Implement keyboard shortcuts
+
+---
+
+### 🟡 MEDIUM PRIORITY - LookUp.Cafe UI/UX Polish
+**Effort**: 2-3 hours
+
+- [ ] Verify navigation shows LookUp.Cafe correctly
+- [ ] Ensure icons display correctly
+- [ ] Confirm colors match theme
+- [ ] Test responsive on mobile
+- [ ] Add loading states where missing
+- [ ] Improve error messages clarity
+- [ ] Add success feedback
+- [ ] Ensure buttons disabled appropriately
+
+---
+
+### 🟢 LOW PRIORITY - Future Feature Expansion
+
+#### LookUp.Cafe Enhancements (20-30 hours)
+- [ ] Chat functionality during games (6-8h)
+- [ ] Custom word lists for drawing game (2-3h)
+- [ ] Mobile-optimized touch controls (2-3h)
+- [ ] Leaderboards and statistics (4-5h)
+- [ ] Spectator mode (3-4h)
+- [ ] More game types (trivia, word games) (5-7h)
+- [ ] Persistent room storage (Redis) (4-5h)
+- [ ] Voice chat integration (8-10h)
+- [ ] Tournament system (10-15h)
+
+---
+
+## 🎯 Implementation Roadmap
+
+**Week 1**: Tasks UI (5 tasks, ~5 hours)
+**Week 2-3**: Rise Journey Backend (14 tasks, ~12 hours)
+**Week 4**: LookUp.Cafe Testing (14 tasks, ~4 hours)
+**Week 5+**: Polish & Future Features (as needed)
+
+**Total Outstanding**: 52 prioritized tasks
+**Critical Path**: Tasks UI → Rise Backend → LookUp Testing → Enhancements
+
+---

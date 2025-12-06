@@ -295,6 +295,7 @@ if DB_AVAILABLE:
         created_by_name = db.Column(db.String(200), nullable=True)  # Display name of creator
         assigned_to = db.Column(db.String(100), nullable=True)  # User ID assigned to the task
         assigned_to_name = db.Column(db.String(200), nullable=True)  # Display name of assigned user
+        notes = db.Column(db.Text, nullable=True)  # Collaborative notes
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -310,6 +311,7 @@ if DB_AVAILABLE:
                 'createdByName': self.created_by_name,
                 'assignedTo': self.assigned_to,
                 'assignedToName': self.assigned_to_name,
+                'notes': self.notes or '',
                 'createdAt': self.created_at.isoformat(),
                 'updatedAt': self.updated_at.isoformat()
             }
@@ -3833,6 +3835,7 @@ def create_task():
             created_by_name=data.get('createdByName') or (user_info['name'] if user_info else None),
             assigned_to=data.get('assignedTo'),
             assigned_to_name=data.get('assignedToName')
+            notes=data.get('notes', '') or ''
         )
         
         try:
@@ -3901,6 +3904,8 @@ def update_task(task_id):
         if 'assignedTo' in data:
             task.assigned_to = data.get('assignedTo') or None
         if 'assignedToName' in data:
+        if 'notes' in data:
+            task.notes = data.get('notes') or ''
             task.assigned_to_name = data.get('assignedToName') or None
         
         # Update support request link if provided
@@ -3963,6 +3968,46 @@ def parse_date_safely(date_string):
     try:
         # Try full ISO format first (with time)
         return datetime.fromisoformat(date_string)
+
+# Socket.io handler for real-time task notes updates
+@socketio.on('task_notes_update')
+def handle_task_notes_update(data):
+    """Handle real-time task notes updates"""
+    try:
+        task_id = data.get('task_id')
+        notes = data.get('notes', '')
+        
+        if not task_id:
+            emit('error', {'message': 'Task ID required'})
+            return
+        
+        # Update task in database
+        if DB_AVAILABLE:
+            task = Task.query.get(task_id)
+            if task:
+                task.notes = notes
+                task.updated_at = datetime.utcnow()
+                db.session.commit()
+                
+                # Broadcast to all connected clients
+                socketio.emit('task_notes_updated', {
+                    'task_id': task_id,
+                    'notes': notes,
+                    'updated_at': task.updated_at.isoformat() if task.updated_at else None
+                }, broadcast=True)
+                
+                print(f"Task notes updated: {task_id}")
+            else:
+                emit('error', {'message': 'Task not found'})
+        else:
+            emit('error', {'message': 'Database not available'})
+            
+    except Exception as e:
+        print(f"Error updating task notes: {e}")
+        import traceback
+        traceback.print_exc()
+        emit('error', {'message': str(e)})
+
     except (ValueError, AttributeError):
         try:
             # Try date-only format (YYYY-MM-DD) and add time

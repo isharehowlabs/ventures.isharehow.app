@@ -147,16 +147,6 @@ interface GameRoom {
 }
 ```
 
-## Future Enhancements
-- [ ] Persistent room storage (Redis)
-- [ ] More game types (trivia, word games, etc.)
-- [ ] Chat functionality during games
-- [ ] Leaderboards and statistics
-- [ ] Custom word lists for drawing game
-- [ ] Mobile-optimized touch controls
-- [ ] Voice chat integration
-- [ ] Spectator mode
-- [ ] Tournament system
 
 ## Files Created/Modified
 
@@ -179,3 +169,11 @@ For issues or questions, contact the development team or create an issue in the 
 
 ---
 Built with ❤️ for family game nights at ventures.isharehow.app
+
+---
+
+## 📋 Prioritized TODO
+
+**See [TODO_PRIORITIZED.md](TODO_PRIORITIZED.md) for the complete, prioritized task list.**
+
+Future enhancements listed above are **LOW PRIORITY** - focus on testing and MVP stability first.

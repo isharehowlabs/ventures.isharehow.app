@@ -14,6 +14,7 @@ export interface Task {
   createdByName?: string; // Display name of creator
   assignedTo?: string; // User ID assigned to the task
   assignedToName?: string; // Display name of assigned user
+  notes?: string; // Collaborative notes
   createdAt?: string;
   updatedAt?: string;
   userId?: string;
@@ -279,6 +280,16 @@ export function useTasks() {
       lastUpdatedRef.current = now;
     });
 
+
+    socketInstance.on('task_notes_updated', (data: { task_id: string; notes: string }) => {
+      if (!isMounted) return;
+      const now = new Date();
+      setTasks(prev => prev.map(task => 
+        task.id === data.task_id ? { ...task, notes: data.notes } : task
+      ));
+      setLastUpdated(now);
+      lastUpdatedRef.current = now;
+    });
     socketInstance.on('task_assigned', (data: { task: Task; assignedTo: string; assignedToName?: string }) => {
       if (!isMounted) return;
       console.log('Task assigned notification:', data);
@@ -316,11 +327,28 @@ export function useTasks() {
       socketInstance.off('task_updated');
       socketInstance.off('task_deleted');
       socketInstance.off('task_assigned');
+      socketInstance.off('task_notes_updated');
       socketInstance.off('auth_restored_ack');
       clearInterval(staleInterval);
     };
   }, [fetchTasks]); // Removed lastUpdated from dependencies to prevent infinite loop
 
+
+  const updateTaskNotes = (id: string, notes: string) => {
+    // Optimistic update
+    setTasks(prev => prev.map(t => 
+      t.id === id ? { ...t, notes } : t
+    ));
+    
+    // Emit socket event for real-time sync
+    if (socket) {
+      socket.emit('task_notes_update', {
+        task_id: id,
+        notes,
+        user_id: null // Will be set by backend from session
+      });
+    }
+  };
   return {
     tasks,
     isLoading,
@@ -333,5 +361,6 @@ export function useTasks() {
     createTask,
     updateTask,
     deleteTask,
+    updateTaskNotes,
   };
 }
