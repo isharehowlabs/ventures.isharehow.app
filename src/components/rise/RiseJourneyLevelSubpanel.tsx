@@ -1,5 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, BookOpen, CheckCircle, Play, Lock, FileText, PenTool, CheckSquare, Plus, X, GraduationCap, ExternalLink } from 'lucide-react';
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Card,
+  CardContent,
+  Tabs,
+  Tab,
+  TextField,
+  LinearProgress,
+  Alert,
+  CircularProgress,
+  IconButton,
+  Checkbox,
+  Chip,
+  Grid,
+} from '@mui/material';
 import RiseJourneyLesson from './RiseJourneyLesson';
 
 interface JourneyLevel {
@@ -65,6 +83,7 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
     spiritual: '',
     wellness: '',
   });
+  const [newTaskText, setNewTaskText] = useState('');
 
   useEffect(() => {
     loadLevelData();
@@ -229,30 +248,34 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
 
   if (loading) {
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading level content...</p>
-        </div>
-      </div>
+      <Box sx={{ p: 3, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={48} sx={{ mb: 2 }} />
+          <Typography variant="body1" color="text.secondary">
+            Loading level content...
+          </Typography>
+        </Box>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <p className="text-red-800">{error}</p>
-          </div>
-          <button
+      <Box sx={{ p: 3, minHeight: '100vh' }}>
+        <Box sx={{ maxWidth: '900px', mx: 'auto' }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          <Button
             onClick={onBack}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            variant="contained"
+            color="primary"
+            sx={{ textTransform: 'none' }}
           >
             Back to Journey
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
     );
   }
 
@@ -261,355 +284,453 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
   const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-      <div className="max-w-6xl mx-auto">
+    <Box sx={{ p: 3, minHeight: '100vh' }}>
+      <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
         {/* Header */}
-        <div className="mb-6">
-          <button
+        <Box sx={{ mb: 3 }}>
+          <Button
             onClick={onBack}
-            className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+            startIcon={<ArrowLeft className="h-5 w-5" />}
+            sx={{ mb: 2, textTransform: 'none' }}
+            variant="text"
           >
-            <ArrowLeft className="h-5 w-5" />
             Back to Journey
-          </button>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">{level.title}</h1>
-          <p className="text-lg text-gray-600 mb-4">{level.focus || level.description}</p>
-          <div className="bg-white rounded-lg p-4 shadow-md">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Level Progress</span>
-              <span className="text-sm text-gray-600">
+          </Button>
+          <Typography variant="h3" fontWeight="bold" gutterBottom>
+            {level.title}
+          </Typography>
+          <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+            {level.focus || level.description}
+          </Typography>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" fontWeight="medium">
+                Level Progress
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
                 {completedLessons} of {totalLessons} lessons completed
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          </div>
-        </div>
+              </Typography>
+            </Box>
+            <LinearProgress 
+              variant="determinate" 
+              value={progressPercentage} 
+              sx={{ height: 8, borderRadius: 1 }}
+            />
+          </Paper>
+        </Box>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-300 mb-6">
-          <button
-            onClick={() => setActiveTab('lessons')}
-            className={`px-6 py-3 font-medium transition-colors ${
-              activeTab === 'lessons'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
+        <Paper sx={{ mb: 3 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue as 'lessons' | 'tasks' | 'journal' | 'learning')}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
-            <BookOpen className="inline-block mr-2 h-5 w-5" />
-            Lessons
-          </button>
-          <button
-            onClick={() => setActiveTab('tasks')}
-            className={`px-6 py-3 font-medium transition-colors ${
-              activeTab === 'tasks'
-                ? 'border-b-2 border-green-500 text-green-600'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <CheckSquare className="inline-block mr-2 h-5 w-5" />
-            Tasks
-          </button>
-          <button
-            onClick={() => setActiveTab('journal')}
-            className={`px-6 py-3 font-medium transition-colors ${
-              activeTab === 'journal'
-                ? 'border-b-2 border-purple-500 text-purple-600'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <PenTool className="inline-block mr-2 h-5 w-5" />
-            Journal
-          </button>
-          <button
-            onClick={() => setActiveTab('learning')}
-            className={`px-6 py-3 font-medium transition-colors ${
-              activeTab === 'learning'
-                ? 'border-b-2 border-indigo-500 text-indigo-600'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <GraduationCap className="inline-block mr-2 h-5 w-5" />
-            Learning Hub
-          </button>
-        </div>
+            <Tab
+              icon={<BookOpen className="h-5 w-5" />}
+              iconPosition="start"
+              label="Lessons"
+              value="lessons"
+              sx={{ textTransform: 'none', minHeight: 64 }}
+            />
+            <Tab
+              icon={<CheckSquare className="h-5 w-5" />}
+              iconPosition="start"
+              label="Tasks"
+              value="tasks"
+              sx={{ textTransform: 'none', minHeight: 64 }}
+            />
+            <Tab
+              icon={<PenTool className="h-5 w-5" />}
+              iconPosition="start"
+              label="Journal"
+              value="journal"
+              sx={{ textTransform: 'none', minHeight: 64 }}
+            />
+            <Tab
+              icon={<GraduationCap className="h-5 w-5" />}
+              iconPosition="start"
+              label="Learning Hub"
+              value="learning"
+              sx={{ textTransform: 'none', minHeight: 64 }}
+            />
+          </Tabs>
+        </Paper>
 
         {/* Tab Content */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
           {/* Lessons Tab */}
           {activeTab === 'lessons' && (
-            <div>
+            <Box>
               {lessons.length === 0 ? (
-                <div className="text-center py-12">
-                  <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No lessons available for this level yet.</p>
-                </div>
+                <Box sx={{ textAlign: 'center', py: 6 }}>
+                  <BookOpen className="h-16 w-16" style={{ color: '#9e9e9e', margin: '0 auto 16px' }} />
+                  <Typography variant="body1" color="text.secondary">
+                    No lessons available for this level yet.
+                  </Typography>
+                </Box>
               ) : (
-                <div className="space-y-4">
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {lessons.map((lesson, index) => (
-                    <div
+                    <Card
                       key={lesson.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      variant="outlined"
                       onClick={() => handleLessonClick(lesson)}
+                      sx={{
+                        cursor: 'pointer',
+                        transition: 'box-shadow 0.2s',
+                        '&:hover': {
+                          boxShadow: 4,
+                        },
+                      }}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-sm font-medium text-gray-500">Lesson {index + 1}</span>
-                            {lesson.progress.completed && (
-                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">
-                                <CheckCircle className="inline-block h-3 w-3 mr-1" />
-                                Completed
-                              </span>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Typography variant="body2" color="text.secondary" fontWeight="medium">
+                                Lesson {index + 1}
+                              </Typography>
+                              {lesson.progress.completed && (
+                                <Chip
+                                  icon={<CheckCircle className="h-4 w-4" />}
+                                  label="Completed"
+                                  size="small"
+                                  color="success"
+                                  sx={{ fontSize: '0.7rem' }}
+                                />
+                              )}
+                            </Box>
+                            <Typography variant="h6" fontWeight="bold" gutterBottom>
+                              {lesson.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                              {lesson.description}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              {lesson.videoUrl && (
+                                <Chip
+                                  icon={<Play className="h-4 w-4" />}
+                                  label="Video"
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
+                              {lesson.pdfUrl && (
+                                <Chip
+                                  icon={<FileText className="h-4 w-4" />}
+                                  label="PDF"
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                          <Box sx={{ ml: 2 }}>
+                            {lesson.progress.completed ? (
+                              <CheckCircle className="h-8 w-8" style={{ color: '#4caf50' }} />
+                            ) : (
+                              <Play className="h-8 w-8" style={{ color: '#2196f3' }} />
                             )}
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-800 mb-2">{lesson.title}</h3>
-                          <p className="text-gray-600 mb-3">{lesson.description}</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            {lesson.videoUrl && (
-                              <span className="flex items-center gap-1">
-                                <Play className="h-4 w-4" />
-                                Video
-                              </span>
-                            )}
-                            {lesson.pdfUrl && (
-                              <span className="flex items-center gap-1">
-                                <FileText className="h-4 w-4" />
-                                PDF
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          {lesson.progress.completed ? (
-                            <CheckCircle className="h-8 w-8 text-green-500" />
-                          ) : (
-                            <Play className="h-8 w-8 text-blue-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
                   ))}
-                </div>
+                </Box>
               )}
-            </div>
+            </Box>
           )}
 
           {/* Tasks Tab */}
           {activeTab === 'tasks' && (
-            <div>
-              <div className="mb-4 flex gap-2">
-                <input
-                  type="text"
+            <Box>
+              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                <TextField
+                  fullWidth
                   placeholder="Add a new task..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  variant="outlined"
+                  size="small"
+                  value={newTaskText}
+                  onChange={(e) => setNewTaskText(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      addTask(e.currentTarget.value);
-                      e.currentTarget.value = '';
+                    if (e.key === 'Enter' && newTaskText.trim()) {
+                      addTask(newTaskText);
+                      setNewTaskText('');
                     }
                   }}
                 />
-                <button
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<Plus className="h-5 w-5" />}
                   onClick={() => {
-                    const input = document.querySelector('input[placeholder="Add a new task..."]') as HTMLInputElement;
-                    if (input && input.value) {
-                      addTask(input.value);
-                      input.value = '';
+                    if (newTaskText.trim()) {
+                      addTask(newTaskText);
+                      setNewTaskText('');
                     }
                   }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  sx={{ textTransform: 'none', minWidth: 100 }}
                 >
-                  <Plus className="h-5 w-5" />
                   Add
-                </button>
-              </div>
+                </Button>
+              </Box>
               {tasks.length === 0 ? (
-                <div className="text-center py-12">
-                  <CheckSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No tasks yet. Add your first task above!</p>
-                </div>
+                <Box sx={{ textAlign: 'center', py: 6 }}>
+                  <CheckSquare className="h-16 w-16" style={{ color: '#9e9e9e', margin: '0 auto 16px' }} />
+                  <Typography variant="body1" color="text.secondary">
+                    No tasks yet. Add your first task above!
+                  </Typography>
+                </Box>
               ) : (
-                <div className="space-y-2">
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {tasks.map(task => (
-                    <div
+                    <Paper
                       key={task.id}
-                      className={`flex items-center gap-3 p-3 border rounded-lg ${
-                        task.completed ? 'bg-gray-50 opacity-60' : 'bg-white'
-                      }`}
+                      variant="outlined"
+                      sx={{
+                        p: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        opacity: task.completed ? 0.6 : 1,
+                        bgcolor: task.completed ? 'grey.50' : 'background.paper',
+                      }}
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={task.completed}
                         onChange={() => toggleTask(task.id, task.completed)}
-                        className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                        color="success"
                       />
-                      <span
-                        className={`flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          flex: 1,
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          color: task.completed ? 'text.secondary' : 'text.primary',
+                        }}
                       >
                         {task.text}
-                      </span>
-                      <button
+                      </Typography>
+                      <IconButton
                         onClick={() => deleteTask(task.id)}
-                        className="text-red-500 hover:text-red-700 transition-colors"
+                        size="small"
+                        color="error"
                       >
                         <X className="h-5 w-5" />
-                      </button>
-                    </div>
+                      </IconButton>
+                    </Paper>
                   ))}
-                </div>
+                </Box>
               )}
-            </div>
+            </Box>
           )}
 
           {/* Journal Tab */}
           {activeTab === 'journal' && (
-            <div className="space-y-6">
-              <p className="text-sm text-gray-600 italic mb-4">
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 1 }}>
                 Reflect on your journey through the 4 pillars:
-              </p>
-              <div>
-                <label className="text-xs font-bold text-green-600 uppercase mb-2 block">
+              </Typography>
+              <Box>
+                <Typography variant="caption" fontWeight="bold" color="success.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
                   💪 Physical Body
-                </label>
-                <textarea
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
                   value={journalEntries.physical}
                   onChange={(e) => saveJournalEntry('physical', e.target.value)}
-                  className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   placeholder="How does this level apply to your body? Energy levels? Physical sensations?"
+                  variant="outlined"
+                  sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: 'success.main' } } }}
                 />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-blue-600 uppercase mb-2 block">
+              </Box>
+              <Box>
+                <Typography variant="caption" fontWeight="bold" color="primary.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
                   🧠 Mental State
-                </label>
-                <textarea
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
                   value={journalEntries.mental}
                   onChange={(e) => saveJournalEntry('mental', e.target.value)}
-                  className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="What mental blocks arose? New insights? Clarity gained?"
+                  variant="outlined"
                 />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-purple-600 uppercase mb-2 block">
+              </Box>
+              <Box>
+                <Typography variant="caption" fontWeight="bold" color="secondary.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
                   ✨ Spiritual Connection
-                </label>
-                <textarea
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
                   value={journalEntries.spiritual}
                   onChange={(e) => saveJournalEntry('spiritual', e.target.value)}
-                  className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                   placeholder="How does this align with your spirit? Intuitive feelings?"
+                  variant="outlined"
+                  sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: 'secondary.main' } } }}
                 />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-yellow-600 uppercase mb-2 block">
+              </Box>
+              <Box>
+                <Typography variant="caption" fontWeight="bold" color="warning.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
                   🌿 Wellness & Balance
-                </label>
-                <textarea
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
                   value={journalEntries.wellness}
                   onChange={(e) => saveJournalEntry('wellness', e.target.value)}
-                  className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 resize-none"
                   placeholder="Overall wellbeing? Self-care insights? Balance reflections?"
+                  variant="outlined"
+                  sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: 'warning.main' } } }}
                 />
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
-                <p className="font-semibold">✓ Auto-saving enabled</p>
-                <p className="text-xs mt-1">Your reflections are automatically saved as you type.</p>
-              </div>
-            </div>
+              </Box>
+              <Alert severity="success" sx={{ borderRadius: 2 }}>
+                <Typography variant="body2" fontWeight="semibold">
+                  ✓ Auto-saving enabled
+                </Typography>
+                <Typography variant="caption">
+                  Your reflections are automatically saved as you type.
+                </Typography>
+              </Alert>
+            </Box>
           )}
 
           {/* Learning Hub Tab */}
           {activeTab === 'learning' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 border-2 border-indigo-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <GraduationCap className="h-8 w-8 text-indigo-600" />
-                  <h3 className="text-2xl font-bold text-gray-800">Learning Hub Classes</h3>
-                </div>
-                <p className="text-gray-700 mb-6">
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 3,
+                  background: 'linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%)',
+                  border: 2,
+                  borderColor: 'secondary.light',
+                  borderRadius: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <GraduationCap className="h-8 w-8" style={{ color: '#5c6bc0' }} />
+                  <Typography variant="h5" fontWeight="bold">
+                    Learning Hub Classes
+                  </Typography>
+                </Box>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
                   Access comprehensive video classes and courses to deepen your understanding of this journey level.
-                </p>
+                </Typography>
                 
                 {/* Learning Hub Content Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Grid container spacing={2} sx={{ mb: 3 }}>
                   {/* Video Classes Card */}
-                  <div className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-200">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Play className="h-6 w-6 text-indigo-600" />
-                        <h4 className="text-xl font-bold text-gray-800">Video Classes</h4>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 mb-4 text-sm">
-                      A comprehensive collection of video classes covering various topics and learning paths.
-                    </p>
-                    <button
-                      onClick={() => {
-                        window.open('https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp', '_blank');
-                      }}
-                      className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold flex items-center justify-center gap-2"
-                    >
-                      <Play className="h-5 w-5" />
-                      Watch Video Classes
-                      <ExternalLink className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                          <Play className="h-6 w-6" style={{ color: '#5c6bc0' }} />
+                          <Typography variant="h6" fontWeight="bold">
+                            Video Classes
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          A comprehensive collection of video classes covering various topics and learning paths.
+                        </Typography>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          startIcon={<Play className="h-5 w-5" />}
+                          endIcon={<ExternalLink className="h-4 w-4" />}
+                          onClick={() => {
+                            window.open('https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp', '_blank');
+                          }}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            bgcolor: '#5c6bc0',
+                            '&:hover': { bgcolor: '#455a64' },
+                          }}
+                        >
+                          Watch Video Classes
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
 
                   {/* AI Development Course Card */}
-                  <div className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-200">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <BookOpen className="h-6 w-6 text-purple-600" />
-                        <h4 className="text-xl font-bold text-gray-800">AI Development</h4>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 mb-4 text-sm">
-                      Learn the fundamentals of AI development including machine learning, neural networks, and data processing.
-                    </p>
-                    <button
-                      onClick={() => {
-                        window.open('https://www.youtube.com/playlist?list=PLwyVPJ9qE2K8vj0Wfb4rxAmZntkysHPlE', '_blank');
-                      }}
-                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center justify-center gap-2"
-                    >
-                      <Play className="h-5 w-5" />
-                      Start Course
-                      <ExternalLink className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                          <BookOpen className="h-6 w-6" style={{ color: '#9c27b0' }} />
+                          <Typography variant="h6" fontWeight="bold">
+                            AI Development
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          Learn the fundamentals of AI development including machine learning, neural networks, and data processing.
+                        </Typography>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          startIcon={<Play className="h-5 w-5" />}
+                          endIcon={<ExternalLink className="h-4 w-4" />}
+                          onClick={() => {
+                            window.open('https://www.youtube.com/playlist?list=PLwyVPJ9qE2K8vj0Wfb4rxAmZntkysHPlE', '_blank');
+                          }}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            bgcolor: '#9c27b0',
+                            '&:hover': { bgcolor: '#7b1fa2' },
+                          }}
+                        >
+                          Start Course
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
 
                 {/* Additional Resources */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Additional Resources</h4>
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-3">
+                <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                  <Typography variant="h6" fontWeight="semibold" gutterBottom>
+                    Additional Resources
+                  </Typography>
+                  <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       For more learning resources, visit the full Learning Hub in the Creative Dashboard.
-                    </p>
-                    <button
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<GraduationCap className="h-5 w-5" />}
+                      endIcon={<ExternalLink className="h-4 w-4" />}
                       onClick={() => {
-                        // Navigate to Creative Dashboard with Learning Hub tab
                         window.location.href = '/creative?tab=learning';
                       }}
-                      className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-semibold flex items-center gap-2"
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        bgcolor: 'grey.800',
+                        '&:hover': { bgcolor: 'grey.900' },
+                      }}
                     >
-                      <GraduationCap className="h-5 w-5" />
                       Open Full Learning Hub
-                      <ExternalLink className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+                    </Button>
+                  </Paper>
+                </Box>
+              </Paper>
+            </Box>
           )}
-        </div>
-      </div>
-    </div>
+        </Paper>
+      </Box>
+    </Box>
   );
 };
 
