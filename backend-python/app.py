@@ -554,10 +554,19 @@ if DB_AVAILABLE:
         is_employee = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Employee flag for Creative Dashboard
         is_admin = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Admin flag for system administration
         last_checked = db.Column(db.DateTime, nullable=True)  # Last subscription check
+        # OAuth and Auth Provider fields
+        google_id = db.Column(db.String(100), unique=True, nullable=True, index=True)  # Google OAuth ID
+        auth_provider = db.Column(db.String(20), default='email', nullable=False)  # 'email', 'google', 'wallet'
         # Web3/ENS fields
         ens_name = db.Column(db.String(255), unique=True, nullable=True, index=True)  # e.g., "isharehow.isharehow.eth"
         crypto_address = db.Column(db.String(42), nullable=True, index=True)  # Ethereum address (0x...)
         content_hash = db.Column(db.String(255), nullable=True)  # IPFS content hash
+        # ETH payment verification fields
+        eth_payment_verified = db.Column(db.Boolean, default=False, nullable=False)
+        eth_payment_amount = db.Column(db.Numeric(18, 8), nullable=True)
+        eth_payment_tx_hash = db.Column(db.String(66), nullable=True, index=True)
+        eth_payment_date = db.Column(db.DateTime, nullable=True)
+        trial_start_date = db.Column(db.DateTime, nullable=True)
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
         
@@ -1310,7 +1319,7 @@ def safe_get_user(user_id):
     except Exception as query_error:
         error_str = str(query_error).lower()
         # Check if error is due to missing columns
-        if 'column' in error_str and ('has_subscription_update' in error_str or 'is_employee' in error_str):
+        if 'column' in error_str and ('has_subscription_update' in error_str or 'is_employee' in error_str or 'google_id' in error_str):
             print(f"Warning: Missing column when querying user {user_id}, attempting to add missing columns...")
             
             # Try to add missing columns immediately
@@ -1335,17 +1344,32 @@ def safe_get_user(user_id):
                             missing_columns.append(('is_employee', 'BOOLEAN', 'FALSE'))
                         if 'is_admin' not in existing_columns:
                             missing_columns.append(('is_admin', 'BOOLEAN', 'FALSE'))
+                        if 'google_id' not in existing_columns:
+                            missing_columns.append(('google_id', 'VARCHAR(100)', 'NULL'))
+                        if 'auth_provider' not in existing_columns:
+                            missing_columns.append(('auth_provider', 'VARCHAR(20)', "'email'"))
                         
                         for col_name, col_type, default in missing_columns:
                             try:
                                 if col_type == 'BOOLEAN':
                                     sql = f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"
                                 elif col_type.startswith('VARCHAR'):
-                                    sql = f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"
+                                    if default == 'NULL':
+                                        sql = f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"
+                                    else:
+                                        sql = f"ALTER TABLE users ADD COLUMN {col_name} {col_type} NOT NULL DEFAULT {default}"
                                 else:
                                     sql = f"ALTER TABLE users ADD COLUMN {col_name} {col_type} DEFAULT {default}"
                                 
                                 conn.execute(db.text(sql))
+                                
+                                # Create index for google_id if it was added
+                                if col_name == 'google_id':
+                                    try:
+                                        conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
+                                    except Exception:
+                                        pass  # Index might already exist
+                                
                                 print(f"  ✓ Added missing column: {col_name}")
                             except Exception as col_error:
                                 error_msg = str(col_error).lower()
@@ -3172,36 +3196,138 @@ def google_callback():
         if not email:
             return jsonify({'error': 'Email not provided by Google'}), 400
         
-        # Find or create user
-        user = User.query.filter_by(google_id=google_id).first()
+        # Find or create user - handle missing google_id column gracefully
+        user = None
+        try:
+            user = User.query.filter_by(google_id=google_id).first()
+        except Exception as query_error:
+            error_str = str(query_error).lower()
+            if 'column' in error_str and 'google_id' in error_str:
+                print(f"Warning: google_id column missing, attempting to add it...")
+                # Try to add the column
+                try:
+                    with db.engine.connect() as conn:
+                        with conn.begin():
+                            conn.execute(db.text("ALTER TABLE users ADD COLUMN google_id VARCHAR(100)"))
+                            try:
+                                conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
+                            except Exception:
+                                pass  # Index might already exist
+                            print("  ✓ Added google_id column")
+                except Exception as add_error:
+                    error_msg = str(add_error).lower()
+                    if 'already exists' in error_msg:
+                        print("  ✓ google_id column already exists")
+                    else:
+                        print(f"  ✗ Could not add google_id column: {add_error}")
+                        # Continue with email lookup as fallback
+                # Retry the query
+                try:
+                    user = User.query.filter_by(google_id=google_id).first()
+                except Exception:
+                    # If still fails, fall back to email lookup
+                    pass
+            else:
+                raise
         
+        # Fallback to email lookup if google_id query failed
         if not user:
             # Check if email already exists
             user = User.query.filter_by(email=email).first()
             
             if user:
-                # Link Google to existing account
-                user.google_id = google_id
-                user.auth_provider = 'google'
+                # Link Google to existing account - handle missing column
+                try:
+                    user.google_id = google_id
+                    user.auth_provider = 'google'
+                except Exception as attr_error:
+                    # If google_id column doesn't exist, add it first
+                    error_str = str(attr_error).lower()
+                    if 'google_id' in error_str or 'no property' in error_str:
+                        print("Warning: google_id column missing, adding it now...")
+                        try:
+                            with db.engine.connect() as conn:
+                                with conn.begin():
+                                    conn.execute(db.text("ALTER TABLE users ADD COLUMN google_id VARCHAR(100)"))
+                                    try:
+                                        conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
+                                    except Exception:
+                                        pass
+                                    print("  ✓ Added google_id column")
+                            # Refresh the user object
+                            db.session.refresh(user)
+                            user.google_id = google_id
+                            user.auth_provider = 'google'
+                        except Exception as add_error:
+                            print(f"  ✗ Could not add google_id: {add_error}")
+                            # Continue without google_id for now
+                    else:
+                        raise
             else:
-                # Create new user
+                # Create new user - handle missing columns
                 existing_usernames = set(u.username for u in User.query.all() if u.username)
                 username = generate_user_id_from_email(email, existing_usernames)
                 
                 ens_data = resolve_or_create_ens(None, username)
                 
-                user = User(
-                    username=username,
-                    email=email,
-                    google_id=google_id,
-                    auth_provider='google',
-                    password_hash=None,
-                    ens_name=ens_data.get('ens_name'),
-                    content_hash=ens_data.get('content_hash'),
-                    patreon_connected=False
-                )
-                db.session.add(user)
-                db.session.commit()
+                # Check if google_id column exists before using it
+                try:
+                    with db.engine.connect() as conn:
+                        from sqlalchemy import inspect
+                        inspector = inspect(conn)
+                        existing_columns = {col['name'] for col in inspector.get_columns('users')}
+                        if 'google_id' not in existing_columns:
+                            with conn.begin():
+                                conn.execute(db.text("ALTER TABLE users ADD COLUMN google_id VARCHAR(100)"))
+                                try:
+                                    conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
+                                except Exception:
+                                    pass
+                                print("  ✓ Added google_id column before creating user")
+                except Exception as check_error:
+                    print(f"  ⚠ Could not check/add google_id: {check_error}")
+                
+                try:
+                    user = User(
+                        username=username,
+                        email=email,
+                        google_id=google_id,
+                        auth_provider='google',
+                        password_hash=None,
+                        ens_name=ens_data.get('ens_name'),
+                        content_hash=ens_data.get('content_hash'),
+                        patreon_connected=False
+                    )
+                except Exception as create_error:
+                    # If google_id still causes issues, create without it
+                    error_str = str(create_error).lower()
+                    if 'google_id' in error_str:
+                        print("  ⚠ Creating user without google_id (will update after column is added)")
+                        user = User(
+                            username=username,
+                            email=email,
+                            auth_provider='google',
+                            password_hash=None,
+                            ens_name=ens_data.get('ens_name'),
+                            content_hash=ens_data.get('content_hash'),
+                            patreon_connected=False
+                        )
+                        db.session.add(user)
+                        db.session.commit()
+                        # Now try to add google_id via raw SQL
+                        try:
+                            with db.engine.connect() as conn:
+                                with conn.begin():
+                                    conn.execute(db.text(
+                                        "UPDATE users SET google_id = :google_id WHERE id = :user_id"
+                                    ), {'google_id': google_id, 'user_id': user.id})
+                        except Exception:
+                            pass
+                    else:
+                        raise
+                else:
+                    db.session.add(user)
+                    db.session.commit()
                 
                 # Start trial
                 trial_expires = start_trial(user)
@@ -7324,7 +7450,8 @@ def run_database_upgrade():
                     required_columns = {
                         'has_subscription_update', 'subscription_update_active',
                         'shopify_customer_id', 'bold_subscription_id',
-                        'is_employee', 'is_admin'
+                        'is_employee', 'is_admin',
+                        'google_id', 'auth_provider'
                     }
                     
                     missing = required_columns - existing_columns
@@ -7345,6 +7472,15 @@ def run_database_upgrade():
                                             conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"))
                                         elif col_name == 'is_admin':
                                             conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"))
+                                        elif col_name == 'google_id':
+                                            conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} VARCHAR(100)"))
+                                            # Create unique index for google_id
+                                            try:
+                                                conn.execute(db.text(f"CREATE UNIQUE INDEX ix_users_google_id ON users ({col_name})"))
+                                            except Exception:
+                                                pass  # Index might already exist
+                                        elif col_name == 'auth_provider':
+                                            conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} VARCHAR(20) NOT NULL DEFAULT 'email'"))
                                         print(f"  ✓ Added column: {col_name}")
                                         added_count += 1
                                     except Exception as col_error:

@@ -799,7 +799,7 @@ function ProfilePage() {
                           variant="contained"
                           onClick={() => {
                             // Redirect to Shopify subscription page
-                            window.location.href = 'https://shop.isharehow.app/apps/app-proxy/subscribe';
+                            window.location.href = 'https://shop.isharehow.app/pages/manage-subscriptions';
                           }}
                           sx={{
                             bgcolor: 'primary.main',

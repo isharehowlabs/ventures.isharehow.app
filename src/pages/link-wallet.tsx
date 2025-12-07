@@ -212,7 +212,7 @@ export default function LinkWalletPage() {
           <Button
             variant="contained"
             fullWidth
-            onClick={() => window.location.href = 'https://shop.isharehow.app/apps/app-proxy/subscribe'}
+            onClick={() => window.location.href = 'https://shop.isharehow.app/pages/manage-subscriptions'}
             sx={{ mt: 2 }}
           >
             Subscribe via Shopify ($17.77/month)
