@@ -64,8 +64,8 @@ const CreativeServicesPage = () => {
       setFormError('Please enter a valid email address');
       return false;
     }
-    if (!formData.company.trim()) {
-      setFormError('Company is required');
+    if (!formData.phone.trim()) {
+      setFormError('Phone number is required');
       return false;
     }
     return true;
@@ -93,8 +93,8 @@ const CreativeServicesPage = () => {
         body: JSON.stringify({
           name: formData.name.trim(),
           email: formData.email.trim(),
-          company: formData.company.trim(),
-          phone: formData.phone.trim() || undefined,
+          company: formData.company.trim() || undefined,
+          phone: formData.phone.trim(),
           message: formData.message.trim() || undefined,
           source: 'creative_services_landing',
           status: 'prospect',
@@ -992,8 +992,7 @@ const CreativeServicesPage = () => {
 
                           <TextField
                             fullWidth
-                            required
-                            label="Company Name"
+                            label="Company Name (Optional)"
                             name="company"
                             value={formData.company}
                             onChange={handleFormChange}
@@ -1011,8 +1010,9 @@ const CreativeServicesPage = () => {
 
                           <TextField
                             fullWidth
+                            required
                             type="tel"
-                            label="Phone Number (Optional)"
+                            label="Phone Number"
                             name="phone"
                             value={formData.phone}
                             onChange={handleFormChange}

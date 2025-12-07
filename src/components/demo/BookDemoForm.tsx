@@ -60,8 +60,8 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
       setError('Please enter a valid email address');
       return false;
     }
-    if (!formData.company.trim()) {
-      setError('Company is required');
+    if (!formData.phone.trim()) {
+      setError('Phone number is required');
       return false;
     }
     return true;
@@ -87,11 +87,11 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
+          body: JSON.stringify({
           name: formData.name.trim(),
           email: formData.email.trim(),
-          company: formData.company.trim(),
-          phone: formData.phone.trim() || undefined,
+          company: formData.company.trim() || undefined,
+          phone: formData.phone.trim(),
           message: formData.message.trim() || undefined,
           source: 'book_demo_form',
         }),
@@ -209,8 +209,7 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
 
           <TextField
             fullWidth
-            required
-            label="Company"
+            label="Company Name (Optional)"
             name="company"
             value={formData.company}
             onChange={handleChange}
@@ -223,8 +222,9 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
 
           <TextField
             fullWidth
+            required
             type="tel"
-            label="Phone Number (Optional)"
+            label="Phone Number"
             name="phone"
             value={formData.phone}
             onChange={handleChange}

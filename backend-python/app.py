@@ -6377,8 +6377,8 @@ def create_demo_lead():
         data = request.get_json()
         
         # Validate required fields
-        if not data.get('name') or not data.get('email') or not data.get('company'):
-            return jsonify({'error': 'Name, email, and company are required'}), 400
+        if not data.get('name') or not data.get('email') or not data.get('phone'):
+            return jsonify({'error': 'Name, email, and phone are required'}), 400
         
         # Check if email already exists
         existing = Client.query.filter_by(email=data['email']).first()
@@ -6397,8 +6397,8 @@ def create_demo_lead():
         client = Client(
             name=data['name'],
             email=data['email'],
-            company=data['company'],
-            phone=data.get('phone'),
+            company=data.get('company'),
+            phone=data['phone'],
             status='prospect',  # Mark as prospect
             notes=f'Demo Request: {data.get("message", "No message")}\nSource: {data.get("source", "book_demo_form")}',
         )
@@ -6509,8 +6509,8 @@ def create_client():
         data = request.get_json()
         
         # Validate required fields
-        if not data.get('name') or not data.get('email') or not data.get('company'):
-            return jsonify({'error': 'Name, email, and company are required'}), 400
+        if not data.get('name') or not data.get('email') or not data.get('phone'):
+            return jsonify({'error': 'Name, email, and phone are required'}), 400
         
         # Check if email already exists in clients
         existing_client = Client.query.filter_by(email=data['email']).first()
@@ -6552,8 +6552,8 @@ def create_client():
         client = Client(
             name=data['name'],
             email=data['email'],
-            company=data['company'],
-            phone=data.get('phone'),
+            company=data.get('company'),
+            phone=data['phone'],
             status=data.get('status', 'pending'),
             tier=data.get('tier'),
             notes=data.get('notes'),
@@ -9146,8 +9146,8 @@ if DB_AVAILABLE:
         id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
         name = db.Column(db.String(200), nullable=False)
         email = db.Column(db.String(255), nullable=False, unique=True, index=True)
-        company = db.Column(db.String(200), nullable=False)
-        phone = db.Column(db.String(50), nullable=True)
+        company = db.Column(db.String(200), nullable=True)
+        phone = db.Column(db.String(50), nullable=False)
         status = db.Column(db.String(20), default='pending', nullable=False)  # pending, active, inactive, prospect
         tier = db.Column(db.String(50), nullable=True)  # starter, professional, enterprise
         notes = db.Column(db.Text, nullable=True)

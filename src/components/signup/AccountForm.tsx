@@ -113,8 +113,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
 
         <TextField
           fullWidth
-          label="Company Name"
-          required={companyRequired}
+          label="Company Name (Optional)"
           value={data.companyName}
           onChange={(e) => onChange('companyName', e.target.value)}
           error={!!errors.companyName}
@@ -132,6 +131,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
           fullWidth
           label="Phone Number"
           type="tel"
+          required
           value={data.phone}
           onChange={(e) => onChange('phone', e.target.value)}
           error={!!errors.phone}

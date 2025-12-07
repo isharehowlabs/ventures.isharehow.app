@@ -52,8 +52,8 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
 
   const handleSubmit = async () => {
     // Validation
-    if (!formData.name || !formData.email || !formData.company) {
-      setError('Please fill in all required fields (Name, Email, Company)');
+    if (!formData.name || !formData.email || !formData.phone) {
+      setError('Please fill in all required fields (Name, Email, Phone)');
       return;
     }
 
@@ -176,8 +176,7 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
 
           <TextField
             fullWidth
-            label="Company Name"
-            required
+            label="Company Name (Optional)"
             value={formData.company}
             onChange={handleChange('company')}
             placeholder="Company Inc."
@@ -185,6 +184,7 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
 
           <TextField
             fullWidth
+            required
             label="Phone Number"
             type="tel"
             value={formData.phone}

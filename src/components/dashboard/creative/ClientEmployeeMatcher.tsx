@@ -529,8 +529,8 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
 
   // Prospects handlers
   const handleCreateProspect = async () => {
-    if (!prospectForm.name || !prospectForm.email || !prospectForm.company) {
-      setError('Name, email, and company are required');
+    if (!prospectForm.name || !prospectForm.email || !prospectForm.phone) {
+      setError('Name, email, and phone are required');
       return;
     }
 
@@ -577,8 +577,8 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
   };
 
   const handleUpdateProspect = async () => {
-    if (!editingProspect || !prospectForm.name || !prospectForm.email || !prospectForm.company) {
-      setError('Name, email, and company are required');
+    if (!editingProspect || !prospectForm.name || !prospectForm.email || !prospectForm.phone) {
+      setError('Name, email, and phone are required');
       return;
     }
 
@@ -1467,17 +1467,17 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
               required
             />
             <TextField
-              label="Company"
+              label="Company (Optional)"
               value={prospectForm.company}
               onChange={(e) => setProspectForm({ ...prospectForm, company: e.target.value })}
               fullWidth
-              required
             />
             <TextField
               label="Phone"
               value={prospectForm.phone}
               onChange={(e) => setProspectForm({ ...prospectForm, phone: e.target.value })}
               fullWidth
+              required
             />
             <TextField
               label="Notes"
