@@ -1,7 +1,7 @@
 """Make company optional and phone required in clients table
 
-Revision ID: 39_make_company_optional_phone_required
-Revises: 38_add_auth_providers
+Revision ID: 39_company_opt_phone_req
+Revises: fc4d8a813095
 Create Date: 2025-01-XX XX:XX:XX.XXXXXX
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '39_make_company_optional_phone_required'
+revision = '39_company_opt_phone_req'  # Shortened to fit 32 char limit
 down_revision = 'fc4d8a813095'  # Points to merge head
 branch_labels = None
 depends_on = None
