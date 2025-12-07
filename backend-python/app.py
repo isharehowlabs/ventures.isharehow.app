@@ -47,6 +47,12 @@ except ImportError:
 try:
     from web3 import Web3
     from ens import ENS
+    WEB3_AVAILABLE = True
+except ImportError:
+    WEB3_AVAILABLE = False
+    Web3 = None
+    ENS = None
+    print("Warning: web3.py not available. Web3 features will be disabled.")
 
 # Google OAuth imports
 try:
@@ -79,14 +85,6 @@ except ImportError as e:
     WALLET_AUTH_HELPERS_AVAILABLE = False
     print(f"Warning: Helper modules not available: {e}")
     print("Wallet authentication features will be limited.")
-
-    WEB3_AVAILABLE = True
-    print("✓ Web3.py and ENS module loaded successfully")
-except ImportError:
-    WEB3_AVAILABLE = False
-    print("Warning: web3.py not available. ENS integration will be disabled.")
-    Web3 = None
-    ENS = None
 
 # Load environment variables
 load_dotenv()
