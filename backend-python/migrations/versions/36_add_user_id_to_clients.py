@@ -40,9 +40,12 @@ def upgrade():
     if table_exists('clients'):
         if not column_exists('clients', 'user_id'):
             print("Adding user_id column to clients table...")
-            op.add_column('clients',
-                sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=True)
-            )
+            # Add column without FK constraint (SQLite limitation)
+            # The FK will be enforced by SQLAlchemy ORM
+            with op.batch_alter_table('clients', schema=None) as batch_op:
+                batch_op.add_column(
+                    sa.Column('user_id', sa.Integer(), nullable=True)
+                )
             # Create index if it doesn't exist
             try:
                 op.create_index('ix_clients_user_id', 'clients', ['user_id'])
@@ -58,9 +61,9 @@ def upgrade():
 def downgrade():
     # Remove user_id column from clients table
     if table_exists('clients') and column_exists('clients', 'user_id'):
-        try:
-            op.drop_index('ix_clients_user_id', 'clients')
-        except Exception:
-            pass  # Index might not exist
-        op.drop_column('clients', 'user_id')
-
+        with op.batch_alter_table('clients', schema=None) as batch_op:
+            try:
+                batch_op.drop_index('ix_clients_user_id')
+            except Exception:
+                pass  # Index might not exist
+            batch_op.drop_column('user_id')
