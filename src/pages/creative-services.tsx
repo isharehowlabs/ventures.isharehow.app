@@ -2,9 +2,12 @@ import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Box, Container, Typography, Button, Card, CardContent, Grid, Chip, Stack } from '@mui/material';
+import { Box, Container, Typography, Button, Card, CardContent, Grid, Chip, Stack, useTheme } from '@mui/material';
 
 const CreativeServicesPage = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  
   const gradientStyle = {
     background: 'linear-gradient(90deg, #a855f7 0%, #ec4899 50%, #a855f7 100%)',
     backgroundSize: '200% auto',
@@ -20,7 +23,7 @@ const CreativeServicesPage = () => {
         <meta name="description" content="Transform your digital presence with strategic creative services, custom applications, and AI-powered content training from iShareHow Studios & Ventures." />
       </Head>
 
-      <Box sx={{ bgcolor: '#000', color: '#fff', minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{ bgcolor: 'background.default', color: 'text.primary', minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
         {/* Animated Background */}
         <Box sx={{
           position: 'fixed',
@@ -35,25 +38,25 @@ const CreativeServicesPage = () => {
           top: 0,
           zIndex: 50,
           backdropFilter: 'blur(20px)',
-          bgcolor: 'rgba(0, 0, 0, 0.8)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          bgcolor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}>
           <Container maxWidth="lg">
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 2.5 }}>
               <Link href="/" style={{ textDecoration: 'none' }}>
-                <Typography variant="h5" fontWeight={700}>
-                  <span style={{ color: '#fff' }}>iShareHow </span>
+                <Typography variant="h5" fontWeight={700} color="text.primary">
+                  <span>iShareHow </span>
                   <span style={gradientStyle}>Studios</span>
                 </Typography>
               </Link>
               <Stack direction="row" spacing={4} alignItems="center" sx={{ display: { xs: 'none', md: 'flex' } }}>
-                <a href="#services" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontWeight: 500 }}>Services</a>
-                <a href="#results" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontWeight: 500 }}>Results</a>
-                <a href="#training" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontWeight: 500 }}>AI Training</a>
+                <a href="#services" style={{ color: theme.palette.text.secondary, textDecoration: 'none', fontWeight: 500 }}>Services</a>
+                <a href="#results" style={{ color: theme.palette.text.secondary, textDecoration: 'none', fontWeight: 500 }}>Results</a>
+                <a href="#training" style={{ color: theme.palette.text.secondary, textDecoration: 'none', fontWeight: 500 }}>AI Training</a>
                 <a href="#contact" style={{ textDecoration: 'none' }}>
                   <Button sx={{
                     background: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)',
-                    color: '#fff',
+                    color: 'white',
                     borderRadius: '50px',
                     px: 3,
                     py: 1,
@@ -93,7 +96,7 @@ const CreativeServicesPage = () => {
                 </Typography>
 
                 <Typography variant="h5" textAlign="center" sx={{
-                  color: 'rgba(255,255,255,0.8)',
+                  color: 'text.secondary',
                   maxWidth: '900px',
                   lineHeight: 1.8,
                   fontSize: { xs: '1.1rem', md: '1.4rem' }
@@ -107,13 +110,13 @@ const CreativeServicesPage = () => {
                 </Typography>
 
                 <Typography variant="h6" textAlign="center" sx={{ 
-                  color: 'rgba(255,255,255,0.7)', 
+                  color: 'text.secondary', 
                   maxWidth: '800px', 
                   fontSize: { xs: '1rem', md: '1.2rem' },
                   lineHeight: 1.7
                 }}>
                   This system isn't just another subscription—
-                  <strong style={{ color: '#fff', fontWeight: 700 }}> it's your direct line to overwhelming value</strong>, 
+                  <strong style={{ color: theme.palette.text.primary, fontWeight: 700 }}> it's your direct line to overwhelming value</strong>, 
                   where my niche expertise becomes your competitive advantage.
                 </Typography>
               </Stack>
@@ -122,19 +125,20 @@ const CreativeServicesPage = () => {
         </Box>
 
         {/* Understanding the Digital Landscape */}
-        <Box component="section" sx={{ position: 'relative', zIndex: 1, py: { xs: 12, md: 20 }, bgcolor: 'rgba(0, 0, 0, 0.3)' }}>
+        <Box component="section" sx={{ position: 'relative', zIndex: 1, py: { xs: 12, md: 20 }, bgcolor: 'background.paper' }}>
           <Container maxWidth="lg">
             <Stack spacing={10}>
               <Box>
                 <Typography variant="h2" fontWeight={800} gutterBottom textAlign="center" sx={{ 
                   fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
-                  mb: 6
+                  mb: 6,
+                  color: 'text.primary'
                 }}>
                   <span style={gradientStyle}>Understanding the Digital Landscape</span>
                 </Typography>
                 
                 <Typography variant="h5" sx={{ 
-                  color: 'rgba(255,255,255,0.8)', 
+                  color: 'text.secondary', 
                   maxWidth: '1000px', 
                   mx: 'auto', 
                   lineHeight: 1.9,
@@ -145,7 +149,7 @@ const CreativeServicesPage = () => {
                 </Typography>
 
                 <Typography variant="h5" sx={{ 
-                  color: 'rgba(255,255,255,0.8)', 
+                  color: 'text.secondary', 
                   maxWidth: '900px', 
                   mx: 'auto', 
                   lineHeight: 1.9,
@@ -188,20 +192,19 @@ const CreativeServicesPage = () => {
                     >
                       <Card sx={{
                         height: '100%',
-                        background: 'rgba(168, 85, 247, 0.05)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(168, 85, 247, 0.2)',
+                        bgcolor: 'background.paper',
+                        border: `1px solid ${theme.palette.divider}`,
                         borderRadius: '24px',
                         transition: 'all 0.3s ease',
                         '&:hover': {
-                          border: '1px solid rgba(168, 85, 247, 0.4)',
+                          border: '1px solid #a855f7',
                           boxShadow: '0 20px 40px rgba(168, 85, 247, 0.2)',
                         }
                       }}>
                         <CardContent sx={{ p: 5 }}>
                           <Typography variant="h1" sx={{ mb: 3, fontSize: '4rem' }}>{item.icon}</Typography>
-                          <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 3 }}>{item.title}</Typography>
-                          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', lineHeight: 1.7 }}>
+                          <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 3, color: 'text.primary' }}>{item.title}</Typography>
+                          <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1.7 }}>
                             {item.desc}
                           </Typography>
                         </CardContent>
@@ -222,7 +225,7 @@ const CreativeServicesPage = () => {
                 <Typography variant="h2" fontWeight={800} gutterBottom sx={{ fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' }, mb: 4 }}>
                   <span style={gradientStyle}>Key Offerings</span>
                 </Typography>
-                <Typography variant="h5" sx={{ color: 'rgba(255,255,255,0.7)', maxWidth: '900px', mx: 'auto', lineHeight: 1.8 }}>
+                <Typography variant="h5" sx={{ color: 'text.secondary', maxWidth: '900px', mx: 'auto', lineHeight: 1.8 }}>
                   iShareHow Studios and Ventures stands out with a variety of offerings designed to address specific business challenges
                 </Typography>
               </Box>
@@ -236,13 +239,12 @@ const CreativeServicesPage = () => {
                   whileHover={{ scale: 1.02 }}
                 >
                   <Card sx={{
-                    background: 'rgba(168, 85, 247, 0.05)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(168, 85, 247, 0.2)',
+                    bgcolor: 'background.paper',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '24px',
                     transition: 'all 0.3s ease',
                     '&:hover': {
-                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      border: '1px solid #a855f7',
                       boxShadow: '0 20px 40px rgba(168, 85, 247, 0.2)',
                     }
                   }}>
@@ -250,14 +252,14 @@ const CreativeServicesPage = () => {
                       <Stack direction={{ xs: 'column', md: 'row' }} spacing={5} alignItems="start">
                         <Typography variant="h1" sx={{ fontSize: '5rem', flexShrink: 0 }}>📱</Typography>
                         <Stack spacing={4} flex={1}>
-                          <Typography variant="h3" fontWeight={700}>
+                          <Typography variant="h3" fontWeight={700} color="text.primary">
                             1. Customized Applications
                           </Typography>
-                          <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.8, fontSize: '1.2rem' }}>
+                          <Typography variant="h6" sx={{ color: 'text.secondary', lineHeight: 1.8, fontSize: '1.2rem' }}>
                             We specialize in creating applications tailored to your business needs. Whether it's a mobile app for customer engagement or an internal tool for efficiency, we've got you covered.
                           </Typography>
                           <Card sx={{ 
-                            bgcolor: 'rgba(168, 85, 247, 0.1)', 
+                            bgcolor: isDark ? 'rgba(168, 85, 247, 0.1)' : 'rgba(168, 85, 247, 0.05)', 
                             border: '1px solid rgba(168, 85, 247, 0.3)',
                             borderRadius: '16px'
                           }}>
@@ -273,14 +275,14 @@ const CreativeServicesPage = () => {
                                   justifyContent: 'center',
                                   flexShrink: 0
                                 }}>
-                                  <Typography fontWeight={700} fontSize="1.2rem">✓</Typography>
+                                  <Typography fontWeight={700} fontSize="1.2rem" color="white">✓</Typography>
                                 </Box>
                                 <Box>
                                   <Typography variant="h6" fontWeight={700} color="#a855f7" gutterBottom>
                                     Success Story: Retail Client
                                   </Typography>
-                                  <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.1rem', lineHeight: 1.7 }}>
-                                    By implementing our customized inventory management app, a retail partner <strong style={{ color: '#fff' }}>reduced stock discrepancies by 30%</strong>, leading to improved sales and customer satisfaction.
+                                  <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1.7 }}>
+                                    By implementing our customized inventory management app, a retail partner <strong style={{ color: theme.palette.text.primary }}>reduced stock discrepancies by 30%</strong>, leading to improved sales and customer satisfaction.
                                   </Typography>
                                 </Box>
                               </Stack>
@@ -300,13 +302,12 @@ const CreativeServicesPage = () => {
                   whileHover={{ scale: 1.02 }}
                 >
                   <Card sx={{
-                    background: 'rgba(236, 72, 153, 0.05)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(236, 72, 153, 0.2)',
+                    bgcolor: 'background.paper',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '24px',
                     transition: 'all 0.3s ease',
                     '&:hover': {
-                      border: '1px solid rgba(236, 72, 153, 0.4)',
+                      border: '1px solid #ec4899',
                       boxShadow: '0 20px 40px rgba(236, 72, 153, 0.2)',
                     }
                   }}>
@@ -314,14 +315,14 @@ const CreativeServicesPage = () => {
                       <Stack direction={{ xs: 'column', md: 'row' }} spacing={5} alignItems="start">
                         <Typography variant="h1" sx={{ fontSize: '5rem', flexShrink: 0 }}>💼</Typography>
                         <Stack spacing={4} flex={1}>
-                          <Typography variant="h3" fontWeight={700}>
+                          <Typography variant="h3" fontWeight={700} color="text.primary">
                             2. Consulting Services
                           </Typography>
-                          <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.8, fontSize: '1.2rem' }}>
+                          <Typography variant="h6" sx={{ color: 'text.secondary', lineHeight: 1.8, fontSize: '1.2rem' }}>
                             With our expertise, we guide organizations in navigating digital transformations, ensuring they leverage technology effectively.
                           </Typography>
                           <Card sx={{ 
-                            bgcolor: 'rgba(59, 130, 246, 0.1)', 
+                            bgcolor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)', 
                             border: '1px solid rgba(59, 130, 246, 0.3)',
                             borderRadius: '16px'
                           }}>
@@ -337,14 +338,14 @@ const CreativeServicesPage = () => {
                                   justifyContent: 'center',
                                   flexShrink: 0
                                 }}>
-                                  <Typography fontWeight={700} fontSize="1.2rem">✓</Typography>
+                                  <Typography fontWeight={700} fontSize="1.2rem" color="white">✓</Typography>
                                 </Box>
                                 <Box>
                                   <Typography variant="h6" fontWeight={700} color="#3b82f6" gutterBottom>
                                     Success Story: Logistics Company
                                   </Typography>
-                                  <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.1rem', lineHeight: 1.7 }}>
-                                    Our consulting services helped streamline their supply chain operations, resulting in a noteworthy <strong style={{ color: '#fff' }}>25% reduction in delivery times</strong>.
+                                  <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1.7 }}>
+                                    Our consulting services helped streamline their supply chain operations, resulting in a noteworthy <strong style={{ color: theme.palette.text.primary }}>25% reduction in delivery times</strong>.
                                   </Typography>
                                 </Box>
                               </Stack>
@@ -364,13 +365,12 @@ const CreativeServicesPage = () => {
                   whileHover={{ scale: 1.02 }}
                 >
                   <Card sx={{
-                    background: 'rgba(34, 197, 94, 0.05)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                    bgcolor: 'background.paper',
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '24px',
                     transition: 'all 0.3s ease',
                     '&:hover': {
-                      border: '1px solid rgba(34, 197, 94, 0.4)',
+                      border: '1px solid #22c55e',
                       boxShadow: '0 20px 40px rgba(34, 197, 94, 0.2)',
                     }
                   }}>
@@ -378,14 +378,14 @@ const CreativeServicesPage = () => {
                       <Stack direction={{ xs: 'column', md: 'row' }} spacing={5} alignItems="start">
                         <Typography variant="h1" sx={{ fontSize: '5rem', flexShrink: 0 }}>🎓</Typography>
                         <Stack spacing={4} flex={1}>
-                          <Typography variant="h3" fontWeight={700}>
+                          <Typography variant="h3" fontWeight={700} color="text.primary">
                             3. Training Programs
                           </Typography>
-                          <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.8, fontSize: '1.2rem' }}>
+                          <Typography variant="h6" sx={{ color: 'text.secondary', lineHeight: 1.8, fontSize: '1.2rem' }}>
                             We offer training sessions to empower your team with the knowledge they need to make the most of our solutions.
                           </Typography>
                           <Card sx={{ 
-                            bgcolor: 'rgba(34, 197, 94, 0.1)', 
+                            bgcolor: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.05)', 
                             border: '1px solid rgba(34, 197, 94, 0.3)',
                             borderRadius: '16px'
                           }}>
@@ -401,14 +401,14 @@ const CreativeServicesPage = () => {
                                   justifyContent: 'center',
                                   flexShrink: 0
                                 }}>
-                                  <Typography fontWeight={700} fontSize="1.2rem">✓</Typography>
+                                  <Typography fontWeight={700} fontSize="1.2rem" color="white">✓</Typography>
                                 </Box>
                                 <Box>
                                   <Typography variant="h6" fontWeight={700} color="#22c55e" gutterBottom>
                                     Success Story: Healthcare Provider
                                   </Typography>
-                                  <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.1rem', lineHeight: 1.7 }}>
-                                    Through our training programs, staff members improved their digital skillset, <strong style={{ color: '#fff' }}>enhancing patient interactions and overall service quality</strong>.
+                                  <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1.7 }}>
+                                    Through our training programs, staff members improved their digital skillset, <strong style={{ color: theme.palette.text.primary }}>enhancing patient interactions and overall service quality</strong>.
                                   </Typography>
                                 </Box>
                               </Stack>
@@ -429,7 +429,10 @@ const CreativeServicesPage = () => {
           position: 'relative', 
           zIndex: 1, 
           py: { xs: 12, md: 20 }, 
-          background: 'linear-gradient(180deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)'
+          bgcolor: 'background.default',
+          background: isDark 
+            ? 'linear-gradient(180deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)'
+            : 'linear-gradient(180deg, rgba(168, 85, 247, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%)'
         }}>
           <Container maxWidth="lg">
             <Stack spacing={10} alignItems="center">
@@ -454,7 +457,7 @@ const CreativeServicesPage = () => {
               </Typography>
 
               <Typography variant="h4" textAlign="center" sx={{ 
-                color: 'rgba(255,255,255,0.8)', 
+                color: 'text.secondary', 
                 maxWidth: '900px',
                 lineHeight: 1.8,
                 fontSize: { xs: '1.3rem', md: '1.6rem' }
@@ -463,38 +466,37 @@ const CreativeServicesPage = () => {
               </Typography>
 
               <Typography variant="h5" textAlign="center" sx={{ 
-                color: 'rgba(255,255,255,0.7)', 
+                color: 'text.secondary', 
                 maxWidth: '850px',
                 lineHeight: 1.7,
                 fontSize: { xs: '1.1rem', md: '1.3rem' }
               }}>
-                The <strong style={{ color: '#fff' }}>iShareHow Labs & Rise With Jamel</strong> are thrilled to announce our exclusive Affiliate AI Content Training Program, designed to empower you to become a true thought leader in your niche, leveraging cutting-edge AI tools.
+                The <strong style={{ color: theme.palette.text.primary }}>iShareHow Labs & Rise With Jamel</strong> are thrilled to announce our exclusive Affiliate AI Content Training Program, designed to empower you to become a true thought leader in your niche, leveraging cutting-edge AI tools.
               </Typography>
 
               <Card sx={{
                 width: '100%',
                 maxWidth: '1100px',
-                background: 'rgba(168, 85, 247, 0.08)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
+                bgcolor: 'background.paper',
+                border: `1px solid ${theme.palette.divider}`,
                 borderRadius: '32px',
               }}>
                 <CardContent sx={{ p: { xs: 5, md: 10 } }}>
                   <Stack spacing={6}>
-                    <Typography variant="h3" fontWeight={700} sx={{ fontSize: { xs: '2rem', md: '2.5rem' } }}>
+                    <Typography variant="h3" fontWeight={700} sx={{ fontSize: { xs: '2rem', md: '2.5rem' }, color: 'text.primary' }}>
                       Why This Program? It's About Influence & Impact.
                     </Typography>
                     
                     <Typography variant="h6" sx={{ 
-                      color: 'rgba(255,255,255,0.8)', 
+                      color: 'text.secondary', 
                       fontSize: { xs: '1.1rem', md: '1.3rem' }, 
                       lineHeight: 1.9 
                     }}>
-                      This isn't just another course on AI. This program is for the <strong style={{ color: '#fff' }}>future content creators of the digital age</strong> – those who understand that true impact comes from clear communication, strategic influence, and a deep connection with their audience.
+                      This isn't just another course on AI. This program is for the <strong style={{ color: theme.palette.text.primary }}>future content creators of the digital age</strong> – those who understand that true impact comes from clear communication, strategic influence, and a deep connection with their audience.
                     </Typography>
 
                     <Typography variant="h6" sx={{ 
-                      color: 'rgba(255,255,255,0.8)', 
+                      color: 'text.secondary', 
                       fontSize: { xs: '1.1rem', md: '1.3rem' }, 
                       lineHeight: 1.9 
                     }}>
@@ -521,7 +523,7 @@ const CreativeServicesPage = () => {
                             transition={{ delay: idx * 0.1 }}
                           >
                             <Card sx={{ 
-                              bgcolor: 'rgba(168, 85, 247, 0.1)', 
+                              bgcolor: isDark ? 'rgba(168, 85, 247, 0.1)' : 'rgba(168, 85, 247, 0.05)', 
                               border: '1px solid rgba(168, 85, 247, 0.2)',
                               borderRadius: '16px',
                               '&:hover': { border: '1px solid rgba(168, 85, 247, 0.4)' }
@@ -529,7 +531,7 @@ const CreativeServicesPage = () => {
                               <CardContent sx={{ p: 3 }}>
                                 <Stack direction="row" spacing={3} alignItems="center">
                                   <Typography color="#a855f7" fontSize="2rem" fontWeight={700}>✓</Typography>
-                                  <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', md: '1.2rem' } }}>
+                                  <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', md: '1.2rem' }, color: 'text.primary' }}>
                                     {item}
                                   </Typography>
                                 </Stack>
@@ -593,13 +595,12 @@ const CreativeServicesPage = () => {
                       >
                         <Card sx={{
                           height: '100%',
-                          background: 'rgba(168, 85, 247, 0.08)',
-                          backdropFilter: 'blur(20px)',
-                          border: '1px solid rgba(168, 85, 247, 0.2)',
+                          bgcolor: 'background.paper',
+                          border: `1px solid ${theme.palette.divider}`,
                           borderRadius: '20px',
                           transition: 'all 0.3s ease',
                           '&:hover': {
-                            border: '1px solid rgba(168, 85, 247, 0.5)',
+                            border: '1px solid #a855f7',
                             boxShadow: '0 15px 35px rgba(168, 85, 247, 0.3)',
                           }
                         }}>
@@ -612,7 +613,7 @@ const CreativeServicesPage = () => {
                               {skill.title}
                             </Typography>
                             <Typography variant="body1" sx={{ 
-                              color: 'rgba(255,255,255,0.7)', 
+                              color: 'text.secondary', 
                               fontSize: { xs: '1rem', md: '1.1rem' },
                               lineHeight: 1.7
                             }}>
@@ -629,17 +630,16 @@ const CreativeServicesPage = () => {
               <Card sx={{
                 width: '100%',
                 maxWidth: '1000px',
-                background: 'rgba(236, 72, 153, 0.08)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(236, 72, 153, 0.3)',
+                bgcolor: 'background.paper',
+                border: `1px solid ${theme.palette.divider}`,
                 borderRadius: '32px',
               }}>
                 <CardContent sx={{ p: { xs: 5, md: 8 } }}>
-                  <Typography variant="h3" fontWeight={700} gutterBottom sx={{ fontSize: { xs: '2rem', md: '2.5rem' }, mb: 5 }}>
+                  <Typography variant="h3" fontWeight={700} gutterBottom sx={{ fontSize: { xs: '2rem', md: '2.5rem' }, mb: 5, color: 'text.primary' }}>
                     Who Is This For?
                   </Typography>
                   <Typography variant="h6" sx={{ 
-                    color: 'rgba(255,255,255,0.8)', 
+                    color: 'text.secondary', 
                     mb: 6,
                     fontSize: { xs: '1.1rem', md: '1.3rem' }
                   }}>
@@ -666,9 +666,9 @@ const CreativeServicesPage = () => {
                             justifyContent: 'center',
                             flexShrink: 0
                           }}>
-                            <Typography fontWeight={700} fontSize="1.2rem">→</Typography>
+                            <Typography fontWeight={700} fontSize="1.2rem" color="white">→</Typography>
                           </Box>
-                          <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.1rem' } }}>
+                          <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.1rem' }, color: 'text.primary' }}>
                             {item}
                           </Typography>
                         </Stack>
@@ -687,14 +687,14 @@ const CreativeServicesPage = () => {
                 </Typography>
                 
                 <Typography variant="h5" sx={{ 
-                  color: 'rgba(255,255,255,0.8)', 
+                  color: 'text.secondary', 
                   maxWidth: '800px', 
                   mx: 'auto',
                   mb: 8,
                   lineHeight: 1.8,
                   fontSize: { xs: '1.2rem', md: '1.4rem' }
                 }}>
-                  Don't just consume content – <strong style={{ color: '#fff' }}>create it, strategically and powerfully</strong>. This is your opportunity to step into your full potential and become a guiding voice in the digital world.
+                  Don't just consume content – <strong style={{ color: theme.palette.text.primary }}>create it, strategically and powerfully</strong>. This is your opportunity to step into your full potential and become a guiding voice in the digital world.
                 </Typography>
 
                 <a href="#contact" style={{ textDecoration: 'none' }}>
@@ -705,7 +705,7 @@ const CreativeServicesPage = () => {
                     fontSize: '1.3rem',
                     fontWeight: 700,
                     textTransform: 'none',
-                    color: '#fff',
+                    color: 'white',
                     boxShadow: '0 15px 40px rgba(147, 51, 234, 0.4)',
                     '&:hover': { 
                       transform: 'scale(1.05)', 
@@ -737,31 +737,31 @@ const CreativeServicesPage = () => {
               </Typography>
 
               <Typography variant="h5" textAlign="center" sx={{ 
-                color: 'rgba(255,255,255,0.8)', 
+                color: 'text.secondary', 
                 maxWidth: '900px',
                 lineHeight: 1.8,
                 fontSize: { xs: '1.2rem', md: '1.4rem' }
               }}>
-                As we transition from iShareHow Labs to <strong style={{ color: '#fff' }}>iShareHow Studios and Ventures</strong>, we invite partners and clients to embark on this journey with us. Together, we will continue to provide the resources and support necessary to navigate the digital landscape.
+                As we transition from iShareHow Labs to <strong style={{ color: theme.palette.text.primary }}>iShareHow Studios and Ventures</strong>, we invite partners and clients to embark on this journey with us. Together, we will continue to provide the resources and support necessary to navigate the digital landscape.
               </Typography>
 
               <Card sx={{
                 width: '100%',
                 maxWidth: '900px',
-                background: 'rgba(168, 85, 247, 0.08)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
+                bgcolor: 'background.paper',
+                border: `1px solid ${theme.palette.divider}`,
                 borderRadius: '32px',
               }}>
                 <CardContent sx={{ p: { xs: 6, md: 10 } }}>
                   <Typography variant="h3" fontWeight={700} gutterBottom textAlign="center" sx={{ 
                     mb: 5,
-                    fontSize: { xs: '2rem', md: '2.5rem' }
+                    fontSize: { xs: '2rem', md: '2.5rem' },
+                    color: 'text.primary'
                   }}>
                     Our Commitment to You
                   </Typography>
                   <Typography variant="h5" textAlign="center" sx={{ 
-                    color: 'rgba(255,255,255,0.8)', 
+                    color: 'text.secondary', 
                     lineHeight: 1.9,
                     fontSize: { xs: '1.2rem', md: '1.4rem' }
                   }}>
@@ -778,7 +778,7 @@ const CreativeServicesPage = () => {
                   fontSize: '1.2rem',
                   fontWeight: 700,
                   textTransform: 'none',
-                  color: '#fff',
+                  color: 'white',
                   boxShadow: '0 10px 30px rgba(147, 51, 234, 0.4)',
                   '&:hover': { 
                     transform: 'scale(1.05)', 
@@ -789,8 +789,8 @@ const CreativeServicesPage = () => {
                 </Button>
                 <a href="mailto:contact@isharehowlabs.com" style={{ textDecoration: 'none' }}>
                   <Button size="large" variant="outlined" sx={{
-                    borderColor: 'rgba(255,255,255,0.3)',
-                    color: '#fff',
+                    borderColor: theme.palette.divider,
+                    color: 'text.primary',
                     borderRadius: '50px',
                     px: 6,
                     py: 2.5,
@@ -813,13 +813,13 @@ const CreativeServicesPage = () => {
         </Box>
 
         {/* Footer */}
-        <Box component="footer" sx={{ position: 'relative', zIndex: 1, py: 8, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <Box component="footer" sx={{ position: 'relative', zIndex: 1, py: 8, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
           <Container>
             <Stack spacing={2} alignItems="center">
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem' }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: '1rem' }}>
                 © 2024 iShareHow Studios & Ventures. All rights reserved.
               </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Core operations: <a href="http://isharehowlabs.com" target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', textDecoration: 'none' }}>isharehowlabs.com</a>
               </Typography>
             </Stack>
