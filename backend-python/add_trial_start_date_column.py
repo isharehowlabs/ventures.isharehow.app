@@ -35,19 +35,11 @@ def add_trial_start_date_column():
             
             print("Adding 'trial_start_date' column to 'users' table...")
             
-            # Add the column
-            if 'postgresql' in database_url.lower():
-                # PostgreSQL
-                conn.execute(text("""
-                    ALTER TABLE users 
-                    ADD COLUMN trial_start_date TIMESTAMP NULL
-                """))
-            else:
-                # SQLite
-                conn.execute(text("""
-                    ALTER TABLE users 
-                    ADD COLUMN trial_start_date DATETIME NULL
-                """))
+            # Add the column (PostgreSQL on Render)
+            conn.execute(text("""
+                ALTER TABLE users 
+                ADD COLUMN trial_start_date TIMESTAMP NULL
+            """))
             
             conn.commit()
             print("✓ Successfully added 'trial_start_date' column to 'users' table")

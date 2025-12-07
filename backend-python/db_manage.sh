@@ -1,10 +1,13 @@
 #!/bin/bash
 # Database Migration Management Script
+# NOTE: Database is on Render (PostgreSQL). DATABASE_URL must be set.
 
-# Set default to SQLite if DATABASE_URL not set
 if [ -z "$DATABASE_URL" ]; then
-    export DATABASE_URL="sqlite:///instance/ventures.db"
-    echo "Using SQLite database: $DATABASE_URL"
+    echo "ERROR: DATABASE_URL environment variable is not set"
+    echo "The database is hosted on Render (PostgreSQL)."
+    echo "Please set DATABASE_URL before running this script:"
+    echo "  export DATABASE_URL='postgresql://user:password@host:port/database'"
+    exit 1
 fi
 
 export FLASK_APP=app.py

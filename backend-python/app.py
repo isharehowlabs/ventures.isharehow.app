@@ -128,20 +128,27 @@ if app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
 # Session-based auth removed to eliminate conflicts and errors
 
 # Database configuration - make it optional to handle import errors
+# NOTE: Database is on Render (PostgreSQL). DATABASE_URL must be set.
 # Convert postgresql:// to postgresql+psycopg:// for psycopg3 support
-database_url = os.environ.get('DATABASE_URL', 'postgresql://localhost/ventures')
+database_url = os.environ.get('DATABASE_URL')
+if not database_url:
+    print("=" * 80)
+    print("ERROR: DATABASE_URL environment variable is not set!")
+    print("The database is hosted on Render (PostgreSQL).")
+    print("Please set DATABASE_URL before starting the application.")
+    print("=" * 80)
+    raise ValueError("DATABASE_URL environment variable is required")
 if database_url.startswith('postgresql://'):
     database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Use engine options compatible with the chosen driver
+# Use engine options for PostgreSQL (Render)
+# Database is on Render (PostgreSQL), so we always use PostgreSQL connection options
 engine_options = {
     'pool_pre_ping': True,
+    'connect_args': {'connect_timeout': 5}
 }
-# Only pass connect_timeout for non-SQLite drivers
-if not app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
-    engine_options['connect_args'] = {'connect_timeout': 5}
 
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
@@ -312,6 +319,7 @@ def find_runnable_scripts():
         'app.py',  # Main application file
         'verify_members.py',  # Scheduled cron job, not a one-time script
         'intervals_icu.py',  # Library module, not a script
+        'add_trial_start_date_column.py',  # Already handled by migration/auto-script
     }
     
     # Directories to exclude

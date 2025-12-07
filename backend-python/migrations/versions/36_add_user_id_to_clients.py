@@ -40,11 +40,17 @@ def upgrade():
     if table_exists('clients'):
         if not column_exists('clients', 'user_id'):
             print("Adding user_id column to clients table...")
-            # Add column without FK constraint (SQLite limitation)
-            # The FK will be enforced by SQLAlchemy ORM
+            # Add column with foreign key constraint (PostgreSQL on Render)
             with op.batch_alter_table('clients', schema=None) as batch_op:
                 batch_op.add_column(
                     sa.Column('user_id', sa.Integer(), nullable=True)
+                )
+                # Add foreign key constraint
+                batch_op.create_foreign_key(
+                    'fk_clients_user_id',
+                    'users',
+                    ['user_id'],
+                    ['id']
                 )
             # Create index if it doesn't exist
             try:

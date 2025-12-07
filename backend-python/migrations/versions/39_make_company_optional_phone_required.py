@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '39_make_company_optional_phone_required'
-down_revision = '38_add_auth_providers'
+down_revision = 'fc4d8a813095'  # Points to merge head
 branch_labels = None
 depends_on = None
 
@@ -54,6 +54,7 @@ def upgrade():
             conn.commit()
             
             print("Making 'phone' column NOT NULL...")
+            # PostgreSQL on Render - use ALTER COLUMN
             op.alter_column('clients', 'phone',
                           existing_type=sa.String(length=50),
                           nullable=False)
