@@ -16,3 +16,6 @@ pywebpush==1.14.0
 web3==6.15.1
 eth-utils==2.3.1
 psycopg2-binary==2.9.10
+google-auth==2.25.2
+google-auth-oauthlib==1.2.0
+eth-account==0.10.0

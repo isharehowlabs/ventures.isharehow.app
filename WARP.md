@@ -6,367 +6,967 @@ Full-stack application with React/TypeScript frontend and Python Flask backend, 
 - **Frontend**: https://ventures.isharehow.app
 - **Backend API**: https://api.ventures.isharehow.app
 - **Framework**: Next.js (React/TypeScript)
-- **Backend**: Python Flask with PostgreSQL
+- **Backend**: Python Flask with PostgreSQL (10,763 lines)
 - **Real-time**: Socket.io for live updates
+- **Database**: PostgreSQL on Render
 
-## Recent Work: Tasks Feature Fix (Dec 4, 2025)
+---
 
-### Problem
-Tasks feature was not working due to:
-1. Auth requests timing out after 5 seconds
-2. Tasks endpoints requiring authentication (@require_session)
-3. Socket.io connections working but operations failing
+## 🚨 CURRENT STATE - Ready for Database & Auth Rework (Dec 7, 2025)
 
-### Solution Implemented
-1. **Backend** (`backend-python/app.py`):
-   - Removed `@require_session` from UPDATE task endpoint (line 3814)
-   - Removed `@require_session` from DELETE task endpoint (line 3845)
-   - Tasks now work with optional authentication
+### Recent Updates Detected
 
-2. **Frontend** (`src/hooks/useAuth.ts`):
-   - Increased auth timeout from 5s to 15s (line 115)
-   - Better handling of slow connections
+#### 1. **Database Schema Changes** (3 New Migrations)
+Three migrations were added to transition from Patreon to Shopify/Bold Subscriptions:
 
-3. **Improvements**:
-   - Added debugging logs for task creation
-   - Prevented duplicate task creation calls
-   - Improved state management with useRef
+**Migration 35**: `add_client_id_to_support_requests`
+- Adds `client_id` (String 36, FK to clients.id) to `support_requests` table
+- Creates index `ix_support_requests_client_id`
+- Links support requests to client accounts
 
-### Tasks API Endpoints
+**Migration 36**: `add_user_id_to_clients`
+- Adds `user_id` (Integer, FK to users.id) to `clients` table
+- Creates index `ix_clients_user_id`
+- Enables clients to have associated user accounts
+
+**Migration 37**: `replace_patreon_with_shopify`
+- **NEW COLUMNS** on `users` table:
+  - `has_subscription_update` (Boolean, default False)
+  - `subscription_update_active` (Boolean, default False)
+  - `shopify_customer_id` (String 50, indexed)
+  - `bold_subscription_id` (String 50, indexed)
+- **KEPT**: Old Patreon columns (for backward compatibility)
+  - `patreon_id`, `access_token`, `refresh_token`, `patreon_connected`, `token_expires_at`
+- Shopify/Bold integration is **prepared but not fully implemented**
+
+---
+
+### 2. **Current User/Auth System Architecture**
+
+#### **User Model** (`users` table) - Authentication User
+Located: `backend-python/app.py` lines 486-560
+
+**Core Fields**:
+- `id` (Integer, PK)
+- `username` (String 80, unique, indexed)
+- `email` (String 120, unique, indexed)
+- `password_hash` (String 255)
+- `created_at`, `updated_at` (DateTime)
+
+**Deprecated Patreon Fields** (marked for removal):
+- `patreon_id` (String 50, unique, indexed)
+- `access_token`, `refresh_token` (Text)
+- `patreon_connected` (Boolean)
+- `token_expires_at` (DateTime)
+
+**New Shopify/Bold Fields**:
+- `has_subscription_update` (Boolean)
+- `subscription_update_active` (Boolean)
+- `shopify_customer_id` (String 50, indexed)
+- `bold_subscription_id` (String 50, indexed)
+- `membership_paid` (Boolean, default False)
+
+**Access Control**:
+- `is_employee` (Boolean, indexed)
+- `is_admin` (Boolean, indexed)
+- `last_checked` (DateTime)
+
+**Web3/ENS Fields**:
+- `ens_name` (String 255, unique, indexed) - e.g. "user.isharehow.eth"
+- `crypto_address` (String 42, indexed) - Ethereum address
+- `content_hash` (String 255) - IPFS content hash
+
+**Methods**:
+- `set_password(password)` - bcrypt hashing
+- `check_password(password)` - bcrypt verification
+- `to_dict()` - Serialization for API responses
+
+**Relationships**:
+- One-to-many with `clients` (via `user_id`)
+- One-to-many with `notifications`
+
+---
+
+#### **UserProfile Model** (`user_profiles` table) - Wellness/App Data
+Located: `backend-python/app.py` lines 607-650
+
+**Core Fields**:
+- `id` (String 36, PK) - ENS name or Patreon user ID
+- `email` (String 255, unique)
+- `name` (String 200)
+- `avatar_url` (Text)
+
+**Membership**:
+- `patreon_id` (String 50, nullable)
+- `membership_tier` (String 50)
+- `is_paid_member` (Boolean)
+- `is_employee` (Boolean) - renamed from isTeamMember
+- `membership_renewal_date` (DateTime)
+- `lifetime_support_amount` (Numeric 10,2)
+
+**Web3/ENS**:
+- `ens_name` (String 255, unique, indexed)
+- `crypto_address` (String 42, indexed)
+- `content_hash` (String 255)
+
+**Related Models**:
+- `AuraProgress` - Physical/Mental/Spiritual/etc progress (0-100)
+- `Achievement` - User achievements
+- `UserAPIKey` - Encrypted API keys for services
+- `IntervalsActivityData` - Fitness tracking
+- `IntervalsMenstrualData` - Cycle tracking
+
+---
+
+#### **Client Model** (`clients` table) - CRM/Business Clients
+Located: `backend-python/app.py` lines 7940-7982
+
+**Core Fields**:
+- `id` (String 36, PK, UUID)
+- `name` (String 200)
+- `email` (String 255, unique, indexed)
+- `company` (String 200)
+- `phone` (String 50, nullable)
+- `status` (String 20) - pending, active, inactive, prospect
+- `tier` (String 50, nullable) - starter, professional, enterprise
+- `notes` (Text)
+- `tags` (Text) - JSON array
+
+**NEW Link to User**:
+- `user_id` (Integer, FK to users.id, indexed) - **NEW in Migration 36**
+- Enables client to have an associated login account
+
+**Relationships**:
+- `employee_assignments` (ClientEmployeeAssignment)
+- `dashboard_connections` (ClientDashboardConnection)
+- `user` (back-reference to User model)
+
+**to_dict() includes**:
+- `userId`, `hasAccount` - NEW fields
+- `assignedEmployee` - From employee_assignments
+- `systemsConnected` - From dashboard_connections
+
+---
+
+#### **SupportRequest Model** (`support_requests` table)
+Located: `backend-python/app.py` lines 8018-8060
+
+**Core Fields**:
+- `id` (String 36, PK, UUID)
+- `client_id` (String 36, FK to clients.id, indexed) - **NEW in Migration 35**
+- `client_name` (String 200, nullable) - Fallback display name
+- `subject` (String 255)
+- `description` (Text)
+- `priority` (String 20) - low, medium, high, urgent
+- `status` (String 20) - open, in-progress, resolved, closed
+- `assigned_to` (String 200, nullable)
+- `created_at`, `updated_at` (DateTime)
+
+**NEW Link to Client**:
+- Support requests can now be linked to client records
+- `to_dict()` returns `linkedTasksCount` from Task model
+
+---
+
+### 3. **Authentication System**
+
+#### JWT-Based Auth (httpOnly cookies)
+- **Token Generation**: `/api/auth/login`, `/api/auth/register`
+- **Token Validation**: `@jwt_required()` decorator
+- **Current User**: `get_jwt_identity()` returns user_id
+- **Timeout**: 15 seconds (increased from 5s on Dec 4)
+
+#### Auth Endpoints
+Located: `backend-python/app.py` lines 2060-2500
+
+**Registration** - `/api/auth/register` (POST)
+- Checks `DB_AVAILABLE`, reconnects if needed
+- Creates new User with bcrypt password
+- Returns JWT token
+
+**Login** - `/api/auth/login` (POST)
+- Validates credentials with bcrypt
+- Returns JWT token + user data
+- Includes Shopify/Bold fields in response
+
+**Current User** - `/api/auth/me` (GET, jwt_required optional)
+- Returns authenticated user info
+- Includes: userId, username, email, isPaidMember, isEmployee, isAdmin
+- Includes: hasSubscriptionUpdate, subscriptionUpdateActive
+- Includes: shopifyCustomerId, boldSubscriptionId
+
+#### Database Connection Handling
+Both login and register endpoints:
+1. Check `DB_AVAILABLE` global flag
+2. Attempt reconnection if false: `db.engine.connect()`
+3. Set `DB_AVAILABLE = True` on success
+4. Return 500 error if database unavailable
+
+---
+
+### 4. **Shopify/Bold Subscriptions Integration** (Partial)
+
+#### Configuration
+Located: `backend-python/app.py` lines 6623-6638
+
+```python
+# Environment Variables Required:
+BOLD_SUBSCRIPTIONS_API_KEY = os.environ.get('BOLD_SUBSCRIPTIONS_API_KEY', '')
+BOLD_SUBSCRIPTIONS_SHOP_DOMAIN = os.environ.get('BOLD_SUBSCRIPTIONS_SHOP_DOMAIN', '0e1cwk-u0.myshopify.com')
 ```
-GET    /api/tasks          - List all tasks (no auth required)
-POST   /api/tasks          - Create task (no auth required)
-PUT    /api/tasks/<id>     - Update task (no auth required)
-DELETE /api/tasks/<id>     - Delete task (no auth required)
+
+#### Webhook Endpoint
+`/api/shopify/webhook` (POST) - Line 6658
+- Verifies HMAC signature
+- Handles Shopify webhook events
+- **Status**: Skeleton exists, needs implementation
+
+#### GraphQL Client
+`shopify_graphql(query, variables)` - Line 882
+- Makes GraphQL requests to Shopify API
+- Used for product/order queries
+
+#### Current Usage
+- PRODUCTS_QUERY - Fetches products (line 964)
+- ORDERS_QUERY - Fetches orders (line 990)
+- Checkout URL generation for clients (line 6189)
+
+**Status**: Infrastructure exists but subscription management not fully implemented
+
+---
+
+### 5. **Tasks Feature** (Fully Working)
+
+#### Recent Changes (Dec 4, 2025)
+- Removed `@require_session` from UPDATE/DELETE endpoints
+- Tasks work with **optional authentication**
+- Assignment fields added: `createdBy`, `assignedTo`, `createdByName`, `assignedToName`
+- Socket.io event: `task_assigned`
+
+#### API Endpoints
+```
+GET    /api/tasks          - List all tasks (no auth)
+POST   /api/tasks          - Create task (no auth)
+PUT    /api/tasks/<id>     - Update task (no auth)
+DELETE /api/tasks/<id>     - Delete task (no auth)
 ```
 
-### Task Model
-```typescript
-{
-  id: string;
-  title: string;
-  description: string;
-  hyperlinks: string[];
-  status: 'pending' | 'in-progress' | 'completed';
-  supportRequestId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-```
+#### Task Model Fields
+- `id`, `title`, `description`, `hyperlinks[]`, `status`
+- `supportRequestId` - Link to support request
+- `createdBy`, `createdByName` - Creator info
+- `assignedTo`, `assignedToName` - Assignment info
+- `createdAt`, `updatedAt` - Timestamps
 
-## Architecture
+---
+
+## 🎯 DATABASE & AUTH REWORK SCOPE
+
+### Issues Identified
+
+1. **Dual User Systems**
+   - `User` (authentication) and `UserProfile` (wellness data) are separate
+   - Overlap in fields: email, name, ENS, crypto address
+   - Potential for data inconsistency
+   - Migration 36 adds `user_id` to clients, suggesting unification intent
+
+2. **Patreon Legacy Code**
+   - Deprecated fields still in User model
+   - Migration 37 keeps old Patreon columns "for backward compatibility"
+   - Access tokens stored (security concern)
+   - Should be removed entirely
+
+3. **Incomplete Shopify Integration**
+   - Fields exist but webhook logic incomplete
+   - No subscription management endpoints
+   - No Bold Subscriptions API integration
+   - Checkout flow references but not implemented
+
+4. **Client-User Relationship**
+   - Migration 36 adds `user_id` to clients
+   - Clients can now have user accounts
+   - Support requests link to clients (Migration 35)
+   - **Question**: Should clients authenticate differently from regular users?
+
+5. **Authentication Complexity**
+   - JWT with httpOnly cookies
+   - Database reconnection logic in every auth endpoint
+   - Optional auth for tasks (intentional design)
+   - No refresh token mechanism visible
+
+6. **Web3/ENS Integration**
+   - Fields exist in both User and UserProfile
+   - ENS name used as profile ID
+   - Content hash for IPFS
+   - **Question**: Should this be the primary auth method?
+
+---
+
+### Recommended Rework Plan
+
+#### Phase 1: User Model Consolidation
+- [ ] Merge `User` and `UserProfile` into single `User` model
+- [ ] Decide on primary ID: Integer vs UUID vs ENS name
+- [ ] Remove all Patreon-related fields
+- [ ] Keep Web3/ENS fields (future-proofing)
+- [ ] Add `user_type` field: 'customer', 'client', 'employee', 'admin'
+- [ ] Migrate existing data from UserProfile to User
+
+#### Phase 2: Client-User Relationship
+- [ ] Keep `clients` table for CRM data
+- [ ] Use `user_id` FK to link to User account
+- [ ] Clients who need login get a User record with type='client'
+- [ ] Support requests link to clients, clients link to users
+- [ ] Tasks can be assigned to any user (employee or client)
+
+#### Phase 3: Shopify/Bold Implementation
+- [ ] Complete webhook handlers
+- [ ] Add subscription management endpoints:
+  - GET /api/subscriptions/status
+  - POST /api/subscriptions/create
+  - PUT /api/subscriptions/update
+  - DELETE /api/subscriptions/cancel
+- [ ] Implement Bold Subscriptions API calls
+- [ ] Sync subscription status to User.membership_paid
+- [ ] Add subscription_tier field
+
+#### Phase 4: Authentication Modernization
+- [ ] Add refresh token mechanism
+- [ ] Improve database reconnection (connection pooling)
+- [ ] Add password reset flow
+- [ ] Add email verification
+- [ ] Add OAuth options (Google, GitHub) if needed
+- [ ] Consider Web3 wallet auth (ENS/Ethereum)
+
+#### Phase 5: Migration Strategy
+- [ ] Write Alembic migrations for schema changes
+- [ ] Create data migration scripts
+- [ ] Test migration on staging database
+- [ ] Plan rollback strategy
+- [ ] Update API documentation
+- [ ] Update frontend to use new fields
+
+---
+
+## 📊 Current Database Schema Summary
+
+### Core Tables
+1. **users** (auth) - 486-560
+   - Authentication, permissions, subscriptions
+   - Links: clients (via user_id), notifications
+
+2. **user_profiles** (wellness) - 607-650
+   - Wellness data, membership, progress
+   - Links: aura_progress, achievements, api_keys, intervals data
+
+3. **clients** (CRM) - 7940-7982
+   - Business clients, CRM info
+   - **NEW**: user_id link (Migration 36)
+   - Links: employee_assignments, dashboard_connections, user
+
+4. **support_requests** - 8018-8060
+   - Support tickets
+   - **NEW**: client_id link (Migration 35)
+   - Links: tasks (via support_request_id)
+
+5. **tasks** - 3800-3900 (approx)
+   - Task management with assignments
+   - Optional auth, Socket.io events
+
+### Supporting Tables
+- `notifications` - User notifications
+- `aura_progress` - Wellness metrics
+- `achievements` - User achievements
+- `user_api_keys` - Encrypted service credentials
+- `intervals_activity_data` - Fitness tracking
+- `intervals_menstrual_data` - Cycle tracking
+- `client_employee_assignments` - Employee-to-client mapping
+- `client_dashboard_connections` - System integrations
+- `subscriptions` - Subscription records (separate from user)
+
+---
+
+## 🔧 Architecture
 
 ### Backend Structure
 - **Location**: `backend-python/`
-- **Main file**: `app.py` (Flask application)
-- **Database**: PostgreSQL (hosted on Render)
-- **Deployment**: Automatic via Git push to GitHub → Render
+- **Main File**: `app.py` (10,763 lines)
+- **Database**: PostgreSQL on Render
+- **ORM**: SQLAlchemy with Flask-SQLAlchemy
+- **Migrations**: Alembic (versions/ folder)
+- **Deployment**: Auto-deploy via GitHub → Render
 
 ### Frontend Structure
-- **Hooks**: `src/hooks/` (useAuth.ts, useTasks.ts)
-- **Components**: `src/components/`
-- **Utils**: `src/utils/` (backendUrl.ts, socket.ts)
+- **Framework**: Next.js with TypeScript
+- **Hooks**: 
+  - `useAuth.ts` - Authentication (15s timeout)
+  - `useTasks.ts` - Tasks with Socket.io
+  - `useRiseJourney.ts` - Rise Journey feature
+- **Utils**:
+  - `backendUrl.ts` - API base URL
+  - `socket.ts` - Socket.io client
 
-### Key Files
-- `backend-python/app.py` - Main Flask server with all API endpoints
-- `src/hooks/useTasks.ts` - Tasks state management with Socket.io
-- `src/utils/socket.ts` - Socket.io client setup
-- `src/utils/backendUrl.ts` - Backend URL configuration
+---
 
-## Development Workflow
+## 📋 TODO: Database & Auth Rework
 
-### Backend Deployment
-1. Make changes to `backend-python/app.py`
-2. Commit: `git add backend-python/app.py && git commit -m "message"`
+### Immediate Actions (This Session)
+- [x] Document current state in WARP.md
+- [ ] Create database schema diagram
+- [ ] List all tables and relationships
+- [ ] Identify data to migrate vs drop
+- [ ] Draft new User model schema
+- [ ] Plan migration sequence
+- [ ] Estimate breaking changes for frontend
+
+### Next Steps
+- [ ] Review and approve new schema design
+- [ ] Write Alembic migration scripts
+- [ ] Create data migration utilities
+- [ ] Update API endpoints
+- [ ] Update frontend hooks/types
+- [ ] Test authentication flows
+- [ ] Test Shopify webhook integration
+- [ ] Deploy to staging
+- [ ] Test end-to-end
+- [ ] Deploy to production
+
+---
+
+## 🚀 Deployment
+
+### Backend
+1. Changes to `backend-python/app.py`
+2. Commit: `git add . && git commit -m "message"`
 3. Push: `git push origin master`
 4. Render auto-deploys (2-5 minutes)
+5. Check logs at Render dashboard
 
-### Local Backend (not typically used, deployed on Render)
+### Database Migrations
 ```bash
 cd backend-python
-python3 app.py  # Requires Flask and dependencies
+# Generate migration
+alembic revision --autogenerate -m "description"
+# Review migration in migrations/versions/
+# Apply migration
+alembic upgrade head
 ```
 
-### Frontend Development
-The frontend is built as a static Next.js export and served from this directory.
+### Frontend
+- Built as static Next.js export
+- Served from current directory
+- Build: `npm run build`
+- Deploy: Push to repository
 
-## Important Notes
+---
 
-### Authentication
-- JWT-based authentication with httpOnly cookies
-- Auth is OPTIONAL for tasks feature
-- Auth timeout: 15 seconds
-- Backend handles auth via `/api/auth/me` endpoint
+## 🐛 Troubleshooting
 
-### Socket.io
-- Separate socket instances for general and tasks
-- Auto-reconnect with max 3 attempts
-- Events: `task_created`, `task_updated`, `task_deleted`
+### Database Connection Issues
+- Check `DB_AVAILABLE` flag
+- Verify DATABASE_URL environment variable
+- Check Render database status
+- Review connection pool settings
 
-### No Web3 Dependencies
-Tasks feature uses simple Python/Node backend only - no Web3 framework or blockchain dependencies.
+### Authentication Errors
+- Verify JWT token in cookies
+- Check token expiration
+- Confirm user exists in database
+- Review CORS settings
 
-## Troubleshooting
+### Migration Issues
+- Check Alembic version history: `alembic current`
+- View pending migrations: `alembic history`
+- Rollback if needed: `alembic downgrade -1`
+- Always test migrations on staging first
 
-### Tasks Not Working
-1. Check Render backend is running: `curl https://api.ventures.isharehow.app/api/tasks`
-2. Check browser console for Socket.io connection status
-3. Verify auth timeout errors are gone (was 5s, now 15s)
+---
 
-### Backend Issues
-- Check Render dashboard for deployment status
-- View logs at Render.com console
-- Backup exists at `backend-python/app.py.backup-tasks`
+## 📝 Recent Commits
 
-### Database
-- PostgreSQL hosted on Render
-- Connection configured in `.env` file (not in repo)
-- Task model: id, title, description, hyperlinks, status, support_request_id
-
-## Git Commit (Dec 4, 2025)
 ```
-commit a008cdef
-Fix tasks feature: remove auth requirements and increase timeout
-
-- Remove @require_session decorator from UPDATE and DELETE tasks endpoints
-- Tasks now work without authentication (optional auth)
-- Increase auth timeout from 5s to 15s for slower connections
-- Add debugging logs for task creation
-- Improve task state management with useRef for lastUpdated
-- Prevent duplicate task creation calls
+b7c001a3 (HEAD) Build: Update production files 2025-12-06 21:21:56
+db728240 push
+21c70f92 push
+a3020315 pushing
+6f33c7d6 Build: Update production files 2025-12-06 19:38:33
+752cce23 saving
+e8c8b4cb Build: Update production files 2025-12-06 19:18:25
+ca469d8c Build: Update production files 2025-12-06 18:39:31
+17f8d32c Fix syntax error in GET support-requests endpoint
+2b60443c Remove auth from support requests endpoints
 ```
 
-## Task Assignment Features (Dec 4, 2025 - Latest)
+**Key Changes**: 
+- 3 new migrations (35, 36, 37)
+- Support requests link to clients
+- Clients link to users
+- Shopify/Bold fields added
+- Support request endpoints updated
 
-### New Features Added
-- **Task Creator Tracking**: Every task now tracks who created it
-- **User Assignment**: Tasks can be assigned to specific users
-- **Real-time Notifications**: Users get notified via Socket.io when assigned a task
-- **Timestamps**: Created and updated timestamps already existed
+---
 
-### Task Model Fields (Complete)
+## 📚 References
+
+- **Backend API**: https://api.ventures.isharehow.app
+- **Frontend**: https://ventures.isharehow.app
+- **GitHub**: https://github.com/\[repo-name\]
+- **Render Dashboard**: https://dashboard.render.com
+- **PostgreSQL**: Hosted on Render
+- **Alembic Docs**: https://alembic.sqlalchemy.org/
+- **Flask-SQLAlchemy**: https://flask-sqlalchemy.palletsprojects.com/
+
+---
+
+**Last Updated**: December 7, 2025
+**Status**: Ready for Database & Authentication System Rework
+**Backend Lines**: 10,763
+**Migrations Pending**: None (all applied)
+**Breaking Changes**: High probability with consolidation
+
+---
+
+## 🌐 WEB3 ACCOUNT LOGIN FEATURES - Current Implementation
+
+**Last Scanned**: December 7, 2025
+
+### Overview
+Your system has **partial Web3/ENS integration** with infrastructure in place but **NO wallet-based authentication**. The features are primarily **display/informational** rather than authentication mechanisms.
+
+---
+
+### ✅ What EXISTS
+
+#### 1. **Backend Web3/ENS Infrastructure** (Lines 46-448)
+
+**Dependencies**:
+- `web3==6.15.1` installed in requirements.txt
+- `from web3 import Web3`
+- `from ens import ENS`
+
+**Configuration** (Lines 349-369):
+```python
+ENS_DOMAIN = 'isharehow.eth'
+ENS_PROVIDER_URL = os.environ.get('ENS_PROVIDER_URL', 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY')
+ENS_PRIVATE_KEY = os.environ.get('ENS_PRIVATE_KEY')  # Optional, for setting records
+
+# Initialization
+w3 = Web3(Web3.HTTPProvider(ENS_PROVIDER_URL))
+ens = ENS.from_web3(w3)
+```
+
+**Status**: 
+- ✅ Module loads successfully
+- ⚠️ Requires valid Infura key in environment
+- ⚠️ Currently uses placeholder: "YOUR_INFURA_KEY"
+
+---
+
+#### 2. **ENS Helper Functions** (Lines 372-448)
+
+**`username_to_ens_name(username: str)`**
+- Converts username to format: `username.isharehow.eth`
+- Normalizes: lowercase, removes spaces
+- Example: "Alice" → "alice.isharehow.eth"
+
+**`resolve_ens_to_address(ens_name: str)`**
+- Resolves ENS name to Ethereum address
+- Returns checksummed address (0x...)
+- Returns None if not found or Web3 unavailable
+
+**`get_ens_content_hash(ens_name: str)`**
+- Retrieves IPFS content hash from ENS resolver
+- Returns hex string (0x...)
+- Used for decentralized profile storage
+
+**`set_ens_content_hash(ens_name: str, ipfs_hash: str, private_key: str)`**
+- **STUB FUNCTION** - Not implemented
+- Would require wallet integration
+- Currently returns False
+
+**`resolve_or_create_ens(user_id: int, username: str)`** (Lines 429-448)
+- Called during user registration
+- Generates ENS name from username
+- Attempts to resolve to crypto address
+- Fetches content hash if available
+- Returns dict with: `ens_name`, `crypto_address`, `content_hash`
+
+---
+
+#### 3. **Database Fields - User Model** (Lines 508-510)
+
+```python
+ens_name = db.Column(db.String(255), unique=True, nullable=True, index=True)
+crypto_address = db.Column(db.String(42), nullable=True, index=True)  
+content_hash = db.Column(db.String(255), nullable=True)
+```
+
+**Also in UserProfile Model** (Lines 620-622):
+```python
+ens_name = db.Column(db.String(255), unique=True, nullable=True, index=True)
+crypto_address = db.Column(db.String(42), nullable=True, index=True)
+content_hash = db.Column(db.String(255), nullable=True)
+```
+
+**Usage**:
+- Stored on user registration (Line 2167-2169)
+- Displayed in profile and Web3 dashboard
+- Used as alternative user ID (Line 526-527)
+- **NOT used for authentication**
+
+---
+
+#### 4. **API Endpoint: Verify ENS** (Lines 3287-3350)
+
+**`POST /api/profile/verify-ens`** (@jwt_required)
+
+**Purpose**: Refresh/update ENS data for authenticated user
+
+**Flow**:
+1. Get current user from JWT
+2. Resolve ENS name from username
+3. Fetch crypto address and content hash from blockchain
+4. Update User table with resolved data
+5. Update UserProfile table (if exists)
+6. Return updated ENS data
+
+**Usage**: Called manually to sync blockchain data, not for login
+
+---
+
+#### 5. **Frontend Web3 Support**
+
+**Dependencies** (package.json):
+- `ethers@6.16.0` - Ethereum JavaScript library
+- `@pushprotocol/restapi@1.7.32` - Push Protocol chat
+
+**Type Definitions** (src/types/window.d.ts):
 ```typescript
-{
-  id: string;
-  title: string;
-  description: string;
-  hyperlinks: string[];
-  status: 'pending' | 'in-progress' | 'completed';
-  supportRequestId?: string;
-  
-  // NEW: Assignment fields
-  createdBy?: string;        // User ID who created the task
-  createdByName?: string;    // Display name of creator
-  assignedTo?: string;       // User ID assigned to the task
-  assignedToName?: string;   // Display name of assigned user
-  
-  createdAt: string;
-  updatedAt: string;
+interface Window {
+  ethereum?: {
+    request: (args: { method: string; params?: any[] }) => Promise<any>;
+    on?: (event: string, handler: (...args: any[]) => void) => void;
+    isMetaMask?: boolean;
+  };
 }
 ```
 
-### API Usage
-
-#### Create Task with Assignment
+**User Interface** (src/hooks/useAuth.ts, lines 27-29):
 ```typescript
-const { createTask } = useTasks();
-await createTask(
-  'Task Title',
-  'Description',
-  ['https://link.com'],
-  'pending',
-  'user123',           // assignedTo (optional)
-  'John Doe'           // assignedToName (optional)
-);
+interface User {
+  ensName?: string;
+  cryptoAddress?: string;
+  contentHash?: string;
+  // ... other fields
+}
 ```
 
-#### Update Task Assignment
+---
+
+#### 6. **Push Protocol Chat Integration** (src/hooks/usePushChat.ts)
+
+**Purpose**: Decentralized chat using Web3 wallet authentication
+
+**Features**:
+- Connects to user's MetaMask/Web3 wallet
+- Requests account access: `window.ethereum.request({ method: 'eth_requestAccounts' })`
+- Creates ethers signer from wallet
+- Initializes Push Protocol with wallet signature
+- Enables wallet-to-wallet messaging
+
+**Flow**:
 ```typescript
-const { updateTask } = useTasks();
-await updateTask(taskId, {
-  assignedTo: 'user456',
-  assignedToName: 'Jane Smith'
-});
+1. Check for window.ethereum
+2. Request wallet connection
+3. Create ethers.BrowserProvider(window.ethereum)
+4. Get signer from provider
+5. Initialize Push Protocol with signer
+6. Set up real-time chat streams
 ```
 
-### Socket.io Events
-- `task_created` - When a task is created
-- `task_updated` - When a task is updated
-- `task_deleted` - When a task is deleted
-- `task_assigned` - **NEW**: When a task is assigned to a user
+**Status**: 
+- ✅ Fully implemented for chat feature
+- ✅ Uses wallet for signing messages
+- ❌ **NOT integrated with main authentication system**
+- Push chat is separate from login/registration
 
-Listen for assignment notifications:
-```typescript
-socket.on('task_assigned', (data) => {
-  console.log('Task assigned:', data.task);
-  console.log('Assigned to:', data.assignedToName);
-  console.log('Created by:', data.createdByName);
-});
+---
+
+#### 7. **Web3Panel Component** (src/components/dashboard/Web3Panel.tsx)
+
+**Purpose**: Display Web3 identity and blockchain data
+
+**Features**:
+- Shows ENS domain (e.g., "alice.isharehow.eth")
+- Shows Ethereum address with Etherscan link
+- Shows IPFS content hash
+- Displays crypto balance (ETH)
+- Shows recent transactions
+- Shows current ETH price
+
+**API Calls**:
+- `GET /api/web3/balance` (credentials: include)
+- `GET /api/web3/transactions` (credentials: include)
+- `GET /api/web3/price` (credentials: include)
+
+**Status**:
+- ✅ Component exists and renders
+- ⚠️ Backend endpoints `/api/web3/*` **DO NOT EXIST**
+- Component will show loading/error states
+- Displays ENS data from user profile
+
+---
+
+### ❌ What DOES NOT EXIST
+
+#### 1. **Wallet-Based Authentication**
+- ❌ No "Sign in with Ethereum" button
+- ❌ No message signing for login verification
+- ❌ No nonce generation for wallet auth
+- ❌ No signature verification endpoint
+- ❌ Cannot login with just a wallet (MetaMask/WalletConnect)
+
+**Current Auth**: Username/password OR Patreon OAuth only
+
+---
+
+#### 2. **Web3 API Endpoints**
+Missing backend routes:
+- ❌ `/api/web3/balance` - Referenced in Web3Panel but doesn't exist
+- ❌ `/api/web3/transactions` - Referenced in Web3Panel but doesn't exist
+- ❌ `/api/web3/price` - Referenced in Web3Panel but doesn't exist
+- ❌ `/api/auth/wallet/nonce` - For wallet auth nonce
+- ❌ `/api/auth/wallet/verify` - For signature verification
+- ❌ `/api/auth/wallet/login` - For wallet-based login
+
+---
+
+#### 3. **Wallet Connection in Auth Flow**
+- ❌ No wallet connect button on login page
+- ❌ No option to link wallet to existing account
+- ❌ No wallet as primary authentication method
+- ❌ No session tied to wallet address
+- ❌ No automatic account creation from wallet
+
+**Current**: ENS fields are populated AFTER traditional registration, not used FOR registration
+
+---
+
+#### 4. **ENS Record Writing**
+- ❌ `set_ens_content_hash()` is a stub (line 410-429)
+- ❌ No endpoint to update ENS records
+- ❌ No wallet transaction signing for on-chain updates
+- ❌ Cannot set avatar, URL, or other ENS text records
+
+**Reason**: Requires wallet integration and gas fees
+
+---
+
+#### 5. **Smart Contract Integration**
+- ❌ No smart contract ABIs
+- ❌ No contract interaction endpoints
+- ❌ No token gating (NFT/token ownership for access)
+- ❌ No on-chain subscription verification
+- ❌ No blockchain payments
+
+---
+
+#### 6. **Multi-Chain Support**
+- ❌ Only Ethereum mainnet configured
+- ❌ No support for Polygon, Arbitrum, Base, etc.
+- ❌ No chain switching
+- ❌ No multi-wallet support (only expects MetaMask)
+
+---
+
+### 🔄 Current Web3 Flow
+
+#### Registration Flow (Line 2159-2185)
+```
+User registers with username/email/password
+    ↓
+Backend calls resolve_or_create_ens(username)
+    ↓
+Generates ENS name: username.isharehow.eth
+    ↓
+Attempts to resolve to Ethereum address (likely fails)
+    ↓
+Stores ENS name, address (null), content_hash (null) in DB
+    ↓
+User is created with traditional auth
 ```
 
-### Database Migration
-Before deploying, run the migration to add new columns:
+**Result**: User has an ENS field, but it's not connected to a real wallet
+
+---
+
+#### ENS Verification Flow (Line 3287-3350)
+```
+Authenticated user calls POST /api/profile/verify-ens
+    ↓
+Backend resolves username.isharehow.eth
+    ↓
+Checks blockchain for:
+  - Ethereum address owner
+  - IPFS content hash
+    ↓
+Updates User and UserProfile tables
+    ↓
+Returns updated data
+```
+
+**Limitation**: Only works if ENS name is actually registered on blockchain
+
+---
+
+#### Push Chat Flow (usePushChat.ts)
+```
+User clicks "Connect Wallet" in chat
+    ↓
+Request MetaMask connection
+    ↓
+Get signer from wallet
+    ↓
+Initialize Push Protocol with wallet signature
+    ↓
+Enable decentralized messaging
+```
+
+**Note**: This is **separate** from login - user must already be logged in via traditional auth
+
+---
+
+### 🎯 What Would Be Needed for Full Web3 Login
+
+#### Phase 1: Basic Wallet Auth
+1. **Frontend**:
+   - Add "Connect Wallet" button to login page
+   - Request wallet connection via `window.ethereum`
+   - Get wallet address
+   - Request nonce from backend
+   - Sign message with wallet: `signer.signMessage(nonce)`
+   - Send signature to backend for verification
+
+2. **Backend**:
+   - `POST /api/auth/wallet/nonce` - Generate random nonce for address
+   - Store nonce temporarily (Redis or DB with expiration)
+   - `POST /api/auth/wallet/verify` - Verify signature
+   - Use `eth_account.messages.encode_defunct(nonce)`
+   - Use `w3.eth.account.recover_message(encoded, signature=signature)`
+   - If valid, find or create User with crypto_address
+   - Return JWT token
+
+3. **Database**:
+   - Index on `crypto_address` (already exists)
+   - `wallet_nonces` table or Redis cache
+   - Link wallet to existing user or create new user
+
+#### Phase 2: Account Linking
+4. Allow existing users to link wallet
+5. Show linked wallets in profile
+6. Support multiple wallets per user
+7. Set primary wallet for login
+
+#### Phase 3: ENS Integration
+8. Use ENS name as username
+9. Fetch ENS avatar for profile picture
+10. Display ENS profile data
+11. Auto-populate from ENS text records
+
+#### Phase 4: Token Gating
+12. Check NFT/token ownership
+13. Grant access based on holdings
+14. Integrate with Shopify for crypto payments
+15. Subscription via smart contract
+
+---
+
+### 📊 Web3 Feature Comparison
+
+| Feature | Status | Location | Notes |
+|---------|--------|----------|-------|
+| ENS name generation | ✅ Implemented | Lines 372-378 | Creates username.isharehow.eth |
+| ENS address resolution | ✅ Implemented | Lines 381-391 | Reads from blockchain |
+| ENS content hash | ✅ Implemented | Lines 394-408 | Reads IPFS hash |
+| ENS record writing | ❌ Stub only | Lines 410-428 | Needs wallet integration |
+| Wallet connection (chat) | ✅ Implemented | usePushChat.ts | Push Protocol only |
+| Wallet authentication | ❌ Missing | N/A | No login with wallet |
+| Signature verification | ❌ Missing | N/A | No backend endpoint |
+| Web3 balance/transactions | ❌ Missing | N/A | Frontend references missing APIs |
+| Smart contracts | ❌ Missing | N/A | No contract interaction |
+| Token gating | ❌ Missing | N/A | No NFT/token checks |
+| Multi-chain | ❌ Missing | N/A | Mainnet only |
+
+---
+
+### 🔧 Environment Variables Required
+
+**Currently Set** (likely):
 ```bash
-cd backend-python
-python3 add_task_assignment_columns.py
+# Not confirmed if these are set in production:
+ENS_PROVIDER_URL=https://mainnet.infura.io/v3/YOUR_INFURA_KEY  # NEEDS REAL KEY
+ENS_PRIVATE_KEY=0x...  # Optional, for ENS record updates
 ```
 
-This will add:
-- `created_by` (VARCHAR 100)
-- `created_by_name` (VARCHAR 200)
-- `assigned_to` (VARCHAR 100)
-- `assigned_to_name` (VARCHAR 200)
-
-All columns are nullable for backward compatibility with existing tasks.
-
-
-## Recent Commits
-```
-commit db11cc62 (HEAD -> master, origin/master)
-Add user assignment and notifications to tasks
-- Task model updated with assignment fields
-- Socket.io notifications for task assignments
-- Database migration script included
-- Frontend Task interface updated
-
-commit a008cdef
-Fix tasks feature: remove auth requirements and increase timeout
-- Removed @require_session from UPDATE and DELETE
-- Increased auth timeout from 5s to 15s
-- Tasks work with optional authentication
+**For Full Web3 Auth** (would need):
+```bash
+WEB3_PROVIDER_URL=https://mainnet.infura.io/v3/YOUR_INFURA_KEY
+WALLET_AUTH_ENABLED=true
+NONCE_EXPIRATION_SECONDS=300
+REDIS_URL=redis://...  # For nonce storage
 ```
 
 ---
 
-## 📋 Prioritized TODO
+### 🚀 Recommendation: Web3 Auth Implementation Priority
 
-**See [TODO_PRIORITIZED.md](TODO_PRIORITIZED.md) for the complete, prioritized task list across all projects.**
+**If you want wallet-based login**, here's the priority order:
 
-The UI Components listed above are **CRITICAL PRIORITY** items - backend is complete and ready for frontend implementation.
+1. **HIGH PRIORITY** (2-3 hours):
+   - Add nonce generation endpoint
+   - Add signature verification endpoint
+   - Basic "Sign in with Ethereum" flow
+   - Link wallet to existing users
 
----
+2. **MEDIUM PRIORITY** (3-4 hours):
+   - Implement missing `/api/web3/*` endpoints
+   - Web3Panel balance/transaction display
+   - ENS avatar fetching
+   - ENS profile data integration
 
-## 📋 Project TODOs - Consolidated Priority List
+3. **LOW PRIORITY** (5+ hours):
+   - Multi-wallet support
+   - Multi-chain support (Polygon, etc.)
+   - Smart contract subscription verification
+   - Token gating features
 
-### 🔴 CRITICAL PRIORITY - Tasks Feature UI (This Week)
-**Status**: Backend 100% complete (deployed Dec 4), UI pending
-**Effort**: 4-6 hours
-**Files**: `src/components/tasks/`, `src/hooks/useTasks.ts`
-
-- [ ] Display task creator and assigned user in task cards
-- [ ] Add user selector/dropdown for assigning tasks
-- [ ] Show toast notification when user receives an assignment
-- [ ] Filter tasks by assigned user
-- [ ] Show "My Tasks" vs "All Tasks" views
-
-**Backend ready**: `createdBy`, `createdByName`, `assignedTo`, `assignedToName` fields exist
-**Socket event ready**: `task_assigned`
-
----
-
-### 🟠 HIGH PRIORITY - Rise Journey Backend Integration
-**Status**: Frontend complete, needs backend APIs
-**Effort**: 8-12 hours
-**Files**: `backend-python/app.py`, `src/hooks/useRiseJourney.ts`
-
-#### Phase 1 - Core APIs (5-6 hours)
-- [ ] GET /api/rise-journey/levels - Fetch all 7 levels
-- [ ] GET /api/rise-journey/progress - Fetch user progress
-- [ ] GET /api/rise-journey/lessons/:id - Fetch lesson details
-- [ ] POST /api/rise-journey/lessons/:id/complete - Mark complete
-- [ ] Implement authentication/user context
-- [ ] Add error handling and loading states
-
-#### Phase 2 - Notes & Journal (3-4 hours)
-- [ ] GET/POST /api/rise-journey/lessons/:id/notes
-- [ ] GET/POST /api/rise-journey/lessons/:id/journal (with pillar)
-- [ ] Connect to wellness journal entries
-- [ ] Connect to goals dashboard
-
-#### Phase 3 - Polish (2-3 hours)
-- [ ] Add celebration animations for completions
-- [ ] Integrate podcast recommendations
-- [ ] Connect to achievements system
-
-**Database tables**: Already exist (migration complete)
-**Frontend hooks**: Ready - `useRiseJourney()`, `useLessonData()`, `useTasks()`
+4. **FUTURE** (10+ hours):
+   - NFT-based access control
+   - On-chain payments
+   - DAO governance integration
+   - Decentralized storage (IPFS profiles)
 
 ---
 
-### 🟠 HIGH PRIORITY - LookUp.Cafe Critical Testing
-**Status**: Feature complete, untested with real users
-**Effort**: 3-4 hours testing
-**Action**: Manual testing with multiple devices
+### ✅ Summary: Web3 Login Status
 
-#### Must-Pass Tests
-- [ ] Room creation generates unique code
-- [ ] Room joining works with valid code
-- [ ] Invalid room code shows error
-- [ ] Room full (16 players) rejection
-- [ ] Player list updates in realtime
-- [ ] Host can start game
-- [ ] Non-host cannot start game
-- [ ] Timer counts down correctly
-- [ ] Drawing syncs across all players
-- [ ] Answers submitted successfully
-- [ ] Scores update correctly
-- [ ] Game end shows final results
-- [ ] Leave room works properly
-- [ ] Host migration works
+**Current State**: 
+- 🟡 **PARTIAL IMPLEMENTATION**
+- Infrastructure exists (web3.py, ethers.js)
+- ENS fields in database
+- Push Protocol chat uses wallet
+- **Cannot login with wallet**
 
-**Testing plan**: Use multiple browsers/devices, monitor Socket.io in dev tools
+**To Enable Wallet Login**:
+1. Add nonce generation
+2. Add signature verification  
+3. Create wallet auth endpoints
+4. Add "Connect Wallet" UI
+5. Link wallets to user accounts
+
+**Estimated Effort**: 4-6 hours for basic wallet authentication
 
 ---
 
-### 🟡 MEDIUM PRIORITY - Rise Journey UX Enhancements
-**Effort**: 6-8 hours (do after backend integration)
+**Next Steps**: Review this assessment and decide if wallet-based authentication should be added during the upcoming database/auth rework.
 
-- [ ] Add accessibility features (ARIA labels, focus management)
-- [ ] Optimize video loading (lazy loading)
-- [ ] Implement offline support (PWA)
-- [ ] Add push notifications for daily activities
-- [ ] Add PDF viewer component (react-pdf)
-- [ ] Implement keyboard shortcuts
-
----
-
-### 🟡 MEDIUM PRIORITY - LookUp.Cafe UI/UX Polish
-**Effort**: 2-3 hours
-
-- [ ] Verify navigation shows LookUp.Cafe correctly
-- [ ] Ensure icons display correctly
-- [ ] Confirm colors match theme
-- [ ] Test responsive on mobile
-- [ ] Add loading states where missing
-- [ ] Improve error messages clarity
-- [ ] Add success feedback
-- [ ] Ensure buttons disabled appropriately
-
----
-
-### 🟢 LOW PRIORITY - Future Feature Expansion
-
-#### LookUp.Cafe Enhancements (20-30 hours)
-- [ ] Chat functionality during games (6-8h)
-- [ ] Custom word lists for drawing game (2-3h)
-- [ ] Mobile-optimized touch controls (2-3h)
-- [ ] Leaderboards and statistics (4-5h)
-- [ ] Spectator mode (3-4h)
-- [ ] More game types (trivia, word games) (5-7h)
-- [ ] Persistent room storage (Redis) (4-5h)
-- [ ] Voice chat integration (8-10h)
-- [ ] Tournament system (10-15h)
-
----
-
-## 🎯 Implementation Roadmap
-
-**Week 1**: Tasks UI (5 tasks, ~5 hours)
-**Week 2-3**: Rise Journey Backend (14 tasks, ~12 hours)
-**Week 4**: LookUp.Cafe Testing (14 tasks, ~4 hours)
-**Week 5+**: Polish & Future Features (as needed)
-
-**Total Outstanding**: 52 prioritized tasks
-**Critical Path**: Tasks UI → Rise Backend → LookUp Testing → Enhancements
-
----

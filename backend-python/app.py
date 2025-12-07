@@ -47,6 +47,39 @@ except ImportError:
 try:
     from web3 import Web3
     from ens import ENS
+
+# Google OAuth imports
+try:
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+    from google_auth_oauthlib.flow import Flow
+    GOOGLE_AUTH_AVAILABLE = True
+    print("✓ Google OAuth libraries loaded successfully")
+except ImportError:
+    GOOGLE_AUTH_AVAILABLE = False
+    print("Warning: google-auth not available. Google OAuth will be disabled.")
+
+# Import our new helper modules
+try:
+    from wallet_auth_helpers import (
+        generate_nonce, verify_nonce, consume_nonce, cleanup_expired_nonces,
+        verify_wallet_signature, generate_user_id_from_email,
+        check_eth_payment_to_isharehow, get_eth_price_usd, 
+        calculate_eth_amount_for_usd, check_user_access_level,
+        format_signing_message
+    )
+    from user_access_control import (
+        UserTier, DashboardType, get_user_tier, get_dashboard_access,
+        can_access_dashboard, get_support_request_limit, start_trial,
+        upgrade_tier, get_upgrade_options, PRICING
+    )
+    WALLET_AUTH_HELPERS_AVAILABLE = True
+    print("✓ Wallet auth and user access control modules loaded")
+except ImportError as e:
+    WALLET_AUTH_HELPERS_AVAILABLE = False
+    print(f"Warning: Helper modules not available: {e}")
+    print("Wallet authentication features will be limited.")
+
     WEB3_AVAILABLE = True
     print("✓ Web3.py and ENS module loaded successfully")
 except ImportError:
@@ -346,27 +379,45 @@ def run_new_scripts_at_startup():
     
     print("="*80 + "\n")
 
-# Web3/ENS Configuration
+# Web3/ENS Configuration - UPDATED TO USE ALCHEMY
 ENS_DOMAIN = 'isharehow.eth'  # Your ENS domain
-ENS_PROVIDER_URL = os.environ.get('ENS_PROVIDER_URL', 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY')
+ALCHEMY_API_KEY = os.environ.get('ALCHEMY_API_KEY', '')
+ALCHEMY_NETWORK = os.environ.get('ALCHEMY_NETWORK', 'eth-mainnet')
+
+# Build Alchemy provider URL
+if ALCHEMY_API_KEY:
+    WEB3_PROVIDER_URL = f'https://{ALCHEMY_NETWORK}.g.alchemy.com/v2/{ALCHEMY_API_KEY}'
+else:
+    # Fallback to Infura if Alchemy not configured
+    WEB3_PROVIDER_URL = os.environ.get('ENS_PROVIDER_URL', 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY')
+
 ENS_PRIVATE_KEY = os.environ.get('ENS_PRIVATE_KEY')  # For setting records (optional)
+ISHAREHOW_ETH_ADDRESS = os.environ.get('ISHAREHOW_ETH_ADDRESS', '0x0000000000000000000000000000000000000000')
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://api.ventures.isharehow.app/api/auth/google/callback')
 
 # Initialize Web3 and ENS if available
 w3 = None
 ens = None
 if WEB3_AVAILABLE:
     try:
-        # Connect to Ethereum mainnet via Infura or other provider
-        w3 = Web3(Web3.HTTPProvider(ENS_PROVIDER_URL))
+        # Connect to Ethereum mainnet via Alchemy or Infura
+        w3 = Web3(Web3.HTTPProvider(WEB3_PROVIDER_URL))
         if w3.is_connected():
             ens = ENS.from_web3(w3)
-            print(f"✓ Web3 connected to Ethereum mainnet")
+            provider_name = "Alchemy" if ALCHEMY_API_KEY else "Infura"
+            print(f"✓ Web3 connected to Ethereum mainnet via {provider_name}")
             print(f"✓ ENS module initialized for domain: {ENS_DOMAIN}")
+            print(f"✓ isharehow.eth address: {ISHAREHOW_ETH_ADDRESS}")
         else:
             print("Warning: Web3 connection failed. ENS features will be limited.")
     except Exception as e:
         print(f"Warning: Failed to initialize Web3/ENS: {e}")
         print("ENS features will be disabled.")
+
 
 # ENS Helper Functions
 def username_to_ens_name(username: str) -> str:
@@ -2652,6 +2703,602 @@ def auth_me():
             'error': 'Database error',
             'message': 'Unable to fetch user information. Please try again later.'
         }), 500
+
+
+# ============================================================================
+# WALLET AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+@app.route('/api/auth/wallet/nonce', methods=['POST', 'OPTIONS'])
+def wallet_nonce():
+    """Generate nonce for wallet authentication"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    if not WALLET_AUTH_HELPERS_AVAILABLE or not WEB3_AVAILABLE:
+        return jsonify({'error': 'Wallet authentication not available'}), 503
+    
+    try:
+        data = request.json
+        address = data.get('address')
+        
+        if not address:
+            return jsonify({'error': 'Wallet address required'}), 400
+        
+        # Validate address format
+        try:
+            checksum_address = Web3.to_checksum_address(address)
+        except Exception:
+            return jsonify({'error': 'Invalid Ethereum address'}), 400
+        
+        # Generate nonce
+        nonce = generate_nonce(checksum_address)
+        message = format_signing_message(nonce)
+        
+        return jsonify({
+            'success': True,
+            'nonce': nonce,
+            'message': message,
+            'address': checksum_address
+        })
+    
+    except Exception as e:
+        print(f"Error generating wallet nonce: {e}")
+        return jsonify({'error': 'Failed to generate nonce', 'details': str(e)}), 500
+
+
+@app.route('/api/auth/wallet/login', methods=['POST', 'OPTIONS'])
+def wallet_login():
+    """Login with wallet signature"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    if not WALLET_AUTH_HELPERS_AVAILABLE or not WEB3_AVAILABLE:
+        return jsonify({'error': 'Wallet authentication not available'}), 503
+    
+    try:
+        data = request.json
+        address = data.get('address')
+        signature = data.get('signature')
+        nonce = data.get('nonce')
+        
+        if not all([address, signature, nonce]):
+            return jsonify({'error': 'Address, signature, and nonce required'}), 400
+        
+        # Normalize address
+        address = Web3.to_checksum_address(address).lower()
+        
+        # Verify nonce exists and hasn't expired
+        if not verify_nonce(address, nonce):
+            return jsonify({'error': 'Invalid or expired nonce'}), 401
+        
+        # Verify signature
+        message = format_signing_message(nonce)
+        if not verify_wallet_signature(address, message, signature, w3):
+            return jsonify({'error': 'Invalid signature'}), 401
+        
+        # Consume nonce (one-time use)
+        consume_nonce(address)
+        
+        # Find user by crypto_address
+        user = User.query.filter_by(crypto_address=address).first()
+        
+        if not user:
+            # User doesn't exist - requires registration
+            return jsonify({
+                'requiresRegistration': True,
+                'address': address,
+                'message': 'Wallet not registered. Please provide email to create account.'
+            }), 404
+        
+        # User exists - generate JWT token
+        access_token = create_access_token(identity=str(user.id))
+        
+        # Get access level information
+        access_info = get_dashboard_access(user)
+        
+        return jsonify({
+            'success': True,
+            'user': user.to_dict(),
+            'access': access_info,
+            'token': access_token,
+            'authProvider': 'wallet'
+        })
+    
+    except Exception as e:
+        print(f"Error in wallet login: {e}")
+        return jsonify({'error': 'Wallet login failed', 'details': str(e)}), 500
+
+
+@app.route('/api/auth/wallet/register', methods=['POST', 'OPTIONS'])
+def wallet_register():
+    """Register new account with wallet + email"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    if not WALLET_AUTH_HELPERS_AVAILABLE or not WEB3_AVAILABLE:
+        return jsonify({'error': 'Wallet authentication not available'}), 503
+    
+    try:
+        data = request.json
+        address = data.get('address')
+        signature = data.get('signature')
+        nonce = data.get('nonce')
+        email = data.get('email')
+        username = data.get('username')  # Optional
+        
+        if not all([address, signature, nonce, email]):
+            return jsonify({'error': 'Address, signature, nonce, and email required'}), 400
+        
+        # Normalize address
+        address = Web3.to_checksum_address(address).lower()
+        
+        # Verify nonce
+        if not verify_nonce(address, nonce):
+            return jsonify({'error': 'Invalid or expired nonce'}), 401
+        
+        # Verify signature
+        message = format_signing_message(nonce)
+        if not verify_wallet_signature(address, message, signature, w3):
+            return jsonify({'error': 'Invalid signature'}), 401
+        
+        # Consume nonce
+        consume_nonce(address)
+        
+        # Check if address already registered
+        existing_user = User.query.filter_by(crypto_address=address).first()
+        if existing_user:
+            return jsonify({'error': 'Wallet already registered'}), 409
+        
+        # Check if email already used
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            return jsonify({'error': 'Email already registered'}), 409
+        
+        # Generate username from email if not provided
+        if not username:
+            existing_usernames = set(u.username for u in User.query.all() if u.username)
+            username = generate_user_id_from_email(email, existing_usernames)
+        
+        # Generate ENS name
+        ens_data = resolve_or_create_ens(None, username)
+        
+        # Create new user
+        user = User(
+            username=username,
+            email=email,
+            crypto_address=address,
+            ens_name=ens_data.get('ens_name'),
+            content_hash=ens_data.get('content_hash'),
+            auth_provider='wallet',
+            password_hash=None,  # Wallet-only account
+            patreon_connected=False
+        )
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        # Start 7-day trial for new users
+        trial_expires = start_trial(user)
+        db.session.commit()
+        
+        # Create UserProfile
+        profile_id = ens_data.get('ens_name') or str(user.id)
+        profile = UserProfile(
+            id=profile_id,
+            email=email,
+            name=username,
+            ens_name=ens_data.get('ens_name'),
+            crypto_address=address,
+            content_hash=ens_data.get('content_hash'),
+            is_employee=False,
+            is_paid_member=False
+        )
+        db.session.add(profile)
+        db.session.commit()
+        
+        # Generate JWT token
+        access_token = create_access_token(identity=str(user.id))
+        
+        # Get access info
+        access_info = get_dashboard_access(user)
+        
+        return jsonify({
+            'success': True,
+            'user': user.to_dict(),
+            'access': access_info,
+            'token': access_token,
+            'trialExpires': trial_expires.isoformat(),
+            'authProvider': 'wallet'
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in wallet registration: {e}")
+        return jsonify({'error': 'Registration failed', 'details': str(e)}), 500
+
+
+@app.route('/api/auth/wallet/link', methods=['POST', 'OPTIONS'])
+@jwt_required()
+def wallet_link():
+    """Link wallet to existing account"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    if not WALLET_AUTH_HELPERS_AVAILABLE or not WEB3_AVAILABLE:
+        return jsonify({'error': 'Wallet authentication not available'}), 503
+    
+    try:
+        user_id = get_jwt_identity()
+        data = request.json
+        address = data.get('address')
+        signature = data.get('signature')
+        nonce = data.get('nonce')
+        
+        if not all([address, signature, nonce]):
+            return jsonify({'error': 'Address, signature, and nonce required'}), 400
+        
+        # Normalize address
+        address = Web3.to_checksum_address(address).lower()
+        
+        # Verify nonce
+        if not verify_nonce(address, nonce):
+            return jsonify({'error': 'Invalid or expired nonce'}), 401
+        
+        # Verify signature
+        message = format_signing_message(nonce)
+        if not verify_wallet_signature(address, message, signature, w3):
+            return jsonify({'error': 'Invalid signature'}), 401
+        
+        # Consume nonce
+        consume_nonce(address)
+        
+        # Get current user
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Check if wallet already linked to another user
+        existing_wallet = User.query.filter_by(crypto_address=address).first()
+        if existing_wallet and existing_wallet.id != user.id:
+            return jsonify({'error': 'Wallet already linked to another account'}), 409
+        
+        # Link wallet to user
+        user.crypto_address = address
+        
+        # Resolve and update ENS data
+        ens_data = resolve_or_create_ens(user.id, user.username or user.email)
+        if ens_data.get('ens_name'):
+            user.ens_name = ens_data.get('ens_name')
+        if ens_data.get('content_hash'):
+            user.content_hash = ens_data.get('content_hash')
+        
+        db.session.commit()
+        
+        # Update UserProfile if exists
+        try:
+            profile_id = user.ens_name or user.patreon_id or user.username or str(user.id)
+            profile = UserProfile.query.get(profile_id)
+            if profile:
+                profile.crypto_address = address
+                profile.ens_name = ens_data.get('ens_name')
+                profile.content_hash = ens_data.get('content_hash')
+                db.session.commit()
+        except:
+            pass
+        
+        return jsonify({
+            'success': True,
+            'message': 'Wallet linked successfully',
+            'cryptoAddress': address,
+            'ensName': user.ens_name
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error linking wallet: {e}")
+        return jsonify({'error': 'Failed to link wallet', 'details': str(e)}), 500
+
+
+# ============================================================================
+# GOOGLE OAUTH ENDPOINTS
+# ============================================================================
+
+@app.route('/api/auth/google/login', methods=['GET'])
+def google_login():
+    """Redirect to Google OAuth consent screen"""
+    if not GOOGLE_AUTH_AVAILABLE or not GOOGLE_CLIENT_ID:
+        return jsonify({'error': 'Google OAuth not configured'}), 503
+    
+    try:
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": GOOGLE_CLIENT_ID,
+                    "client_secret": GOOGLE_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [GOOGLE_REDIRECT_URI]
+                }
+            },
+            scopes=['openid', 'email', 'profile']
+        )
+        flow.redirect_uri = GOOGLE_REDIRECT_URI
+        
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true'
+        )
+        
+        # Store state in session for verification (would use Redis in production)
+        # For now, just redirect
+        return redirect(authorization_url)
+    
+    except Exception as e:
+        print(f"Error initiating Google OAuth: {e}")
+        return jsonify({'error': 'Failed to initiate Google login', 'details': str(e)}), 500
+
+
+@app.route('/api/auth/google/callback', methods=['GET'])
+def google_callback():
+    """Handle Google OAuth callback"""
+    if not GOOGLE_AUTH_AVAILABLE or not GOOGLE_CLIENT_ID:
+        return jsonify({'error': 'Google OAuth not configured'}), 503
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get authorization code from query params
+        code = request.args.get('code')
+        if not code:
+            return jsonify({'error': 'No authorization code received'}), 400
+        
+        # Exchange code for token
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": GOOGLE_CLIENT_ID,
+                    "client_secret": GOOGLE_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [GOOGLE_REDIRECT_URI]
+                }
+            },
+            scopes=['openid', 'email', 'profile']
+        )
+        flow.redirect_uri = GOOGLE_REDIRECT_URI
+        flow.fetch_token(code=code)
+        
+        # Get user info
+        credentials = flow.credentials
+        id_info = id_token.verify_oauth2_token(
+            credentials.id_token,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+        
+        google_id = id_info['sub']
+        email = id_info.get('email')
+        name = id_info.get('name', email)
+        
+        if not email:
+            return jsonify({'error': 'Email not provided by Google'}), 400
+        
+        # Find or create user
+        user = User.query.filter_by(google_id=google_id).first()
+        
+        if not user:
+            # Check if email already exists
+            user = User.query.filter_by(email=email).first()
+            
+            if user:
+                # Link Google to existing account
+                user.google_id = google_id
+                user.auth_provider = 'google'
+            else:
+                # Create new user
+                existing_usernames = set(u.username for u in User.query.all() if u.username)
+                username = generate_user_id_from_email(email, existing_usernames)
+                
+                ens_data = resolve_or_create_ens(None, username)
+                
+                user = User(
+                    username=username,
+                    email=email,
+                    google_id=google_id,
+                    auth_provider='google',
+                    password_hash=None,
+                    ens_name=ens_data.get('ens_name'),
+                    content_hash=ens_data.get('content_hash'),
+                    patreon_connected=False
+                )
+                db.session.add(user)
+                db.session.commit()
+                
+                # Start trial
+                trial_expires = start_trial(user)
+                db.session.commit()
+                
+                # Create profile
+                profile_id = ens_data.get('ens_name') or str(user.id)
+                profile = UserProfile(
+                    id=profile_id,
+                    email=email,
+                    name=name,
+                    ens_name=ens_data.get('ens_name'),
+                    is_employee=False,
+                    is_paid_member=False
+                )
+                db.session.add(profile)
+            
+            db.session.commit()
+        
+        # Generate JWT
+        access_token = create_access_token(identity=str(user.id))
+        
+        # Redirect to frontend with token
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
+        redirect_url = f"{frontend_url}/auth/callback?token={access_token}"
+        
+        return redirect(redirect_url)
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in Google OAuth callback: {e}")
+        return jsonify({'error': 'Google authentication failed', 'details': str(e)}), 500
+
+
+# ============================================================================
+# USER ACCESS & TIER ENDPOINTS
+# ============================================================================
+
+@app.route('/api/user/access', methods=['GET', 'OPTIONS'])
+@jwt_required()
+def get_user_access():
+    """Get current user's access level and dashboard permissions"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get complete access information
+        access_info = get_dashboard_access(user)
+        
+        return jsonify(access_info)
+    
+    except Exception as e:
+        print(f"Error getting user access: {e}")
+        return jsonify({'error': 'Failed to get access info', 'details': str(e)}), 500
+
+
+@app.route('/api/user/upgrade-options', methods=['GET', 'OPTIONS'])
+@jwt_required()
+def get_user_upgrade_options():
+    """Get available upgrade options for current user"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        options = get_upgrade_options(user)
+        current_tier = get_user_tier(user)
+        
+        return jsonify({
+            'currentTier': current_tier.value,
+            'upgradeOptions': options
+        })
+    
+    except Exception as e:
+        print(f"Error getting upgrade options: {e}")
+        return jsonify({'error': 'Failed to get upgrade options', 'details': str(e)}), 500
+
+
+@app.route('/api/auth/start-trial', methods=['POST', 'OPTIONS'])
+def start_user_trial():
+    """Start 7-day trial for a prospect"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        data = request.json
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email required'}), 400
+        
+        # Check if email already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            # Check if trial already used
+            if existing_user.trial_start_date:
+                return jsonify({'error': 'Trial already started for this email'}), 409
+            
+            # Start trial for existing user
+            trial_expires = start_trial(existing_user)
+            db.session.commit()
+            
+            access_token = create_access_token(identity=str(existing_user.id))
+            
+            return jsonify({
+                'success': True,
+                'trial_start': existing_user.trial_start_date.isoformat(),
+                'trial_expires': trial_expires.isoformat(),
+                'token': access_token
+            })
+        
+        # Create new user with trial
+        existing_usernames = set(u.username for u in User.query.all() if u.username)
+        username = generate_user_id_from_email(email, existing_usernames)
+        ens_data = resolve_or_create_ens(None, username)
+        
+        user = User(
+            username=username,
+            email=email,
+            auth_provider='email',
+            password_hash=None,  # Trial account without password
+            ens_name=ens_data.get('ens_name'),
+            patreon_connected=False
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        # Start trial
+        trial_expires = start_trial(user)
+        db.session.commit()
+        
+        # Create profile
+        profile_id = ens_data.get('ens_name') or str(user.id)
+        profile = UserProfile(
+            id=profile_id,
+            email=email,
+            name=username,
+            ens_name=ens_data.get('ens_name'),
+            is_employee=False,
+            is_paid_member=False
+        )
+        db.session.add(profile)
+        db.session.commit()
+        
+        # Generate token
+        access_token = create_access_token(identity=str(user.id))
+        
+        return jsonify({
+            'success': True,
+            'trial_start': user.trial_start_date.isoformat(),
+            'trial_expires': trial_expires.isoformat(),
+            'access_granted': ['rise', 'cowork', 'support'],
+            'token': access_token
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error starting trial: {e}")
+        return jsonify({'error': 'Failed to start trial', 'details': str(e)}), 500
+
+
 
 @app.route('/api/auth/logout', methods=['POST', 'OPTIONS'])
 @jwt_required()

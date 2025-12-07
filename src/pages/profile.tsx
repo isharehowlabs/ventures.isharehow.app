@@ -267,7 +267,8 @@ function ProfilePage() {
     setVerifyingMembership(true);
     try {
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/auth/verify-patreon`, {
+      // Use new subscription verification endpoint
+      const response = await fetch(`${backendUrl}/api/subscriptions/verify`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -285,18 +286,14 @@ function ProfilePage() {
           const updatedProfile = await profileResponse.json();
           setProfileData(updatedProfile);
         }
-        alert('Membership status updated successfully!');
+        alert('Subscription status updated successfully!');
       } else {
         const error = await response.json();
-        if (error.needsConnection) {
-          alert('Please connect your Patreon account first to verify membership status.');
-        } else {
-          alert(`Failed to verify membership: ${error.error || error.message || 'Unknown error'}`);
-        }
+        alert(`Failed to verify subscription: ${error.error || error.message || 'Unknown error'}`);
       }
     } catch (error: any) {
-      console.error('Error verifying membership:', error);
-      alert(`Error: ${error.message || 'Failed to verify membership status'}`);
+      console.error('Error verifying subscription:', error);
+      alert(`Error: ${error.message || 'Failed to verify subscription status'}`);
     } finally {
       setVerifyingMembership(false);
     }
@@ -763,17 +760,15 @@ function ProfilePage() {
                       <Typography variant="body2" color="text.secondary">
                         Membership Status
                       </Typography>
-                      {user.patreonConnected && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={handleVerifyMembership}
-                          disabled={verifyingMembership}
-                          sx={{ textTransform: 'none' }}
-                        >
-                          {verifyingMembership ? 'Verifying...' : 'Refresh Status'}
-                        </Button>
-                      )}
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={handleVerifyMembership}
+                        disabled={verifyingMembership}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        {verifyingMembership ? 'Verifying...' : 'Refresh Subscription Status'}
+                      </Button>
                     </Stack>
                     <Stack direction="row" spacing={1} alignItems="center">
                       {user.isEmployee && (
@@ -795,29 +790,34 @@ function ProfilePage() {
                         Last checked: {new Date(user.lastChecked).toLocaleString()}
                       </Typography>
                     )}
-                    {!user.patreonConnected && (
+                    {!user.isPaidMember && (
                       <Box sx={{ mt: 2 }}>
                         <Alert severity="info" sx={{ mb: 2 }}>
-                          Connect your Patreon account to verify membership status automatically.
+                          Subscribe to access all dashboards and features. Monthly subscription: $17.77/month
                         </Alert>
                         <Button
                           variant="contained"
                           onClick={() => {
-                            const backendUrl = getBackendUrl();
-                            window.location.href = `${backendUrl}/api/auth/patreon`;
+                            // Redirect to Shopify subscription page
+                            window.location.href = 'https://shop.isharehow.app/apps/app-proxy/subscribe';
                           }}
                           sx={{
-                            bgcolor: '#FF424D',
+                            bgcolor: 'primary.main',
                             '&:hover': {
-                              bgcolor: '#E63946',
+                              bgcolor: 'primary.dark',
                             },
                             textTransform: 'none',
                             fontWeight: 600,
                           }}
                         >
-                          Connect Patreon Account
+                          Subscribe Now
                         </Button>
                       </Box>
+                    )}
+                    {user.hasSubscriptionUpdate && (
+                      <Alert severity="success" sx={{ mt: 2 }}>
+                        Your subscription has been updated. {user.subscriptionUpdateActive ? 'Active' : 'Inactive'}
+                      </Alert>
                     )}
                   </Box>
                   <Box>

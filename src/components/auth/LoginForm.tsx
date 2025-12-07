@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Alert, CircularProgress, Link } from '@mui/material';
+import { Box, Button, TextField, Typography, Alert, CircularProgress, Link, Divider } from '@mui/material';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { WalletLoginButton } from './WalletLoginButton';
+import { GoogleLoginButton } from './GoogleLoginButton';
 
 interface LoginFormProps {
   onSuccess: (token: string, user: any) => void;
@@ -48,12 +50,30 @@ export default function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps
   };
 
   return (
-    <Box sx={{ p: 4, textAlign: 'center', maxWidth: 400, mx: 'auto' }}>
+    <Box sx={{ p: 4, textAlign: 'center', maxWidth: 450, mx: 'auto' }}>
       <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
         Sign In
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Enter your username and password to continue
+        Choose your preferred sign in method
+      </Typography>
+
+      {/* Web3 Wallet & Google Login */}
+      <Box sx={{ mb: 3 }}>
+        <WalletLoginButton />
+        <GoogleLoginButton />
+      </Box>
+
+      {/* Divider */}
+      <Divider sx={{ my: 3 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+          OR
+        </Typography>
+      </Divider>
+
+      {/* Traditional Login */}
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'left' }}>
+        Sign in with username and password
       </Typography>
 
       {error && (
@@ -73,8 +93,8 @@ export default function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps
           onChange={(e) => setUsername(e.target.value)}
           margin="normal"
           required
-          autoFocus
           disabled={isLoading}
+          size="small"
         />
 
         <TextField
@@ -89,6 +109,7 @@ export default function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps
           margin="normal"
           required
           disabled={isLoading}
+          size="small"
         />
 
         <Button
@@ -111,7 +132,7 @@ export default function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps
       </form>
 
       {onRegisterClick && (
-        <Typography variant="body2" sx={{ mt: 2 }}>
+        <Typography variant="body2" sx={{ mt: 3 }}>
           Don't have an account?{' '}
           <Link
             component="button"
@@ -123,7 +144,14 @@ export default function LoginForm({ onSuccess, onRegisterClick }: LoginFormProps
           </Link>
         </Typography>
       )}
+
+      {/* Wallet Linking Info */}
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 3, display: 'block' }}>
+        Already have an account?{' '}
+        <Link href="/link-wallet" sx={{ textDecoration: 'none' }}>
+          Link your wallet here
+        </Link>
+      </Typography>
     </Box>
   );
 }
-

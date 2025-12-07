@@ -9,19 +9,28 @@ let globalAuthListeners: Set<(state: AuthState) => void> = new Set();
 
 interface User {
   id: string;
+  userId?: string;  // Numeric database ID
   name: string;
+  username?: string;  // Username field
   email?: string;
   avatar?: string;
   avatarUrl?: string;
+  // Deprecated Patreon fields (kept for backward compatibility)
   patreonId?: string;
+  patreonConnected?: boolean;
+  // Subscription fields
   isPaidMember?: boolean;
   membershipTier?: string;
   lifetimeSupportAmount?: number;
   membershipRenewalDate?: string;
+  hasSubscriptionUpdate?: boolean;
+  subscriptionUpdateActive?: boolean;
+  shopifyCustomerId?: string;
+  boldSubscriptionId?: string;
+  // User roles
   isEmployee?: boolean;
   isAdmin?: boolean;
   createdAt?: string;
-  patreonConnected?: boolean;
   lastChecked?: string;
   // Web3/ENS fields
   ensName?: string;
@@ -288,9 +297,10 @@ export function useAuth() {
   }, []); // Empty deps - only run once on mount
 
   const login = () => {
-    const backendUrl = getBackendUrl();
-    console.log('[Auth] Initiating Patreon login...', { backendUrl });
-    window.location.href = `${backendUrl}/api/auth/patreon`;
+    // Redirect to login page - Patreon login removed, use email/password or Google OAuth
+    if (typeof window !== 'undefined') {
+      window.location.href = '/?login=true';
+    }
   };
 
   const logout = useCallback(async () => {
@@ -332,10 +342,220 @@ export function useAuth() {
     }
   }, [updateGlobalAuthState]);
 
+
+  // ============================================================================
+  // WALLET AUTHENTICATION METHODS
+  // ============================================================================
+
+  const loginWithWallet = useCallback(async (
+    address: string,
+    signature: string,
+    nonce: string
+  ): Promise<{ success: boolean; requiresRegistration?: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/api/auth/wallet/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ address, signature, nonce })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Wallet login successful
+        await checkAuth();
+        return { success: true };
+      } else if (response.status === 404 && data.requiresRegistration) {
+        // Wallet not registered - needs email
+        return { 
+          success: false, 
+          requiresRegistration: true 
+        };
+      } else {
+        return { 
+          success: false, 
+          error: data.error || 'Wallet login failed' 
+        };
+      }
+    } catch (error: any) {
+      console.error('Error logging in with wallet:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Network error during wallet login' 
+      };
+    }
+  }, [checkAuth]);
+
+  const registerWithWallet = useCallback(async (
+    address: string,
+    signature: string,
+    nonce: string,
+    email: string,
+    username?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/api/auth/wallet/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ address, signature, nonce, email, username })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Registration successful
+        await checkAuth();
+        return { success: true };
+      } else {
+        return { 
+          success: false, 
+          error: data.error || 'Wallet registration failed' 
+        };
+      }
+    } catch (error: any) {
+      console.error('Error registering with wallet:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Network error during registration' 
+      };
+    }
+  }, [checkAuth]);
+
+  const linkWallet = useCallback(async (
+    address: string,
+    signature: string,
+    nonce: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/api/auth/wallet/link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ address, signature, nonce })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Wallet linked successfully
+        await checkAuth(); // Refresh user data
+        return { success: true };
+      } else {
+        return { 
+          success: false, 
+          error: data.error || 'Failed to link wallet' 
+        };
+      }
+    } catch (error: any) {
+      console.error('Error linking wallet:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Network error while linking wallet' 
+      };
+    }
+  }, [checkAuth]);
+
+  const getWalletNonce = useCallback(async (
+    address: string
+  ): Promise<{ nonce?: string; message?: string; error?: string }> => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/api/auth/wallet/nonce`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        return { 
+          nonce: data.nonce, 
+          message: data.message 
+        };
+      } else {
+        return { 
+          error: data.error || 'Failed to get nonce' 
+        };
+      }
+    } catch (error: any) {
+      console.error('Error getting wallet nonce:', error);
+      return { 
+        error: error.message || 'Network error while getting nonce' 
+      };
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(() => {
+    // Redirect to Google OAuth
+    window.location.href = `${getBackendUrl()}/api/auth/google/login`;
+  }, []);
+
+  const startTrial = useCallback(async (
+    email: string
+  ): Promise<{ success: boolean; trialExpires?: string; error?: string }> => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/api/auth/start-trial`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        await checkAuth();
+        return { 
+          success: true, 
+          trialExpires: data.trial_expires 
+        };
+      } else {
+        return { 
+          success: false, 
+          error: data.error || 'Failed to start trial' 
+        };
+      }
+    } catch (error: any) {
+      console.error('Error starting trial:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Network error while starting trial' 
+        };
+    }
+  }, [checkAuth]);
+
+  const getUserAccess = useCallback(async (): Promise<any> => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/api/user/access`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        return await response.json();
+      } else {
+        throw new Error('Failed to get user access');
+      }
+    } catch (error: any) {
+      console.error('Error getting user access:', error);
+      throw error;
+    }
+  }, []);
+
   return {
     ...authState,
     login,
     logout,
     refresh: checkAuth,
+    loginWithWallet,
+    registerWithWallet,
+    linkWallet,
+    getWalletNonce,
+    loginWithGoogle,
+    startTrial,
+    getUserAccess,
   };
 }
