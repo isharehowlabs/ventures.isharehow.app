@@ -1,5 +1,66 @@
 /* Dashboard-specific styles and animations */
-/* REMOVED !important overrides - let MUI theme handle colors properly */
+
+/* Ensure MUI Cards and Papers respect theme on initial load */
+[data-theme="dark"] .MuiCard-root,
+[data-theme="dark"] .MuiPaper-root,
+[data-theme="dark"] .MuiDrawer-paper,
+[data-theme="dark"] .MuiMenu-paper,
+[data-theme="dark"] .MuiAppBar-root {
+  background-color: #1e293b !important;
+  color: #f7fafc !important;
+}
+
+[data-theme="light"] .MuiCard-root,
+[data-theme="light"] .MuiPaper-root,
+[data-theme="light"] .MuiDrawer-paper,
+[data-theme="light"] .MuiMenu-paper,
+[data-theme="light"] .MuiAppBar-root {
+  background-color: #FFFFFF !important;
+  color: #212529 !important;
+}
+
+.dark-mode .MuiCard-root,
+.dark-mode .MuiPaper-root,
+.dark-mode .MuiDrawer-paper,
+.dark-mode .MuiMenu-paper,
+.dark-mode .MuiAppBar-root {
+  background-color: #1e293b !important;
+  color: #f7fafc !important;
+}
+
+.light-mode .MuiCard-root,
+.light-mode .MuiPaper-root,
+.light-mode .MuiDrawer-paper,
+.light-mode .MuiMenu-paper,
+.light-mode .MuiAppBar-root {
+  background-color: #FFFFFF !important;
+  color: #212529 !important;
+}
+
+/* Ensure navigation list items respect theme */
+[data-theme="dark"] .MuiListItemButton-root,
+[data-theme="dark"] .MuiListItemText-primary,
+[data-theme="dark"] .MuiListItemIcon-root {
+  color: #f7fafc !important;
+}
+
+[data-theme="light"] .MuiListItemButton-root,
+[data-theme="light"] .MuiListItemText-primary,
+[data-theme="light"] .MuiListItemIcon-root {
+  color: #212529 !important;
+}
+
+.dark-mode .MuiListItemButton-root,
+.dark-mode .MuiListItemText-primary,
+.dark-mode .MuiListItemIcon-root {
+  color: #f7fafc !important;
+}
+
+.light-mode .MuiListItemButton-root,
+.light-mode .MuiListItemText-primary,
+.light-mode .MuiListItemIcon-root {
+  color: #212529 !important;
+}
 
 /* Card hover animations */
 .dashboard-card {
@@ -138,3 +199,4 @@
 .data-updated {
   animation: data-update 0.6s ease-in-out;
 }
+

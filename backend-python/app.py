@@ -1289,99 +1289,94 @@ def get_user_id():
         pass
     return 'anonymous'
 
+def safe_get_user(user_id):
+    """Safely get user by ID, handling missing database columns gracefully"""
+    if not user_id or not DB_AVAILABLE:
+        return None
+    
+    user = None
+    try:
+        # Try normal SQLAlchemy query first
+        if str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        if not user:
+            user = User.query.filter_by(email=str(user_id)).first()
+    except Exception as query_error:
+        error_str = str(query_error).lower()
+        # Check if error is due to missing columns
+        if ('column' in error_str and ('is_employee' in error_str or 'has_subscription_update' in error_str)):
+            print(f"Warning: Missing column when querying user {user_id}, using raw SQL fallback")
+            print("Please run: flask db upgrade")
+            # Use raw SQL that only queries existing columns
+            try:
+                with db.engine.connect() as conn:
+                    # Try to convert user_id to integer for id comparison
+                    try:
+                        user_id_int = int(user_id)
+                        id_condition = "id = CAST(:user_id_int AS INTEGER)"
+                        params = {'user_id': str(user_id), 'user_id_int': user_id_int}
+                    except (ValueError, TypeError):
+                        id_condition = "FALSE"
+                        params = {'user_id': str(user_id)}
+                    
+                    # Query only columns that definitely exist (basic ones)
+                    result = conn.execute(db.text(f"""
+                        SELECT id, username, email, password_hash, membership_paid,
+                               last_checked, created_at, updated_at
+                        FROM users 
+                        WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id OR email = :user_id)
+                        LIMIT 1
+                    """), params)
+                    row = result.fetchone()
+                    if row:
+                        from types import SimpleNamespace
+                        user = SimpleNamespace(
+                            id=row[0],
+                            username=row[1],
+                            email=row[2],
+                            password_hash=row[3],
+                            membership_paid=row[4],
+                            last_checked=row[5],
+                            created_at=row[6],
+                            updated_at=row[7]
+                        )
+                        # Add methods that might be called
+                        def check_password(pwd):
+                            if not user.password_hash:
+                                return False
+                            return bcrypt.checkpw(pwd.encode('utf-8'), user.password_hash.encode('utf-8'))
+                        user.check_password = check_password
+                        def to_dict():
+                            user_id_str = user.email.split('@')[0] if user.email else (user.username or str(user.id))
+                            return {
+                                'id': user_id_str,
+                                'userId': str(user.id),
+                                'username': user.username,
+                                'email': user.email,
+                                'membershipPaid': user.membership_paid,
+                                'lastChecked': user.last_checked.isoformat() if user.last_checked else None
+                            }
+                        user.to_dict = to_dict
+            except Exception as raw_error:
+                print(f"Error in raw SQL fallback: {raw_error}")
+                return None
+        else:
+            # Some other error, re-raise
+            raise
+    
+    return user
+
 def get_current_user():
     """Get current user from JWT token"""
     try:
         user_id = get_jwt_identity()
-        if not user_id or not DB_AVAILABLE:
+        if not user_id:
             return None
-        
-        # Find user by ID - handle missing is_employee column
-        user = None
-        try:
-            if user_id.isdigit():
-                user = User.query.get(int(user_id))
-            if not user:
-                user = User.query.filter_by(username=user_id).first()
-            if not user:
-                # Try email lookup (user_id could be an email)
-                user = User.query.filter_by(email=user_id).first()
-        except Exception as query_error:
-            error_str = str(query_error).lower()
-            if 'is_employee' in error_str and 'column' in error_str:
-                # Column doesn't exist - log warning but don't crash
-                print(f"Warning: is_employee column missing when querying user {user_id}")
-                print("Please run: flask db upgrade")
-                # Try to work around by using raw SQL (excluding is_employee column)
-                try:
-                    with db.engine.connect() as conn:
-                        # Try to convert user_id to integer for id comparison, but keep as string for username/email
-                        try:
-                            user_id_int = int(user_id)
-                            id_condition = "id = :user_id_int"
-                            params = {'user_id': user_id, 'user_id_int': user_id_int}
-                        except (ValueError, TypeError):
-                            # If user_id is not numeric, only check username and email
-                            id_condition = "FALSE"
-                            params = {'user_id': user_id}
-                        
-                        result = conn.execute(db.text(f"""
-                            SELECT id, username, email, password_hash, membership_paid,
-                                   last_checked, created_at, updated_at,
-                                   has_subscription_update, subscription_update_active,
-                                   shopify_customer_id, bold_subscription_id
-                            FROM users 
-                            WHERE ({id_condition} OR username = :user_id OR email = :user_id)
-                            LIMIT 1
-                        """), params)
-                        row = result.fetchone()
-                        if row:
-                            # Create a minimal user object (won't have is_employee)
-                            # This is a workaround - migration should be run
-                            from types import SimpleNamespace
-                            user = SimpleNamespace(
-                                id=row[0],
-                                username=row[1],
-                                email=row[2],
-                                password_hash=row[3],
-                                membership_paid=row[4],
-                                last_checked=row[5],
-                                created_at=row[6],
-                                updated_at=row[7],
-                                has_subscription_update=row[8] if len(row) > 8 else False,
-                                subscription_update_active=row[9] if len(row) > 9 else False,
-                                shopify_customer_id=row[10] if len(row) > 10 else None,
-                                bold_subscription_id=row[11] if len(row) > 11 else None
-                            )
-                            # Add methods that might be called
-                            def check_password(pwd):
-                                if not user.password_hash:
-                                    return False
-                                return bcrypt.checkpw(pwd.encode('utf-8'), user.password_hash.encode('utf-8'))
-                            user.check_password = check_password
-                            def to_dict():
-                                user_id_str = user.email.split('@')[0] if user.email else (user.username or str(user.id))
-                                return {
-                                    'id': user_id_str,
-                                    'userId': str(user.id),
-                                    'username': user.username,
-                                    'email': user.email,
-                                    'membershipPaid': user.membership_paid,
-                                    'hasSubscriptionUpdate': getattr(user, 'has_subscription_update', False),
-                                    'subscriptionUpdateActive': getattr(user, 'subscription_update_active', False),
-                                    'shopifyCustomerId': getattr(user, 'shopify_customer_id', None),
-                                    'boldSubscriptionId': getattr(user, 'bold_subscription_id', None),
-                                    'lastChecked': user.last_checked.isoformat() if user.last_checked else None
-                                }
-                            user.to_dict = to_dict
-                except Exception as raw_error:
-                    print(f"Error in raw SQL fallback: {raw_error}")
-                    return None
-            else:
-                # Some other error, re-raise
-                raise
-        
-        return user
+        return safe_get_user(user_id)
     except Exception as e:
         print(f"Error in get_current_user: {e}")
         return None
@@ -4171,58 +4166,8 @@ def get_notifications():
         if not user_id:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        # Find user by ID - handle missing columns gracefully
-        user = None
-        try:
-            if user_id and str(user_id).isdigit():
-                user = User.query.get(int(user_id))
-            if not user and user_id:
-                user = User.query.filter_by(username=str(user_id)).first()
-            if not user and user_id:
-                user = User.query.filter_by(patreon_id=str(user_id)).first()
-        except Exception as query_error:
-            error_str = str(query_error).lower()
-            # If column is missing, use raw SQL fallback
-            if 'has_subscription_update' in error_str and 'column' in error_str:
-                print(f"Warning: has_subscription_update column missing, using raw SQL fallback for notifications")
-                try:
-                    with db.engine.connect() as conn:
-                        # Try to convert user_id to integer for id comparison
-                        try:
-                            user_id_int = int(user_id)
-                            id_condition = "id = :user_id_int"
-                            params = {'user_id': str(user_id), 'user_id_int': user_id_int}
-                        except (ValueError, TypeError):
-                            id_condition = "FALSE"
-                            params = {'user_id': str(user_id)}
-                        
-                        result = conn.execute(db.text(f"""
-                            SELECT id, username, email, password_hash, membership_paid,
-                                   is_employee, is_admin, last_checked, created_at, updated_at
-                            FROM users 
-                            WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id)
-                            LIMIT 1
-                        """), params)
-                        row = result.fetchone()
-                        if row:
-                            from types import SimpleNamespace
-                            user = SimpleNamespace(
-                                id=row[0],
-                                username=row[1],
-                                email=row[2],
-                                password_hash=row[3],
-                                membership_paid=row[4],
-                                is_employee=row[5] if len(row) > 5 else False,
-                                is_admin=row[6] if len(row) > 6 else False,
-                                last_checked=row[7] if len(row) > 7 else None,
-                                created_at=row[8] if len(row) > 8 else None,
-                                updated_at=row[9] if len(row) > 9 else None
-                            )
-                except Exception as raw_error:
-                    print(f"Error in raw SQL fallback for notifications: {raw_error}")
-                    return jsonify({'error': 'Database migration required', 'message': 'Please run: flask db upgrade'}), 500
-            else:
-                raise
+        # Find user by ID - use safe_get_user to handle missing columns gracefully
+        user = safe_get_user(user_id)
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -5088,12 +5033,8 @@ def get_or_create_user_profile():
     user_id_str = str(user_id)
     
     # Try to find user by ID (could be integer ID, username, or patreon_id)
-    if user_id_str.isdigit():
-        user = User.query.get(int(user_id_str))
-    if not user:
-        user = User.query.filter_by(username=user_id_str).first()
-    if not user:
-        user = User.query.filter_by(patreon_id=user_id_str).first()
+    # Use safe_get_user to handle missing columns gracefully
+    user = safe_get_user(user_id_str)
     
     if not user:
         return None, jsonify({'error': 'User not found'}), 404
