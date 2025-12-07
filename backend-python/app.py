@@ -1315,15 +1315,25 @@ def get_current_user():
                 # Try to work around by using raw SQL (excluding is_employee column)
                 try:
                     with db.engine.connect() as conn:
-                        result = conn.execute(db.text("""
+                        # Try to convert user_id to integer for id comparison, but keep as string for username/email
+                        try:
+                            user_id_int = int(user_id)
+                            id_condition = "id = :user_id_int"
+                            params = {'user_id': user_id, 'user_id_int': user_id_int}
+                        except (ValueError, TypeError):
+                            # If user_id is not numeric, only check username and email
+                            id_condition = "FALSE"
+                            params = {'user_id': user_id}
+                        
+                        result = conn.execute(db.text(f"""
                             SELECT id, username, email, password_hash, membership_paid,
                                    last_checked, created_at, updated_at,
                                    has_subscription_update, subscription_update_active,
                                    shopify_customer_id, bold_subscription_id
                             FROM users 
-                            WHERE (id = :user_id OR username = :user_id OR email = :user_id)
+                            WHERE ({id_condition} OR username = :user_id OR email = :user_id)
                             LIMIT 1
-                        """), {'user_id': user_id})
+                        """), params)
                         row = result.fetchone()
                         if row:
                             # Create a minimal user object (won't have is_employee)
@@ -2576,15 +2586,25 @@ def auth_me():
             print(f"Warning: is_employee column missing in auth/me, using raw SQL fallback")
             try:
                 with db.engine.connect() as conn:
-                    result = conn.execute(db.text("""
+                    # Try to convert user_id to integer for id comparison, but keep as string for username/patreon_id
+                    try:
+                        user_id_int = int(user_id)
+                        id_condition = "id = :user_id_int"
+                        params = {'user_id': user_id, 'user_id_int': user_id_int}
+                    except (ValueError, TypeError):
+                        # If user_id is not numeric, only check username and patreon_id
+                        id_condition = "FALSE"
+                        params = {'user_id': user_id}
+                    
+                    result = conn.execute(db.text(f"""
                         SELECT id, username, email, password_hash, patreon_id, 
                                access_token, refresh_token, membership_paid,
                                last_checked, token_expires_at, patreon_connected,
                                created_at, updated_at
                         FROM users 
-                        WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                        WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id)
                         LIMIT 1
-                    """), {'user_id': user_id})
+                    """), params)
                     row = result.fetchone()
                     if row:
                         from types import SimpleNamespace
@@ -3677,15 +3697,25 @@ def get_profile():
             print(f"Warning: is_employee column missing in profile endpoint, using raw SQL fallback")
             try:
                 with db.engine.connect() as conn:
-                    result = conn.execute(db.text("""
+                    # Try to convert user_id to integer for id comparison, but keep as string for username/patreon_id
+                    try:
+                        user_id_int = int(user_id_str)
+                        id_condition = "id = :user_id_int"
+                        params = {'user_id': user_id_str, 'user_id_int': user_id_int}
+                    except (ValueError, TypeError):
+                        # If user_id is not numeric, only check username and patreon_id
+                        id_condition = "FALSE"
+                        params = {'user_id': user_id_str}
+                    
+                    result = conn.execute(db.text(f"""
                         SELECT id, username, email, password_hash, patreon_id, 
                                access_token, refresh_token, membership_paid,
                                last_checked, token_expires_at, patreon_connected,
                                created_at, updated_at
                         FROM users 
-                        WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                        WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id)
                         LIMIT 1
-                    """), {'user_id': user_id_str})
+                    """), params)
                     row = result.fetchone()
                     if row:
                         from types import SimpleNamespace
@@ -3754,15 +3784,25 @@ def get_profile():
                         # Use the same raw SQL fallback as above
                         try:
                             with db.engine.connect() as conn:
-                                result = conn.execute(db.text("""
+                                # Try to convert user_id to integer for id comparison, but keep as string for username/patreon_id
+                                try:
+                                    user_id_int = int(user_id_str)
+                                    id_condition = "id = :user_id_int"
+                                    params = {'user_id': user_id_str, 'user_id_int': user_id_int}
+                                except (ValueError, TypeError):
+                                    # If user_id is not numeric, only check username and patreon_id
+                                    id_condition = "FALSE"
+                                    params = {'user_id': user_id_str}
+                                
+                                result = conn.execute(db.text(f"""
                                     SELECT id, username, email, password_hash, patreon_id, 
                                            access_token, refresh_token, membership_paid,
                                            last_checked, token_expires_at, patreon_connected,
                                            created_at, updated_at
                                     FROM users 
-                                    WHERE (id = :user_id OR username = :user_id OR patreon_id = :user_id)
+                                    WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id)
                                     LIMIT 1
-                                """), {'user_id': user_id_str})
+                                """), params)
                                 row = result.fetchone()
                                 if row:
                                     from types import SimpleNamespace
