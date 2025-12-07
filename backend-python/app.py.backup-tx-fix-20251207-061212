@@ -29,7 +29,6 @@ except ImportError:
     try:
         from werkzeug import HTTPException, MethodNotAllowed
     except ImportError:
-        db.session.rollback()  # Rollback failed transaction
         HTTPException = None
         MethodNotAllowed = None
 
@@ -223,7 +222,6 @@ def is_database_connected():
             conn.execute(db.text("SELECT 1"))
         return True
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         error_str = str(e).lower()
         # Check for common database connection errors
         if any(keyword in error_str for keyword in ['connection', 'timeout', 'refused', 'unreachable', 'network', 'operational']):
@@ -284,7 +282,6 @@ def load_executed_scripts():
                 data = json.load(f)
                 return set(data.get('executed_scripts', []))
         except (json.JSONDecodeError, IOError) as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Warning: Could not load script tracking file: {e}")
             return set()
     return set()
@@ -299,7 +296,6 @@ def save_executed_script(script_path):
         with open(tracking_file, 'w') as f:
             json.dump({'executed_scripts': list(executed)}, f, indent=2)
     except IOError as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Warning: Could not save script tracking file: {e}")
 
 def find_runnable_scripts():
@@ -347,7 +343,6 @@ def is_script_runnable(script_path):
             
             return has_main_block or has_shebang or (has_executable_content and imports_app)
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Warning: Could not read script {script_path}: {e}")
         return False
     
@@ -388,7 +383,6 @@ def run_script_safely(script_path):
         print(f"✗ Script {script_name} timed out after 5 minutes")
         return False
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"✗ Error running script {script_name}: {e}")
         return False
 
@@ -472,7 +466,6 @@ if WEB3_AVAILABLE:
         else:
             print("Warning: Web3 connection failed. ENS features will be limited.")
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Warning: Failed to initialize Web3/ENS: {e}")
         print("ENS features will be disabled.")
 
@@ -496,7 +489,6 @@ def resolve_ens_to_address(ens_name: str) -> str:
             return address.lower()  # Return checksummed address
         return None
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error resolving ENS name {ens_name}: {e}")
         return None
 
@@ -513,7 +505,6 @@ def get_ens_content_hash(ens_name: str) -> str:
                 return '0x' + content_hash.hex()
         return None
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting content hash for {ens_name}: {e}")
         return None
 
@@ -533,7 +524,6 @@ def set_ens_content_hash(ens_name: str, ipfs_hash: str, private_key: str = None)
         print(f"Setting content hash for {ens_name} requires wallet integration")
         return False
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error setting content hash for {ens_name}: {e}")
         return False
 
@@ -980,7 +970,6 @@ if DB_AVAILABLE:
             db.create_all()
             print("✓ Database tables created/verified successfully")
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f"✗ Database connection failed: {e}")
             print(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
             print("  Tables will be created when database is available")
@@ -1022,7 +1011,6 @@ def shopify_graphql(query, variables=None):
                         return None, {'error': 'Shopify API error', 'message': data['errors']}
                 return data['data'], None
         except Exception as e:
-                db.session.rollback()  # Rollback failed transaction
                 return None, {'error': 'Failed to fetch from Shopify', 'message': str(e)}
 
 # GraphQL queries
@@ -1360,7 +1348,6 @@ def get_user_id():
                     return user.email.split('@')[0] if user.email else (user.username or str(user.id))
             return str(user_id)
     except Exception:
-        db.session.rollback()  # Rollback failed transaction
         pass
     return 'anonymous'
 
@@ -1383,8 +1370,6 @@ def safe_get_user(user_id):
         
         return user
     except Exception as query_error:
-        # Rollback failed transaction immediately
-        db.session.rollback()
         error_str = str(query_error).lower()
         # Check if error is due to missing columns
         if 'column' in error_str and ('has_subscription_update' in error_str or 'is_employee' in error_str or 'google_id' in error_str):
@@ -1436,12 +1421,10 @@ def safe_get_user(user_id):
                                     try:
                                         conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
                                     except Exception:
-                                        db.session.rollback()  # Rollback failed transaction
                                         pass  # Index might already exist
                                 
                                 print(f"  ✓ Added missing column: {col_name}")
                             except Exception as col_error:
-                                db.session.rollback()  # Rollback failed transaction
                                 error_msg = str(col_error).lower()
                                 if 'already exists' in error_msg or 'duplicate' in error_msg:
                                     print(f"  ✓ Column {col_name} already exists")
@@ -1460,7 +1443,6 @@ def safe_get_user(user_id):
                 
                 return user
             except Exception as add_error:
-                db.session.rollback()  # Rollback failed transaction
                 print(f"Error adding missing columns: {add_error}")
                 # Fall through to raw SQL fallback
         
@@ -1472,7 +1454,6 @@ def safe_get_user(user_id):
                     id_condition = "id = CAST(:user_id_int AS INTEGER)"
                     params = {'user_id': str(user_id), 'user_id_int': user_id_int}
                 except (ValueError, TypeError):
-                    db.session.rollback()  # Rollback failed transaction
                     id_condition = "FALSE"
                     params = {'user_id': str(user_id)}
                 
@@ -1498,7 +1479,6 @@ def safe_get_user(user_id):
                     )
                     return user
         except Exception as raw_error:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Error in raw SQL fallback: {raw_error}")
             return None
         
@@ -1513,7 +1493,6 @@ def get_current_user():
             return None
         return safe_get_user(user_id)
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error in get_current_user: {e}")
         return None
 
@@ -1591,10 +1570,8 @@ def send_push_notification(user_id: int, notification: Notification):
                     db.session.delete(subscription)
                     db.session.commit()
             except Exception as e:
-                db.session.rollback()  # Rollback failed transaction
                 app.logger.error(f"Error sending push to subscription {subscription.id}: {e}")
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         app.logger.error(f"Error in send_push_notification: {e}")
 
 # Global flag to track if is_employee column exists
@@ -1634,7 +1611,6 @@ def check_is_employee_column_exists(force_check=False):
             _IS_EMPLOYEE_COLUMN_EXISTS = result.fetchone() is not None
         return _IS_EMPLOYEE_COLUMN_EXISTS
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error checking is_employee column: {e}")
         app.logger.warning(f"Error checking is_employee column: {e}")
         # If we can't check, assume it doesn't exist (safer fallback)
@@ -1648,7 +1624,6 @@ def safe_query_user(query_func):
     try:
         return query_func()
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         error_str = str(e)
         # Check if error is due to missing is_employee column
         if 'is_employee' in error_str.lower() and 'column' in error_str.lower():
@@ -1674,7 +1649,6 @@ def safe_get_is_employee(user):
         if hasattr(user, 'is_employee'):
             return bool(user.is_employee)
     except (AttributeError, KeyError):
-        db.session.rollback()  # Rollback failed transaction
         # Column doesn't exist in database yet
         pass
     return False
@@ -1814,7 +1788,6 @@ def figma_component_like():
         try:
             sync_like_to_figma(file_id, component_id, liked, user_id)
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f'Error syncing like to Figma: {e}')
             # Don't fail the request if sync fails
     
@@ -1836,7 +1809,6 @@ def figma_component_save():
         try:
             sync_save_to_figma(file_id, component_id, saved, user_id)
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f'Error syncing save to Figma: {e}')
             # Don't fail the request if sync fails
     
@@ -1928,7 +1900,6 @@ def sync_like_to_figma(file_id, component_id, liked, user_id):
         try:
             file_data = file_r.json()
         except (ValueError, AttributeError):
-            db.session.rollback()  # Rollback failed transaction
             return
         components = file_data.get('components', {}) if isinstance(file_data, dict) else {}
         
@@ -1943,7 +1914,6 @@ def sync_like_to_figma(file_id, component_id, liked, user_id):
                     comments_data = comments_r.json()
                     comments = comments_data.get('comments', []) if isinstance(comments_data, dict) else []
                 except (ValueError, AttributeError):
-                    db.session.rollback()  # Rollback failed transaction
                     comments = []
                 
                 like_comment = next((c for c in comments if isinstance(c, dict) and c.get('message') == '❤️ LIKED' and c.get('client_meta', {}).get('node_id') == node_id), None)
@@ -1961,7 +1931,6 @@ def sync_like_to_figma(file_id, component_id, liked, user_id):
                             timeout=10
                         )
                     except Exception:
-                        db.session.rollback()  # Rollback failed transaction
                         pass  # Silent fail for sync
                 elif not liked and like_comment:
                     # Mark as removed
@@ -1977,10 +1946,8 @@ def sync_like_to_figma(file_id, component_id, liked, user_id):
                             timeout=10
                         )
                     except Exception:
-                        db.session.rollback()  # Rollback failed transaction
                         pass  # Silent fail for sync
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'Error syncing like to Figma: {e}')
 
 def sync_save_to_figma(file_id, component_id, saved, user_id):
@@ -1994,7 +1961,6 @@ def sync_save_to_figma(file_id, component_id, saved, user_id):
         try:
             file_data = file_r.json()
         except (ValueError, AttributeError):
-            db.session.rollback()  # Rollback failed transaction
             return
         components = file_data.get('components', {}) if isinstance(file_data, dict) else {}
         
@@ -2009,7 +1975,6 @@ def sync_save_to_figma(file_id, component_id, saved, user_id):
                     comments_data = comments_r.json()
                     comments = comments_data.get('comments', []) if isinstance(comments_data, dict) else []
                 except (ValueError, AttributeError):
-                    db.session.rollback()  # Rollback failed transaction
                     comments = []
                 
                 save_comment = next((c for c in comments if isinstance(c, dict) and c.get('message') == '🔖 SAVED' and c.get('client_meta', {}).get('node_id') == node_id), None)
@@ -2027,7 +1992,6 @@ def sync_save_to_figma(file_id, component_id, saved, user_id):
                             timeout=10
                         )
                     except Exception:
-                        db.session.rollback()  # Rollback failed transaction
                         pass  # Silent fail for sync
                 elif not saved and save_comment:
                     # Mark as removed
@@ -2043,10 +2007,8 @@ def sync_save_to_figma(file_id, component_id, saved, user_id):
                             timeout=10
                         )
                     except Exception:
-                        db.session.rollback()  # Rollback failed transaction
                         pass  # Silent fail for sync
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'Error syncing save to Figma: {e}')
 
 @app.route('/api/figma/teams', methods=['GET'])
@@ -2076,7 +2038,6 @@ def figma_files():
                 projects_data = r.json()
                 projects = projects_data.get('projects', []) if isinstance(projects_data, dict) else []
             except (ValueError, AttributeError) as e:
-                db.session.rollback()  # Rollback failed transaction
                 print(f'Error parsing projects JSON: {e}')
                 projects = []
             
@@ -2090,7 +2051,6 @@ def figma_files():
                             files_data = files_r.json()
                             files = files_data.get('files', []) if isinstance(files_data, dict) else []
                         except (ValueError, AttributeError) as e:
-                            db.session.rollback()  # Rollback failed transaction
                             print(f'Error parsing files JSON for project {project.get("id")}: {e}')
                             files = []
                         
@@ -2122,15 +2082,12 @@ def figma_files():
                                     all_files.append(normalized_file)
                                     seen_file_keys.add(file_key)
                             except Exception as e:
-                                db.session.rollback()  # Rollback failed transaction
                                 print(f'Error processing file: {e}')
                                 continue
                 except Exception as e:
-                    db.session.rollback()  # Rollback failed transaction
                     print(f'Error fetching files for project {project.get("id")}: {e}')
                     continue
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'Error fetching projects: {e}')
         # Return empty list on error instead of failing
     
@@ -2142,7 +2099,6 @@ def figma_files():
             str(f.get('name', ''))
         ))
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'Error sorting files: {e}')
         # Continue without sorting if it fails
     
@@ -2300,7 +2256,6 @@ def register():
                     DB_AVAILABLE = True
                     print("✓ Database reconnection successful")
             except Exception as reconnect_error:
-                db.session.rollback()  # Rollback failed transaction
                 error_msg = 'Database not available. Please check your DATABASE_URL environment variable and ensure the database is accessible.'
                 print(f"Registration failed: {error_msg}")
                 print(f"  DATABASE_URL is set: {bool(os.environ.get('DATABASE_URL'))}")
@@ -2345,7 +2300,6 @@ def register():
             if User.query.filter_by(username=username).first():
                 return jsonify({'error': 'Username already exists'}), 400
         except Exception as query_error:
-            db.session.rollback()  # Rollback failed transaction
             error_str = str(query_error).lower()
             if 'is_employee' in error_str and 'column' in error_str:
                 return jsonify({
@@ -2361,7 +2315,6 @@ def register():
             if email and User.query.filter_by(email=email).first():
                 return jsonify({'error': 'Email already exists'}), 400
         except Exception as query_error:
-            db.session.rollback()  # Rollback failed transaction
             error_str = str(query_error).lower()
             if 'is_employee' in error_str and 'column' in error_str:
                 return jsonify({
@@ -2430,7 +2383,6 @@ def register():
         return response, 201
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error in registration: {e}")
         import traceback
         traceback.print_exc()
@@ -2464,7 +2416,6 @@ def login():
                     DB_AVAILABLE = True
                     print("✓ Database reconnection successful")
             except Exception as reconnect_error:
-                db.session.rollback()  # Rollback failed transaction
                 return jsonify({
                     'error': 'Database not available',
                     'message': 'Database connection failed. Please check your DATABASE_URL environment variable.'
@@ -2492,7 +2443,6 @@ def login():
         try:
             user = find_user()
         except Exception as query_error:
-            db.session.rollback()  # Rollback failed transaction
             error_str = str(query_error).lower()
             if 'is_employee' in error_str and 'column' in error_str:
                 # Column doesn't exist - try raw SQL fallback
@@ -2547,7 +2497,6 @@ def login():
                         else:
                             user = None
                 except Exception as raw_error:
-                    db.session.rollback()  # Rollback failed transaction
                     print(f"Error in raw SQL fallback for login: {raw_error}")
                     return jsonify({
                         'error': 'Database migration required',
@@ -2606,7 +2555,6 @@ def login():
         return response
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error in login: {e}")
         import traceback
         traceback.print_exc()
@@ -2721,7 +2669,6 @@ def auth_me():
         try:
             column_exists = check_is_employee_column_exists()
         except Exception as check_error:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Error in check_is_employee_column_exists: {check_error}")
             column_exists = False  # Default to False (use fallback)
         
@@ -2737,7 +2684,6 @@ def auth_me():
                 if not user and user_id:
                     user = User.query.filter_by(ens_name=user_id).first()
             except Exception as query_error:
-                db.session.rollback()  # Rollback failed transaction
                 error_str = str(query_error).lower()
                 if 'is_employee' in error_str and 'column' in error_str:
                     print(f"Unexpected: is_employee error despite check, using raw SQL fallback")
@@ -2756,7 +2702,6 @@ def auth_me():
                         id_condition = "id = :user_id_int"
                         params = {'user_id': user_id, 'user_id_int': user_id_int}
                     except (ValueError, TypeError):
-                        db.session.rollback()  # Rollback failed transaction
                         # If user_id is not numeric, only check username and patreon_id
                         id_condition = "FALSE"
                         params = {'user_id': user_id}
@@ -2800,7 +2745,6 @@ def auth_me():
                             }
                         user.to_dict = to_dict
             except Exception as raw_error:
-                db.session.rollback()  # Rollback failed transaction
                 error_str = str(raw_error).lower()
                 print(f"Error in raw SQL fallback for auth/me: {raw_error}")
                 app.logger.error(f"Error fetching user from database: {raw_error}")
@@ -2828,7 +2772,6 @@ def auth_me():
             if profile:
                 profile_data = profile.to_dict()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Warning: Failed to fetch profile: {e}")
         
         # Return combined user data - handle both regular User objects and SimpleNamespace fallback
@@ -2860,7 +2803,6 @@ def auth_me():
             print(f"✓ User authenticated via JWT: {user_id}")
             return jsonify(user_data)
         except Exception as dict_error:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Error creating user dict: {dict_error}")
             app.logger.error(f"Error creating user dict: {dict_error}")
             # Return minimal user data
@@ -2872,7 +2814,6 @@ def auth_me():
                 'name': getattr(user, 'username', None) or getattr(user, 'email', None) or 'User'
             })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         error_str = str(e).lower()
         print(f"Error fetching user from database: {e}")
         app.logger.error(f"Error fetching user from database: {e}")
@@ -2916,7 +2857,6 @@ def wallet_nonce():
         try:
             checksum_address = Web3.to_checksum_address(address)
         except Exception:
-            db.session.rollback()  # Rollback failed transaction
             return jsonify({'error': 'Invalid Ethereum address'}), 400
         
         # Generate nonce
@@ -2931,7 +2871,6 @@ def wallet_nonce():
         })
     
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error generating wallet nonce: {e}")
         return jsonify({'error': 'Failed to generate nonce', 'details': str(e)}), 500
 
@@ -2995,7 +2934,6 @@ def wallet_login():
         })
     
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error in wallet login: {e}")
         return jsonify({'error': 'Wallet login failed', 'details': str(e)}), 500
 
@@ -3246,7 +3184,6 @@ def google_login():
         return redirect(authorization_url)
     
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error initiating Google OAuth: {e}")
         return jsonify({'error': 'Failed to initiate Google login', 'details': str(e)}), 500
 
@@ -3317,7 +3254,6 @@ def google_callback():
         try:
             user = User.query.filter_by(google_id=google_id).first()
         except Exception as query_error:
-            db.session.rollback()  # Rollback failed transaction
             error_str = str(query_error).lower()
             if 'column' in error_str and 'google_id' in error_str:
                 print(f"Warning: google_id column missing, attempting to add it...")
@@ -3329,11 +3265,9 @@ def google_callback():
                             try:
                                 conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
                             except Exception:
-                                db.session.rollback()  # Rollback failed transaction
                                 pass  # Index might already exist
                             print("  ✓ Added google_id column")
                 except Exception as add_error:
-                    db.session.rollback()  # Rollback failed transaction
                     error_msg = str(add_error).lower()
                     if 'already exists' in error_msg:
                         print("  ✓ google_id column already exists")
@@ -3344,7 +3278,6 @@ def google_callback():
                 try:
                     user = User.query.filter_by(google_id=google_id).first()
                 except Exception:
-                    db.session.rollback()  # Rollback failed transaction
                     # If still fails, fall back to email lookup
                     pass
             else:
@@ -3361,7 +3294,6 @@ def google_callback():
                     user.google_id = google_id
                     user.auth_provider = 'google'
                 except Exception as attr_error:
-                    db.session.rollback()  # Rollback failed transaction
                     # If google_id column doesn't exist, add it first
                     error_str = str(attr_error).lower()
                     if 'google_id' in error_str or 'no property' in error_str:
@@ -3373,7 +3305,6 @@ def google_callback():
                                     try:
                                         conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
                                     except Exception:
-                                        db.session.rollback()  # Rollback failed transaction
                                         pass
                                     print("  ✓ Added google_id column")
                             # Refresh the user object
@@ -3381,7 +3312,6 @@ def google_callback():
                             user.google_id = google_id
                             user.auth_provider = 'google'
                         except Exception as add_error:
-                            db.session.rollback()  # Rollback failed transaction
                             print(f"  ✗ Could not add google_id: {add_error}")
                             # Continue without google_id for now
                     else:
@@ -3405,11 +3335,9 @@ def google_callback():
                                 try:
                                     conn.execute(db.text("CREATE UNIQUE INDEX ix_users_google_id ON users (google_id)"))
                                 except Exception:
-                                    db.session.rollback()  # Rollback failed transaction
                                     pass
                                 print("  ✓ Added google_id column before creating user")
                 except Exception as check_error:
-                    db.session.rollback()  # Rollback failed transaction
                     print(f"  ⚠ Could not check/add google_id: {check_error}")
                 
                 try:
@@ -3424,7 +3352,6 @@ def google_callback():
                         patreon_connected=False
                     )
                 except Exception as create_error:
-                    db.session.rollback()  # Rollback failed transaction
                     # If google_id still causes issues, create without it
                     error_str = str(create_error).lower()
                     if 'google_id' in error_str:
@@ -3448,7 +3375,6 @@ def google_callback():
                                         "UPDATE users SET google_id = :google_id WHERE id = :user_id"
                                     ), {'google_id': google_id, 'user_id': user.id})
                         except Exception:
-                            db.session.rollback()  # Rollback failed transaction
                             pass
                     else:
                         raise
@@ -3519,7 +3445,6 @@ def get_user_access():
         return jsonify(access_info)
     
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting user access: {e}")
         return jsonify({'error': 'Failed to get access info', 'details': str(e)}), 500
 
@@ -3547,7 +3472,6 @@ def get_user_upgrade_options():
         })
     
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting upgrade options: {e}")
         return jsonify({'error': 'Failed to get upgrade options', 'details': str(e)}), 500
 
@@ -3664,7 +3588,6 @@ def refresh_patreon_token(refresh_token):
         if response.ok:
             return response.json()
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error refreshing Patreon token: {e}")
     return None
 
@@ -4011,7 +3934,6 @@ def get_profile():
         try:
             column_exists = check_is_employee_column_exists()
         except Exception as check_error:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Error in check_is_employee_column_exists for profile: {check_error}")
             column_exists = False  # Default to False (use fallback)
         
@@ -4026,7 +3948,6 @@ def get_profile():
                         id_condition = "id = :user_id_int"
                         params = {'user_id': user_id_str, 'user_id_int': user_id_int}
                     except (ValueError, TypeError):
-                        db.session.rollback()  # Rollback failed transaction
                         # If user_id is not numeric, only check username and patreon_id
                         id_condition = "FALSE"
                         params = {'user_id': user_id_str}
@@ -4072,7 +3993,6 @@ def get_profile():
                         user.to_dict = to_dict
                         app.logger.info(f"Profile endpoint: Found user via raw SQL - ID: {user.id}, patreon_id: {user.patreon_id}, username: {user.username}")
             except Exception as raw_error:
-                db.session.rollback()  # Rollback failed transaction
                 error_str = str(raw_error).lower()
                 print(f"Error in raw SQL fallback for profile: {raw_error}")
                 app.logger.error(f"Error fetching user from database: {raw_error}")
@@ -4101,7 +4021,6 @@ def get_profile():
                     if user:
                         app.logger.info(f"Profile endpoint: Found user - ID: {user.id}, patreon_id: {user.patreon_id}, username: {user.username}")
                 except Exception as e:
-                    db.session.rollback()  # Rollback failed transaction
                     error_str = str(e).lower()
                     app.logger.error(f"Profile endpoint: Error looking up by integer ID: {e}")
                     # If we still get an is_employee error (shouldn't happen if check worked), use fallback
@@ -4116,7 +4035,6 @@ def get_profile():
                                     id_condition = "id = :user_id_int"
                                     params = {'user_id': user_id_str, 'user_id_int': user_id_int}
                                 except (ValueError, TypeError):
-                                    db.session.rollback()  # Rollback failed transaction
                                     # If user_id is not numeric, only check username and patreon_id
                                     id_condition = "FALSE"
                                     params = {'user_id': user_id_str}
@@ -4150,7 +4068,6 @@ def get_profile():
                                         }
                                     user.to_dict = to_dict
                         except Exception as raw_error2:
-                            db.session.rollback()  # Rollback failed transaction
                             print(f"Error in secondary raw SQL fallback: {raw_error2}")
                             raise e  # Re-raise original error
                     else:
@@ -4162,7 +4079,6 @@ def get_profile():
                     user = User.query.filter_by(username=user_id_str).first()
                     app.logger.info(f"Profile endpoint: Looked up by username: {user_id_str}, found: {user is not None}")
                 except Exception as e:
-                    db.session.rollback()  # Rollback failed transaction
                     error_str = str(e).lower()
                     app.logger.error(f"Profile endpoint: Error looking up by username: {e}")
                     if 'is_employee' in error_str and 'column' in error_str:
@@ -4177,7 +4093,6 @@ def get_profile():
                     user = User.query.filter_by(patreon_id=user_id_str).first()
                     app.logger.info(f"Profile endpoint: Looked up by patreon_id: {user_id_str}, found: {user is not None}")
                 except Exception as e:
-                    db.session.rollback()  # Rollback failed transaction
                     error_str = str(e).lower()
                     app.logger.error(f"Profile endpoint: Error looking up by patreon_id: {e}")
                     if 'is_employee' in error_str and 'column' in error_str:
@@ -4213,7 +4128,6 @@ def get_profile():
             if profile:
                 profile_data = profile.to_dict()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Warning: Failed to fetch profile: {e}")
         
         # Return combined user data (accessible regardless of payment status)
@@ -4237,7 +4151,6 @@ def get_profile():
                     'createdAt': getattr(user, 'created_at', None).isoformat() if getattr(user, 'created_at', None) else None
                 }
         except Exception as dict_error:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Error creating user dict in profile: {dict_error}")
             # Fallback for minimal user data if to_dict fails
             user_data = {
@@ -4297,7 +4210,6 @@ def get_profile():
         
         return jsonify(user_data)
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching profile: {e}")
         app.logger.error(f"Error fetching profile: {e}")
         return jsonify({'error': 'Database error'}), 500
@@ -4548,8 +4460,6 @@ def get_notifications():
             'unreadCount': Notification.query.filter_by(user_id=user.id, read=False).count()
         })
     except Exception as e:
-        # Rollback failed transaction
-        db.session.rollback()
         app.logger.error(f"Error fetching notifications: {e}")
         import traceback
         traceback.print_exc()
@@ -4612,7 +4522,6 @@ def create_notification():
             if WEBPUSH_AVAILABLE:
                 send_push_notification(user.id, notification)
         except Exception as push_error:
-            db.session.rollback()  # Rollback failed transaction
             app.logger.warning(f"Failed to send push notification: {push_error}")
         
         return jsonify(notification.to_dict()), 201
@@ -4818,7 +4727,6 @@ def broadcast_notification():
                 try:
                     send_push_notification(notification.user_id, notification)
                 except Exception as push_error:
-                    db.session.rollback()  # Rollback failed transaction
                     app.logger.warning(f"Failed to send push notification to user {notification.user_id}: {push_error}")
         
         return jsonify({
@@ -4963,7 +4871,6 @@ def get_tasks():
             'totalCount': total_count
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         error_str = str(e).lower()
         print(f"Error fetching tasks: {e}")
         import traceback
@@ -5056,11 +4963,9 @@ def create_task():
             })
         return jsonify({'task': task.to_dict()}), 201
     except KeyError as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Missing required field: {e}")
         return jsonify({'error': 'Validation error', 'message': f'Missing required field: {str(e)}'}), 400
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error creating task: {e}")
         import traceback
         traceback.print_exc()
@@ -5110,7 +5015,6 @@ def update_task(task_id):
             })
         return jsonify({'task': task.to_dict()})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error updating task: {e}")
         import traceback
         traceback.print_exc()
@@ -5132,7 +5036,6 @@ def delete_task(task_id):
         socketio.emit('task_deleted', {'id': task_id, 'userId': user_info['id'] if user_info else 'anonymous'})
         return jsonify({'success': True})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error deleting task: {e}")
         import traceback
         traceback.print_exc()
@@ -5192,7 +5095,6 @@ def get_workspace_users():
         return jsonify(users_data), 200
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching workspace users: {e}")
         import traceback
         traceback.print_exc()
@@ -5213,7 +5115,6 @@ def parse_date_safely(date_string):
         # Try full ISO format first (with time)
         return datetime.fromisoformat(date_string)
     except (ValueError, TypeError):
-        db.session.rollback()  # Rollback failed transaction
         # If parsing fails, return None
         return None
 
@@ -5349,21 +5250,18 @@ def handle_task_notes_update(data):
             emit('error', {'message': 'Database not available'})
             
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error updating task notes: {e}")
         import traceback
         traceback.print_exc()
         emit('error', {'message': str(e)})
 
     except (ValueError, AttributeError):
-        db.session.rollback()  # Rollback failed transaction
         try:
             # Try date-only format (YYYY-MM-DD) and add time
             if 'T' not in date_string:
                 return datetime.fromisoformat(date_string + 'T00:00:00')
             raise
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Error parsing date '{date_string}': {e}")
             return None
 
@@ -5375,7 +5273,6 @@ def get_or_create_user_profile():
         try:
             verify_jwt_in_request(optional=False)
         except Exception as verify_err:
-            db.session.rollback()  # Rollback failed transaction
             # JWT verification failed - return auth error
             print(f"JWT verification failed in get_or_create_user_profile: {verify_err}")
             return None, jsonify({
@@ -5386,7 +5283,6 @@ def get_or_create_user_profile():
         # Get user ID from JWT token (set by @jwt_required() decorator)
         user_id = get_jwt_identity()
     except RuntimeError as e:
-        db.session.rollback()  # Rollback failed transaction
         # JWT context not available - this means @jwt_required() didn't run or JWT is invalid
         error_msg = str(e)
         print(f"Error getting JWT identity: {error_msg}")
@@ -5492,7 +5388,6 @@ def get_aura_progress():
             'auras': [aura.to_dict() for aura in auras]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching aura progress: {e}")
         import traceback
         traceback.print_exc()
@@ -5583,7 +5478,6 @@ def get_activities():
             'activities': [activity.to_dict() for activity in activities]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching activities: {e}")
         import traceback
         traceback.print_exc()
@@ -5669,7 +5563,6 @@ def get_goals():
             'goals': [goal.to_dict() for goal in goals]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching goals: {e}")
         import traceback
         traceback.print_exc()
@@ -5800,7 +5693,6 @@ def get_achievements():
             'achievements': [achievement.to_dict() for achievement in achievements]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching achievements: {e}")
         import traceback
         traceback.print_exc()
@@ -5937,7 +5829,6 @@ def admin_update():
         })
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error posting admin update: {e}")
         import traceback
         traceback.print_exc()
@@ -5956,7 +5847,6 @@ def twitch_goals():
             'currentViewers': int(os.environ.get('TWITCH_CURRENT_VIEWERS', 0)),
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching Twitch goals: {e}")
         return jsonify({
             'followerGoal': 1000,
@@ -6083,7 +5973,6 @@ def twitch_status():
             'stream': None
         }), 200  # Return 200 so frontend doesn't break
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error checking Twitch status: {e}")
         import traceback
         traceback.print_exc()
@@ -6223,7 +6112,6 @@ def gemini_chat():
             }), 500
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error in Gemini chat: {e}")
         import traceback
         traceback.print_exc()
@@ -6270,7 +6158,6 @@ def handle_connect():
             }
             print(f"User {user_id} ({user_name}) connected and tracked")
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error tracking user connection: {e}")
 
 @socketio.on('disconnect')
@@ -6285,7 +6172,6 @@ def handle_disconnect():
                 print(f"User {user_id} disconnected and removed from active users")
                 break
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error tracking user disconnection: {e}")
 
 @socketio.on('join_notifications')
@@ -6350,14 +6236,12 @@ def get_clients():
                 clients = [c for c in clients if c.employee_assignments and 
                           any(a.employee_id == emp_id_int for a in c.employee_assignments)]
             except (ValueError, TypeError):
-                db.session.rollback()  # Rollback failed transaction
                 pass  # Invalid employee_id, ignore filter
         
         return jsonify({
             'clients': [client.to_dict() for client in clients]
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching clients: {e}")
         import traceback
         traceback.print_exc()
@@ -6493,7 +6377,6 @@ iShareHow Ventures Team
         print(f"✓ Password reset email sent to {email}")
         return True
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"⚠ Error sending password reset email to {email}: {e}")
         import traceback
         traceback.print_exc()
@@ -6623,13 +6506,10 @@ def reset_password():
             decoded = decode_token(token)
             user_id = decoded.get('sub')
         except ExpiredSignatureError:
-            db.session.rollback()  # Rollback failed transaction
             return jsonify({'error': 'Token has expired. Please request a new password reset link.'}), 400
         except DecodeError:
-            db.session.rollback()  # Rollback failed transaction
             return jsonify({'error': 'Invalid token'}), 400
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f"Token verification error: {e}")
             return jsonify({'error': 'Invalid or expired token'}), 400
         
@@ -6681,7 +6561,6 @@ def get_client(client_id):
         
         return jsonify(client.to_dict()), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching client: {e}")
         return jsonify({'error': 'Failed to fetch client'}), 500
 
@@ -6771,7 +6650,6 @@ def assign_employee(client_id):
                 emp_id_int = int(employee_id)
                 employee = User.query.get(emp_id_int)
             except (ValueError, TypeError):
-                db.session.rollback()  # Rollback failed transaction
                 # Try finding by username, patreon_id, or ens_name
                 employee = User.query.filter_by(username=str(employee_id)).first()
                 if not employee:
@@ -6834,7 +6712,6 @@ def get_client_dashboard_connections(client_id):
             'connections': [conn.to_dict() for conn in connections]
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching dashboard connections: {e}")
         return jsonify({'error': 'Failed to fetch connections'}), 500
 
@@ -6915,7 +6792,6 @@ def get_employees():
             try:
                 users = User.query.filter_by(is_employee=True).all()
             except Exception as e:
-                db.session.rollback()  # Rollback failed transaction
                 error_str = str(e).lower()
                 if 'is_employee' in error_str and 'column' in error_str:
                     # Column doesn't exist, fallback to all users
@@ -6943,7 +6819,6 @@ def get_employees():
         
         return jsonify({'employees': employees}), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching employees: {e}")
         import traceback
         traceback.print_exc()
@@ -6997,7 +6872,6 @@ def get_creative_metrics():
             )
             active_clients_count = active_clients_query.count()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             app.logger.warning(f"Error counting active clients: {e}")
             active_clients_count = 0
         
@@ -7012,7 +6886,6 @@ def get_creative_metrics():
                 Client.created_at >= first_day_of_month
             ).count()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             app.logger.warning(f"Error counting clients this month: {e}")
             clients_this_month = 0
         
@@ -7028,7 +6901,6 @@ def get_creative_metrics():
                 SupportRequest.status.in_(['open', 'in-progress'])
             ).count()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             # Check if it's a column error
             error_str = str(e).lower()
             if 'client_id' in error_str or 'column' in error_str or 'undefinedcolumn' in error_str:
@@ -7041,7 +6913,6 @@ def get_creative_metrics():
                     SupportRequest.status.in_(['open', 'in-progress'])
                 ).count()
             except Exception as e2:
-                db.session.rollback()  # Rollback failed transaction
                 app.logger.warning(f"Error in fallback support request count: {e2}")
                 open_support_requests = 0
         
@@ -7054,7 +6925,6 @@ def get_creative_metrics():
                 ClientEmployeeAssignment.employee_id == employee_db_id
             ).count()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             app.logger.warning(f"Error counting total clients: {e}")
             total_clients = 0
         
@@ -7077,7 +6947,6 @@ def get_creative_metrics():
                 SupportRequest.updated_at >= today_start
             ).count()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             # Check if it's a column error
             error_str = str(e).lower()
             if 'client_id' in error_str or 'column' in error_str or 'undefinedcolumn' in error_str:
@@ -7091,7 +6960,6 @@ def get_creative_metrics():
                     SupportRequest.updated_at >= today_start
                 ).count()
             except Exception as e2:
-                db.session.rollback()  # Rollback failed transaction
                 app.logger.warning(f"Error in fallback task count: {e2}")
                 tasks_completed_today = 0
         
@@ -7104,7 +6972,6 @@ def get_creative_metrics():
             'totalClients': total_clients
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         import traceback
         error_trace = traceback.format_exc()
         print(f"Error fetching creative metrics: {e}")
@@ -7137,7 +7004,6 @@ def get_support_requests():
             columns = [col['name'] for col in inspector.get_columns('support_requests')]
             has_client_id_column = 'client_id' in columns
         except Exception:
-            db.session.rollback()  # Rollback failed transaction
             # Table might not exist
             pass
         
@@ -7208,7 +7074,6 @@ def get_support_requests():
             'requests': [req.to_dict() for req in requests]
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching support requests: {e}")
         import traceback
         traceback.print_exc()
@@ -7246,7 +7111,6 @@ def create_support_request():
                     if not user:
                         user = User.query.filter_by(patreon_id=user_id).first()
             except Exception as e:
-                db.session.rollback()  # Rollback failed transaction
                 app.logger.debug(f"Could not get user from JWT: {e}")
             
             if not user:
@@ -7347,12 +7211,10 @@ def create_support_request():
                     if WEBPUSH_AVAILABLE:
                         send_push_notification(assigned_employee.id, notification)
                 except Exception as push_error:
-                    db.session.rollback()  # Rollback failed transaction
                     app.logger.warning(f"Failed to send push notification: {push_error}")
                 
                 print(f"✓ Sent notification to employee {assigned_employee.id} for support request {request_obj.id}")
             except Exception as notif_error:
-                db.session.rollback()  # Rollback failed transaction
                 app.logger.error(f"Failed to send notification: {notif_error}")
                 # Don't fail the request creation if notification fails
         
@@ -7447,7 +7309,6 @@ def get_support_request_tasks(request_id):
                 'count': len(tasks)
             }), 200
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             # If support_request_id column doesn't exist, return empty list
             error_str = str(e).lower()
             if 'support_request_id' in error_str or 'column' in error_str:
@@ -7459,7 +7320,6 @@ def get_support_request_tasks(request_id):
             raise
     
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         app.logger.error(f"Error fetching tasks for support request: {e}")
         return jsonify({'error': 'Failed to fetch tasks'}), 500
 
@@ -7554,7 +7414,6 @@ def get_current_subscription():
             'subscription': subscription.to_dict()
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching subscription: {e}")
         return jsonify({'error': 'Failed to fetch subscription'}), 500
 
@@ -7662,7 +7521,6 @@ def seed_rise_journey_levels():
             conn.commit()
             print(f"✓ Successfully seeded {len(levels_data)} Rise Journey levels")
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"✗ Error seeding Rise Journey levels: {e}")
         import traceback
         traceback.print_exc()
@@ -7729,14 +7587,12 @@ def run_database_upgrade():
                                             try:
                                                 conn.execute(db.text(f"CREATE UNIQUE INDEX ix_users_google_id ON users ({col_name})"))
                                             except Exception:
-                                                db.session.rollback()  # Rollback failed transaction
                                                 pass  # Index might already exist
                                         elif col_name == 'auth_provider':
                                             conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} VARCHAR(20) NOT NULL DEFAULT 'email'"))
                                         print(f"  ✓ Added column: {col_name}")
                                         added_count += 1
                                     except Exception as col_error:
-                                        db.session.rollback()  # Rollback failed transaction
                                         error_str = str(col_error).lower()
                                         if 'already exists' in error_str or 'duplicate' in error_str:
                                             print(f"  ✓ Column {col_name} already exists (ignoring)")
@@ -7751,13 +7607,11 @@ def run_database_upgrade():
                     else:
                         print("✓ All required columns verified")
             except Exception as verify_error:
-                db.session.rollback()  # Rollback failed transaction
                 print(f"⚠ Could not verify columns (non-critical): {verify_error}")
                 import traceback
                 traceback.print_exc()
                 
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"⚠ Could not run database upgrade: {e}")
         import traceback
         traceback.print_exc()
@@ -7785,7 +7639,6 @@ def ensure_database_upgrade():
             with app.app_context():
                 seed_rise_journey_levels()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f"⚠ Could not seed Rise Journey levels at startup: {e}")
             import traceback
             traceback.print_exc()
@@ -8065,7 +7918,6 @@ def shopify_checkout():
             'price': price
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error creating Shopify checkout: {e}")
         return jsonify({'error': 'Failed to create checkout'}), 500
 
@@ -8088,7 +7940,6 @@ def shopify_checkout():
             print("Patreon OAuth error: Missing environment variables")
             return redirect(f'{get_frontend_url()}/?auth=error&message=missing_config')
     except KeyError as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Patreon OAuth error: Missing environment variable: {e}")
         return redirect(f'{get_frontend_url()}/?auth=error&message=missing_config')
 
@@ -8359,7 +8210,6 @@ def shopify_checkout():
         set_access_cookies(response, jwt_token)
         return response
     except requests.exceptions.HTTPError as e:
-        db.session.rollback()  # Rollback failed transaction
         error_detail = "Unknown error"
         try:
             error_detail = e.response.json() if e.response else str(e)
@@ -8374,7 +8224,6 @@ def shopify_checkout():
         app.logger.error(f"Patreon OAuth network error: {e}")
         return redirect(f'{get_frontend_url()}/?auth=error&message=network_error')
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         app.logger.error(f"Patreon OAuth error: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
@@ -8523,7 +8372,6 @@ def create_course():
         course = learning_store.add_course(data)
         return jsonify({'course': course}), 201
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error creating course: {e}")
         return jsonify({'error': 'Failed to create course', 'message': str(e)}), 500
 
@@ -8543,7 +8391,6 @@ def update_course(course_id):
             return jsonify({'error': 'Course not found'}), 404
         return jsonify({'course': course})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error updating course: {e}")
         return jsonify({'error': 'Failed to update course', 'message': str(e)}), 500
 
@@ -8569,7 +8416,6 @@ def create_pdf():
         pdf = learning_store.add_pdf(data)
         return jsonify({'pdf': pdf}), 201
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error creating PDF: {e}")
         return jsonify({'error': 'Failed to create PDF', 'message': str(e)}), 500
 
@@ -8589,7 +8435,6 @@ def update_pdf(pdf_id):
             return jsonify({'error': 'PDF not found'}), 404
         return jsonify({'pdf': pdf})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error updating PDF: {e}")
         return jsonify({'error': 'Failed to update PDF', 'message': str(e)}), 500
 
@@ -8615,7 +8460,6 @@ def create_video():
         video = learning_store.add_video(data)
         return jsonify({'video': video}), 201
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error creating video: {e}")
         return jsonify({'error': 'Failed to create video', 'message': str(e)}), 500
 
@@ -8635,7 +8479,6 @@ def update_video(video_id):
             return jsonify({'error': 'Video not found'}), 404
         return jsonify({'video': video})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error updating video: {e}")
         return jsonify({'error': 'Failed to update video', 'message': str(e)}), 500
 
@@ -8680,7 +8523,6 @@ def get_board_snapshot(board_id):
         
         return jsonify(snapshot), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting board snapshot: {e}")
         return jsonify({'error': 'Failed to get board snapshot'}), 500
 
@@ -8716,7 +8558,6 @@ def board_presence(board_id):
             
             return jsonify({'success': True, 'presence': presence_data}), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error handling board presence: {e}")
         return jsonify({'error': 'Failed to handle presence'}), 500
 
@@ -8997,7 +8838,6 @@ def get_wellness_modules():
         
         return jsonify({'modules': result}), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching wellness modules: {e}")
         return jsonify({'error': 'Failed to fetch modules'}), 500
 
@@ -9012,7 +8852,6 @@ def get_wellness_module(module_id):
         module = WellnessModule.query.get_or_404(module_id)
         return jsonify({'module': module.to_dict()}), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching wellness module: {e}")
         return jsonify({'error': 'Failed to fetch module'}), 500
 
@@ -9077,7 +8916,6 @@ def activate_wellness_module():
             'progress': progress.to_dict()
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error activating module: {e}")
         return jsonify({'error': 'Failed to activate module'}), 500
 
@@ -9092,7 +8930,6 @@ def get_mentor_cues(module_id):
         cues = MentorCue.query.filter_by(module_id=module_id).all()
         return jsonify({'cues': [cue.to_dict() for cue in cues]}), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching mentor cues: {e}")
         return jsonify({'error': 'Failed to fetch cues'}), 500
 
@@ -9238,7 +9075,6 @@ if DB_AVAILABLE:
             try:
                 linked_tasks_count = Task.query.filter_by(support_request_id=self.id).count()
             except Exception:
-                db.session.rollback()  # Rollback failed transaction
                 pass  # Ignore if tasks table doesn't exist or column doesn't exist
             
             return {
@@ -9316,7 +9152,6 @@ def get_crypto_balance():
             'transactions': [tx.to_dict() for tx in transactions]
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching crypto balance: {e}")
         return jsonify({'error': 'Failed to fetch balance'}), 500
 
@@ -9361,7 +9196,6 @@ def award_crypto():
             'transaction': transaction.to_dict()
         }), 201
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error awarding crypto: {e}")
         return jsonify({'error': 'Failed to award crypto'}), 500
 
@@ -9400,7 +9234,6 @@ def get_crypto_stats():
             'role': user_info['role']
         }), 200
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error fetching crypto stats: {e}")
         return jsonify({'error': 'Failed to fetch stats'}), 500
 
@@ -9426,7 +9259,6 @@ def admin_list_users():
                         profile_dict = profile.to_dict()
                         user_dict.update(profile_dict)
                 except Exception as profile_error:
-                    db.session.rollback()  # Rollback failed transaction
                     print(f"Error fetching profile for user {user.id}: {profile_error}")
                     pass
                 
@@ -9444,7 +9276,6 @@ def admin_list_users():
                 
                 users_data.append(user_dict)
             except Exception as user_error:
-                db.session.rollback()  # Rollback failed transaction
                 print(f"Error processing user {getattr(user, 'id', 'unknown')}: {user_error}")
                 # Add minimal user data even if to_dict() fails
                 users_data.append({
@@ -9458,7 +9289,6 @@ def admin_list_users():
         
         return jsonify({'users': users_data})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error listing users: {e}")
         import traceback
         traceback.print_exc()
@@ -9502,7 +9332,6 @@ def admin_toggle_admin(user_id):
                     """))
                     conn.commit()
             except Exception as e:
-                db.session.rollback()  # Rollback failed transaction
                 error_str = str(e).lower()
                 if 'already exists' not in error_str and 'duplicate' not in error_str:
                     return jsonify({'error': 'Database migration required: is_admin column missing'}), 500
@@ -9527,7 +9356,6 @@ def admin_toggle_admin(user_id):
                     })
                     conn.commit()
             except Exception as e:
-                db.session.rollback()  # Rollback failed transaction
                 return jsonify({'error': f'Failed to update admin status: {str(e)}'}), 500
         
         db.session.commit()
@@ -9574,7 +9402,6 @@ def admin_change_password(user_id):
             from flask_jwt_extended import verify_jwt_in_request
             verify_jwt_in_request()
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             # Set CORS headers for error response
             origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
             allowed_origins = ['https://ventures.isharehow.app']
@@ -9985,7 +9812,6 @@ def load_game_content():
         print(f'[LookUp.Cafe] Loaded {len(PUZZLES)} puzzles')
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Warning: Could not load game content: {e}')
         print('[LookUp.Cafe] Using fallback content')
         # Fallback to simple lists
@@ -10104,7 +9930,6 @@ def handle_create_room(data):
         socketio.emit('game:rooms-updated')
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error creating room: {e}')
         emit('game:error', {'message': f'Failed to create room: {str(e)}'})
 
@@ -10164,7 +9989,6 @@ def handle_join_room(data):
         }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error joining room: {e}')
         emit('game:error', {'message': f'Failed to join room: {str(e)}'})
 
@@ -10213,7 +10037,6 @@ def handle_leave_room(data):
         }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error leaving room: {e}')
 
 
@@ -10301,7 +10124,6 @@ def handle_start_game(data):
             }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error starting game: {e}')
         emit('game:error', {'message': f'Failed to start game: {str(e)}'})
 
@@ -10373,7 +10195,6 @@ def handle_submit_answer(data):
             }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error submitting answer: {e}')
 
 
@@ -10397,7 +10218,6 @@ def handle_draw(data):
         emit('game:drawing-update', data, room=room_code, skip_sid=request.sid)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error handling draw: {e}')
 
 
@@ -10420,7 +10240,6 @@ def handle_clear_canvas(data):
         emit('game:canvas-cleared', {}, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error clearing canvas: {e}')
 
 
@@ -10466,7 +10285,6 @@ def handle_next_round(data):
         emit('game:round-start', {'room': room}, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error starting next round: {e}')
 
 
@@ -10496,7 +10314,6 @@ def handle_chat(data):
         }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error handling chat: {e}')
 
 
@@ -10528,7 +10345,6 @@ def handle_disconnect():
                 break
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error handling disconnect: {e}')
 
 
@@ -10555,7 +10371,6 @@ def get_api_keys():
             'apiKeys': [key.to_dict() for key in keys]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting API keys: {e}")
         return jsonify({'error': 'Failed to get API keys'}), 500
 
@@ -10793,7 +10608,6 @@ def get_intervals_activities():
             'activities': [activity.to_dict() for activity in activities]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting activities: {e}")
         return jsonify({'error': 'Failed to get activities'}), 500
 
@@ -10821,7 +10635,6 @@ def get_intervals_wellness():
             'metrics': [metric.to_dict() for metric in metrics]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting wellness metrics: {e}")
         return jsonify({'error': 'Failed to get wellness metrics'}), 500
 
@@ -10974,7 +10787,6 @@ def get_rise_journey_quiz():
             return jsonify({'quiz': quiz.to_dict()})
         return jsonify({'quiz': None})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting quiz: {e}")
         return jsonify({'error': 'Failed to get quiz'}), 500
 
@@ -10999,7 +10811,6 @@ def get_rise_journey_trial():
             return jsonify({'trial': trial.to_dict()})
         return jsonify({'trial': None})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting trial: {e}")
         return jsonify({'error': 'Failed to get trial'}), 500
 
@@ -11103,7 +10914,6 @@ def check_rise_journey_access():
             'isIsharehow': is_isharehow
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error checking Rise Journey access: {e}")
         import traceback
         traceback.print_exc()
@@ -11133,7 +10943,6 @@ def get_rise_journey_levels():
                 levels = RiseJourneyLevel.query.order_by(RiseJourneyLevel.order).all()
                 print(f"✓ After seeding, found {len(levels)} levels")
             except Exception as seed_error:
-                db.session.rollback()  # Rollback failed transaction
                 print(f"⚠ Failed to seed levels: {seed_error}")
                 import traceback
                 traceback.print_exc()
@@ -11149,7 +10958,6 @@ def get_rise_journey_levels():
         
         return jsonify({'levels': result})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting levels: {e}")
         import traceback
         traceback.print_exc()
@@ -11179,7 +10987,6 @@ def get_rise_journey_lessons(level_id):
         
         return jsonify({'lessons': result})
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting lessons: {e}")
         return jsonify({'error': 'Failed to get lessons'}), 500
 
@@ -11210,7 +11017,6 @@ def get_rise_journey_notes(lesson_id):
             'sharedNotes': [note.to_dict() for note in shared_notes]
         })
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f"Error getting notes: {e}")
         return jsonify({'error': 'Failed to get notes'}), 500
 
@@ -11399,7 +11205,6 @@ def intervals_proxy_activities():
             data = response.json()
             return jsonify(data), 200
         except ValueError as e:
-            db.session.rollback()  # Rollback failed transaction
             app.logger.error(f"Failed to parse JSON response: {e}")
             return jsonify({'error': 'Invalid JSON response from Intervals.icu'}), 502
         
@@ -11407,7 +11212,6 @@ def intervals_proxy_activities():
         app.logger.error(f"Request exception in intervals_proxy_activities: {e}")
         return jsonify({'error': 'Upstream request failed', 'detail': str(e)}), 502
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         app.logger.error(f"Unexpected error in intervals_proxy_activities: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
 
@@ -11455,7 +11259,6 @@ def intervals_proxy_wellness():
             data = response.json()
             return jsonify(data), 200
         except ValueError as e:
-            db.session.rollback()  # Rollback failed transaction
             app.logger.error(f"Failed to parse JSON response: {e}")
             return jsonify({'error': 'Invalid JSON response from Intervals.icu'}), 502
         
@@ -11463,7 +11266,6 @@ def intervals_proxy_wellness():
         app.logger.error(f"Request exception in intervals_proxy_wellness: {e}")
         return jsonify({'error': 'Upstream request failed', 'detail': str(e)}), 502
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         app.logger.error(f"Unexpected error in intervals_proxy_wellness: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
 
@@ -11511,7 +11313,6 @@ def intervals_proxy_athlete():
             data = response.json()
             return jsonify(data), 200
         except ValueError as e:
-            db.session.rollback()  # Rollback failed transaction
             app.logger.error(f"Failed to parse JSON response: {e}")
             return jsonify({'error': 'Invalid JSON response from Intervals.icu'}), 502
         
@@ -11519,7 +11320,6 @@ def intervals_proxy_athlete():
         app.logger.error(f"Request exception in intervals_proxy_athlete: {e}")
         return jsonify({'error': 'Upstream request failed', 'detail': str(e)}), 502
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         app.logger.error(f"Unexpected error in intervals_proxy_athlete: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
 
@@ -11557,7 +11357,6 @@ def handle_set_game_type(data):
         emit('game:type-set', {'room': room}, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error setting game type: {e}')
         emit('game:error', {'message': f'Failed to set game type: {str(e)}'})
 
@@ -11627,7 +11426,6 @@ def handle_set_words(data):
         }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error setting words: {e}')
         emit('game:error', {'message': f'Failed to set words: {str(e)}'})
 
@@ -11715,7 +11513,6 @@ def handle_submit_guess(data):
             }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error submitting guess: {e}')
         emit('game:error', {'message': f'Failed to submit guess: {str(e)}'})
 
@@ -11818,7 +11615,6 @@ def handle_vote(data):
                 emit('guessing:voting-complete', results, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error processing vote: {e}')
         emit('game:error', {'message': f'Failed to process vote: {str(e)}'})
 
@@ -11877,7 +11673,6 @@ def handle_next_guessing_round(data):
         }, room=room_code)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error starting next round: {e}')
         emit('game:error', {'message': f'Failed to start next round: {str(e)}'})
 
@@ -11925,7 +11720,6 @@ def cleanup_inactive_rooms():
                     del game_rooms[room_code]
         
         except Exception as e:
-            db.session.rollback()  # Rollback failed transaction
             print(f'[LookUp.Cafe] Error in cleanup task: {e}')
 
 # Start cleanup thread
@@ -11987,7 +11781,6 @@ def handle_rejoin_room(data):
         }, room=room_code, skip_sid=player_id)
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error rejoining room: {e}')
         emit('game:error', {'message': f'Failed to rejoin room: {str(e)}'})
 
@@ -12022,7 +11815,6 @@ def handle_delete_room(data):
         del game_rooms[room_code]
         
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error deleting room: {e}')
         emit('game:error', {'message': f'Failed to delete room: {str(e)}'})
 
@@ -12055,7 +11847,6 @@ def handle_disconnect():
                     return
     
     except Exception as e:
-        db.session.rollback()  # Rollback failed transaction
         print(f'[LookUp.Cafe] Error handling disconnect: {e}')
 
 
