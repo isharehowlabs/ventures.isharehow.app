@@ -34,9 +34,8 @@ export default function ProspectingPage() {
   const timerString = `${timeLeft.hours}:${formatTime(timeLeft.minutes)}:${formatTime(timeLeft.seconds)}`;
 
   const claimSpot = () => {
-    // Replace with actual checkout integration
-    alert('Redirecting to secure checkout... (Integrate with Stripe here)');
-    // window.location.href = '/checkout?price=97';
+    // Redirect to Shopify flash sale product page
+    window.location.href = 'https://shop.isharehow.app/products/flash-sale-10x-your-seo-prospecting?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web';
   };
 
   return (

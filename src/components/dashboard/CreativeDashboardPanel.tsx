@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import {
   Box,
   Tabs,
@@ -57,13 +58,43 @@ function TabPanel(props: TabPanelProps) {
 export default function CreativeDashboardPanel() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [addClientOpen, setAddClientOpen] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.isAdmin || false;
 
+  // Map tab names to indices
+  const tabMap: Record<string, number> = {
+    overview: 0,
+    analytics: 1,
+    support: 2,
+    match: 3,
+    management: 4,
+    learning: isAdmin ? 5 : 4,
+    ai: isAdmin ? 6 : 5,
+  };
+
+  // Initialize tab from URL query parameter
+  useEffect(() => {
+    const tabParam = router.query.tab as string;
+    if (tabParam && tabMap[tabParam] !== undefined) {
+      setActiveTab(tabMap[tabParam]);
+    }
+  }, [router.query.tab, isAdmin]);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
+    
+    // Update URL with tab parameter
+    const tabNames = Object.keys(tabMap);
+    const tabName = tabNames.find(key => tabMap[key] === newValue);
+    if (tabName) {
+      router.push({
+        pathname: router.pathname,
+        query: { ...router.query, tab: tabName },
+      }, undefined, { shallow: true });
+    }
   };
 
   return (

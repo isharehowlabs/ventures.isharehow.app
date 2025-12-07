@@ -1,6 +1,7 @@
 // src/components/dashboard/LearningPanel.tsx
 import type { FC } from 'react';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 import {
   Avatar,
@@ -34,7 +35,9 @@ import {
   FilterList,
   Close as CloseIcon,
   Note as NoteIcon,
+  Build as BuildIcon,
 } from '@mui/icons-material';
+import SEOProspectingBuilder from './creative/SEOProspectingBuilder';
 import type { SvgIconComponent } from '@mui/icons-material';
 
 interface LearningContent {
@@ -327,9 +330,25 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function LearningPanel() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedContent, setSelectedContent] = useState<LearningContent | null>(null);
   const [notes, setNotes] = useState<{ [key: string]: string }>({});
+
+  // Map subtab names to indices
+  const subtabMap: Record<string, number> = {
+    courses: 0,
+    pdfs: 1,
+    tools: 2,
+  };
+
+  // Initialize subtab from URL query parameter
+  useEffect(() => {
+    const subtabParam = router.query.subtab as string;
+    if (subtabParam && subtabMap[subtabParam] !== undefined) {
+      setActiveTab(subtabMap[subtabParam]);
+    }
+  }, [router.query.subtab]);
 
   // Load notes from localStorage on mount
   useEffect(() => {
@@ -352,6 +371,16 @@ export default function LearningPanel() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
+    
+    // Update URL with subtab parameter
+    const subtabNames = Object.keys(subtabMap);
+    const subtabName = subtabNames.find(key => subtabMap[key] === newValue);
+    if (subtabName) {
+      router.push({
+        pathname: router.pathname,
+        query: { ...router.query, tab: 'learning', subtab: subtabName },
+      }, undefined, { shallow: true });
+    }
   };
 
   const handleContentClick = (content: LearningContent) => {
@@ -418,6 +447,12 @@ export default function LearningPanel() {
               label="PDFs"
               sx={{ textTransform: 'none', fontWeight: 600 }}
             />
+            <Tab
+              icon={<BuildIcon />}
+              iconPosition="start"
+              label="Tools"
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            />
           </Tabs>
         </Box>
 
@@ -480,6 +515,10 @@ export default function LearningPanel() {
               ))}
             </Stack>
           </Stack>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <SEOProspectingBuilder />
         </TabPanel>
       </Stack>
 
