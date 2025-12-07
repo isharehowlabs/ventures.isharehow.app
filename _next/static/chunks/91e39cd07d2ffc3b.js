@@ -1,0 +1,20 @@
+__turbopack_load_page_chunks__("/cowork", [
+  "static/chunks/74378257df263d4c.js",
+  "static/chunks/a2f8cb0db4f77f0e.js",
+  "static/chunks/cce264097322a1ff.js",
+  "static/chunks/c8bf1850466270f5.js",
+  "static/chunks/c24de43f24c6c860.js",
+  "static/chunks/55db2730b9138f95.js",
+  "static/chunks/e7bd01d67c66fb95.js",
+  "static/chunks/fb22ae8de0feb8b9.js",
+  "static/chunks/15e827e443a3dbac.js",
+  "static/chunks/3e52b27737cf67cf.js",
+  "static/chunks/c4a3371e258c9a5c.js",
+  "static/chunks/7343a6960d0a1159.js",
+  "static/chunks/04b08779c3b3184c.js",
+  "static/chunks/35910d7e4f975e45.js",
+  "static/chunks/67cfd786c5ec5637.js",
+  "static/chunks/034044e5cb108128.js",
+  "static/chunks/82fe38ab6b1f6a6a.js",
+  "static/chunks/turbopack-40800fc8cd7943ea.js"
+])
