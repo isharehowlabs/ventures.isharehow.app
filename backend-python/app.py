@@ -1290,83 +1290,20 @@ def get_user_id():
     return 'anonymous'
 
 def safe_get_user(user_id):
-    """Safely get user by ID, handling missing database columns gracefully"""
+    """Get user by ID - columns are ensured to exist by database upgrade"""
     if not user_id or not DB_AVAILABLE:
         return None
     
+    # Try normal SQLAlchemy query
     user = None
-    try:
-        # Try normal SQLAlchemy query first
-        if str(user_id).isdigit():
-            user = User.query.get(int(user_id))
-        if not user:
-            user = User.query.filter_by(username=str(user_id)).first()
-        if not user:
-            user = User.query.filter_by(patreon_id=str(user_id)).first()
-        if not user:
-            user = User.query.filter_by(email=str(user_id)).first()
-    except Exception as query_error:
-        error_str = str(query_error).lower()
-        # Check if error is due to missing columns
-        if ('column' in error_str and ('is_employee' in error_str or 'has_subscription_update' in error_str)):
-            print(f"Warning: Missing column when querying user {user_id}, using raw SQL fallback")
-            print("Please run: flask db upgrade")
-            # Use raw SQL that only queries existing columns
-            try:
-                with db.engine.connect() as conn:
-                    # Try to convert user_id to integer for id comparison
-                    try:
-                        user_id_int = int(user_id)
-                        id_condition = "id = CAST(:user_id_int AS INTEGER)"
-                        params = {'user_id': str(user_id), 'user_id_int': user_id_int}
-                    except (ValueError, TypeError):
-                        id_condition = "FALSE"
-                        params = {'user_id': str(user_id)}
-                    
-                    # Query only columns that definitely exist (basic ones)
-                    result = conn.execute(db.text(f"""
-                        SELECT id, username, email, password_hash, membership_paid,
-                               last_checked, created_at, updated_at
-                        FROM users 
-                        WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id OR email = :user_id)
-                        LIMIT 1
-                    """), params)
-                    row = result.fetchone()
-                    if row:
-                        from types import SimpleNamespace
-                        user = SimpleNamespace(
-                            id=row[0],
-                            username=row[1],
-                            email=row[2],
-                            password_hash=row[3],
-                            membership_paid=row[4],
-                            last_checked=row[5],
-                            created_at=row[6],
-                            updated_at=row[7]
-                        )
-                        # Add methods that might be called
-                        def check_password(pwd):
-                            if not user.password_hash:
-                                return False
-                            return bcrypt.checkpw(pwd.encode('utf-8'), user.password_hash.encode('utf-8'))
-                        user.check_password = check_password
-                        def to_dict():
-                            user_id_str = user.email.split('@')[0] if user.email else (user.username or str(user.id))
-                            return {
-                                'id': user_id_str,
-                                'userId': str(user.id),
-                                'username': user.username,
-                                'email': user.email,
-                                'membershipPaid': user.membership_paid,
-                                'lastChecked': user.last_checked.isoformat() if user.last_checked else None
-                            }
-                        user.to_dict = to_dict
-            except Exception as raw_error:
-                print(f"Error in raw SQL fallback: {raw_error}")
-                return None
-        else:
-            # Some other error, re-raise
-            raise
+    if str(user_id).isdigit():
+        user = User.query.get(int(user_id))
+    if not user:
+        user = User.query.filter_by(username=str(user_id)).first()
+    if not user:
+        user = User.query.filter_by(patreon_id=str(user_id)).first()
+    if not user:
+        user = User.query.filter_by(email=str(user_id)).first()
     
     return user
 
@@ -7241,6 +7178,52 @@ def run_database_upgrade():
             from flask_migrate import upgrade
             upgrade()
             print("✓ Database upgrade completed successfully")
+            
+            # After migration, ensure all required columns exist
+            # This is a safety check in case migrations didn't run properly
+            try:
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                
+                if 'users' in inspector.get_table_names():
+                    existing_columns = {col['name'] for col in inspector.get_columns('users')}
+                    required_columns = {
+                        'has_subscription_update', 'subscription_update_active',
+                        'shopify_customer_id', 'bold_subscription_id',
+                        'is_employee', 'is_admin'
+                    }
+                    
+                    missing = required_columns - existing_columns
+                    if missing:
+                        print(f"⚠ Warning: Missing columns detected: {missing}")
+                        print("  Attempting to add missing columns...")
+                        
+                        with db.engine.connect() as conn:
+                            with conn.begin():
+                                for col_name in missing:
+                                    try:
+                                        if col_name in ['has_subscription_update', 'subscription_update_active']:
+                                            conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"))
+                                        elif col_name in ['shopify_customer_id', 'bold_subscription_id']:
+                                            conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} VARCHAR(50)"))
+                                        elif col_name == 'is_employee':
+                                            conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"))
+                                        elif col_name == 'is_admin':
+                                            conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"))
+                                        print(f"  ✓ Added column: {col_name}")
+                                    except Exception as col_error:
+                                        error_str = str(col_error).lower()
+                                        if 'already exists' in error_str or 'duplicate' in error_str:
+                                            print(f"  ✓ Column {col_name} already exists (ignoring)")
+                                        else:
+                                            print(f"  ✗ Could not add {col_name}: {col_error}")
+                        
+                        print("✓ Missing columns check complete")
+                    else:
+                        print("✓ All required columns verified")
+            except Exception as verify_error:
+                print(f"⚠ Could not verify columns (non-critical): {verify_error}")
+                
     except Exception as e:
         print(f"⚠ Could not run database upgrade: {e}")
         import traceback
