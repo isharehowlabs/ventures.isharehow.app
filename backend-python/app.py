@@ -9504,6 +9504,92 @@ def admin_change_password(user_id):
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 500
 
+@app.route('/api/admin/users/<user_id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required()
+def delete_user(user_id):
+    """Delete a user (admin only)"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 500
+    
+    try:
+        # Get current admin user
+        admin_user_id = get_jwt_identity()
+        if not admin_user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        admin_user = safe_get_user(admin_user_id)
+        if not admin_user:
+            return jsonify({'error': 'Admin user not found'}), 404
+        
+        # Check if user is admin
+        if not (hasattr(admin_user, 'is_admin') and admin_user.is_admin):
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        # Get user to delete
+        user_to_delete = safe_get_user(user_id)
+        if not user_to_delete:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Prevent self-deletion
+        if (hasattr(user_to_delete, 'id') and hasattr(admin_user, 'id') and 
+            str(user_to_delete.id) == str(admin_user.id)):
+            return jsonify({'error': 'Cannot delete your own account'}), 400
+        
+        user_id_to_delete = user_to_delete.id if hasattr(user_to_delete, 'id') else user_id
+        
+        # Delete related records first (to avoid foreign key constraints)
+        try:
+            # Delete user profile
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                with conn.begin():
+                    # Delete user profiles
+                    conn.execute(text("DELETE FROM user_profiles WHERE id = :user_id OR user_id = :user_id"), 
+                                {'user_id': str(user_id_to_delete)})
+                    
+                    # Delete client assignments
+                    conn.execute(text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"), 
+                                {'user_id': user_id_to_delete})
+                    
+                    # Delete support requests (if user was assigned)
+                    conn.execute(text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"), 
+                                {'user_id': str(user_id_to_delete)})
+                    
+                    # Delete notifications
+                    conn.execute(text("DELETE FROM notifications WHERE user_id = :user_id"), 
+                                {'user_id': user_id_to_delete})
+                    
+                    # Delete subscriptions
+                    conn.execute(text("DELETE FROM subscriptions WHERE user_id = :user_id"), 
+                                {'user_id': user_id_to_delete})
+                    
+                    # Finally, delete the user
+                    conn.execute(text("DELETE FROM users WHERE id = :user_id"), 
+                                {'user_id': user_id_to_delete})
+            
+            return jsonify({'message': 'User deleted successfully'}), 200
+        except Exception as delete_error:
+            db.session.rollback()
+            app.logger.error(f"Error deleting user: {delete_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': 'Failed to delete user', 'details': str(delete_error)}), 500
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error in delete_user endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to delete user', 'details': str(e)}), 500
+
 @app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
 @require_admin
 def admin_toggle_employee(user_id):

@@ -34,6 +34,8 @@ import {
   DialogActions,
   Autocomplete,
   Tooltip,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -45,16 +47,25 @@ import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  Warning as WarningIcon,
   PersonAdd as PersonAddIcon,
   TrendingUp as TrendingUpIcon,
   Add as AddIcon,
   Email as EmailIcon,
   Notifications as NotificationsIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { getBackendUrl } from '../../../utils/backendUrl';
 import AddClientDialog from './AddClientDialog';
 import EditClientDialog from './EditClientDialog';
 import AssignEmployeeDialog from './AssignEmployeeDialog';
+import { useAuth } from '../../../hooks/useAuth';
+import AdminClientAssignmentDialog from './AdminClientAssignmentDialog';
+import {
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  VpnKey as VpnKeyIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 
 interface Employee {
   id: number;
@@ -85,6 +96,9 @@ interface ClientEmployeeMatcherProps {
 }
 
 export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient }: ClientEmployeeMatcherProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || false;
+  
   // State for all sections
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -92,6 +106,22 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Employee Management state (admin only)
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userError, setUserError] = useState<string | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [adminAssignDialogOpen, setAdminAssignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedUserForDelete, setSelectedUserForDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Match Clients & Employees state
   const [selectedClient, setSelectedClient] = useState<string>('');
@@ -122,7 +152,194 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
 
   useEffect(() => {
     fetchData();
-  }, [statusFilter, employeeFilter, searchQuery]);
+    if (isAdmin) {
+      fetchAllUsers();
+    }
+  }, [statusFilter, employeeFilter, searchQuery, isAdmin]);
+  
+  const fetchAllUsers = async () => {
+    if (!isAdmin) return;
+    setLoadingUsers(true);
+    setUserError(null);
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/admin/users`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAllUsers(data.users || []);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        setUserError(errorData.error || `Failed to load users (${response.status})`);
+      }
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      setUserError(error.message || 'Failed to load users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+  
+  const toggleEmployeeStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/admin/users/${userId}/employee`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isEmployee: !currentStatus }),
+      });
+      if (response.ok) {
+        await fetchAllUsers();
+        await fetchData(); // Refresh employees list
+        setSuccess(`Employee status ${!currentStatus ? 'enabled' : 'disabled'} successfully`);
+      } else {
+        const errorData = await response.json();
+        setUserError(errorData.error || 'Failed to update employee status');
+      }
+    } catch (error: any) {
+      setUserError(error.message || 'Failed to update employee status');
+    }
+  };
+  
+  const toggleAdminStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/admin/users/${userId}/admin`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isAdmin: !currentStatus }),
+      });
+      if (response.ok) {
+        await fetchAllUsers();
+        setSuccess(`Admin status ${!currentStatus ? 'enabled' : 'disabled'} successfully`);
+      } else {
+        const errorData = await response.json();
+        setUserError(errorData.error || 'Failed to update admin status');
+      }
+    } catch (error: any) {
+      setUserError(error.message || 'Failed to update admin status');
+    }
+  };
+  
+  const handleOpenPasswordDialog = (user: any) => {
+    setSelectedUserForPassword(user);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+    setPasswordDialogOpen(true);
+  };
+  
+  const handleClosePasswordDialog = () => {
+    setPasswordDialogOpen(false);
+    setSelectedUserForPassword(null);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+  };
+  
+  const handleChangePassword = async () => {
+    if (!selectedUserForPassword) return;
+    
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    
+    setChangingPassword(true);
+    setPasswordError(null);
+    
+    try {
+      const backendUrl = getBackendUrl();
+      const userId = selectedUserForPassword.id || selectedUserForPassword.username || selectedUserForPassword.user_id;
+      const encodedUserId = encodeURIComponent(userId);
+      
+      const response = await fetch(`${backendUrl}/api/admin/users/${encodedUserId}/password`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      
+      if (response.ok) {
+        handleClosePasswordDialog();
+        setSuccess('Password changed successfully');
+      } else {
+        const errorData = await response.json();
+        setPasswordError(errorData.error || 'Failed to change password');
+      }
+    } catch (error: any) {
+      setPasswordError(error.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+  
+  const handleOpenDeleteDialog = (usr: any) => {
+    setSelectedUserForDelete(usr);
+    setDeleteError(null);
+    setDeleteDialogOpen(true);
+  };
+  
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setSelectedUserForDelete(null);
+    setDeleteError(null);
+  };
+  
+  const handleDeleteUser = async () => {
+    if (!selectedUserForDelete) return;
+    
+    // Prevent self-deletion
+    const userIdToDelete = selectedUserForDelete.id || selectedUserForDelete.user_id;
+    if (userIdToDelete === user?.id || selectedUserForDelete.username === user?.username) {
+      setDeleteError('Cannot delete your own account');
+      return;
+    }
+    
+    setDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const backendUrl = getBackendUrl();
+      const encodedUserId = encodeURIComponent(userIdToDelete);
+      
+      const response = await fetch(`${backendUrl}/api/admin/users/${encodedUserId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        handleCloseDeleteDialog();
+        await fetchAllUsers();
+        await fetchData(); // Refresh employees list
+        setSuccess('User deleted successfully');
+      } else {
+        const errorData = await response.json();
+        setDeleteError(errorData.error || 'Failed to delete user');
+      }
+    } catch (error: any) {
+      setDeleteError(error.message || 'Failed to delete user');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -862,6 +1079,136 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
                   )}
                 </Grid>
               </Box>
+              
+              {/* Employee Management Section (Admin Only) */}
+              {isAdmin && (
+                <>
+                  <Divider sx={{ my: 4 }} />
+                  <Box>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                      <AdminPanelSettingsIcon color="primary" sx={{ fontSize: 28 }} />
+                      <Typography variant="h6" fontWeight={700}>
+                        Employee Management (Admin Only)
+                      </Typography>
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Manage employee status for users. Employees have access to the Creative Dashboard and can be assigned to clients.
+                    </Typography>
+                    
+                    {userError && (
+                      <Alert severity="error" sx={{ mb: 2 }} onClose={() => setUserError(null)}>
+                        {userError}
+                      </Alert>
+                    )}
+                    
+                    {loadingUsers ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                        <CircularProgress />
+                      </Box>
+                    ) : allUsers.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">
+                        No users found.
+                      </Typography>
+                    ) : (
+                      <Grid container spacing={2}>
+                        {allUsers.map((usr: any) => (
+                          <Grid item xs={12} sm={6} md={4} key={usr.id || usr.user_id}>
+                            <Card variant="outlined">
+                              <CardContent>
+                                <Stack spacing={2}>
+                                  <Box>
+                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                      {usr.name || usr.username || usr.email || 'Unknown User'}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {usr.ensName || usr.id} {usr.email && `• ${usr.email}`}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                                      {usr.isAdmin && (
+                                        <Chip label="Admin" color="error" size="small" />
+                                      )}
+                                      {usr.isEmployee && (
+                                        <Chip label="Employee" color="secondary" size="small" />
+                                      )}
+                                      {usr.isPaidMember && (
+                                        <Chip label="Paid Member" color="success" size="small" variant="outlined" />
+                                      )}
+                                    </Stack>
+                                  </Box>
+                                  <Divider />
+                                  <Stack spacing={1}>
+                                    <FormControlLabel
+                                      control={
+                                        <Switch
+                                          checked={usr.isAdmin || false}
+                                          onChange={() => toggleAdminStatus(usr.id || usr.user_id, usr.isAdmin || false)}
+                                          disabled={usr.id === user?.id || usr.username === user?.username}
+                                          size="small"
+                                        />
+                                      }
+                                      label="Admin"
+                                    />
+                                    <FormControlLabel
+                                      control={
+                                        <Switch
+                                          checked={usr.isEmployee || false}
+                                          onChange={() => toggleEmployeeStatus(usr.id || usr.user_id, usr.isEmployee || false)}
+                                          disabled={usr.isAdmin}
+                                          size="small"
+                                        />
+                                      }
+                                      label={usr.isEmployee ? 'Employee: On' : 'Employee: Off'}
+                                    />
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<VpnKeyIcon />}
+                                      onClick={() => handleOpenPasswordDialog(usr)}
+                                      fullWidth
+                                    >
+                                      Change Password
+                                    </Button>
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      color="error"
+                                      startIcon={<DeleteIcon />}
+                                      onClick={() => handleOpenDeleteDialog(usr)}
+                                      fullWidth
+                                      disabled={usr.id === user?.id || usr.username === user?.username}
+                                    >
+                                      Delete User
+                                    </Button>
+                                  </Stack>
+                                </Stack>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    )}
+                    
+                    <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<RefreshIcon />}
+                        onClick={fetchAllUsers}
+                        disabled={loadingUsers}
+                      >
+                        {loadingUsers ? 'Loading...' : 'Refresh Users'}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<AssignmentIcon />}
+                        onClick={() => setAdminAssignDialogOpen(true)}
+                        disabled={loadingUsers}
+                      >
+                        Manage Client Assignments
+                      </Button>
+                    </Stack>
+                  </Box>
+                </>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -925,6 +1272,178 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
         onAssign={handleEmployeeAssign}
       />
 
+      {/* Admin Client Assignment Dialog */}
+      {isAdmin && (
+        <AdminClientAssignmentDialog
+          open={adminAssignDialogOpen}
+          onClose={() => setAdminAssignDialogOpen(false)}
+          currentUser={user}
+          isAdminView={isAdmin}
+        />
+      )}
+      
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <WarningIcon color="error" />
+              <Typography variant="h6">Delete User</Typography>
+            </Stack>
+            <Button onClick={handleCloseDeleteDialog} size="small" sx={{ minWidth: 'auto' }}>
+              <CloseIcon />
+            </Button>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {selectedUserForDelete && (
+            <>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight={600}>
+                  This action cannot be undone!
+                </Typography>
+                <Typography variant="body2">
+                  Deleting this user will permanently remove their account and all associated data.
+                </Typography>
+              </Alert>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  User to delete:
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  {selectedUserForDelete.name || selectedUserForDelete.username || selectedUserForDelete.email}
+                </Typography>
+                {selectedUserForDelete.email && (
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedUserForDelete.email}
+                  </Typography>
+                )}
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  {selectedUserForDelete.isAdmin && (
+                    <Chip label="Admin" color="error" size="small" />
+                  )}
+                  {selectedUserForDelete.isEmployee && (
+                    <Chip label="Employee" color="secondary" size="small" />
+                  )}
+                </Stack>
+              </Box>
+            </>
+          )}
+          
+          {deleteError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setDeleteError(null)}>
+              {deleteError}
+            </Alert>
+          )}
+          
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to delete this user? This will permanently delete:
+          </Typography>
+          <Box component="ul" sx={{ mt: 1, pl: 2 }}>
+            <Typography component="li" variant="body2" color="text.secondary">
+              User account and profile
+            </Typography>
+            <Typography component="li" variant="body2" color="text.secondary">
+              All client assignments
+            </Typography>
+            <Typography component="li" variant="body2" color="text.secondary">
+              All notifications
+            </Typography>
+            <Typography component="li" variant="body2" color="text.secondary">
+              All subscriptions
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteUser}
+            variant="contained"
+            color="error"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
+          >
+            {deleting ? 'Deleting...' : 'Delete User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Change Password Dialog */}
+      <Dialog open={passwordDialogOpen} onClose={handleClosePasswordDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <VpnKeyIcon />
+              <Typography variant="h6">Change Password</Typography>
+            </Stack>
+            <Button onClick={handleClosePasswordDialog} size="small" sx={{ minWidth: 'auto' }}>
+              <CloseIcon />
+            </Button>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {selectedUserForPassword && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Changing password for:
+              </Typography>
+              <Typography variant="body1" fontWeight={600}>
+                {selectedUserForPassword.name || selectedUserForPassword.username || selectedUserForPassword.email}
+              </Typography>
+              {selectedUserForPassword.email && (
+                <Typography variant="body2" color="text.secondary">
+                  {selectedUserForPassword.email}
+                </Typography>
+              )}
+            </Box>
+          )}
+          
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPasswordError(null)}>
+              {passwordError}
+            </Alert>
+          )}
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              type="password"
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password (min 6 characters)"
+              disabled={changingPassword}
+              helperText="Password must be at least 6 characters long"
+            />
+            <TextField
+              fullWidth
+              type="password"
+              label="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              disabled={changingPassword}
+              error={confirmPassword !== '' && newPassword !== confirmPassword}
+              helperText={confirmPassword !== '' && newPassword !== confirmPassword ? 'Passwords do not match' : ''}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePasswordDialog} disabled={changingPassword}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleChangePassword}
+            variant="contained"
+            disabled={changingPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 6}
+            startIcon={changingPassword ? <CircularProgress size={20} /> : <VpnKeyIcon />}
+          >
+            {changingPassword ? 'Changing...' : 'Change Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
       {/* Prospect Dialog */}
       <Dialog open={prospectDialogOpen} onClose={() => setProspectDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>

@@ -30,7 +30,6 @@ import { getBackendUrl } from '../../utils/backendUrl';
 import LearningPanel from './LearningPanel';
 import AiAgentPanel from './AiAgentPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
-import EmployeeClientManagement from './creative/EmployeeClientManagement';
 import { useAuth } from '../../hooks/useAuth';
 
 interface TabPanelProps {
@@ -63,6 +62,19 @@ export default function CreativeDashboardPanel() {
   const [addClientOpen, setAddClientOpen] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.isAdmin || false;
+  
+  // Debug admin status
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log('[CreativeDashboard] Admin check:', {
+        isAdmin,
+        userIsAdmin: user?.isAdmin,
+        userId: user?.id,
+        username: user?.username,
+        fullUser: user
+      });
+    }
+  }, [user, isAdmin]);
 
   // Map tab names to indices
   const tabMap: Record<string, number> = {
@@ -70,9 +82,8 @@ export default function CreativeDashboardPanel() {
     analytics: 1,
     support: 2,
     match: 3,
-    management: 4,
-    learning: isAdmin ? 5 : 4,
-    ai: isAdmin ? 6 : 5,
+    learning: 4,
+    ai: 5,
   };
 
   // Initialize tab from URL query parameter
@@ -81,7 +92,7 @@ export default function CreativeDashboardPanel() {
     if (tabParam && tabMap[tabParam] !== undefined) {
       setActiveTab(tabMap[tabParam]);
     }
-  }, [router.query.tab, isAdmin]);
+  }, [router.query.tab]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -160,28 +171,19 @@ export default function CreativeDashboardPanel() {
               id="creative-tab-3"
               aria-controls="creative-tabpanel-3"
             />
-            {isAdmin && (
-              <Tab
-                icon={<AdminPanelSettingsIcon />}
-                iconPosition="start"
-                label="Employee & Client Management"
-                id="creative-tab-4"
-                aria-controls="creative-tabpanel-4"
-              />
-            )}
             <Tab
               icon={<SchoolIcon />}
               iconPosition="start"
               label="Learning Hub"
-              id={isAdmin ? "creative-tab-5" : "creative-tab-4"}
-              aria-controls={isAdmin ? "creative-tabpanel-5" : "creative-tabpanel-4"}
+              id="creative-tab-4"
+              aria-controls="creative-tabpanel-4"
             />
             <Tab
               icon={<SmartToyIcon />}
               iconPosition="start"
               label="AI Agent"
-              id={isAdmin ? "creative-tab-6" : "creative-tab-5"}
-              aria-controls={isAdmin ? "creative-tabpanel-6" : "creative-tabpanel-5"}
+              id="creative-tab-5"
+              aria-controls="creative-tabpanel-5"
             />
           </Tabs>
         </Container>
@@ -202,15 +204,10 @@ export default function CreativeDashboardPanel() {
           <TabPanel value={activeTab} index={3}>
             <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
           </TabPanel>
-          {isAdmin && (
-            <TabPanel value={activeTab} index={4}>
-              <EmployeeClientManagement />
-            </TabPanel>
-          )}
-          <TabPanel value={activeTab} index={isAdmin ? 5 : 4}>
+          <TabPanel value={activeTab} index={4}>
             <LearningPanel />
           </TabPanel>
-          <TabPanel value={activeTab} index={isAdmin ? 6 : 5}>
+          <TabPanel value={activeTab} index={5}>
             <AiAgentPanel />
           </TabPanel>
         </Container>
