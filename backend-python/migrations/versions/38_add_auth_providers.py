@@ -53,6 +53,10 @@ def upgrade():
     except Exception as e:
         print(f"Note: Could not alter password_hash nullable status: {e}")
         # Column might already be nullable
+    
+    # Add trial tracking field
+    if 'trial_start_date' not in columns:
+        op.add_column('users', sa.Column('trial_start_date', sa.DateTime(), nullable=True))
 
 
 def downgrade():
@@ -80,7 +84,7 @@ def downgrade():
     if 'google_id' in columns:
         op.drop_index(op.f('ix_users_google_id'), table_name='users')
         op.drop_column('users', 'google_id')
-
-    # Add trial tracking field
-    if 'trial_start_date' not in columns:
-        op.add_column('users', sa.Column('trial_start_date', sa.DateTime(), nullable=True))
+    
+    # Remove trial tracking field
+    if 'trial_start_date' in columns:
+        op.drop_column('users', 'trial_start_date')

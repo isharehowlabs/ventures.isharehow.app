@@ -1,12 +1,125 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Box, Container, Typography, Button, Card, CardContent, Grid, Chip, Stack, useTheme } from '@mui/material';
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  Button, 
+  Card, 
+  CardContent, 
+  Grid, 
+  Chip, 
+  Stack, 
+  useTheme,
+  TextField,
+  Alert,
+  CircularProgress
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Business as BusinessIcon,
+  Phone as PhoneIcon,
+  Send as SendIcon,
+} from '@mui/icons-material';
+import { getBackendUrl } from '../utils/backendUrl';
 
 const CreativeServicesPage = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  
+  // Client Prospect Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    company: '',
+    phone: '',
+    message: '',
+  });
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState(false);
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+    if (formError) setFormError(null);
+  };
+
+  const validateForm = (): boolean => {
+    if (!formData.name.trim()) {
+      setFormError('Name is required');
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setFormError('Email is required');
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setFormError('Please enter a valid email address');
+      return false;
+    }
+    if (!formData.company.trim()) {
+      setFormError('Company is required');
+      return false;
+    }
+    return true;
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setFormLoading(true);
+    setFormError(null);
+
+    try {
+      const backendUrl = getBackendUrl();
+      
+      const response = await fetch(`${backendUrl}/api/creative/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          company: formData.company.trim(),
+          phone: formData.phone.trim() || undefined,
+          message: formData.message.trim() || undefined,
+          source: 'creative_services_landing',
+          status: 'prospect',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to submit prospect form' }));
+        throw new Error(errorData.error || 'Failed to submit form. Please try again.');
+      }
+
+      setFormSuccess(true);
+      setFormData({
+        name: '',
+        email: '',
+        company: '',
+        phone: '',
+        message: '',
+      });
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to submit form. Please try again.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
   
   const gradientStyle = {
     background: 'linear-gradient(90deg, #a855f7 0%, #ec4899 50%, #a855f7 100%)',
@@ -770,44 +883,203 @@ const CreativeServicesPage = () => {
                 </CardContent>
               </Card>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={5} sx={{ pt: 4 }}>
-                <Button size="large" sx={{
-                  background: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)',
-                  borderRadius: '50px',
-                  padding: '20px 48px',
-                  fontSize: '1.2rem',
-                  fontWeight: 700,
-                  textTransform: 'none',
-                  color: 'white',
-                  boxShadow: '0 10px 30px rgba(147, 51, 234, 0.4)',
-                  '&:hover': { 
-                    transform: 'scale(1.05)', 
-                    boxShadow: '0 15px 40px rgba(147, 51, 234, 0.6)'
-                  }
-                }}>
-                  Become a Client
-                </Button>
-                <a href="mailto:contact@isharehowlabs.com" style={{ textDecoration: 'none' }}>
-                  <Button size="large" variant="outlined" sx={{
-                    borderColor: theme.palette.divider,
-                    color: 'text.primary',
-                    borderRadius: '50px',
-                    px: 6,
-                    py: 2.5,
-                    fontSize: '1.2rem',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    borderWidth: 2,
-                    '&:hover': { 
-                      borderColor: '#a855f7', 
-                      bgcolor: 'rgba(168, 85, 247, 0.1)',
-                      borderWidth: 2
-                    }
-                  }}>
-                    Contact Us Directly
-                  </Button>
-                </a>
-              </Stack>
+              <Box sx={{ pt: 4, width: '100%', maxWidth: '800px', mx: 'auto' }}>
+                {formSuccess ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                  >
+                    <Card sx={{
+                      bgcolor: 'background.paper',
+                      border: `2px solid #22c55e`,
+                      borderRadius: '24px',
+                      p: 4,
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="h4" fontWeight={700} color="#22c55e" gutterBottom>
+                        ✓ Thank You!
+                      </Typography>
+                      <Typography variant="h6" sx={{ color: 'text.secondary', mb: 3 }}>
+                        We've received your information and will contact you soon.
+                      </Typography>
+                      <Button
+                        onClick={() => setFormSuccess(false)}
+                        variant="outlined"
+                        sx={{
+                          borderColor: theme.palette.divider,
+                          color: 'text.primary',
+                          '&:hover': { borderColor: '#a855f7' }
+                        }}
+                      >
+                        Submit Another
+                      </Button>
+                    </Card>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Card sx={{
+                      bgcolor: 'background.paper',
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: '24px',
+                      p: { xs: 4, md: 6 },
+                      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <Box sx={{ mb: 4, textAlign: 'center' }}>
+                        <Typography variant="h3" fontWeight={800} gutterBottom sx={{ 
+                          fontSize: { xs: '2rem', md: '2.5rem' },
+                          background: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}>
+                          Become a Client
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: 'text.secondary', mt: 2 }}>
+                          Fill out the form below and we'll get back to you within 24 hours
+                        </Typography>
+                      </Box>
+
+                      {formError && (
+                        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setFormError(null)}>
+                          {formError}
+                        </Alert>
+                      )}
+
+                      <form onSubmit={handleFormSubmit}>
+                        <Stack spacing={3}>
+                          <TextField
+                            fullWidth
+                            required
+                            label="Full Name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleFormChange}
+                            placeholder="John Doe"
+                            disabled={formLoading}
+                            InputProps={{
+                              startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                              }
+                            }}
+                          />
+
+                          <TextField
+                            fullWidth
+                            required
+                            type="email"
+                            label="Email Address"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleFormChange}
+                            placeholder="john@example.com"
+                            disabled={formLoading}
+                            InputProps={{
+                              startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                              }
+                            }}
+                          />
+
+                          <TextField
+                            fullWidth
+                            required
+                            label="Company Name"
+                            name="company"
+                            value={formData.company}
+                            onChange={handleFormChange}
+                            placeholder="Acme Inc."
+                            disabled={formLoading}
+                            InputProps={{
+                              startAdornment: <BusinessIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                              }
+                            }}
+                          />
+
+                          <TextField
+                            fullWidth
+                            type="tel"
+                            label="Phone Number (Optional)"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleFormChange}
+                            placeholder="+1 (555) 123-4567"
+                            disabled={formLoading}
+                            InputProps={{
+                              startAdornment: <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                              }
+                            }}
+                          />
+
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={4}
+                            label="Tell us about your project (Optional)"
+                            name="message"
+                            value={formData.message}
+                            onChange={handleFormChange}
+                            placeholder="What services are you interested in? What are your goals?"
+                            disabled={formLoading}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                              }
+                            }}
+                          />
+
+                          <Button
+                            type="submit"
+                            size="large"
+                            fullWidth
+                            disabled={formLoading}
+                            sx={{
+                              background: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)',
+                              borderRadius: '50px',
+                              padding: '16px 32px',
+                              fontSize: '1.1rem',
+                              fontWeight: 700,
+                              textTransform: 'none',
+                              color: 'white',
+                              boxShadow: '0 10px 30px rgba(147, 51, 234, 0.4)',
+                              mt: 2,
+                              '&:hover': { 
+                                transform: 'scale(1.02)', 
+                                boxShadow: '0 15px 40px rgba(147, 51, 234, 0.6)',
+                                background: 'linear-gradient(90deg, #ec4899 0%, #9333ea 100%)'
+                              },
+                              '&:disabled': {
+                                background: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)',
+                                opacity: 0.7
+                              }
+                            }}
+                            startIcon={formLoading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                          >
+                            {formLoading ? 'Submitting...' : 'Submit Application'}
+                          </Button>
+                        </Stack>
+                      </form>
+                    </Card>
+                  </motion.div>
+                )}
+              </Box>
             </Stack>
           </Container>
         </Box>
