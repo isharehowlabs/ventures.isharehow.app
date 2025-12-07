@@ -1290,22 +1290,123 @@ def get_user_id():
     return 'anonymous'
 
 def safe_get_user(user_id):
-    """Get user by ID - columns are ensured to exist by database upgrade"""
+    """Get user by ID - handles missing columns gracefully"""
     if not user_id or not DB_AVAILABLE:
         return None
     
-    # Try normal SQLAlchemy query
-    user = None
-    if str(user_id).isdigit():
-        user = User.query.get(int(user_id))
-    if not user:
-        user = User.query.filter_by(username=str(user_id)).first()
-    if not user:
-        user = User.query.filter_by(patreon_id=str(user_id)).first()
-    if not user:
-        user = User.query.filter_by(email=str(user_id)).first()
-    
-    return user
+    # Try normal SQLAlchemy query first
+    try:
+        user = None
+        if str(user_id).isdigit():
+            user = User.query.get(int(user_id))
+        if not user:
+            user = User.query.filter_by(username=str(user_id)).first()
+        if not user:
+            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        if not user:
+            user = User.query.filter_by(email=str(user_id)).first()
+        
+        return user
+    except Exception as query_error:
+        error_str = str(query_error).lower()
+        # Check if error is due to missing columns
+        if 'column' in error_str and ('has_subscription_update' in error_str or 'is_employee' in error_str):
+            print(f"Warning: Missing column when querying user {user_id}, attempting to add missing columns...")
+            
+            # Try to add missing columns immediately
+            try:
+                with db.engine.connect() as conn:
+                    with conn.begin():
+                        # Check and add missing columns
+                        from sqlalchemy import inspect
+                        inspector = inspect(conn)
+                        existing_columns = {col['name'] for col in inspector.get_columns('users')}
+                        
+                        missing_columns = []
+                        if 'has_subscription_update' not in existing_columns:
+                            missing_columns.append(('has_subscription_update', 'BOOLEAN', 'FALSE'))
+                        if 'subscription_update_active' not in existing_columns:
+                            missing_columns.append(('subscription_update_active', 'BOOLEAN', 'FALSE'))
+                        if 'shopify_customer_id' not in existing_columns:
+                            missing_columns.append(('shopify_customer_id', 'VARCHAR(50)', 'NULL'))
+                        if 'bold_subscription_id' not in existing_columns:
+                            missing_columns.append(('bold_subscription_id', 'VARCHAR(50)', 'NULL'))
+                        if 'is_employee' not in existing_columns:
+                            missing_columns.append(('is_employee', 'BOOLEAN', 'FALSE'))
+                        if 'is_admin' not in existing_columns:
+                            missing_columns.append(('is_admin', 'BOOLEAN', 'FALSE'))
+                        
+                        for col_name, col_type, default in missing_columns:
+                            try:
+                                if col_type == 'BOOLEAN':
+                                    sql = f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"
+                                elif col_type.startswith('VARCHAR'):
+                                    sql = f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"
+                                else:
+                                    sql = f"ALTER TABLE users ADD COLUMN {col_name} {col_type} DEFAULT {default}"
+                                
+                                conn.execute(db.text(sql))
+                                print(f"  ✓ Added missing column: {col_name}")
+                            except Exception as col_error:
+                                error_msg = str(col_error).lower()
+                                if 'already exists' in error_msg or 'duplicate' in error_msg:
+                                    print(f"  ✓ Column {col_name} already exists")
+                                else:
+                                    print(f"  ✗ Could not add {col_name}: {col_error}")
+                
+                # Retry the query after adding columns
+                if str(user_id).isdigit():
+                    user = User.query.get(int(user_id))
+                if not user:
+                    user = User.query.filter_by(username=str(user_id)).first()
+                if not user:
+                    user = User.query.filter_by(patreon_id=str(user_id)).first()
+                if not user:
+                    user = User.query.filter_by(email=str(user_id)).first()
+                
+                return user
+            except Exception as add_error:
+                print(f"Error adding missing columns: {add_error}")
+                # Fall through to raw SQL fallback
+        
+        # Fallback to raw SQL if columns still missing
+        try:
+            with db.engine.connect() as conn:
+                try:
+                    user_id_int = int(user_id)
+                    id_condition = "id = CAST(:user_id_int AS INTEGER)"
+                    params = {'user_id': str(user_id), 'user_id_int': user_id_int}
+                except (ValueError, TypeError):
+                    id_condition = "FALSE"
+                    params = {'user_id': str(user_id)}
+                
+                result = conn.execute(db.text(f"""
+                    SELECT id, username, email, password_hash, membership_paid,
+                           last_checked, created_at, updated_at
+                    FROM users 
+                    WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id OR email = :user_id)
+                    LIMIT 1
+                """), params)
+                row = result.fetchone()
+                if row:
+                    from types import SimpleNamespace
+                    user = SimpleNamespace(
+                        id=row[0],
+                        username=row[1],
+                        email=row[2],
+                        password_hash=row[3],
+                        membership_paid=row[4],
+                        last_checked=row[5],
+                        created_at=row[6],
+                        updated_at=row[7]
+                    )
+                    return user
+        except Exception as raw_error:
+            print(f"Error in raw SQL fallback: {raw_error}")
+            return None
+        
+        # If all else fails, re-raise the original error
+        raise
 
 def get_current_user():
     """Get current user from JWT token"""
@@ -2963,8 +3064,19 @@ def wallet_link():
 @app.route('/api/auth/google/login', methods=['GET'])
 def google_login():
     """Redirect to Google OAuth consent screen"""
-    if not GOOGLE_AUTH_AVAILABLE or not GOOGLE_CLIENT_ID:
-        return jsonify({'error': 'Google OAuth not configured'}), 503
+    if not GOOGLE_AUTH_AVAILABLE:
+        return jsonify({
+            'error': 'Google OAuth not available',
+            'message': 'Google OAuth libraries are not installed. Install with: pip install google-auth-oauthlib google-auth'
+        }), 503
+    
+    if not GOOGLE_CLIENT_ID:
+        return jsonify({
+            'error': 'Google OAuth not configured',
+            'message': 'GOOGLE_CLIENT_ID environment variable is not set. See GOOGLE_OAUTH_SETUP.md for setup instructions.',
+            'required_vars': ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+            'optional_vars': ['GOOGLE_REDIRECT_URI']
+        }), 503
     
     try:
         flow = Flow.from_client_config(
@@ -2977,7 +3089,11 @@ def google_login():
                     "redirect_uris": [GOOGLE_REDIRECT_URI]
                 }
             },
-            scopes=['openid', 'email', 'profile']
+            scopes=[
+                'openid',
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile'
+            ]
         )
         flow.redirect_uri = GOOGLE_REDIRECT_URI
         
@@ -2998,8 +3114,19 @@ def google_login():
 @app.route('/api/auth/google/callback', methods=['GET'])
 def google_callback():
     """Handle Google OAuth callback"""
-    if not GOOGLE_AUTH_AVAILABLE or not GOOGLE_CLIENT_ID:
-        return jsonify({'error': 'Google OAuth not configured'}), 503
+    if not GOOGLE_AUTH_AVAILABLE:
+        return jsonify({
+            'error': 'Google OAuth not available',
+            'message': 'Google OAuth libraries are not installed. Install with: pip install google-auth-oauthlib google-auth'
+        }), 503
+    
+    if not GOOGLE_CLIENT_ID:
+        return jsonify({
+            'error': 'Google OAuth not configured',
+            'message': 'GOOGLE_CLIENT_ID environment variable is not set. See GOOGLE_OAUTH_SETUP.md for setup instructions.',
+            'required_vars': ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+            'optional_vars': ['GOOGLE_REDIRECT_URI']
+        }), 503
     
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
@@ -3021,7 +3148,11 @@ def google_callback():
                     "redirect_uris": [GOOGLE_REDIRECT_URI]
                 }
             },
-            scopes=['openid', 'email', 'profile']
+            scopes=[
+                'openid',
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile'
+            ]
         )
         flow.redirect_uri = GOOGLE_REDIRECT_URI
         flow.fetch_token(code=code)
@@ -3093,11 +3224,14 @@ def google_callback():
         # Generate JWT
         access_token = create_access_token(identity=str(user.id))
         
-        # Redirect to frontend with token
+        # Set JWT in httpOnly cookie and redirect to frontend
         frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
-        redirect_url = f"{frontend_url}/auth/callback?token={access_token}"
+        redirect_url = f"{frontend_url}/?auth=success"
         
-        return redirect(redirect_url)
+        response = redirect(redirect_url)
+        set_access_cookies(response, access_token)
+        
+        return response
     
     except Exception as e:
         db.session.rollback()
@@ -7198,6 +7332,7 @@ def run_database_upgrade():
                         print(f"⚠ Warning: Missing columns detected: {missing}")
                         print("  Attempting to add missing columns...")
                         
+                        added_count = 0
                         with db.engine.connect() as conn:
                             with conn.begin():
                                 for col_name in missing:
@@ -7211,18 +7346,25 @@ def run_database_upgrade():
                                         elif col_name == 'is_admin':
                                             conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN NOT NULL DEFAULT FALSE"))
                                         print(f"  ✓ Added column: {col_name}")
+                                        added_count += 1
                                     except Exception as col_error:
                                         error_str = str(col_error).lower()
                                         if 'already exists' in error_str or 'duplicate' in error_str:
                                             print(f"  ✓ Column {col_name} already exists (ignoring)")
                                         else:
                                             print(f"  ✗ Could not add {col_name}: {col_error}")
+                                            import traceback
+                                            traceback.print_exc()
                         
+                        if added_count > 0:
+                            print(f"✓ Successfully added {added_count} missing column(s)")
                         print("✓ Missing columns check complete")
                     else:
                         print("✓ All required columns verified")
             except Exception as verify_error:
                 print(f"⚠ Could not verify columns (non-critical): {verify_error}")
+                import traceback
+                traceback.print_exc()
                 
     except Exception as e:
         print(f"⚠ Could not run database upgrade: {e}")
