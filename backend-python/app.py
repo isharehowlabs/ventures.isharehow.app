@@ -4171,14 +4171,58 @@ def get_notifications():
         if not user_id:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        # Find user by ID
+        # Find user by ID - handle missing columns gracefully
         user = None
-        if user_id and str(user_id).isdigit():
-            user = User.query.get(int(user_id))
-        if not user and user_id:
-            user = User.query.filter_by(username=str(user_id)).first()
-        if not user and user_id:
-            user = User.query.filter_by(patreon_id=str(user_id)).first()
+        try:
+            if user_id and str(user_id).isdigit():
+                user = User.query.get(int(user_id))
+            if not user and user_id:
+                user = User.query.filter_by(username=str(user_id)).first()
+            if not user and user_id:
+                user = User.query.filter_by(patreon_id=str(user_id)).first()
+        except Exception as query_error:
+            error_str = str(query_error).lower()
+            # If column is missing, use raw SQL fallback
+            if 'has_subscription_update' in error_str and 'column' in error_str:
+                print(f"Warning: has_subscription_update column missing, using raw SQL fallback for notifications")
+                try:
+                    with db.engine.connect() as conn:
+                        # Try to convert user_id to integer for id comparison
+                        try:
+                            user_id_int = int(user_id)
+                            id_condition = "id = :user_id_int"
+                            params = {'user_id': str(user_id), 'user_id_int': user_id_int}
+                        except (ValueError, TypeError):
+                            id_condition = "FALSE"
+                            params = {'user_id': str(user_id)}
+                        
+                        result = conn.execute(db.text(f"""
+                            SELECT id, username, email, password_hash, membership_paid,
+                                   is_employee, is_admin, last_checked, created_at, updated_at
+                            FROM users 
+                            WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id)
+                            LIMIT 1
+                        """), params)
+                        row = result.fetchone()
+                        if row:
+                            from types import SimpleNamespace
+                            user = SimpleNamespace(
+                                id=row[0],
+                                username=row[1],
+                                email=row[2],
+                                password_hash=row[3],
+                                membership_paid=row[4],
+                                is_employee=row[5] if len(row) > 5 else False,
+                                is_admin=row[6] if len(row) > 6 else False,
+                                last_checked=row[7] if len(row) > 7 else None,
+                                created_at=row[8] if len(row) > 8 else None,
+                                updated_at=row[9] if len(row) > 9 else None
+                            )
+                except Exception as raw_error:
+                    print(f"Error in raw SQL fallback for notifications: {raw_error}")
+                    return jsonify({'error': 'Database migration required', 'message': 'Please run: flask db upgrade'}), 500
+            else:
+                raise
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
