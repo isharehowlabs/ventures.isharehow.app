@@ -44,23 +44,31 @@ const getInitialMode = (): ThemeMode => {
   return 'system';
 };
 
+// Helper function to read current resolved theme from DOM (set by _document.tsx)
+const getInitialResolvedMode = (): ResolvedThemeMode => {
+  if (typeof window === 'undefined') return 'light';
+  const dataTheme = document.documentElement.getAttribute('data-theme');
+  if (dataTheme === 'dark') return 'dark';
+  return 'light';
+};
+
 // Helper function to update DOM with theme
 const updateDOMTheme = (resolvedMode: ResolvedThemeMode) => {
   if (typeof window === 'undefined') return;
   
   console.log('[ThemeContext] Updating DOM theme to:', resolvedMode);
   
+  const html = document.documentElement;
+  
   // Prevent CSS transitions during theme change to avoid flashing
-  document.documentElement.classList.add('theme-transitioning');
+  html.classList.add('theme-transitioning');
   
-  // Remove both classes first
-  document.documentElement.classList.remove('light-mode', 'dark-mode');
+  // Update data-theme attribute (most important for CSS modules)
+  html.setAttribute('data-theme', resolvedMode);
   
-  // Add the current mode class
-  document.documentElement.classList.add(`${resolvedMode}-mode`);
-  
-  // Also set a data attribute for CSS modules
-  document.documentElement.setAttribute('data-theme', resolvedMode);
+  // Update class-based selectors
+  html.classList.remove('light-mode', 'dark-mode');
+  html.classList.add(`${resolvedMode}-mode`);
   
   // Update color-scheme meta tag for native browser elements
   let colorSchemeMetaTag = document.querySelector('meta[name="color-scheme"]');
@@ -71,13 +79,10 @@ const updateDOMTheme = (resolvedMode: ResolvedThemeMode) => {
   }
   colorSchemeMetaTag.setAttribute('content', resolvedMode);
   
-  // Body styles are handled by MUI CssBaseline, no need to set inline styles
-  // This prevents conflicts between inline styles and CSS classes
-  
   // Remove transition prevention class after a short delay
   requestAnimationFrame(() => {
     setTimeout(() => {
-      document.documentElement.classList.remove('theme-transitioning');
+      html.classList.remove('theme-transitioning');
     }, 50);
   });
 };
@@ -87,6 +92,7 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
   const [mode, setMode] = useState<ThemeMode>(() => getInitialMode());
   const [systemPreference, setSystemPreference] = useState<ResolvedThemeMode>(() => getSystemPreference());
   const mountedRef = useRef(false);
+  const initialResolvedMode = useRef<ResolvedThemeMode>(getInitialResolvedMode());
 
   // Resolve the actual theme mode based on user preference
   const resolvedMode = useMemo<ResolvedThemeMode>(() => {
@@ -95,19 +101,19 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
     return resolved;
   }, [mode, systemPreference]);
 
-  // On mount, ensure theme is correct - use useLayoutEffect to run before paint
+  // On mount, ensure theme matches what _document.tsx set
   useLayoutEffect(() => {
     mountedRef.current = true;
-    console.log('[ThemeContext] Component mounted, mode:', mode, 'resolvedMode:', resolvedMode);
+    console.log('[ThemeContext] Component mounted, mode:', mode, 'resolvedMode:', resolvedMode, 'initialDOM:', initialResolvedMode.current);
     
-    // Force update DOM on mount to ensure consistency BEFORE React paints
-    updateDOMTheme(resolvedMode);
-    
-    // Body styles are handled by MUI CssBaseline based on theme mode
-    // No need to set inline styles here to avoid conflicts
+    // Only update DOM if there's a mismatch (prevents unnecessary updates)
+    if (resolvedMode !== initialResolvedMode.current) {
+      console.log('[ThemeContext] Syncing DOM theme on mount');
+      updateDOMTheme(resolvedMode);
+    }
   }, []);
 
-  // Listen for system preference changes (single effect for system monitoring)
+  // Listen for system preference changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -138,10 +144,12 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
     console.log('[ThemeContext] resolvedMode changed, updating DOM to:', resolvedMode);
     updateDOMTheme(resolvedMode);
     
-    // Force MUI components to re-render with new theme
+    // Dispatch custom event for any components listening to theme changes
     if (typeof window !== 'undefined') {
-      // Trigger a reflow to ensure all components update
-      const event = new Event('themechange', { bubbles: true });
+      const event = new CustomEvent('themechange', { 
+        bubbles: true, 
+        detail: { mode: resolvedMode } 
+      });
       document.dispatchEvent(event);
     }
   }, [resolvedMode]);

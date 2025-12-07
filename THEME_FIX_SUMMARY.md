@@ -1,112 +1,83 @@
-# Dark Mode Theme Fix Summary
+# Theme Color Scheme Fix Summary
 
-## Issue
-The application experienced dark mode inconsistencies where some pages would show light mode while others showed dark mode when set to "system" preference. Users had to toggle through light→dark→system to temporarily fix the issue.
+## Problem
+Landing page showing mixed dark/light mode - half the page in dark mode, half in light mode.
 
-## Root Causes Identified
+## Root Cause
+**Duplicate CSS Variable Definitions** in `src/index.css`:
+- Lines 4-9 defined default light mode variables in `:root` selector
+- These variables were applied BEFORE `data-theme` attribute was set
+- Caused CSS modules and some components to use light colors regardless of theme
 
-1. **Race Conditions in Theme Initialization**
-   - Multiple `useEffect` hooks were updating theme state independently
-   - localStorage read, system preference monitoring, and DOM updates could execute in different orders
+## Files Changed
 
-2. **Double Theme Application**
-   - Theme was set in both `_document.tsx` (inline script before hydration) and `ThemeContext.tsx` (after hydration)
-   - If they disagreed, it caused flashing or incorrect themes
+### 1. `src/index.css`
+**Changed:**
+- Removed duplicate `:root` CSS variable definitions (--bg-default, --bg-paper, etc.)
+- Now CSS variables are ONLY defined within `html[data-theme="light"]` and `html[data-theme="dark"]`
+- Added `color-scheme: light dark` to `:root` for better browser support
 
-3. **CSS Module vs MUI Timing Issues**
-   - CSS modules using `[data-theme]` attribute updated separately from MUI's ThemeProvider
-   - This caused mixed styling when updates weren't synchronized
+**Result:** CSS modules now correctly respond to `data-theme` attribute
 
-4. **Missing Browser Support**
-   - No `color-scheme` meta tag for native browser elements
-   - System preference listener wasn't firing correctly on initial load
+### 2. `src/ThemeContext.tsx`
+**Changed:**
+- Added `getInitialResolvedMode()` to read the theme already set by `_document.tsx`
+- Prevents unnecessary DOM updates on mount (reduces flash)
+- Better synchronization between blocking script and React context
 
-## Changes Made
+**Result:** ThemeContext now respects the initial theme set by the blocking script
 
-### 1. ThemeContext.tsx (`src/ThemeContext.tsx`)
-**Key Improvements:**
-- Consolidated theme initialization to use synchronous localStorage read during state initialization
-- Added `useLayoutEffect` instead of `useEffect` to update DOM before paint
-- Created centralized `updateDOMTheme()` function that atomically updates all DOM elements
-- Added `initializedRef` to track first render and prevent double-updates
-- Added transition prevention during theme changes to avoid flashing
-- Added error handling for localStorage access
-- Memoized theme creation to prevent unnecessary re-renders
-- Dynamically creates/updates `color-scheme` meta tag
+### 3. `src/pages/_document.tsx`
+**No changes needed** - Already had blocking script to set theme before React hydration
 
-### 2. _document.tsx (`src/pages/_document.tsx`)
-**Key Improvements:**
-- Added static `<meta name="color-scheme" content="light dark" />` tag in head
-- Enhanced inline script with better error handling
-- Ensured script sets both `data-theme` attribute AND class names consistently
-- Added fallback to light mode if initialization fails
-- Updates color-scheme meta tag in initialization script
+## How It Works Now
 
-### 3. index.css (`src/index.css`)
-**Key Improvements:**
-- Added `.theme-transitioning` class that disables all transitions and animations
-- Applies to element and all descendants including pseudo-elements
-- Prevents visual flashing during theme changes
-- Class is temporarily applied during theme changes and removed after paint
+1. **SSR/Initial Load** (`_document.tsx`):
+   - Blocking script runs BEFORE any content renders
+   - Reads `localStorage.getItem('themeMode')`
+   - Sets `data-theme` attribute on `<html>` element
+   - Prevents any flash of incorrect theme
 
-## Technical Details
+2. **CSS Application** (`index.css`):
+   - CSS variables are ONLY defined within `html[data-theme="X"]` selectors
+   - No default values that could override theme
+   - All components see correct theme immediately
 
-### Theme Synchronization Flow
-1. **Initial Load:**
-   - `_document.tsx` inline script reads localStorage and system preference
-   - Sets `data-theme` attribute, class name, and color-scheme meta tag BEFORE React hydrates
-   - ThemeContext initializes with same values synchronously
-   - `useLayoutEffect` verifies DOM is in sync, only updates if mismatch detected
+3. **React Hydration** (`ThemeContext.tsx`):
+   - Reads initial theme from DOM (respects what _document.tsx set)
+   - Only updates DOM if user changes theme
+   - Syncs localStorage with theme state
 
-2. **Theme Changes:**
-   - User changes theme via toggle or setter
-   - `updateDOMTheme()` is called synchronously:
-     - Adds `theme-transitioning` class to disable transitions
-     - Updates `data-theme` attribute
-     - Updates class names
-     - Updates color-scheme meta tag
-     - Removes transition class after paint (50ms delay)
-   - MUI ThemeProvider receives new theme via memoized getter
+## Testing
 
-3. **System Preference Changes:**
-   - Media query listener detects OS theme change
-   - Updates system preference state
-   - If mode is "system", resolvedMode recalculates
-   - `useLayoutEffect` triggers DOM update before paint
+Test the following scenarios:
 
-## Testing Recommendations
+1. **Fresh Load (No localStorage)**
+   - Should match system preference
+   - No flash of wrong theme
 
-1. **Theme Persistence:**
-   - Set theme to light, refresh → should stay light
-   - Set theme to dark, refresh → should stay dark
-   - Set theme to system, refresh → should follow OS
+2. **With Saved Preference**
+   - Should respect saved light/dark/system mode
+   - No flash of wrong theme
 
-2. **System Preference Changes:**
-   - Set app to "system" mode
-   - Change OS dark mode setting
-   - App should update immediately without flash
+3. **Toggle Theme**
+   - Should smoothly transition between modes
+   - All sections of landing page should change together
 
-3. **Navigation:**
-   - Navigate between different pages (/, /rise, /board, etc.)
-   - Theme should remain consistent across all pages
+4. **System Preference Change**
+   - If mode is "system", should follow OS theme changes
 
-4. **No Flash on Load:**
-   - Hard refresh the page
-   - Should not see any white flash or theme flicker
+## Rollback
 
-5. **Toggle Functionality:**
-   - Toggle through light → dark → system → light
-   - Each change should be instant and smooth
+If issues occur, restore backups:
+```bash
+cp src/index.css.backup src/index.css
+cp src/ThemeContext.tsx.backup src/ThemeContext.tsx
+```
 
-## Browser Support
+## Key Principle
 
-- All modern browsers (Chrome, Firefox, Safari, Edge)
-- Falls back gracefully in older browsers
-- Native element theming via `color-scheme` meta tag (scrollbars, inputs, etc.)
+**Single Source of Truth:** The `data-theme` attribute on `<html>` is the ONLY source of truth for theme. All CSS and components reference this attribute, never default values.
 
-## Performance Impact
-
-- Minimal: localStorage reads are synchronous but cached
-- Theme updates use `useLayoutEffect` to prevent paint flashing
-- Transition prevention is temporary (50ms) to avoid permanent performance impact
-- Theme object is memoized to prevent unnecessary re-renders
+---
+Fixed: December 7, 2025

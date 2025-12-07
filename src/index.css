@@ -1,15 +1,11 @@
 /* Minimal CSS - Material UI handles everything else */
 
-/* Default theme (light) - these are fallbacks if data-theme is not set yet */
+/* NO default variables in :root - rely ONLY on data-theme attribute */
 :root {
-  --bg-default: #FFFFFF;
-  --bg-paper: #FFFFFF;
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --border-color: #dee2e6;
+  color-scheme: light dark;
 }
 
-/* Light mode explicit */
+/* Light mode - explicit data-theme attribute required */
 html[data-theme="light"] {
   --bg-default: #FFFFFF;
   --bg-paper: #FFFFFF;
@@ -18,9 +14,10 @@ html[data-theme="light"] {
   --border-color: #dee2e6;
   background-color: #FFFFFF;
   color: #212529;
+  color-scheme: light;
 }
 
-/* Dark mode */
+/* Dark mode - explicit data-theme attribute required */
 html[data-theme="dark"] {
   --bg-default: #0f172a;
   --bg-paper: #1e293b;
@@ -29,6 +26,7 @@ html[data-theme="dark"] {
   --border-color: #334155;
   background-color: #0f172a;
   color: #f7fafc;
+  color-scheme: dark;
 }
 
 * {
