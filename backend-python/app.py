@@ -211,6 +211,59 @@ def get_frontend_url():
     frontend_url = os.environ.get('FRONTEND_URL', 'https://ventures.isharehow.app')
     return frontend_url.rstrip('/')
 
+# Database connection check helper
+def is_database_connected():
+    """Check if database is actually reachable (not just configured)"""
+    if not DB_AVAILABLE:
+        return False
+    try:
+        # Try a simple query to test connection
+        with db.engine.connect() as conn:
+            conn.execute(db.text("SELECT 1"))
+        return True
+    except Exception as e:
+        error_str = str(e).lower()
+        # Check for common database connection errors
+        if any(keyword in error_str for keyword in ['connection', 'timeout', 'refused', 'unreachable', 'network', 'operational']):
+            return False
+        # Other errors might be query-related, not connection issues
+        return True
+
+def get_database_error_message(error):
+    """Get a user-friendly error message for database errors"""
+    error_str = str(error).lower()
+    
+    # Connection errors
+    if any(keyword in error_str for keyword in ['connection', 'timeout', 'refused', 'unreachable', 'network']):
+        return {
+            'error': 'Database connection failed',
+            'message': 'Unable to connect to the database. The database server may be down or unreachable.',
+            'details': 'Please check your database connection settings and ensure the database server is running.'
+        }
+    
+    # Operational errors
+    if 'operational' in error_str or 'server closed' in error_str:
+        return {
+            'error': 'Database unavailable',
+            'message': 'The database server is not responding. It may be temporarily unavailable.',
+            'details': 'Please try again in a few moments or contact support if the issue persists.'
+        }
+    
+    # Generic database error
+    if 'database' in error_str or 'db' in error_str:
+        return {
+            'error': 'Database error',
+            'message': 'An error occurred while accessing the database.',
+            'details': str(error)
+        }
+    
+    # Unknown error
+    return {
+        'error': 'Database error',
+        'message': str(error),
+        'details': 'An unexpected error occurred while accessing the database.'
+    }
+
 # ============================================================================
 # AUTOMATIC SCRIPT RUNNER - Runs new scripts found in backend directory
 # ============================================================================
@@ -4355,7 +4408,19 @@ def update_profile():
 def get_notifications():
     """Get user's notifications (paginated)"""
     if not DB_AVAILABLE:
-        return jsonify({'error': 'Database not available'}), 500
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database is not configured or unavailable. Please check your database configuration.'
+        }), 503
+    
+    # Check if database is actually connected
+    if not is_database_connected():
+        error_info = {
+            'error': 'Database connection failed',
+            'message': 'Unable to connect to the database. The database server may be down or unreachable.',
+            'details': 'Please check your database connection settings and ensure the database server is running.'
+        }
+        return jsonify(error_info), 503
     
     try:
         # Get user ID from JWT
@@ -4398,7 +4463,11 @@ def get_notifications():
         app.logger.error(f"Error fetching notifications: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'Failed to fetch notifications', 'message': str(e)}), 500
+        
+        # Check if it's a database connection error
+        error_info = get_database_error_message(e)
+        status_code = 503 if 'connection' in error_info['error'].lower() or 'unavailable' in error_info['error'].lower() else 500
+        return jsonify(error_info), status_code
 
 @app.route('/api/notifications', methods=['POST'])
 @jwt_required()
@@ -6120,7 +6189,19 @@ def handle_join_notifications(data):
 def get_clients():
     """Get all clients with optional filtering - no authentication required"""
     if not DB_AVAILABLE:
-        return jsonify({'error': 'Database not available'}), 503
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database is not configured or unavailable. Please check your database configuration.'
+        }), 503
+    
+    # Check if database is actually connected
+    if not is_database_connected():
+        error_info = {
+            'error': 'Database connection failed',
+            'message': 'Unable to connect to the database. The database server may be down or unreachable.',
+            'details': 'Please check your database connection settings and ensure the database server is running.'
+        }
+        return jsonify(error_info), 503
     
     try:
         # No authentication required - anyone can view clients
@@ -6164,7 +6245,11 @@ def get_clients():
         print(f"Error fetching clients: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'Failed to fetch clients: {str(e)}'}), 500
+        
+        # Check if it's a database connection error
+        error_info = get_database_error_message(e)
+        status_code = 503 if 'connection' in error_info['error'].lower() or 'unavailable' in error_info['error'].lower() else 500
+        return jsonify(error_info), status_code
 
 @app.route('/api/demo/leads', methods=['POST'])
 def create_demo_lead():
@@ -6679,7 +6764,19 @@ def update_dashboard_connections(client_id):
 def get_employees():
     """Get list of employees (users) for assignment"""
     if not DB_AVAILABLE:
-        return jsonify({'error': 'Database not available'}), 503
+        return jsonify({
+            'error': 'Database not available',
+            'message': 'Database is not configured or unavailable. Please check your database configuration.'
+        }), 503
+    
+    # Check if database is actually connected
+    if not is_database_connected():
+        error_info = {
+            'error': 'Database connection failed',
+            'message': 'Unable to connect to the database. The database server may be down or unreachable.',
+            'details': 'Please check your database connection settings and ensure the database server is running.'
+        }
+        return jsonify(error_info), 503
     
     try:
         user = get_current_user()
@@ -6725,7 +6822,11 @@ def get_employees():
         print(f"Error fetching employees: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'Failed to fetch employees: {str(e)}'}), 500
+        
+        # Check if it's a database connection error
+        error_info = get_database_error_message(e)
+        status_code = 503 if 'connection' in error_info['error'].lower() or 'unavailable' in error_info['error'].lower() else 500
+        return jsonify(error_info), status_code
 
 # Creative Dashboard - Metrics API Endpoint
 
@@ -6877,7 +6978,11 @@ def get_creative_metrics():
         print(f"Traceback: {error_trace}")
         app.logger.error(f"Error fetching creative metrics: {e}")
         app.logger.error(f"Traceback: {error_trace}")
-        return jsonify({'error': 'Failed to fetch metrics', 'details': str(e)}), 500
+        
+        # Check if it's a database connection error
+        error_info = get_database_error_message(e)
+        status_code = 503 if 'connection' in error_info['error'].lower() or 'unavailable' in error_info['error'].lower() else 500
+        return jsonify(error_info), status_code
 
 @app.route('/api/creative/support-requests', methods=['GET'])
 def get_support_requests():
@@ -6978,7 +7083,11 @@ def get_support_requests():
                 'error': 'Support requests table not found. Please run database migrations.',
                 'details': 'The support_requests table needs to be created. Run: flask db upgrade'
             }), 500
-        return jsonify({'error': 'Failed to fetch support requests'}), 500
+        
+        # Check if it's a database connection error
+        error_info = get_database_error_message(e)
+        status_code = 503 if 'connection' in error_info['error'].lower() or 'unavailable' in error_info['error'].lower() else 500
+        return jsonify(error_info), status_code
 
 @app.route('/api/creative/support-requests', methods=['POST'])
 @jwt_required(optional=True)
