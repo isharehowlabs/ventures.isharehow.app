@@ -744,141 +744,25 @@ function SettingsPage() {
               </Paper>
             </Paper>
             
-            {/* Employee Management Section */}
+            {/* Employee Management and Client Assignment moved to Creative Dashboard */}
             <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
               <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
                 <AdminPanelSettingsIcon sx={{ color: 'gold', fontSize: 32 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
-                  Employee Management
-                </Typography>
-              </Stack>
-              <Divider sx={{ mb: 3, borderColor: 'gold' }} />
-              
-              {employeeError && (
-                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setEmployeeError(null)}>
-                  {employeeError}
-                </Alert>
-              )}
-              
-              <Typography variant="body1" sx={{ mb: 3 }}>
-                Manage employee status for users. Employees have access to the Creative Dashboard and can be assigned to clients.
-              </Typography>
-              
-              {loadingEmployees ? (
-                <Typography variant="body2" color="text.secondary">
-                  Loading users...
-                </Typography>
-              ) : employees.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No users found.
-                </Typography>
-              ) : (
-                <Stack spacing={2}>
-                  {employees.map((emp: any) => (
-                    <Paper key={emp.id} variant="outlined" sx={{ p: 2 }}>
-                      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                            {emp.name || emp.username || emp.email || 'Unknown User'}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {emp.ensName || emp.id} {emp.email && `• ${emp.email}`}
-                          </Typography>
-                          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                            {emp.isAdmin && (
-                              <Chip label="Admin" color="error" size="small" />
-                            )}
-                            {emp.isEmployee && (
-                              <Chip label="Employee" color="secondary" size="small" />
-                            )}
-                            {emp.isPaidMember && (
-                              <Chip label="Paid Member" color="success" size="small" variant="outlined" />
-                            )}
-                          </Stack>
-                        </Box>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={emp.isAdmin || false}
-                                onChange={() => toggleAdminStatus(emp.id || emp.user_id, emp.isAdmin || false)}
-                                disabled={emp.id === user?.id || emp.username === user?.username} // Can't change own admin status
-                              />
-                            }
-                            label="Admin"
-                          />
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={emp.isEmployee || false}
-                                onChange={() => toggleEmployeeStatus(emp.id || emp.user_id, emp.isEmployee || false)}
-                                disabled={emp.isAdmin} // Admins are always employees
-                              />
-                            }
-                            label={emp.isEmployee ? 'Employee' : 'Not Employee'}
-                          />
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleOpenPasswordDialog(emp)}
-                            sx={{ ml: 2 }}
-                          >
-                            Change Password
-                          </Button>
-                        </Stack>
-                      </Stack>
-                    </Paper>
-                  ))}
-                </Stack>
-              )}
-              
-              <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<Refresh />}
-                  onClick={fetchEmployees}
-                  disabled={loadingEmployees}
-                >
-                  {loadingEmployees ? 'Loading...' : 'Refresh List'}
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<AssignmentIcon />}
-                  onClick={() => setAssignDialogOpen(true)}
-                  disabled={loadingEmployees}
-                >
-                  Manage Client Assignments
-                </Button>
-              </Stack>
-            </Paper>
-            
-            {/* Client Assignment Management Section */}
-            <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-                <AssignmentIcon sx={{ color: 'gold', fontSize: 32 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
-                  Client Assignment Management
+                  Employee & Client Management
                 </Typography>
               </Stack>
               <Divider sx={{ mb: 3, borderColor: 'gold' }} />
               <Typography variant="body1" sx={{ mb: 3 }}>
-                Assign clients to employees. Admins can reassign any client to any employee. Employees can view their assigned clients.
+                Employee Management and Client Assignment Management have been moved to the Creative Dashboard for better organization.
               </Typography>
-              <Stack direction="row" spacing={2}>
-                <Button
-                  variant="contained"
-                  startIcon={<AssignmentIcon />}
-                  onClick={() => setAssignDialogOpen(true)}
-                >
-                  Open Assignment Dialog
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => router.push('/creative')}
-                >
-                  Go to Creative Dashboard
-                </Button>
-              </Stack>
+              <Button
+                variant="contained"
+                startIcon={<CreativeIcon />}
+                onClick={() => router.push('/creative')}
+              >
+                Go to Creative Dashboard
+              </Button>
             </Paper>
           </Box>
         )}

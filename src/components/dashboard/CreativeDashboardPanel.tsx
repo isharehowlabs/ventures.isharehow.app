@@ -19,6 +19,7 @@ import {
   School as SchoolIcon,
   SmartToy as SmartToyIcon,
   TrendingUp as TrendingUpIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
 } from '@mui/icons-material';
 import AddClientDialog from './creative/AddClientDialog';
 import AnalyticsActivity from './creative/AnalyticsActivity';
@@ -28,6 +29,8 @@ import { getBackendUrl } from '../../utils/backendUrl';
 import LearningPanel from './LearningPanel';
 import AiAgentPanel from './AiAgentPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
+import EmployeeClientManagement from './creative/EmployeeClientManagement';
+import { useAuth } from '../../hooks/useAuth';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -56,6 +59,8 @@ export default function CreativeDashboardPanel() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [activeTab, setActiveTab] = useState(0);
   const [addClientOpen, setAddClientOpen] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || false;
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -124,19 +129,28 @@ export default function CreativeDashboardPanel() {
               id="creative-tab-3"
               aria-controls="creative-tabpanel-3"
             />
+            {isAdmin && (
+              <Tab
+                icon={<AdminPanelSettingsIcon />}
+                iconPosition="start"
+                label="Employee & Client Management"
+                id="creative-tab-4"
+                aria-controls="creative-tabpanel-4"
+              />
+            )}
             <Tab
               icon={<SchoolIcon />}
               iconPosition="start"
               label="Learning Hub"
-              id="creative-tab-4"
-              aria-controls="creative-tabpanel-4"
+              id={isAdmin ? "creative-tab-5" : "creative-tab-4"}
+              aria-controls={isAdmin ? "creative-tabpanel-5" : "creative-tabpanel-4"}
             />
             <Tab
               icon={<SmartToyIcon />}
               iconPosition="start"
               label="AI Agent"
-              id="creative-tab-5"
-              aria-controls="creative-tabpanel-5"
+              id={isAdmin ? "creative-tab-6" : "creative-tab-5"}
+              aria-controls={isAdmin ? "creative-tabpanel-6" : "creative-tabpanel-5"}
             />
           </Tabs>
         </Container>
@@ -157,10 +171,15 @@ export default function CreativeDashboardPanel() {
           <TabPanel value={activeTab} index={3}>
             <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
           </TabPanel>
-          <TabPanel value={activeTab} index={4}>
+          {isAdmin && (
+            <TabPanel value={activeTab} index={4}>
+              <EmployeeClientManagement />
+            </TabPanel>
+          )}
+          <TabPanel value={activeTab} index={isAdmin ? 5 : 4}>
             <LearningPanel />
           </TabPanel>
-          <TabPanel value={activeTab} index={5}>
+          <TabPanel value={activeTab} index={isAdmin ? 6 : 5}>
             <AiAgentPanel />
           </TabPanel>
         </Container>
