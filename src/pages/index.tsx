@@ -1,5 +1,5 @@
 // UNIQUE_BUILD_TEST_2025_OCT_24_V3
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -12,6 +12,14 @@ import {
   Card,
   CardContent,
   Avatar,
+  Fade,
+  Grow,
+  Slide,
+  Chip,
+  IconButton,
+  Fab,
+  Zoom,
+  useScrollTrigger,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -29,6 +37,12 @@ import {
   TrendingUp as TrendingUpIcon,
   Shield as ShieldIcon,
   Speed as SpeedIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  PlayArrow as PlayArrowIcon,
+  ContactSupport as ContactSupportIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  Launch as LaunchIcon,
 } from '@mui/icons-material';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -327,6 +341,20 @@ const HomePage = () => {
     "quizAnswers",
     {}
   );
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Scroll to top button visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleSelectTier = (tierId: string) => {
     // Navigate to signup page with selected tier
@@ -488,6 +516,15 @@ const HomePage = () => {
                   className={styles.ctaButton}
                   size="large"
                   onClick={() => router.push('/demo')}
+                  endIcon={<ArrowForwardIcon />}
+                  sx={{
+                    '& .MuiButton-endIcon': {
+                      transition: 'transform 0.3s',
+                    },
+                    '&:hover .MuiButton-endIcon': {
+                      transform: 'translateX(4px)',
+                    },
+                  }}
                 >
                   Start Your Transformation Today
                 </Button>
@@ -498,8 +535,26 @@ const HomePage = () => {
                     const element = document.getElementById('pricing');
                     if (element) element.scrollIntoView({ behavior: 'smooth' });
                   }}
+                  startIcon={<ArrowDownwardIcon />}
                 >
                   View Pricing Plans
+                </Button>
+                <Button
+                  variant="text"
+                  size="large"
+                  onClick={() => {
+                    const element = document.getElementById('services');
+                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  }}
+                  startIcon={<PlayArrowIcon />}
+                >
+                  Watch Demo
                 </Button>
               </Stack>
               <Typography
@@ -516,36 +571,40 @@ const HomePage = () => {
           </Box>
 
           {/* Stats Bar - Social Proof */}
-          <Box className={styles.statsBar}>
-            <Container maxWidth="lg">
-              <Grid container spacing={4}>
-                <Grid item xs={6} sm={3}>
-                  <Box className={styles.statCard}>
-                    <Typography className={styles.statNumber}>100+</Typography>
-                    <Typography className={styles.statLabel}>Organizations</Typography>
-                  </Box>
+          <Fade in timeout={1000}>
+            <Box className={styles.statsBar}>
+              <Container maxWidth="lg">
+                <Grid container spacing={4}>
+                  {[
+                    { number: '100+', label: 'Organizations', icon: <TrendingUpIcon /> },
+                    { number: '30%', label: 'Efficiency Gain', icon: <SpeedIcon /> },
+                    { number: '24/7', label: 'Support', icon: <SecurityIcon /> },
+                    { number: '98%', label: 'Satisfaction', icon: <StarIcon /> },
+                  ].map((stat, index) => (
+                    <Grid item xs={6} sm={3} key={index}>
+                      <Grow in timeout={800 + index * 200}>
+                        <Box className={styles.statCard}>
+                          <Avatar
+                            sx={{
+                              bgcolor: 'primary.main',
+                              width: 48,
+                              height: 48,
+                              mb: 2,
+                              mx: 'auto',
+                            }}
+                          >
+                            {stat.icon}
+                          </Avatar>
+                          <Typography className={styles.statNumber}>{stat.number}</Typography>
+                          <Typography className={styles.statLabel}>{stat.label}</Typography>
+                        </Box>
+                      </Grow>
+                    </Grid>
+                  ))}
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Box className={styles.statCard}>
-                    <Typography className={styles.statNumber}>30%</Typography>
-                    <Typography className={styles.statLabel}>Efficiency Gain</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Box className={styles.statCard}>
-                    <Typography className={styles.statNumber}>24/7</Typography>
-                    <Typography className={styles.statLabel}>Support</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Box className={styles.statCard}>
-                    <Typography className={styles.statNumber}>98%</Typography>
-                    <Typography className={styles.statLabel}>Satisfaction</Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Container>
-          </Box>
+              </Container>
+            </Box>
+          </Fade>
 
           {/* SaaS Section */}
           <Box id="saas" sx={{ py: 10, mb: 8 }}>
@@ -562,19 +621,45 @@ const HomePage = () => {
               <Grid container spacing={4} sx={{ mb: 5 }}>
                 {mbbaaSFeatures.map((feature, index) => (
                   <Grid item xs={12} sm={6} md={3} key={index}>
-                    <Card className={styles.featureCard}>
-                      <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Avatar className={styles.featureIcon}>
-                          {feature.icon}
-                        </Avatar>
-                        <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mt: 2 }}>
-                          {feature.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                          {feature.description}
-                        </Typography>
-                      </CardContent>
-                    </Card>
+                    <Grow in timeout={600 + index * 150}>
+                      <Card className={styles.featureCard}>
+                        <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <Avatar className={styles.featureIcon}>
+                            {feature.icon}
+                          </Avatar>
+                          <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mt: 2 }}>
+                            {feature.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
+                            {feature.description}
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            endIcon={<ArrowForwardIcon />}
+                            sx={{
+                              mt: 'auto',
+                              borderColor: 'primary.main',
+                              color: 'primary.main',
+                              '&:hover': {
+                                borderColor: 'primary.dark',
+                                bgcolor: 'primary.main',
+                                color: 'white',
+                                '& .MuiButton-endIcon': {
+                                  transform: 'translateX(4px)',
+                                },
+                              },
+                              '& .MuiButton-endIcon': {
+                                transition: 'transform 0.3s',
+                              },
+                            }}
+                            onClick={() => router.push('/demo')}
+                          >
+                            Learn More
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </Grow>
                   </Grid>
                 ))}
               </Grid>
@@ -612,44 +697,81 @@ const HomePage = () => {
               <Grid container spacing={4} sx={{ mb: 6 }}>
                 {creativeServices.map((service, index) => (
                   <Grid item xs={12} md={6} key={index}>
-                    <Card className={styles.featureCard}>
-                      <CardContent sx={{ p: 4 }}>
-                        <Stack direction="row" spacing={3}>
-                          <Avatar
-                            className={styles.featureIcon}
-                            sx={{
-                              bgcolor: 'secondary.main',
-                              width: 64,
-                              height: 64,
-                            }}
-                          >
-                            {service.icon}
-                          </Avatar>
-                          <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="h6" fontWeight={700} gutterBottom>
-                              {service.title}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-                              {service.description}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </CardContent>
-                    </Card>
+                    <Slide direction="up" in timeout={600 + index * 150}>
+                      <Card className={styles.featureCard}>
+                        <CardContent sx={{ p: 4 }}>
+                          <Stack direction="row" spacing={3}>
+                            <Avatar
+                              className={styles.featureIcon}
+                              sx={{
+                                bgcolor: 'secondary.main',
+                                width: 64,
+                                height: 64,
+                              }}
+                            >
+                              {service.icon}
+                            </Avatar>
+                            <Box sx={{ flexGrow: 1 }}>
+                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                                <Typography variant="h6" fontWeight={700}>
+                                  {service.title}
+                                </Typography>
+                                <Chip
+                                  label="Popular"
+                                  size="small"
+                                  color="primary"
+                                  sx={{ display: index === 0 ? 'flex' : 'none' }}
+                                />
+                              </Stack>
+                              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 2 }}>
+                                {service.description}
+                              </Typography>
+                              <Button
+                                variant="text"
+                                size="small"
+                                endIcon={<LaunchIcon />}
+                                sx={{
+                                  color: 'primary.main',
+                                  '&:hover': {
+                                    bgcolor: 'primary.main',
+                                    color: 'white',
+                                  },
+                                }}
+                                onClick={() => router.push('/creative-services')}
+                              >
+                                Explore Service
+                              </Button>
+                            </Box>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Slide>
                   </Grid>
                 ))}
               </Grid>
 
-              <Paper
-                elevation={2}
-                sx={{
-                  p: 4,
-                  borderRadius: 3,
-                  bgcolor: 'background.paper',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
+              <Fade in timeout={1000}>
+                <Paper
+                  elevation={2}
+                  sx={{
+                    p: 4,
+                    borderRadius: 3,
+                    bgcolor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 4,
+                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                    },
+                  }}
+                >
                 <Grid container spacing={4}>
                   <Grid item xs={12} md={4}>
                     <Box>
@@ -725,76 +847,126 @@ const HomePage = () => {
                     </Box>
                   </Grid>
                 </Grid>
+                <Box sx={{ mt: 4, textAlign: 'center' }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    endIcon={<ArrowForwardIcon />}
+                    onClick={() => router.push('/demo')}
+                    sx={{
+                      bgcolor: 'primary.main',
+                      px: 4,
+                      py: 1.5,
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.3s',
+                    }}
+                  >
+                    Get Started with Creative Services
+                  </Button>
+                </Box>
               </Paper>
+              </Fade>
             </Container>
           </Box>
 
           <Divider sx={{ my: 8 }} />
 
           {/* iShareHow Divisions Section */}
-          <Box id="isharehow" sx={{ mb: 8 }}>
+          <Box id="isharehow" sx={{ py: 10, mb: 8, bgcolor: 'background.default' }}>
             <Container maxWidth="lg">
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 800,
-                  mb: 2,
-                  textAlign: 'center',
-                  fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  color: "primary.main",
-                }}
-              >
-                iShareHow
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{
-                  textAlign: 'center',
-                  mb: 5,
-                  color: 'text.secondary',
-                  maxWidth: 800,
-                  mx: 'auto',
-                  fontSize: '1.1rem',
-                }}
-              >
-                We develop and distribute compelling content through our iShareHow YT Channel and publishing division.
-              </Typography>
+              <Box className={styles.sectionHeader}>
+                <Typography variant="h2" className={styles.sectionTitle}>
+                  iShareHow Divisions
+                </Typography>
+                <Typography variant="h5" className={styles.sectionSubtitle}>
+                  We develop and distribute compelling content through our iShareHow YT Channel and publishing division.
+                </Typography>
+              </Box>
 
               <Grid container spacing={4}>
                 {iShareHowDivisions.map((division, index) => (
                   <Grid item xs={12} md={4} key={index}>
-                    <Card
-                      elevation={3}
-                      sx={{
-                        height: '100%',
-                        p: 4,
-                        background: `linear-gradient(135deg, ${division.color}15, ${division.color}05)`,
-                        border: '1px solid',
-                        borderColor: `${division.color}30`,
-                        transition: 'transform 0.3s, box-shadow 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-8px)',
-                          boxShadow: 8,
-                        },
-                      }}
-                    >
-                      <Avatar
+                    <Grow in timeout={600 + index * 150}>
+                      <Card
+                        elevation={3}
                         sx={{
-                          bgcolor: division.color,
-                          width: 64,
-                          height: 64,
-                          mb: 3,
+                          height: '100%',
+                          p: 4,
+                          background: `linear-gradient(135deg, ${division.color}15, ${division.color}05)`,
+                          border: '1px solid',
+                          borderColor: `${division.color}30`,
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: 4,
+                            background: division.color,
+                            transform: 'scaleX(0)',
+                            transition: 'transform 0.3s',
+                          },
+                          '&:hover': {
+                            transform: 'translateY(-8px)',
+                            boxShadow: 8,
+                            '&::before': {
+                              transform: 'scaleX(1)',
+                            },
+                          },
                         }}
                       >
-                        {division.icon}
-                      </Avatar>
-                      <Typography variant="h5" fontWeight={700} gutterBottom>
-                        {division.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {division.description}
-                      </Typography>
-                    </Card>
+                        <Avatar
+                          sx={{
+                            bgcolor: division.color,
+                            width: 64,
+                            height: 64,
+                            mb: 3,
+                            transition: 'transform 0.3s',
+                            '&:hover': {
+                              transform: 'scale(1.1) rotate(5deg)',
+                            },
+                          }}
+                        >
+                          {division.icon}
+                        </Avatar>
+                        <Typography variant="h5" fontWeight={700} gutterBottom>
+                          {division.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
+                          {division.description}
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          endIcon={<LaunchIcon />}
+                          sx={{
+                            borderColor: division.color,
+                            color: division.color,
+                            '&:hover': {
+                              borderColor: division.color,
+                              bgcolor: division.color,
+                              color: 'white',
+                              transform: 'translateX(4px)',
+                            },
+                            '& .MuiButton-endIcon': {
+                              transition: 'transform 0.3s',
+                            },
+                            '&:hover .MuiButton-endIcon': {
+                              transform: 'translateX(4px)',
+                            },
+                            transition: 'all 0.3s',
+                          }}
+                        >
+                          Learn More
+                        </Button>
+                      </Card>
+                    </Grow>
                   </Grid>
                 ))}
               </Grid>
@@ -804,38 +976,48 @@ const HomePage = () => {
           <Divider sx={{ my: 8 }} />
 
           {/* Services Section */}
-          <Box sx={{ py: 8, bgcolor: "background.default" }} id="services">
+          <Box sx={{ py: 10, bgcolor: "background.default" }} id="services">
             <Container maxWidth="lg">
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 800,
-                  mb: 2,
-                  textAlign: 'center',
-                  fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  color: "primary.main",
-                }}
-              >
-                Comprehensive Managed Services
-              </Typography>
-              <Typography
-                variant="h5"
-                color="text.secondary"
-                textAlign="center"
-                sx={{ mb: 6, fontWeight: 500 }}
-              >
-                We deliver enterprise-grade managed services with security operations at the core. From SOC monitoring to studio production, all services are backed by guaranteed availability and unified platform management. We're building the future of managed services by combining Security Operations Center (SOC)
-          expertise with a comprehensive SaaS platform. Our mission is to become the best SOC company
-          while delivering end-to-end managed services across infrastructure, security, production,
-          applications, and support.
-              </Typography>
-              <Grid container spacing={6}>
-                {Object.entries(serviceDefinitions).map(([key, service]) => (
+              <Box className={styles.sectionHeader}>
+                <Typography variant="h2" className={styles.sectionTitle}>
+                  Comprehensive Managed Services
+                </Typography>
+                <Typography variant="h5" className={styles.sectionSubtitle}>
+                  We deliver enterprise-grade managed services with security operations at the core. From SOC monitoring to studio production, all services are backed by guaranteed availability and unified platform management.
+                </Typography>
+              </Box>
+              <Grid container spacing={4}>
+                {Object.entries(serviceDefinitions).map(([key, service], index) => (
                   <Grid item xs={12} sm={6} md={4} key={key}>
-                    <ServiceCard service={{ ...service, key }} />
+                    <Fade in timeout={600 + index * 100}>
+                      <Box>
+                        <ServiceCard service={{ ...service, key }} />
+                      </Box>
+                    </Fade>
                   </Grid>
                 ))}
               </Grid>
+              <Box sx={{ mt: 6, textAlign: 'center' }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  endIcon={<ArrowForwardIcon />}
+                  onClick={() => router.push('/demo')}
+                  sx={{
+                    bgcolor: 'primary.main',
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                      transform: 'translateY(-2px)',
+                    },
+                    transition: 'all 0.3s',
+                  }}
+                >
+                  Explore All Services
+                </Button>
+              </Box>
             </Container>
           </Box>
 
@@ -962,80 +1144,175 @@ const HomePage = () => {
               <Grid container spacing={4} sx={{ mb: 8 }}>
                 {testimonials.map((testimonial, index) => (
                   <Grid item xs={12} md={4} key={index}>
-                    <Card className={styles.testimonialCard}>
-                      <CardContent>
-                        <Typography
-                          variant="body1"
-                          sx={{ mb: 3, fontStyle: 'italic', flexGrow: 1, fontSize: '1.1rem', lineHeight: 1.7, position: 'relative', zIndex: 1 }}
-                          color="text.secondary"
-                        >
-                          {testimonial.quote}
-                        </Typography>
-                        <Divider sx={{ my: 2 }} />
-                        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
-                          {testimonial.author}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {testimonial.role}
-                        </Typography>
-                      </CardContent>
-                    </Card>
+                    <Grow in timeout={800 + index * 200}>
+                      <Card className={styles.testimonialCard}>
+                        <CardContent>
+                          <Stack direction="row" spacing={1} mb={2}>
+                            {[...Array(5)].map((_, i) => (
+                              <StarIcon
+                                key={i}
+                                sx={{
+                                  color: '#ffc107',
+                                  fontSize: 20,
+                                }}
+                              />
+                            ))}
+                          </Stack>
+                          <Typography
+                            variant="body1"
+                            sx={{ mb: 3, fontStyle: 'italic', flexGrow: 1, fontSize: '1.1rem', lineHeight: 1.7, position: 'relative', zIndex: 1 }}
+                            color="text.secondary"
+                          >
+                            {testimonial.quote}
+                          </Typography>
+                          <Divider sx={{ my: 2 }} />
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <Avatar
+                              sx={{
+                                bgcolor: 'primary.main',
+                                width: 48,
+                                height: 48,
+                              }}
+                            >
+                              {testimonial.author.charAt(0)}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
+                                {testimonial.author}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {testimonial.role}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grow>
                   </Grid>
                 ))}
               </Grid>
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  endIcon={<ArrowForwardIcon />}
+                  onClick={() => router.push('/demo')}
+                  sx={{
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    px: 4,
+                    '&:hover': {
+                      borderColor: 'primary.dark',
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                    },
+                  }}
+                >
+                  Read More Testimonials
+                </Button>
+              </Box>
             </Container>
           </Box>
 
           {/* Final CTA Section */}
           <Box id="contact" className={styles.finalCTASection}>
             <Container maxWidth="lg" className={styles.finalCTAContent}>
-              <Typography
-                variant="h2"
-                className={styles.finalCTATitle}
-                sx={{
-                  fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                }}
-              >
-                Ready to Transform Your Business?
-              </Typography>
-              <Typography
-                variant="h5"
-                className={styles.finalCTADescription}
-                sx={{
-                  fontSize: { xs: '1.1rem', md: '1.25rem' },
-                }}
-              >
-                Trust iShareHow Labs and our advanced AI app ecosystem to provide the technical backbone and strategic insights that will ensure your competitive edge in today's dynamic market.
-              </Typography>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={3}
-                justifyContent="center"
-                sx={{ mt: 4 }}
-              >
-                <Button
-                  className={styles.ctaButton}
-                  size="large"
-                  onClick={() => router.push('/demo')}
-                  sx={{
-                    minWidth: { xs: '100%', sm: 'auto' },
-                  }}
-                >
-                  Start Your Transformation Today
-                </Button>
-                <Button
-                  className={styles.ctaButtonSecondary}
-                  size="large"
-                  onClick={() => router.push('/demo?tier=enterprise')}
-                  sx={{
-                    minWidth: { xs: '100%', sm: 'auto' },
-                  }}
-                >
-                  Contact Sales
-                </Button>
-              </Stack>
+              <Fade in timeout={1000}>
+                <Box>
+                  <Typography
+                    variant="h2"
+                    className={styles.finalCTATitle}
+                    sx={{
+                      fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                    }}
+                  >
+                    Ready to Transform Your Business?
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    className={styles.finalCTADescription}
+                    sx={{
+                      fontSize: { xs: '1.1rem', md: '1.25rem' },
+                    }}
+                  >
+                    Trust iShareHow Labs and our advanced AI app ecosystem to provide the technical backbone and strategic insights that will ensure your competitive edge in today's dynamic market.
+                  </Typography>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={3}
+                    justifyContent="center"
+                    sx={{ mt: 4 }}
+                  >
+                    <Button
+                      className={styles.ctaButton}
+                      size="large"
+                      onClick={() => router.push('/demo')}
+                      endIcon={<ArrowForwardIcon />}
+                      sx={{
+                        minWidth: { xs: '100%', sm: 'auto' },
+                        '& .MuiButton-endIcon': {
+                          transition: 'transform 0.3s',
+                        },
+                        '&:hover .MuiButton-endIcon': {
+                          transform: 'translateX(4px)',
+                        },
+                      }}
+                    >
+                      Start Your Transformation Today
+                    </Button>
+                    <Button
+                      className={styles.ctaButtonSecondary}
+                      size="large"
+                      onClick={() => router.push('/demo?tier=enterprise')}
+                      startIcon={<ContactSupportIcon />}
+                      sx={{
+                        minWidth: { xs: '100%', sm: 'auto' },
+                      }}
+                    >
+                      Contact Sales
+                    </Button>
+                    <Button
+                      variant="text"
+                      size="large"
+                      onClick={() => router.push('/about')}
+                      sx={{
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        minWidth: { xs: '100%', sm: 'auto' },
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 255, 255, 0.1)',
+                        },
+                      }}
+                    >
+                      Learn More
+                    </Button>
+                  </Stack>
+                </Box>
+              </Fade>
             </Container>
           </Box>
+
+          {/* Scroll to Top Button */}
+          <Zoom in={showScrollTop}>
+            <Fab
+              color="primary"
+              size="medium"
+              aria-label="scroll back to top"
+              onClick={scrollToTop}
+              sx={{
+                position: 'fixed',
+                bottom: 32,
+                right: 32,
+                zIndex: 1000,
+                boxShadow: 4,
+                '&:hover': {
+                  transform: 'scale(1.1)',
+                },
+                transition: 'transform 0.3s',
+              }}
+            >
+              <KeyboardArrowUpIcon />
+            </Fab>
+          </Zoom>
         </Box>
       </AppShell>
     </>

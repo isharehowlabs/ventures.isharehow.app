@@ -1,0 +1,19 @@
+__turbopack_load_page_chunks__("/creative", [
+  "static/chunks/74378257df263d4c.js",
+  "static/chunks/55db2730b9138f95.js",
+  "static/chunks/cce264097322a1ff.js",
+  "static/chunks/dd773841e11b2736.js",
+  "static/chunks/04b08779c3b3184c.js",
+  "static/chunks/d1b9d940d419c69d.js",
+  "static/chunks/99535e10090bf397.js",
+  "static/chunks/c24de43f24c6c860.js",
+  "static/chunks/7343a6960d0a1159.js",
+  "static/chunks/c4a3371e258c9a5c.js",
+  "static/chunks/8699da0738a8d489.js",
+  "static/chunks/21a5cbfc4cd1d1be.js",
+  "static/chunks/fb22ae8de0feb8b9.js",
+  "static/chunks/69a6b6d1e3b33256.js",
+  "static/chunks/c89c2b55fff120f8.js",
+  "static/chunks/3e52b27737cf67cf.js",
+  "static/chunks/turbopack-c32fa1c516ff4e30.js"
+])
