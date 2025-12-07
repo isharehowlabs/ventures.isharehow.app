@@ -1,6 +1,6 @@
 """Replace Patreon fields with Shopify subscription fields
 
-Revision ID: 37_replace_patreon_shopify
+Revision ID: 37_replace_patreon_with_shopify
 Revises: 36_add_user_id_clients
 Create Date: 2025-12-06 21:00:00.000000
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
-revision = '37_replace_patreon_shopify'
+revision = '37_replace_patreon_with_shopify'
 down_revision = '36_add_user_id_clients'
 branch_labels = None
 depends_on = None
