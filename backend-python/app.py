@@ -9835,6 +9835,12 @@ def delete_user(user_id):
         
         user_id_to_delete = user_to_delete.id if hasattr(user_to_delete, 'id') else user_id
         
+        # Ensure user_id_to_delete is an integer
+        try:
+            user_id_to_delete = int(user_id_to_delete)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid user ID format'}), 400
+        
         # Delete related records first (to avoid foreign key constraints)
         try:
             # Delete user profile
@@ -9843,7 +9849,7 @@ def delete_user(user_id):
                 with conn.begin():
                     # Delete user profiles
                     conn.execute(text("DELETE FROM user_profiles WHERE id = :user_id OR user_id = :user_id"), 
-                                {'user_id': str(user_id_to_delete)})
+                                {'user_id': user_id_to_delete})
                     
                     # Delete client assignments
                     conn.execute(text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"), 
@@ -9851,7 +9857,7 @@ def delete_user(user_id):
                     
                     # Delete support requests (if user was assigned)
                     conn.execute(text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"), 
-                                {'user_id': str(user_id_to_delete)})
+                                {'user_id': user_id_to_delete})
                     
                     # Delete notifications
                     conn.execute(text("DELETE FROM notifications WHERE user_id = :user_id"), 
@@ -9859,6 +9865,10 @@ def delete_user(user_id):
                     
                     # Delete subscriptions
                     conn.execute(text("DELETE FROM subscriptions WHERE user_id = :user_id"), 
+                                {'user_id': user_id_to_delete})
+                    
+                    # Delete tasks
+                    conn.execute(text("DELETE FROM tasks WHERE created_by = :user_id OR assigned_to = :user_id"), 
                                 {'user_id': user_id_to_delete})
                     
                     # Finally, delete the user

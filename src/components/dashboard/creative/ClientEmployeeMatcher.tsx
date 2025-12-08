@@ -331,11 +331,22 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
         await fetchData(); // Refresh employees list
         setSuccess('User deleted successfully');
       } else {
-        const errorData = await response.json();
-        setDeleteError(errorData.error || 'Failed to delete user');
+        let errorMessage = 'Failed to delete user';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+          if (errorData.details) {
+            errorMessage += `: ${errorData.details}`;
+          }
+        } catch (parseError) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        setDeleteError(errorMessage);
       }
     } catch (error: any) {
-      setDeleteError(error.message || 'Failed to delete user');
+      const errorMessage = error.message || 'Failed to delete user';
+      setDeleteError(errorMessage);
+      console.error('Error deleting user:', error);
     } finally {
       setDeleting(false);
     }
