@@ -9847,9 +9847,14 @@ def delete_user(user_id):
             from sqlalchemy import text
             with db.engine.connect() as conn:
                 with conn.begin():
-                    # Delete user profiles
-                    conn.execute(text("DELETE FROM user_profiles WHERE id = :user_id"), 
-                                {'user_id': user_id_to_delete})
+                    # Delete user profiles (linked by email or ens_name)
+                    # First, get the user to find linking fields
+                    user_result = conn.execute(text("SELECT email, ens_name FROM users WHERE id = :user_id"), 
+                                              {'user_id': user_id_to_delete})
+                    user_row = user_result.fetchone()
+                    if user_row:
+                        conn.execute(text("DELETE FROM user_profiles WHERE email = :email OR ens_name = :ens_name"), 
+                                    {'email': user_row[0], 'ens_name': user_row[1]})
                     
                     # Delete client assignments
                     conn.execute(text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"), 
