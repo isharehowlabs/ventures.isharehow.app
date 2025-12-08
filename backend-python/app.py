@@ -6393,6 +6393,8 @@ def create_demo_lead():
         if existing:
             # Update existing client/prospect with new demo request info
             existing.notes = (existing.notes or '') + f'\n\nDemo Request: {datetime.utcnow().isoformat()} - {data.get("message", "No message")}'
+            if data.get('marketingBudget'):
+                existing.marketing_budget = data.get('marketingBudget')
             if existing.status == 'inactive':
                 existing.status = 'prospect'  # Reactivate as prospect
             db.session.commit()
@@ -6408,6 +6410,7 @@ def create_demo_lead():
             company=data.get('company'),
             phone=data['phone'],
             status='prospect',  # Mark as prospect
+            marketing_budget=data.get('marketingBudget'),
             notes=f'Demo Request: {data.get("message", "No message")}\nSource: {data.get("source", "book_demo_form")}',
         )
         
@@ -6566,6 +6569,7 @@ def create_client():
             tier=data.get('tier'),
             notes=data.get('notes'),
             tags=json.dumps(data.get('tags', [])) if data.get('tags') else None,
+            marketing_budget=data.get('marketingBudget'),
             user_id=user.id
         )
         
@@ -9167,6 +9171,7 @@ if DB_AVAILABLE:
         tier = db.Column(db.String(50), nullable=True)  # starter, professional, enterprise
         notes = db.Column(db.Text, nullable=True)
         tags = db.Column(db.Text, nullable=True)  # JSON array of tags
+        marketing_budget = db.Column(db.String(500), nullable=True)  # Marketing budget information
         user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Link to User account
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -9187,6 +9192,7 @@ if DB_AVAILABLE:
                 'tier': self.tier,
                 'notes': self.notes,
                 'tags': json.loads(self.tags) if self.tags else [],
+                'marketingBudget': self.marketing_budget,
                 'userId': self.user_id,
                 'hasAccount': self.user_id is not None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,

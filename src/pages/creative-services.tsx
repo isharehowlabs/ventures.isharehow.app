@@ -23,6 +23,7 @@ import {
   Business as BusinessIcon,
   Phone as PhoneIcon,
   Send as SendIcon,
+  AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
 import { getBackendUrl } from '../utils/backendUrl';
 
@@ -37,6 +38,7 @@ const CreativeServicesPage = () => {
     company: '',
     phone: '',
     message: '',
+    marketingBudget: '',
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -96,6 +98,7 @@ const CreativeServicesPage = () => {
           company: formData.company.trim() || undefined,
           phone: formData.phone.trim(),
           message: formData.message.trim() || undefined,
+          marketingBudget: formData.marketingBudget.trim() || undefined,
           source: 'creative_services_landing',
           status: 'prospect',
         }),
@@ -113,6 +116,7 @@ const CreativeServicesPage = () => {
         company: '',
         phone: '',
         message: '',
+        marketingBudget: '',
       });
     } catch (err: any) {
       setFormError(err.message || 'Failed to submit form. Please try again.');
@@ -1038,6 +1042,25 @@ const CreativeServicesPage = () => {
                             onChange={handleFormChange}
                             placeholder="What services are you interested in? What are your goals?"
                             disabled={formLoading}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                              }
+                            }}
+                          />
+
+                          <TextField
+                            fullWidth
+                            label="Marketing Budget"
+                            name="marketingBudget"
+                            value={formData.marketingBudget}
+                            onChange={handleFormChange}
+                            placeholder="Do you have a marketing budget available or willing to get one?"
+                            helperText="Do you have a marketing budget available or willing to get one?"
+                            disabled={formLoading}
+                            InputProps={{
+                              startAdornment: <AttachMoneyIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                            }}
                             sx={{
                               '& .MuiOutlinedInput-root': {
                                 borderRadius: '12px',

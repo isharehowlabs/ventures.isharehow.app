@@ -35,6 +35,7 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
     phone: '',
     tier: '',
     notes: '',
+    marketingBudget: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,6 +83,7 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
           phone: formData.phone || undefined,
           tier: formData.tier || undefined,
           notes: formData.notes || undefined,
+          marketingBudget: formData.marketingBudget || undefined,
           status: 'pending',
         }),
       });
@@ -116,6 +118,7 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
         phone: '',
         tier: '',
         notes: '',
+        marketingBudget: '',
       });
     } catch (err: any) {
       setError(err.message || 'Failed to add client. Please try again.');
@@ -132,6 +135,7 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
       phone: '',
       tier: '',
       notes: '',
+      marketingBudget: '',
     });
     setError(null);
     onClose();
@@ -214,6 +218,15 @@ export default function AddClientDialog({ open, onClose }: AddClientDialogProps)
             value={formData.notes}
             onChange={handleChange('notes')}
             placeholder="Any additional information about this client..."
+          />
+
+          <TextField
+            fullWidth
+            label="Marketing Budget"
+            value={formData.marketingBudget}
+            onChange={handleChange('marketingBudget')}
+            placeholder="Do you have a marketing budget available or willing to get one?"
+            helperText="Do you have a marketing budget available or willing to get one?"
           />
         </Stack>
       </DialogContent>

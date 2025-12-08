@@ -18,6 +18,7 @@ import {
   Email as EmailIcon,
   Business as BusinessIcon,
   Phone as PhoneIcon,
+  AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
 import { getBackendUrl } from '../../utils/backendUrl';
 
@@ -32,6 +33,7 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
     company: '',
     phone: '',
     message: '',
+    marketingBudget: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
           company: formData.company.trim() || undefined,
           phone: formData.phone.trim(),
           message: formData.message.trim() || undefined,
+          marketingBudget: formData.marketingBudget.trim() || undefined,
           source: 'book_demo_form',
         }),
       });
@@ -244,6 +247,20 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
             value={formData.message}
             onChange={handleChange}
             placeholder="Tell us what you're interested in learning about..."
+            disabled={loading}
+          />
+
+          <TextField
+            fullWidth
+            label="Marketing Budget"
+            name="marketingBudget"
+            value={formData.marketingBudget}
+            onChange={handleChange}
+            placeholder="Do you have a marketing budget available or willing to get one?"
+            helperText="Do you have a marketing budget available or willing to get one?"
+            InputProps={{
+              startAdornment: <AttachMoneyIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+            }}
             disabled={loading}
           />
 
