@@ -112,14 +112,16 @@ export default function SupportRequests() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch support requests');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to fetch support requests' }));
+        throw new Error(errorData.error || errorData.details || 'Failed to fetch support requests');
       }
 
       const data = await response.json();
       setRequests(data.requests || []);
     } catch (err: any) {
       console.error('Error fetching support requests:', err);
-      setError(err.message || 'Failed to load support requests');
+      const errorMessage = err.message || 'Failed to load support requests';
+      setError(errorMessage);
       // Fallback to empty array on error
       setRequests([]);
     } finally {

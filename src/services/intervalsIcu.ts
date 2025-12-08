@@ -162,7 +162,17 @@ const makeProxyRequest = async (endpoint: string, params: Record<string, string>
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorText = '';
+    try {
+      const errorData = await response.json();
+      errorText = JSON.stringify(errorData);
+      // If it's a 401 error, provide more helpful message
+      if (response.status === 401) {
+        throw new Error(`Intervals.icu API authentication failed. Please check your API key is correct and valid. Error: ${errorText}`);
+      }
+    } catch {
+      errorText = await response.text();
+    }
     throw new Error(`Intervals.icu API error: ${response.status} ${errorText}`);
   }
 

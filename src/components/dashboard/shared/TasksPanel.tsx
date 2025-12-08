@@ -100,6 +100,9 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
         if (response.ok) {
           const data = await response.json();
           setSupportRequests(data.requests || []);
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to fetch support requests' }));
+          console.error('Error fetching support requests:', errorData);
         }
       } catch (err) {
         console.error('Error fetching support requests:', err);

@@ -59,9 +59,9 @@ export default function Workspace() {
                   display: 'block',
                 }}
                 allowFullScreen
-                allow="clipboard-read; clipboard-write; display-capture; microphone; camera; autoplay"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-downloads"
-                loading="lazy"
+                allow="clipboard-read; clipboard-write; display-capture; microphone; camera; autoplay; fullscreen"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-downloads allow-top-navigation allow-top-navigation-by-user-activation"
+                loading="eager"
               />
             </Box>
           </Paper>

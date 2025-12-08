@@ -4941,14 +4941,14 @@ def unsubscribe_push():
         return jsonify({'error': 'Failed to unsubscribe', 'message': str(e)}), 500
 
 
-@require_session
 @app.route('/api/tasks', methods=['GET'])
+@jwt_required(optional=True)  # Allow unauthenticated access to see all tasks
 def get_tasks():
     if not db:
         return jsonify({'tasks': [], 'error': 'Database not configured'}), 503
     
     try:
-        # Get all tasks, ordered by most recent first
+        # Get all tasks, ordered by most recent first (no filtering by user)
         tasks = Task.query.order_by(Task.created_at.desc()).all()
         total_count = len(tasks)
         print(f"Fetched {total_count} tasks from database")
@@ -11467,8 +11467,8 @@ def intervals_proxy_activities():
         oldest = request.args.get('oldest', '').strip()
         
         if not api_key:
-            app.logger.warning(f"Missing API key")
-            return jsonify({'error': 'Missing X-Intervals-API-Key'}), 401
+            app.logger.warning(f"Missing API key in intervals_proxy_activities")
+            return jsonify({'error': 'Missing X-Intervals-API-Key header'}), 401
         if not oldest:
             app.logger.warning(f"Missing required param: oldest={oldest}")
             return jsonify({'error': 'oldest parameter is required'}), 400
@@ -11491,9 +11491,17 @@ def intervals_proxy_activities():
             app.logger.error(f"Intervals.icu API error: {response.status_code} - {response.text[:200]}")
             try:
                 error_data = response.json()
-                return jsonify({'error': 'Intervals.icu API error', 'detail': error_data}), response.status_code
+                return jsonify({
+                    'error': 'Intervals.icu API error',
+                    'detail': error_data,
+                    'statusCode': response.status_code
+                }), response.status_code
             except:
-                return jsonify({'error': 'Intervals.icu API error', 'detail': response.text[:200]}), response.status_code
+                return jsonify({
+                    'error': 'Intervals.icu API error',
+                    'detail': {'error': response.text[:200], 'status': response.status_code},
+                    'statusCode': response.status_code
+                }), response.status_code
         
         # Try to parse as JSON to validate
         try:
@@ -11583,8 +11591,8 @@ def intervals_proxy_athlete():
         api_key = request.headers.get('X-Intervals-API-Key', '').strip()
         
         if not api_key:
-            app.logger.warning(f"Missing API key")
-            return jsonify({'error': 'Missing X-Intervals-API-Key'}), 401
+            app.logger.warning(f"Missing API key in intervals_proxy_athlete")
+            return jsonify({'error': 'Missing X-Intervals-API-Key header', 'detail': {'error': 'Unauthorized', 'status': 401}}), 401
         
         # Intervals.icu uses basic auth with username "API_KEY" and password as the API key
         # Use "0" for athlete_id to use the athlete associated with the API key
@@ -11603,9 +11611,19 @@ def intervals_proxy_athlete():
             app.logger.error(f"Intervals.icu API error: {response.status_code} - {response.text[:200]}")
             try:
                 error_data = response.json()
-                return jsonify({'error': 'Intervals.icu API error', 'detail': error_data}), response.status_code
+                # Return more detailed error information
+                return jsonify({
+                    'error': 'Intervals.icu API error',
+                    'detail': error_data,
+                    'statusCode': response.status_code,
+                    'message': error_data.get('error', 'Unauthorized') if isinstance(error_data, dict) else str(error_data)
+                }), response.status_code
             except:
-                return jsonify({'error': 'Intervals.icu API error', 'detail': response.text[:200]}), response.status_code
+                return jsonify({
+                    'error': 'Intervals.icu API error',
+                    'detail': {'error': response.text[:200], 'status': response.status_code},
+                    'statusCode': response.status_code
+                }), response.status_code
         
         # Try to parse as JSON to validate
         try:
