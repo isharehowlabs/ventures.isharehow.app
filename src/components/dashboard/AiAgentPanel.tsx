@@ -12,6 +12,17 @@ import {
   CardContent,
   IconButton,
   Chip,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
 } from '@mui/material';
 import {
   SmartToy as AiAgentIcon,
@@ -20,8 +31,28 @@ import {
   Edit as EditIcon,
   PlayArrow as PlayIcon,
   Schedule as ScheduleIcon,
+  Refresh as RefreshIcon,
+  Favorite as FavoriteIcon,
+  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import { useSettings } from '../../hooks/useSettings';
+import TasksPanel from './shared/TasksPanel';
+
+// Optional imports for Figma/MCP features
+let useFigmaHook: any = null;
+let useMCPHook: any = null;
+try {
+  const figmaModule = require('../../hooks/useFigma');
+  useFigmaHook = figmaModule.useFigma || figmaModule.default?.useFigma;
+} catch (err) {
+  console.warn('Figma hook not available:', err);
+}
+try {
+  const mcpModule = require('../../hooks/useMCP');
+  useMCPHook = mcpModule.useMCP || mcpModule.default?.useMCP;
+} catch (err) {
+  console.warn('MCP hook not available:', err);
+}
 
 interface ContentItem {
   id: string;
@@ -43,6 +74,48 @@ export default function AiAgentPanel() {
   const [success, setSuccess] = useState<string | null>(null);
   const [revidApiKey, setRevidApiKey] = useState<string>('');
 
+  // Figma hooks (optional - try to load)
+  let figmaHook: any = null;
+  let mcpHook: any = null;
+  
+  try {
+    if (useFigmaHook) {
+      figmaHook = useFigmaHook();
+    }
+  } catch (err) {
+    console.warn('Figma hook not available:', err);
+  }
+  
+  try {
+    if (useMCPHook) {
+      mcpHook = useMCPHook();
+    }
+  } catch (err) {
+    console.warn('MCP hook not available:', err);
+  }
+  
+  const files = figmaHook?.files || [];
+  const components = figmaHook?.components || [];
+  const componentStatuses = figmaHook?.componentStatuses || {};
+  const figmaLoading = figmaHook?.isLoading || false;
+  const figmaErrorMsg = figmaHook?.error || null;
+  const fetchFiles = figmaHook?.fetchFiles || (() => Promise.resolve());
+  const fetchComponents = figmaHook?.fetchComponents || (() => Promise.resolve());
+  const likeComponent = figmaHook?.likeComponent || (() => Promise.resolve());
+  const saveComponent = figmaHook?.saveComponent || (() => Promise.resolve());
+  const fetchComponentStatus = figmaHook?.fetchComponentStatus || (() => Promise.resolve());
+  
+  const linkComponentToCode = mcpHook?.linkComponentToCode || (() => Promise.resolve());
+  const fetchCodeLinks = mcpHook?.fetchCodeLinks || (() => Promise.resolve());
+
+  // Figma state
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [figmaComponentId, setFigmaComponentId] = useState('');
+  const [codeFilePath, setCodeFilePath] = useState('');
+  const [codeComponentName, setCodeComponentName] = useState('');
+  const [loadingComponents, setLoadingComponents] = useState(false);
+
   // Load API key from settings
   useEffect(() => {
     const apiKey = settings.apiKeys?.revidApiKey || '';
@@ -60,6 +133,37 @@ export default function AiAgentPanel() {
       }
     }
   }, []);
+
+  // Load Figma data (only if hooks are available)
+  useEffect(() => {
+    if (!useFigmaHook || !useMCPHook) return;
+    
+    const loadFigmaData = async () => {
+      try {
+        await Promise.all([
+          fetchFiles(),
+          fetchCodeLinks(),
+        ]);
+      } catch (err) {
+        console.error('Error loading Figma data:', err);
+      }
+    };
+    loadFigmaData();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedFile || !useFigmaHook) return;
+    
+    setLoadingComponents(true);
+    fetchComponents(selectedFile)
+      .then(() => {
+        if (components.length > 0) {
+          Promise.all(components.map((comp: any) => fetchComponentStatus(comp.key, selectedFile)));
+        }
+      })
+      .catch((err: any) => console.error('Error fetching components:', err))
+      .finally(() => setLoadingComponents(false));
+  }, [selectedFile]);
 
   // Save content items to localStorage
   const saveContentItems = (items: ContentItem[]) => {
@@ -176,178 +280,396 @@ export default function AiAgentPanel() {
     setTimeout(() => setSuccess(null), 3000);
   };
 
+  // Figma handlers
+  const handleRefreshFigma = () => {
+    if (selectedFile) {
+      fetchComponents(selectedFile);
+    } else {
+      fetchFiles();
+    }
+  };
+
+  const handleLike = async (componentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentStatus = componentStatuses[componentId]?.liked || false;
+    try {
+      await likeComponent(componentId, !currentStatus, selectedFile || undefined);
+    } catch (err) {
+      console.error('Error liking component:', err);
+    }
+  };
+
+  const handleSaveComponent = async (componentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentStatus = componentStatuses[componentId]?.saved || false;
+    try {
+      await saveComponent(componentId, !currentStatus, selectedFile || undefined);
+    } catch (err) {
+      console.error('Error saving component:', err);
+    }
+  };
+
+  const handleLinkComponent = async () => {
+    if (!figmaComponentId || !codeFilePath) return;
+    
+    try {
+      await linkComponentToCode(figmaComponentId, codeFilePath, codeComponentName, selectedFile || '');
+      setLinkDialogOpen(false);
+      fetchCodeLinks();
+    } catch (err) {
+      console.error('Error linking component:', err);
+    }
+  };
+
   return (
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-        <AiAgentIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>
-          AI Agent Content Manager
-        </Typography>
-      </Stack>
+      <Grid container spacing={3}>
+        {/* Tasks Section */}
+        <Grid item xs={12} md={4}>
+          <TasksPanel height={600} />
+        </Grid>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Create and manage content for your AI agent to automatically generate and post videos daily.
-        Add your Revid.ai API key in Settings to enable video generation.
-      </Typography>
+        {/* Design & Figma Section */}
+        <Grid item xs={12} md={4}>
+          <Paper elevation={2} sx={{ p: 3, height: 600, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h5" fontWeight={700}>Design & Figma</Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Refresh">
+                  <IconButton onClick={handleRefreshFigma} size="small">
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setLinkDialogOpen(true)}
+                  disabled={!selectedFile || components.length === 0}
+                >
+                  Link to Code
+                </Button>
+              </Box>
+            </Box>
+            
+            {!useFigmaHook || !useMCPHook ? (
+              <Alert severity="info">
+                Figma integration not available. Check your configuration.
+              </Alert>
+            ) : (
+              <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {figmaErrorMsg && <Alert severity="error" sx={{ mb: 2 }}>{figmaErrorMsg}</Alert>}
+                
+                <Box sx={{ mb: 2 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Select Figma File</InputLabel>
+                    <Select
+                      value={selectedFile || ''}
+                      label="Select Figma File"
+                      onChange={(e) => setSelectedFile(e.target.value)}
+                    >
+                      <MenuItem value="">-- Select a file --</MenuItem>
+                      {files.map((file: any) => (
+                        <MenuItem key={file.key} value={file.key}>{file.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
 
-      {!revidApiKey && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          Revid.ai API key not configured. Please add it in Settings to enable video generation.
-        </Alert>
-      )}
+                {selectedFile && (
+                  <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                    {loadingComponents ? (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <CircularProgress size={24} />
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                          Loading components...
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Grid container spacing={2}>
+                        {components.map((comp: any) => (
+                          <Grid item xs={12} sm={6} key={comp.key}>
+                            <Card elevation={1}>
+                              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                                <Typography variant="subtitle2" noWrap fontWeight={500}>
+                                  {comp.name}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => handleLike(comp.key, e)}
+                                    color={componentStatuses[comp.key]?.liked ? 'error' : 'default'}
+                                  >
+                                    <FavoriteIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => handleSaveComponent(comp.key, e)}
+                                    color={componentStatuses[comp.key]?.saved ? 'primary' : 'default'}
+                                  >
+                                    <BookmarkIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        ))}
+                        
+                        {components.length === 0 && (
+                          <Grid item xs={12}>
+                            <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
+                              No components found in this file.
+                            </Typography>
+                          </Grid>
+                        )}
+                      </Grid>
+                    )}
+                  </Box>
+                )}
+                
+                {!selectedFile && (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Select a Figma file to view components
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </Paper>
+        </Grid>
 
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {!showForm ? (
-        <>
-          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Content Library</Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAdd}
-              disabled={!revidApiKey}
-            >
-              Add Content
-            </Button>
-          </Box>
-
-          {contentItems.length === 0 ? (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                No content items yet. Create your first content item to get started.
+        {/* AI Agent Content Manager Section */}
+        <Grid item xs={12} md={4}>
+          <Paper elevation={2} sx={{ p: 3, height: 600, display: 'flex', flexDirection: 'column' }}>
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+              <AiAgentIcon sx={{ fontSize: 32, color: 'primary.main' }} />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                AI Agent Content Manager
               </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={handleAdd}
-                disabled={!revidApiKey}
-              >
-                Add Your First Content
-              </Button>
-            </Paper>
-          ) : (
-            <Stack spacing={2}>
-              {contentItems
-                .filter((item) => item.status === 'active')
-                .map((item) => (
-                  <Card key={item.id} elevation={2}>
-                    <CardContent>
-                      <Stack direction="row" justifyContent="space-between" alignItems="start" sx={{ mb: 2 }}>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="h6" sx={{ mb: 1 }}>
-                            {item.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {item.content.substring(0, 200)}
-                            {item.content.length > 200 ? '...' : ''}
-                          </Typography>
-                          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                            <Chip
-                              label={`Created: ${new Date(item.createdAt).toLocaleDateString()}`}
-                              size="small"
-                              variant="outlined"
-                            />
-                            {item.lastUsed && (
-                              <Chip
-                                label={`Last used: ${new Date(item.lastUsed).toLocaleDateString()}`}
-                                size="small"
-                                variant="outlined"
-                              />
-                            )}
-                          </Stack>
-                        </Box>
-                        <Stack direction="row" spacing={1}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleGenerateVideo(item)}
-                            title="Generate Video"
-                            disabled={!revidApiKey}
-                          >
-                            <PlayIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleSchedule(item)}
-                            title="Schedule"
-                            disabled={!revidApiKey}
-                          >
-                            <ScheduleIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEdit(item)}
-                            title="Edit"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(item.id)}
-                            title="Delete"
-                            color="error"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Stack>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                ))}
             </Stack>
-          )}
-        </>
-      ) : (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            {editingItem ? 'Edit Content' : 'Add New Content'}
-          </Typography>
-          <Stack spacing={2}>
-            <TextField
-              fullWidth
-              label="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter content title"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter the content/script for your AI agent to use"
-              multiline
-              rows={8}
-              required
-            />
-            <Stack direction="row" spacing={2}>
-              <Button variant="contained" onClick={handleSave}>
-                {editingItem ? 'Update' : 'Save'}
-              </Button>
-              <Button variant="outlined" onClick={() => {
-                setShowForm(false);
-                setTitle('');
-                setContent('');
-                setEditingItem(null);
-                setError(null);
-              }}>
-                Cancel
-              </Button>
-            </Stack>
-          </Stack>
-        </Paper>
-      )}
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Create and manage content for your AI agent to automatically generate and post videos daily.
+              Add your Revid.ai API key in Settings to enable video generation.
+            </Typography>
+
+            {!revidApiKey && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Revid.ai API key not configured. Please add it in Settings to enable video generation.
+              </Alert>
+            )}
+
+            {success && (
+              <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+                {success}
+              </Alert>
+            )}
+
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+
+            <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+              {!showForm ? (
+                <>
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">Content Library</Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={handleAdd}
+                      disabled={!revidApiKey}
+                      size="small"
+                    >
+                      Add Content
+                    </Button>
+                  </Box>
+
+                  {contentItems.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        No content items yet. Create your first content item to get started.
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        onClick={handleAdd}
+                        disabled={!revidApiKey}
+                        size="small"
+                      >
+                        Add Your First Content
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Stack spacing={2}>
+                      {contentItems
+                        .filter((item) => item.status === 'active')
+                        .map((item) => (
+                          <Card key={item.id} elevation={1}>
+                            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                              <Stack direction="row" justifyContent="space-between" alignItems="start">
+                                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                                  <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 0.5 }}>
+                                    {item.title}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    {item.content.substring(0, 150)}
+                                    {item.content.length > 150 ? '...' : ''}
+                                  </Typography>
+                                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                                    <Chip
+                                      label={`Created: ${new Date(item.createdAt).toLocaleDateString()}`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                    {item.lastUsed && (
+                                      <Chip
+                                        label={`Last used: ${new Date(item.lastUsed).toLocaleDateString()}`}
+                                        size="small"
+                                        variant="outlined"
+                                      />
+                                    )}
+                                  </Stack>
+                                </Box>
+                                <Stack direction="row" spacing={0.5}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleGenerateVideo(item)}
+                                    title="Generate Video"
+                                    disabled={!revidApiKey}
+                                  >
+                                    <PlayIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleSchedule(item)}
+                                    title="Schedule"
+                                    disabled={!revidApiKey}
+                                  >
+                                    <ScheduleIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleEdit(item)}
+                                    title="Edit"
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDelete(item.id)}
+                                    title="Delete"
+                                    color="error"
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Stack>
+                              </Stack>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </Stack>
+                  )}
+                </>
+              ) : (
+                <Box>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    {editingItem ? 'Edit Content' : 'Add New Content'}
+                  </Typography>
+                  <Stack spacing={2}>
+                    <TextField
+                      fullWidth
+                      label="Title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Enter content title"
+                      required
+                      size="small"
+                    />
+                    <TextField
+                      fullWidth
+                      label="Content"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Enter the content/script for your AI agent to use"
+                      multiline
+                      rows={6}
+                      required
+                      size="small"
+                    />
+                    <Stack direction="row" spacing={2}>
+                      <Button variant="contained" onClick={handleSave} size="small">
+                        {editingItem ? 'Update' : 'Save'}
+                      </Button>
+                      <Button variant="outlined" onClick={() => {
+                        setShowForm(false);
+                        setTitle('');
+                        setContent('');
+                        setEditingItem(null);
+                        setError(null);
+                      }} size="small">
+                        Cancel
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Link Component Dialog */}
+      <Dialog open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Link Figma Component to Code</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="dense" sx={{ mb: 2, mt: 1 }}>
+            <InputLabel>Figma Component</InputLabel>
+            <Select
+              value={figmaComponentId}
+              label="Figma Component"
+              onChange={(e) => setFigmaComponentId(e.target.value)}
+            >
+              {components.map((comp: any) => (
+                <MenuItem key={comp.key} value={comp.key}>
+                  {comp.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            margin="dense"
+            label="Code File Path"
+            fullWidth
+            variant="outlined"
+            value={codeFilePath}
+            onChange={(e) => setCodeFilePath(e.target.value)}
+            placeholder="/src/components/Button.tsx"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Component Name (Optional)"
+            fullWidth
+            variant="outlined"
+            value={codeComponentName}
+            onChange={(e) => setCodeComponentName(e.target.value)}
+            placeholder="Button"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLinkDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleLinkComponent}
+            variant="contained"
+            disabled={!figmaComponentId || !codeFilePath}
+          >
+            Link
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
