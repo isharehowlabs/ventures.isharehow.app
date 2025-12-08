@@ -7198,7 +7198,13 @@ def get_support_requests():
                 requests.append(SimpleRequest(req_dict))
         else:
             # Use ORM since column exists
-            query = SupportRequest.query
+            # Use load_only to exclude client_name column that doesn't exist in DB
+            from sqlalchemy.orm import load_only
+            query = db.session.query(SupportRequest).options(
+                load_only(SupportRequest.id, SupportRequest.client_id, SupportRequest.subject,
+                         SupportRequest.description, SupportRequest.priority, SupportRequest.status,
+                         SupportRequest.assigned_to, SupportRequest.created_at, SupportRequest.updated_at)
+            )
             
             if status != 'all':
                 query = query.filter(SupportRequest.status == status)
@@ -7312,7 +7318,7 @@ def create_support_request():
         # Create support request
         request_obj = SupportRequest(
             client_id=data.get('clientId'),
-            client_name=data.get('client') or (client.name if client else None),
+            # client_name column doesn't exist - will be computed from client relationship
             subject=data['subject'],
             description=data['description'],
             priority=data.get('priority', 'medium'),
@@ -7335,7 +7341,7 @@ def create_support_request():
                     user_id=assigned_employee.id,
                     type='support-request',
                     title=f'New Support Request: {request_obj.subject}',
-                    message=f'A new support request has been created for client {request_obj.client_name or "Unknown"}. Priority: {request_obj.priority}',
+                    message=f'A new support request has been created for client {request_obj.client_name or (client.name if client else "Unknown")}. Priority: {request_obj.priority}',
                     read=False,
                     notification_metadata=json.dumps({
                         'link': f'/creative?tab=support',
@@ -7364,7 +7370,8 @@ def create_support_request():
                 app.logger.error(f"Failed to send notification: {notif_error}")
                 # Don't fail the request creation if notification fails
         
-        print(f"✓ Created support request: {request_obj.id} for client {request_obj.client_name or request_obj.client_id}")
+        client_name = request_obj.client_name or (client.name if client else None)
+        print(f"✓ Created support request: {request_obj.id} for client {client_name or request_obj.client_id}")
         return jsonify(request_obj.to_dict()), 201
     except Exception as e:
         db.session.rollback()
@@ -9231,7 +9238,7 @@ if DB_AVAILABLE:
         
         id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
         client_id = db.Column(db.String(36), db.ForeignKey('clients.id'), nullable=True, index=True)
-        client_name = db.Column(db.String(200), nullable=True)  # Store name for flexibility
+        # Note: client_name column does not exist in database - use client_name property instead
         subject = db.Column(db.String(255), nullable=False)
         description = db.Column(db.Text, nullable=False)
         priority = db.Column(db.String(20), default='medium', nullable=False)  # low, medium, high, urgent
@@ -9239,6 +9246,16 @@ if DB_AVAILABLE:
         assigned_to = db.Column(db.String(200), nullable=True)
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        
+        # Relationship to Client
+        client = db.relationship('Client', foreign_keys=[client_id], backref='support_requests')
+        
+        @property
+        def client_name(self):
+            """Get client name from Client relationship"""
+            if self.client:
+                return self.client.name
+            return None
         
         def to_dict(self):
             # Count linked tasks
@@ -9249,9 +9266,19 @@ if DB_AVAILABLE:
                 db.session.rollback()  # Rollback failed transaction
                 pass  # Ignore if tasks table doesn't exist or column doesn't exist
             
+            # Get client name safely
+            client_name_value = self.client_name
+            if not client_name_value and self.client_id:
+                try:
+                    client = Client.query.get(self.client_id)
+                    if client:
+                        client_name_value = client.name
+                except Exception:
+                    pass
+            
             return {
                 'id': self.id,
-                'client': self.client_name or (self.client_id if self.client_id else 'N/A'),
+                'client': client_name_value or (self.client_id if self.client_id else 'N/A'),
                 'clientId': self.client_id,
                 'subject': self.subject,
                 'description': self.description,
