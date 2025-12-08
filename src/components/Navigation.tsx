@@ -12,6 +12,7 @@ import {
 import {
   Home as HomeIcon,
   Article as ArticleIcon,
+  MenuBook as BlogIcon,
   ShoppingBag as ShoppingBagIcon,
   Science as LabsIcon,
   TrendingUp as RiseIcon,
@@ -25,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative';
+type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog';
 
 interface NavigationItem {
   key: NavKey;
@@ -55,6 +56,12 @@ const navigationItems: NavigationItem[] = [
     label: 'Portfolio',
     href: '/portfolio',
     icon: <ArticleIcon />,
+  },
+  {
+    key: 'blog',
+    label: 'Blog',
+    href: '/blog',
+    icon: <BlogIcon />,
   },
   {
     key: 'products',
