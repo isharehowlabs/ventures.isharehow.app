@@ -9843,75 +9843,42 @@ def delete_user(user_id):
         
         # Delete related records first (to avoid foreign key constraints)
         try:
+            # Delete user profile
             from sqlalchemy import text
-            from sqlalchemy.exc import ProgrammingError, OperationalError
-            
             with db.engine.connect() as conn:
-                # Use a transaction with proper error handling
-                trans = conn.begin()
-                try:
-                    user_id_str = str(user_id_to_delete)
-                    
-                    # Get user info first (before any deletes)
+                with conn.begin():
+                    # Delete user profiles (linked by email or ens_name)
+                    # First, get the user to find linking fields
                     user_result = conn.execute(text("SELECT email, ens_name FROM users WHERE id = :user_id"), 
                                               {'user_id': user_id_to_delete})
                     user_row = user_result.fetchone()
-                    
-                    # Delete user profiles (linked by email or ens_name)
-                    if user_row and user_row[0]:
-                        try:
-                            conn.execute(text("DELETE FROM user_profiles WHERE email = :email OR ens_name = :ens_name"), 
-                                        {'email': user_row[0], 'ens_name': user_row[1] if user_row[1] else ''})
-                        except (ProgrammingError, OperationalError) as e:
-                            # Table or column might not exist, continue
-                            app.logger.warning(f"Could not delete user_profiles: {e}")
+                    if user_row:
+                        conn.execute(text("DELETE FROM user_profiles WHERE email = :email OR ens_name = :ens_name"), 
+                                    {'email': user_row[0], 'ens_name': user_row[1]})
                     
                     # Delete client assignments
-                    try:
-                        conn.execute(text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"), 
-                                    {'user_id': user_id_to_delete})
-                    except (ProgrammingError, OperationalError) as e:
-                        app.logger.warning(f"Could not delete client_employee_assignments: {e}")
+                    conn.execute(text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"), 
+                                {'user_id': user_id_to_delete})
                     
-                    # Update support requests assigned_to
-                    try:
-                        conn.execute(text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"), 
-                                    {'user_id': user_id_str})
-                    except (ProgrammingError, OperationalError) as e:
-                        app.logger.warning(f"Could not update support_requests: {e}")
+                    # Delete support requests (if user was assigned)
+                    conn.execute(text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"), 
+                                {'user_id': user_id_to_delete})
                     
                     # Delete notifications
-                    try:
-                        conn.execute(text("DELETE FROM notifications WHERE user_id = :user_id"), 
-                                    {'user_id': user_id_to_delete})
-                    except (ProgrammingError, OperationalError) as e:
-                        app.logger.warning(f"Could not delete notifications: {e}")
+                    conn.execute(text("DELETE FROM notifications WHERE user_id = :user_id"), 
+                                {'user_id': user_id_to_delete})
                     
                     # Delete subscriptions
-                    try:
-                        conn.execute(text("DELETE FROM subscriptions WHERE user_id = :user_id"), 
-                                    {'user_id': user_id_to_delete})
-                    except (ProgrammingError, OperationalError) as e:
-                        app.logger.warning(f"Could not delete subscriptions: {e}")
+                    conn.execute(text("DELETE FROM subscriptions WHERE user_id = :user_id"), 
+                                {'user_id': user_id_to_delete})
                     
                     # Delete tasks
-                    try:
-                        conn.execute(text("DELETE FROM tasks WHERE created_by = :user_id OR assigned_to = :user_id"), 
-                                    {'user_id': user_id_to_delete})
-                    except (ProgrammingError, OperationalError) as e:
-                        app.logger.warning(f"Could not delete tasks: {e}")
+                    conn.execute(text("DELETE FROM tasks WHERE created_by = :user_id OR assigned_to = :user_id"), 
+                                {'user_id': user_id_to_delete})
                     
                     # Finally, delete the user
                     conn.execute(text("DELETE FROM users WHERE id = :user_id"), 
                                 {'user_id': user_id_to_delete})
-                    
-                    # Commit the transaction
-                    trans.commit()
-                    
-                except Exception as e:
-                    # Rollback on any error
-                    trans.rollback()
-                    raise
             
             return jsonify({'message': 'User deleted successfully'}), 200
         except Exception as delete_error:
