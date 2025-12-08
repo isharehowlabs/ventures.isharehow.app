@@ -32,7 +32,7 @@ export default function Workspace() {
 
         {/* Hyperbeam Embed */}
         <Grid item xs={12}>
-          <Paper elevation={2} sx={{ p: 3, height: 600, display: 'flex', flexDirection: 'column' }}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 800, height: 'calc(100vh - 300px)', display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
               Hyperbeam Session
             </Typography>
@@ -44,6 +44,7 @@ export default function Workspace() {
                 borderRadius: 2,
                 overflow: 'hidden',
                 bgcolor: 'background.paper',
+                minHeight: 750,
               }}
             >
               <iframe
@@ -51,7 +52,7 @@ export default function Workspace() {
                 src={HYPERBEAM_EMBED_URL}
                 width="100%"
                 height="100%"
-                style={{ border: 'none', minHeight: 550 }}
+                style={{ border: 'none', minHeight: 750 }}
                 allowFullScreen
                 allow="clipboard-read; clipboard-write; display-capture"
               />
