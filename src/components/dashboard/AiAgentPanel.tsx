@@ -64,7 +64,7 @@ interface ContentItem {
 }
 
 export default function AiAgentPanel() {
-  const { settings } = useSettings();
+  const { settings, updateApiKeys } = useSettings();
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -194,7 +194,7 @@ export default function AiAgentPanel() {
     }
 
     if (!revidApiKey) {
-      setError('Revid.ai API key is required. Please add it in Settings.');
+      setError('Revid.ai API key is required. Please add your API key above.');
       return;
     }
 
@@ -232,7 +232,7 @@ export default function AiAgentPanel() {
 
   const handleGenerateVideo = async (item: ContentItem) => {
     if (!revidApiKey) {
-      setError('Revid.ai API key is required. Please add it in Settings.');
+      setError('Revid.ai API key is required. Please add your API key above.');
       return;
     }
 
@@ -450,14 +450,26 @@ export default function AiAgentPanel() {
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Create and manage content for your AI agent to automatically generate and post videos daily.
-              Add your Revid.ai API key in Settings to enable video generation.
             </Typography>
 
-            {!revidApiKey && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Revid.ai API key not configured. Please add it in Settings to enable video generation.
-              </Alert>
-            )}
+            {/* Revid.ai API Key Input */}
+            <Box sx={{ mb: 3 }}>
+              <TextField
+                fullWidth
+                label="Revid.ai API Key"
+                type="password"
+                value={revidApiKey}
+                onChange={(e) => {
+                  const newKey = e.target.value;
+                  setRevidApiKey(newKey);
+                  // Save to settings immediately
+                  updateApiKeys({ revidApiKey: newKey });
+                }}
+                placeholder="Enter your Revid.ai API key"
+                helperText="Required for AI Agent panel to generate and auto-post videos"
+                size="small"
+              />
+            </Box>
 
             {success && (
               <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>

@@ -30,6 +30,7 @@ export default function IntervalsSettings() {
       const { apiKey: savedKey } = getApiCredentials();
       if (savedKey) {
         setExistingKey(savedKey);
+        setApiKey(savedKey); // Pre-fill the input with saved key
       }
     } catch (error) {
       console.error('Failed to load credentials:', error);

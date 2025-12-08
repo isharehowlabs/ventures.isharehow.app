@@ -45,6 +45,7 @@ export default function Workspace() {
                 overflow: 'hidden',
                 bgcolor: 'background.paper',
                 minHeight: 750,
+                position: 'relative',
               }}
             >
               <iframe
@@ -52,9 +53,15 @@ export default function Workspace() {
                 src={HYPERBEAM_EMBED_URL}
                 width="100%"
                 height="100%"
-                style={{ border: 'none', minHeight: 750 }}
+                style={{ 
+                  border: 'none', 
+                  minHeight: 750,
+                  display: 'block',
+                }}
                 allowFullScreen
-                allow="clipboard-read; clipboard-write; display-capture"
+                allow="clipboard-read; clipboard-write; display-capture; microphone; camera; autoplay"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-downloads"
+                loading="lazy"
               />
             </Box>
           </Paper>

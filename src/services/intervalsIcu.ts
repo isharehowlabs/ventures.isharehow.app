@@ -67,11 +67,40 @@ export interface IntervalsAthlete {
   resting_hr?: number;
 }
 
-// Storage utilities
+// Cookie utilities
+const setCookie = (name: string, value: string, days: number = 365) => {
+  if (typeof document === 'undefined') return;
+  const expires = new Date();
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+};
+
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const nameEQ = name + '=';
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+};
+
+const deleteCookie = (name: string) => {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+};
+
+// Storage utilities - save to both localStorage and cookies
 export const saveApiCredentials = (apiKey: string, athleteId: string) => {
   if (typeof window !== 'undefined') {
+    // Save to localStorage
     localStorage.setItem(API_KEY_STORAGE, apiKey);
     localStorage.setItem(ATHLETE_ID_STORAGE, athleteId);
+    // Also save to cookies for better persistence
+    setCookie(API_KEY_STORAGE, apiKey, 365);
+    setCookie(ATHLETE_ID_STORAGE, athleteId, 365);
   }
 };
 
@@ -79,16 +108,36 @@ export const getApiCredentials = (): { apiKey: string | null; athleteId: string 
   if (typeof window === 'undefined') {
     return { apiKey: null, athleteId: null };
   }
-  return {
-    apiKey: localStorage.getItem(API_KEY_STORAGE),
-    athleteId: localStorage.getItem(ATHLETE_ID_STORAGE),
-  };
+  // Try localStorage first, then cookies as fallback
+  let apiKey = localStorage.getItem(API_KEY_STORAGE);
+  let athleteId = localStorage.getItem(ATHLETE_ID_STORAGE);
+  
+  // If not in localStorage, try cookies
+  if (!apiKey) {
+    apiKey = getCookie(API_KEY_STORAGE);
+    if (apiKey) {
+      // Restore to localStorage if found in cookies
+      localStorage.setItem(API_KEY_STORAGE, apiKey);
+    }
+  }
+  
+  if (!athleteId) {
+    athleteId = getCookie(ATHLETE_ID_STORAGE);
+    if (athleteId) {
+      localStorage.setItem(ATHLETE_ID_STORAGE, athleteId);
+    }
+  }
+  
+  return { apiKey, athleteId };
 };
 
 export const clearApiCredentials = () => {
   if (typeof window !== 'undefined') {
+    // Clear from both localStorage and cookies
     localStorage.removeItem(API_KEY_STORAGE);
     localStorage.removeItem(ATHLETE_ID_STORAGE);
+    deleteCookie(API_KEY_STORAGE);
+    deleteCookie(ATHLETE_ID_STORAGE);
   }
 };
 

@@ -474,28 +474,6 @@ function SettingsPage() {
           </Stack>
         </Paper>
 
-        {/* API Keys Settings */}
-        <Paper elevation={2} sx={{ p: 4, mb: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-            <SettingsIcon color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              API Keys
-            </Typography>
-          </Stack>
-          <Divider sx={{ mb: 3 }} />
-          <Stack spacing={3}>
-            <TextField
-              fullWidth
-              label="Revid.ai API Key"
-              type="password"
-              value={settings.apiKeys?.revidApiKey || ''}
-              onChange={(e) => updateApiKeys({ revidApiKey: e.target.value })}
-              placeholder="Enter your Revid.ai API key"
-              helperText="Required for AI Agent panel to generate and auto-post videos"
-            />
-          </Stack>
-        </Paper>
-
         {/* Panel Settings */}
         <Paper elevation={2} sx={{ p: 4, mb: 3 }}>
           <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
