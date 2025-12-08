@@ -9848,7 +9848,7 @@ def delete_user(user_id):
             with db.engine.connect() as conn:
                 with conn.begin():
                     # Delete user profiles
-                    conn.execute(text("DELETE FROM user_profiles WHERE id = :user_id OR user_id = :user_id"), 
+                    conn.execute(text("DELETE FROM user_profiles WHERE id = :user_id"), 
                                 {'user_id': user_id_to_delete})
                     
                     # Delete client assignments
