@@ -1,0 +1,19 @@
+__turbopack_load_page_chunks__("/rise", [
+  "static/chunks/7a8373fdcb9e73f8.js",
+  "static/chunks/92abe2dbf7115d8c.js",
+  "static/chunks/fe7a7306284f3f4a.js",
+  "static/chunks/beec7ff89ce50114.js",
+  "static/chunks/80d3256d22705869.js",
+  "static/chunks/42b1b1b61651f6b7.js",
+  "static/chunks/7344280726fb2ec9.js",
+  "static/chunks/6ca50e7c1dda2787.js",
+  "static/chunks/6b36b4668ecad7fb.js",
+  "static/chunks/565ae1c320a803cb.js",
+  "static/chunks/763d4190cd747ccd.js",
+  "static/chunks/9ac453d013674617.js",
+  "static/chunks/839f404ef81491e6.js",
+  "static/chunks/cb8e09de73944e52.js",
+  "static/chunks/39f1790bd7fde951.js",
+  "static/chunks/211fa6136060767c.js",
+  "static/chunks/turbopack-5727f1736852bf3d.js"
+])
