@@ -231,6 +231,7 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
   });
 
     const contentGridItems = filteredContent.filter((item) => !item.isVenturePartnership);
+    const ventureGridItems = filteredContent.filter((item) => item.isVenturePartnership);
 
   return (
       <Box>
@@ -336,6 +337,47 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
             <Typography variant="body2">Try adjusting your search or filters</Typography>
           </Box>
         )}
+      </Box>
+
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+          Venture Partnerships
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 640 }}>
+          Discover the ventures and collaborations that help expand the iShareHow community. These highlights are
+          handpicked for their impact on learning, innovation, and wellbeing.
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(3, 1fr)',
+              lg: 'repeat(4, 1fr)',
+            },
+            gap: 3,
+          }}
+        >
+          {ventureGridItems.length > 0 ? (
+            ventureGridItems.map((content) => <ContentCard key={content.id} content={content} />)
+          ) : (
+            <Box
+              sx={{
+                gridColumn: '1 / -1',
+                textAlign: 'center',
+                py: 8,
+                color: 'text.secondary',
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                No ventures match your filters
+              </Typography>
+              <Typography variant="body2">Adjust your search or filter selections to see more partnerships.</Typography>
+            </Box>
+          )}
+        </Box>
       </Box>
     </Box>
   );
