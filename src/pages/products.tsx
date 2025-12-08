@@ -186,8 +186,6 @@ const ProductsPage = () => {
           <Card
             key={product.id}
             sx={{
-              minWidth: 280,
-              maxWidth: 280,
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
@@ -308,37 +306,17 @@ const ProductsPage = () => {
 
           <Box
             sx={{
-              width: '100%',
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              pb: 2,
-              '&::-webkit-scrollbar': {
-                height: 8,
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+                lg: 'repeat(4, 1fr)',
               },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'divider',
-                borderRadius: 4,
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: 'primary.main',
-                borderRadius: 4,
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                },
-              },
+              gap: 3,
             }}
           >
-            <Stack
-              direction="row"
-              spacing={3}
-              sx={{
-                width: 'max-content',
-                minWidth: { xs: 'calc(100vw - 64px)', sm: 'calc(280px * 4 + 24px * 3)' },
-                px: { xs: 2, sm: 0 },
-              }}
-            >
-              {productCards}
-            </Stack>
+            {productCards}
           </Box>
 
           <Box sx={{ mt: 4, textAlign: 'center' }}>

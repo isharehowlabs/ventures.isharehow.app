@@ -158,20 +158,6 @@ const contentItems = [
     externalUrl: 'https://www.youtube.com/@DivineAmusement?sub_confirmation=1',
   },
   {
-    id: 'web3',
-    title: 'Web3 Development',
-    description: 'iShareHow Labs Web3 Development & Women in web3 Venture.',
-    channelName: 'Web3 Development',
-    channelIcon: 'WD',
-    timestamp: '1 week ago',
-      category: ['Web3'],
-      color: '#5865F2',
-      isVenturePartnership: true,
-      mediaType: 'image' as const,
-    mediaUrl: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&h=600&fit=crop',
-    externalUrl: '/labs',
-  },
-  {
     id: 'discord-chat',
     title: 'Discord Chat',
     description: 'Join our community on Discord to chat, collaborate, and get support for our ventures.',
@@ -211,7 +197,6 @@ const categoryFilters = [
   'Entertainment',
   'Plants',
   'Discord',
-  'Web3',
   'Amusement',
 ];
 
@@ -246,7 +231,6 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
   });
 
     const contentGridItems = filteredContent.filter((item) => !item.isVenturePartnership);
-    const ventureGridItems = filteredContent.filter((item) => item.isVenturePartnership);
 
   return (
       <Box>
@@ -352,47 +336,6 @@ const ContentLibraryView = ({ showHero = true }: ContentLibraryViewProps) => {
             <Typography variant="body2">Try adjusting your search or filters</Typography>
           </Box>
         )}
-      </Box>
-
-      <Box sx={{ mt: 6 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-          Venture Partnerships
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 640 }}>
-          Discover the ventures and collaborations that help expand the iShareHow community. These highlights are
-          handpicked for their impact on learning, innovation, and wellbeing.
-        </Typography>
-
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-              lg: 'repeat(4, 1fr)',
-            },
-            gap: 3,
-          }}
-        >
-          {ventureGridItems.length > 0 ? (
-            ventureGridItems.map((content) => <ContentCard key={content.id} content={content} />)
-          ) : (
-            <Box
-              sx={{
-                gridColumn: '1 / -1',
-                textAlign: 'center',
-                py: 8,
-                color: 'text.secondary',
-              }}
-            >
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                No ventures match your filters
-              </Typography>
-              <Typography variant="body2">Adjust your search or filter selections to see more partnerships.</Typography>
-            </Box>
-          )}
-        </Box>
       </Box>
     </Box>
   );

@@ -56,17 +56,6 @@ export default function StreamingPanel() {
               />
             </Box>
           </Paper>
-          
-          {/* Google AdSense Ad Block */}
-          <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
-            <ins 
-              className="adsbygoogle"
-              style={{ display: 'block' }}
-              data-ad-format="autorelaxed"
-              data-ad-client="ca-pub-0501888641420535"
-              data-ad-slot="8218985343"
-            />
-          </Paper>
         </Grid>
         <Grid item xs={12} lg={4} sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -101,6 +90,20 @@ export default function StreamingPanel() {
           </Paper>
         </Grid>
       </Grid>
+      
+      {/* Google AdSense Ad Block - Smaller and at bottom */}
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+        <Paper sx={{ p: { xs: 1, sm: 2 }, maxWidth: 728, width: '100%' }}>
+          <ins 
+            className="adsbygoogle"
+            style={{ display: 'block', width: '100%', height: '90px' }}
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+            data-ad-client="ca-pub-0501888641420535"
+            data-ad-slot="8218985343"
+          />
+        </Paper>
+      </Box>
     </Box>
   );
 }

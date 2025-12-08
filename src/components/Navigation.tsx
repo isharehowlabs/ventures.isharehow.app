@@ -53,7 +53,7 @@ const navigationItems: NavigationItem[] = [
   {
     key: 'content',
     label: 'Portfolio',
-    href: '/content',
+    href: '/portfolio',
     icon: <ArticleIcon />,
   },
   {

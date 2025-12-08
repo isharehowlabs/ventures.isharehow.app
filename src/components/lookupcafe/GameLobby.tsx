@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Head from 'next/head';
 import {
   Box,
   Container,
@@ -155,8 +156,25 @@ export default function GameLobby() {
     }
   };
 
+  useEffect(() => {
+    // Initialize AdSense ads after component mounts
+    try {
+      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+    } catch (err) {
+      console.error('AdSense error:', err);
+    }
+  }, []);
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <>
+      <Head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0501888641420535"
+          crossOrigin="anonymous"
+        />
+      </Head>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box textAlign="center" mb={4}>
         <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
@@ -435,6 +453,21 @@ export default function GameLobby() {
           </Paper>
         </Box>
       )}
+      
+      {/* Google AdSense Ad Block at bottom */}
+      <Box sx={{ mt: 6, mb: 4, display: 'flex', justifyContent: 'center' }}>
+        <Paper sx={{ p: 3, maxWidth: 728, width: '100%' }}>
+          <ins 
+            className="adsbygoogle"
+            style={{ display: 'block', width: '100%', height: '90px' }}
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+            data-ad-client="ca-pub-0501888641420535"
+            data-ad-slot="8218985343"
+          />
+        </Paper>
+      </Box>
     </Container>
+    </>
   );
 }
