@@ -1,7 +1,30 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Grid,
+  Stack,
+  Divider,
+  Chip,
+  useTheme,
+  Paper,
+} from '@mui/material';
+import {
+  AccessTime as AccessTimeIcon,
+  CheckCircle as CheckCircleIcon,
+  Close as CloseIcon,
+  ArrowForward as ArrowForwardIcon,
+} from '@mui/icons-material';
 
 export default function ProspectingPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [timeLeft, setTimeLeft] = useState({ hours: 48, minutes: 0, seconds: 0 });
 
   useEffect(() => {
@@ -31,7 +54,7 @@ export default function ProspectingPage() {
   }, []);
 
   const formatTime = (time: number) => time.toString().padStart(2, '0');
-  const timerString = `${timeLeft.hours}:${formatTime(timeLeft.minutes)}:${formatTime(timeLeft.seconds)}`;
+  const timerString = `${formatTime(timeLeft.hours)}:${formatTime(timeLeft.minutes)}:${formatTime(timeLeft.seconds)}`;
 
   const claimSpot = () => {
     // Redirect to Shopify flash sale product page
@@ -48,217 +71,357 @@ export default function ProspectingPage() {
         />
       </Head>
 
-      <style jsx global>{`
-        body {
-          font-family: 'Inter', sans-serif;
-          margin: 0;
-          padding: 0;
-          background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
-          color: #fff;
-          line-height: 1.6;
-        }
-        .prospecting-container {
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-        }
-        .hero {
-          text-align: center;
-          padding: 40px 0;
-          background: rgba(0, 255, 0, 0.1);
-          border-radius: 10px;
-          margin-bottom: 40px;
-        }
-        .headline {
-          font-size: 3em;
-          font-weight: bold;
-          margin-bottom: 20px;
-          color: #00ff00;
-        }
-        .subhead {
-          font-size: 1.5em;
-          margin-bottom: 30px;
-        }
-        .countdown {
-          background: #ff0000;
-          color: #fff;
-          padding: 15px;
-          border-radius: 5px;
-          font-size: 1.2em;
-          margin: 20px 0;
-        }
-        .value-stack {
-          background: #1a1a2e;
-          padding: 30px;
-          border-radius: 10px;
-          margin: 20px 0;
-        }
-        .stack-item {
-          display: flex;
-          justify-content: space-between;
-          margin: 10px 0;
-          border-bottom: 1px solid #333;
-          padding-bottom: 10px;
-        }
-        .cta {
-          background: #00ff00;
-          color: #000;
-          padding: 15px 30px;
-          font-size: 1.2em;
-          font-weight: bold;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-          width: 100%;
-          margin: 20px 0;
-          transition: background 0.3s;
-        }
-        .cta:hover {
-          background: #00cc00;
-        }
-        .testimonial {
-          background: #0f0f23;
-          padding: 20px;
-          border-radius: 10px;
-          margin: 20px 0;
-          font-style: italic;
-        }
-        .faq {
-          margin-top: 40px;
-        }
-        .faq-item {
-          margin: 20px 0;
-        }
-        .prospecting-footer {
-          text-align: center;
-          padding: 20px;
-          font-size: 0.9em;
-          opacity: 0.7;
-        }
-        .prospecting-footer a {
-          color: #00ff00;
-          text-decoration: none;
-        }
-        .prospecting-footer a:hover {
-          text-decoration: underline;
-        }
-        @media (max-width: 768px) {
-          .headline {
-            font-size: 2em;
-          }
-        }
-      `}</style>
+      <Box sx={{ bgcolor: 'background.default', color: 'text.primary', minHeight: '100vh' }}>
+        {/* Navigation */}
+        <Box component="nav" sx={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          backdropFilter: 'blur(20px)',
+          bgcolor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}>
+          <Container maxWidth="lg">
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 2.5 }}>
+              <Link href="/" style={{ textDecoration: 'none' }}>
+                <Typography variant="h5" fontWeight={700} color="primary.main">
+                  iShareHow Labs
+                </Typography>
+              </Link>
+              <Link href="/" style={{ textDecoration: 'none' }}>
+                <Button variant="outlined" color="primary">
+                  Back to Home
+                </Button>
+              </Link>
+            </Stack>
+          </Container>
+        </Box>
 
-      <div className="prospecting-container">
-        {/* Hero Section */}
-        <section className="hero">
-          <h1 className="headline">🚨 FLASH SALE: 10X Your SEO Prospecting in 90 Minutes—Live Workshop</h1>
-          <p className="subhead">
-            Agency owners: Tired of cold emails vanishing into the void? Get Grant Cardone-inspired scripts + AI-powered SEO tools to close 5x more clients. Normally $497... Today only:{' '}
-            <strong>$97</strong> (86% OFF!)
-          </p>
-          <div className="countdown">
-            ⏰ Flash Sale Ends In: <span id="timer">{timerString}</span> | Only 50 Spots Left
-          </div>
-          <button className="cta" onClick={claimSpot}>
-            Claim Your Spot Now – $97
-          </button>
-          <p>
-            <small>100% Secure Checkout | Instant Access | Money-Back Guarantee</small>
-          </p>
-        </section>
+        <Container maxWidth="md" sx={{ py: { xs: 4, md: 8 } }}>
+          {/* Hero Section */}
+          <Card
+            elevation={3}
+            sx={{
+              mb: 6,
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(75, 93, 189, 0.15) 0%, rgba(107, 125, 215, 0.1) 100%)'
+                : 'linear-gradient(135deg, rgba(75, 93, 189, 0.08) 0%, rgba(107, 125, 215, 0.05) 100%)',
+              border: `1px solid ${theme.palette.primary.main}40`,
+            }}
+          >
+            <CardContent sx={{ p: { xs: 4, md: 6 }, textAlign: 'center' }}>
+              <Chip
+                label="🚨 FLASH SALE"
+                color="error"
+                sx={{ mb: 3, fontWeight: 700, fontSize: '0.9rem', py: 2.5 }}
+              />
+              <Typography
+                variant="h3"
+                fontWeight={800}
+                gutterBottom
+                sx={{
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  mb: 3,
+                  color: 'text.primary',
+                }}
+              >
+                10X Your SEO Prospecting in 90 Minutes—Live Workshop
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  color: 'text.secondary',
+                  mb: 4,
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  lineHeight: 1.7,
+                }}
+              >
+                Agency owners: Tired of cold emails vanishing into the void? Get Grant Cardone-inspired scripts + AI-powered SEO tools to close 5x more clients. Normally $497... Today only:{' '}
+                <Typography component="span" fontWeight={800} color="primary.main">
+                  $97
+                </Typography>{' '}
+                (86% OFF!)
+              </Typography>
 
-        {/* Pain/Agitate Section */}
-        <section>
-          <h2>Why Your SEO Outreach Feels Like Shouting Into the Wind</h2>
-          <p>
-            As an agency founder building co-work dashboards and client wins, you know the drill: You pour hours into SEO audits, but prospects ghost you. Rankings stall, leads dry up, and your Analytics dashboard shows more frustration than growth.
-          </p>
-          <ul>
-            <li>❌ 80% of cold pitches ignored (even with &quot;personalized&quot; tweaks)</li>
-            <li>❌ Wasted ad spend on unqualified tire-kickers</li>
-            <li>❌ No scalable system to prospect high-ticket clients who value your AI-driven expertise</li>
-          </ul>
-          <p>Sound familiar? It&apos;s not you—it&apos;s your process. Time to 10X it.</p>
-        </section>
+              <Paper
+                elevation={2}
+                sx={{
+                  bgcolor: 'error.main',
+                  color: 'white',
+                  p: 3,
+                  mb: 4,
+                  borderRadius: 2,
+                }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mb: 1 }}>
+                  <AccessTimeIcon />
+                  <Typography variant="h6" fontWeight={700}>
+                    Flash Sale Ends In: {timerString}
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                  Only 50 Spots Left
+                </Typography>
+              </Paper>
 
-        {/* Solution & Value Stack */}
-        <section className="value-stack">
-          <h2>What&apos;s Inside the 10X SEO Prospecting Workshop</h2>
-          <p>
-            Join me live (or get the replay) for a 90-min deep dive: From Cardone&apos;s &quot;add value first&quot; mindset to Hormozi&apos;s grand-slam offers, tailored for SEO agencies. Walk away with a plug-and-play system that feeds your dashboard&apos;s Ministry & Wellness modules for sustained client relationships.
-          </p>
-          <div className="stack-item">
-            <span>Live Training: 10X Prospecting Scripts (Cold Email + LinkedIn DMs)</span>
-            <span>$997</span>
-          </div>
-          <div className="stack-item">
-            <span>Bonus: AI SEO Audit Template (Integrates with Your Analytics Dashboard)</span>
-            <span>$497</span>
-          </div>
-          <div className="stack-item">
-            <span>Bonus: 50 High-Ticket Client Personas + Outreach Tracker</span>
-            <span>$297</span>
-          </div>
-          <div className="stack-item">
-            <span>Bonus: Private Co-Work Community Access (1 Month – Build Together!)</span>
-            <span>$197</span>
-          </div>
-          <div style={{ borderTop: '2px solid #00ff00', paddingTop: '10px', fontWeight: 'bold' }}>
-            <span>Total Value</span>
-            <span>$1,988</span>
-          </div>
-          <p style={{ textAlign: 'center', fontSize: '2em', color: '#00ff00', marginTop: '20px' }}>
-            Flash Price: <strong>Just $97</strong> (You Save $400 + Get $1,491 in Bonuses)
-          </p>
-        </section>
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                onClick={claimSpot}
+                endIcon={<ArrowForwardIcon />}
+                sx={{
+                  bgcolor: 'primary.main',
+                  py: 2,
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  mb: 2,
+                  '&:hover': {
+                    bgcolor: 'primary.dark',
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'all 0.3s',
+                }}
+              >
+                Claim Your Spot Now – $97
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                100% Secure Checkout | Instant Access | Money-Back Guarantee
+              </Typography>
+            </CardContent>
+          </Card>
 
-        {/* Social Proof */}
-        <section>
-          <h2>Agencies Just Like Yours Are 10Xing...</h2>
-          <div className="testimonial">
-            &quot;This workshop turned my SEO cold outreach from 2% response to 18% closes. Integrated the templates into my dashboard—clients now co-work on real-time wins. Revenue up 3x in Q4!&quot; – Sarah J., Digital Agency Founder
-          </div>
-          <div className="testimonial">
-            &quot;Hormozi + Cardone in one session? Game-changer for prospecting. The AI bonus alone saved me 20 hours/week.&quot; – Mark T., SEO Consultant
-          </div>
-        </section>
+          {/* Pain/Agitate Section */}
+          <Box sx={{ mb: 6 }}>
+            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
+              Why Your SEO Outreach Feels Like Shouting Into the Wind
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.8 }}>
+              As an agency founder building co-work dashboards and client wins, you know the drill: You pour hours into SEO audits, but prospects ghost you. Rankings stall, leads dry up, and your Analytics dashboard shows more frustration than growth.
+            </Typography>
+            <Stack spacing={2}>
+              {[
+                '80% of cold pitches ignored (even with "personalized" tweaks)',
+                'Wasted ad spend on unqualified tire-kickers',
+                'No scalable system to prospect high-ticket clients who value your AI-driven expertise',
+              ].map((item, index) => (
+                <Stack key={index} direction="row" spacing={2} alignItems="flex-start">
+                  <CloseIcon sx={{ color: 'error.main', mt: 0.5 }} />
+                  <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
+                    {item}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+            <Typography variant="body1" sx={{ color: 'text.primary', mt: 3, fontWeight: 600 }}>
+              Sound familiar? It&apos;s not you—it&apos;s your process. Time to 10X it.
+            </Typography>
+          </Box>
 
-        {/* Objection Handling / FAQ */}
-        <section className="faq">
-          <h2>Still On the Fence? Here&apos;s the Real Talk</h2>
-          <div className="faq-item">
-            <h3>Q: Is this beginner-friendly?</h3>
-            <p>A: Yes—perfect for agencies scaling from solopreneur to team leads. No fluff, just actionable 10X tactics.</p>
-          </div>
-          <div className="faq-item">
-            <h3>Q: What if I miss the live session?</h3>
-            <p>A: Full replay + resources dropped instantly. Plus, lifetime access to updates via your dashboard.</p>
-          </div>
-          <div className="faq-item">
-            <h3>Q: Guarantee?</h3>
-            <p>A: 30-Day Money-Back. If you don&apos;t land your first qualified prospect, full refund—no questions.</p>
-          </div>
-        </section>
+          <Divider sx={{ my: 6 }} />
 
-        {/* Final CTA */}
-        <section style={{ textAlign: 'center', padding: '40px 0', background: 'rgba(0,255,0,0.1)', borderRadius: '10px' }}>
-          <h2>Don&apos;t Let This Slip – Your Next Client is Waiting</h2>
-          <p>
-            Flash ends in <span id="final-timer">{timerString}</span>. Join the 10X movement and build client wins together.
-          </p>
-          <button className="cta" onClick={claimSpot}>
-            Secure My $97 Spot Before It&apos;s Gone
-          </button>
-        </section>
+          {/* Solution & Value Stack */}
+          <Card elevation={2} sx={{ mb: 6, bgcolor: 'background.paper' }}>
+            <CardContent sx={{ p: { xs: 4, md: 6 } }}>
+              <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
+                What&apos;s Inside the 10X SEO Prospecting Workshop
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.8 }}>
+                Join me live (or get the replay) for a 90-min deep dive: From Cardone&apos;s &quot;add value first&quot; mindset to Hormozi&apos;s grand-slam offers, tailored for SEO agencies. Walk away with a plug-and-play system that feeds your dashboard&apos;s Ministry & Wellness modules for sustained client relationships.
+              </Typography>
 
-        <footer className="prospecting-footer">
-          <p>
-            &copy; 2025 iShareHow Labs LLC | Helping Agencies Build Community-Driven Growth |{' '}
-            <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a>
-          </p>
-        </footer>
-      </div>
+              <Stack spacing={2} sx={{ mb: 4 }}>
+                {[
+                  { label: 'Live Training: 10X Prospecting Scripts (Cold Email + LinkedIn DMs)', value: '$997' },
+                  { label: 'Bonus: AI SEO Audit Template (Integrates with Your Analytics Dashboard)', value: '$497' },
+                  { label: 'Bonus: 50 High-Ticket Client Personas + Outreach Tracker', value: '$297' },
+                  { label: 'Bonus: Private Co-Work Community Access (1 Month – Build Together!)', value: '$197' },
+                ].map((item, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      py: 2,
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <Typography variant="body1" sx={{ color: 'text.primary', flex: 1 }}>
+                      {item.label}
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700} sx={{ color: 'text.secondary', ml: 2 }}>
+                      {item.value}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 2,
+                  borderTop: `2px solid ${theme.palette.primary.main}`,
+                }}
+              >
+                <Typography variant="h6" fontWeight={700} sx={{ color: 'text.primary' }}>
+                  Total Value
+                </Typography>
+                <Typography variant="h5" fontWeight={800} sx={{ color: 'primary.main' }}>
+                  $1,988
+                </Typography>
+              </Box>
+
+              <Box sx={{ textAlign: 'center', mt: 4, p: 3, bgcolor: 'primary.main', borderRadius: 2 }}>
+                <Typography variant="h5" fontWeight={800} sx={{ color: 'white', mb: 1 }}>
+                  Flash Price: Just $97
+                </Typography>
+                <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                  You Save $400 + Get $1,491 in Bonuses
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Social Proof */}
+          <Box sx={{ mb: 6 }}>
+            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 4 }}>
+              Agencies Just Like Yours Are 10Xing...
+            </Typography>
+            <Grid container spacing={3}>
+              {[
+                {
+                  quote: 'This workshop turned my SEO cold outreach from 2% response to 18% closes. Integrated the templates into my dashboard—clients now co-work on real-time wins. Revenue up 3x in Q4!',
+                  author: 'Sarah J., Digital Agency Founder',
+                },
+                {
+                  quote: 'Hormozi + Cardone in one session? Game-changer for prospecting. The AI bonus alone saved me 20 hours/week.',
+                  author: 'Mark T., SEO Consultant',
+                },
+              ].map((testimonial, index) => (
+                <Grid item xs={12} md={6} key={index}>
+                  <Card elevation={2} sx={{ height: '100%', bgcolor: 'background.paper' }}>
+                    <CardContent sx={{ p: 4 }}>
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          color: 'text.secondary',
+                          fontStyle: 'italic',
+                          mb: 3,
+                          lineHeight: 1.7,
+                        }}
+                      >
+                        &quot;{testimonial.quote}&quot;
+                      </Typography>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
+                        – {testimonial.author}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+
+          <Divider sx={{ my: 6 }} />
+
+          {/* Objection Handling / FAQ */}
+          <Box sx={{ mb: 6 }}>
+            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 4 }}>
+              Still On the Fence? Here&apos;s the Real Talk
+            </Typography>
+            <Stack spacing={3}>
+              {[
+                {
+                  q: 'Is this beginner-friendly?',
+                  a: 'Yes—perfect for agencies scaling from solopreneur to team leads. No fluff, just actionable 10X tactics.',
+                },
+                {
+                  q: 'What if I miss the live session?',
+                  a: 'Full replay + resources dropped instantly. Plus, lifetime access to updates via your dashboard.',
+                },
+                {
+                  q: 'Guarantee?',
+                  a: '30-Day Money-Back. If you don\'t land your first qualified prospect, full refund—no questions.',
+                },
+              ].map((faq, index) => (
+                <Card key={index} elevation={1} sx={{ bgcolor: 'background.paper' }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" fontWeight={700} gutterBottom sx={{ color: 'primary.main', mb: 1 }}>
+                      Q: {faq.q}
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
+                      A: {faq.a}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          </Box>
+
+          {/* Final CTA */}
+          <Card
+            elevation={3}
+            sx={{
+              mb: 6,
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(75, 93, 189, 0.15) 0%, rgba(107, 125, 215, 0.1) 100%)'
+                : 'linear-gradient(135deg, rgba(75, 93, 189, 0.08) 0%, rgba(107, 125, 215, 0.05) 100%)',
+              border: `1px solid ${theme.palette.primary.main}40`,
+            }}
+          >
+            <CardContent sx={{ p: { xs: 4, md: 6 }, textAlign: 'center' }}>
+              <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 2 }}>
+                Don&apos;t Let This Slip – Your Next Client is Waiting
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.7 }}>
+                Flash ends in <strong>{timerString}</strong>. Join the 10X movement and build client wins together.
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                onClick={claimSpot}
+                endIcon={<ArrowForwardIcon />}
+                sx={{
+                  bgcolor: 'primary.main',
+                  py: 2,
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  '&:hover': {
+                    bgcolor: 'primary.dark',
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'all 0.3s',
+                }}
+              >
+                Secure My $97 Spot Before It&apos;s Gone
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Footer */}
+          <Box component="footer" sx={{ textAlign: 'center', py: 4, borderTop: `1px solid ${theme.palette.divider}` }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+              © 2025 iShareHow Labs LLC | Helping Agencies Build Community-Driven Growth
+            </Typography>
+            <Stack direction="row" spacing={2} justifyContent="center">
+              <Link href="/privacy" style={{ color: theme.palette.primary.main, textDecoration: 'none' }}>
+                Privacy
+              </Link>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>|</Typography>
+              <Link href="/terms" style={{ color: theme.palette.primary.main, textDecoration: 'none' }}>
+                Terms
+              </Link>
+            </Stack>
+          </Box>
+        </Container>
+      </Box>
     </>
   );
 }
