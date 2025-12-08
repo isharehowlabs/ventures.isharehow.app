@@ -492,9 +492,9 @@ const RiseJourney: React.FC = () => {
             elevation={4}
             sx={{ 
               p: 4, 
-              background: 'linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)',
-              border: 2,
-              borderColor: 'secondary.light'
+              bgcolor: 'background.paper',
+              border: 1,
+              borderColor: 'divider'
             }}
           >
             <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -515,9 +515,7 @@ const RiseJourney: React.FC = () => {
                 fontWeight: 700,
                 px: 4,
                 py: 1.5,
-                background: 'linear-gradient(135deg, #9c27b0 0%, #e91e63 100%)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #7b1fa2 0%, #c2185b 100%)',
                   transform: 'translateY(-2px)',
                   boxShadow: 6,
                 },

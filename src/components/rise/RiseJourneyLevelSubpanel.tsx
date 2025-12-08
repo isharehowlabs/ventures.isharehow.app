@@ -382,11 +382,11 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
               <Box
                 sx={{
                   p: 3,
-                  background: 'linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%)',
-                  border: 2,
-                  borderColor: 'secondary.light',
+                  bgcolor: 'background.paper',
+                  border: 1,
+                  borderColor: 'divider',
                   borderRadius: 2,
-                  boxShadow: 2,
+                  boxShadow: 1,
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -425,8 +425,6 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                           sx={{
                             textTransform: 'none',
                             fontWeight: 600,
-                            bgcolor: '#5c6bc0',
-                            '&:hover': { bgcolor: '#455a64' },
                           }}
                         >
                           Watch Video Classes
@@ -459,8 +457,6 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                           sx={{
                             textTransform: 'none',
                             fontWeight: 600,
-                            bgcolor: '#9c27b0',
-                            '&:hover': { bgcolor: '#7b1fa2' },
                           }}
                         >
                           Start Course

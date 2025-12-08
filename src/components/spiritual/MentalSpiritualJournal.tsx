@@ -331,11 +331,11 @@ export default function MentalSpiritualJournal() {
       <Grid item xs={12} lg={5}>
         <Paper
           sx={{
-            height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            minHeight: 600,
-            maxHeight: { lg: 'calc(100vh - 200px)' },
+            minHeight: { xs: 600, lg: 800 },
+            height: { xs: 'auto', lg: 'calc(100vh - 150px)' },
+            maxHeight: { lg: 'calc(100vh - 150px)' },
           }}
         >
           {/* Chat Header */}
