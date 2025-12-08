@@ -9856,25 +9856,43 @@ def delete_user(user_id):
                         conn.execute(text("DELETE FROM user_profiles WHERE email = :email OR ens_name = :ens_name"), 
                                     {'email': user_row[0], 'ens_name': user_row[1]})
                     
-                    # Delete client assignments
-                    conn.execute(text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"), 
-                                {'user_id': user_id_to_delete})
+                    # Try to delete from various tables (skip if table/column doesn't exist)
+                    user_id_str = str(user_id_to_delete)
                     
-                    # Delete support requests (if user was assigned)
-                    conn.execute(text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"), 
-                                {'user_id': user_id_to_delete})
+                    # Delete client assignments
+                    try:
+                        conn.execute(text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"), 
+                                    {'user_id': user_id_to_delete})
+                    except Exception:
+                        pass
+                    
+                    # Update support requests assigned_to
+                    try:
+                        conn.execute(text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"), 
+                                    {'user_id': user_id_str})
+                    except Exception:
+                        pass
                     
                     # Delete notifications
-                    conn.execute(text("DELETE FROM notifications WHERE user_id = :user_id"), 
-                                {'user_id': user_id_to_delete})
+                    try:
+                        conn.execute(text("DELETE FROM notifications WHERE user_id = :user_id"), 
+                                    {'user_id': user_id_str})
+                    except Exception:
+                        pass
                     
                     # Delete subscriptions
-                    conn.execute(text("DELETE FROM subscriptions WHERE user_id = :user_id"), 
-                                {'user_id': user_id_to_delete})
+                    try:
+                        conn.execute(text("DELETE FROM subscriptions WHERE user_id = :user_id"), 
+                                    {'user_id': user_id_str})
+                    except Exception:
+                        pass
                     
                     # Delete tasks
-                    conn.execute(text("DELETE FROM tasks WHERE created_by = :user_id OR assigned_to = :user_id"), 
-                                {'user_id': user_id_to_delete})
+                    try:
+                        conn.execute(text("DELETE FROM tasks WHERE created_by = :user_id OR assigned_to = :user_id"), 
+                                    {'user_id': user_id_to_delete})
+                    except Exception:
+                        pass
                     
                     # Finally, delete the user
                     conn.execute(text("DELETE FROM users WHERE id = :user_id"), 
