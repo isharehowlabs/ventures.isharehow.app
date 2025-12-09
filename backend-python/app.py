@@ -7328,12 +7328,12 @@ def create_support_request():
             try:
                 user_id = get_jwt_identity()
                 if user_id:
-                    if user_id.isdigit():
+                    if str(user_id).isdigit():
                         user = User.query.get(int(user_id))
                     if not user:
-                        user = User.query.filter_by(username=user_id).first()
+                        user = User.query.filter_by(username=str(user_id)).first()
                     if not user:
-                        user = User.query.filter_by(patreon_id=user_id).first()
+                        user = User.query.filter_by(patreon_id=str(user_id)).first()
             except Exception as e:
                 db.session.rollback()  # Rollback failed transaction
                 app.logger.debug(f"Could not get user from JWT: {e}")
