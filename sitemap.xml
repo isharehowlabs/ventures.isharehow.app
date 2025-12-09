@@ -1,93 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <!-- Homepage -->
     <url>
-      <loc>https://ventures.isharehow.app/</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>1.0</priority>
+        <loc>https://ventures.isharehow.app/</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+    </url>
+    
+    <!-- Blog -->
+    <url>
+        <loc>https://ventures.isharehow.app/blog</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+    
+    <!-- Book Demo / Conversion Page -->
+    <url>
+        <loc>https://ventures.isharehow.app/demo</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <!-- Portfolio -->
+    <url>
+        <loc>https://ventures.isharehow.app/portfolio</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <!-- Products -->
+    <url>
+        <loc>https://ventures.isharehow.app/products</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <!-- Creative Services -->
+    <url>
+        <loc>https://ventures.isharehow.app/creative-services</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <!-- Prospecting -->
+    <url>
+        <loc>https://ventures.isharehow.app/prospecting</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <!-- Growth Machine -->
+    <url>
+        <loc>https://ventures.isharehow.app/growth-machine</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <!-- Live Stream -->
+    <url>
+        <loc>https://ventures.isharehow.app/live</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.6</priority>
+    </url>
+    
+    <!-- LookUp.Cafe -->
+    <url>
+        <loc>https://ventures.isharehow.app/lookupcafe</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+    </url>
+    
+    <!-- Legal Pages -->
+    <url>
+        <loc>https://ventures.isharehow.app/privacy</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
     </url>
     <url>
-      <loc>https://ventures.isharehow.app/content</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>0.8</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/labs</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>0.8</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/live</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>0.8</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/rise</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>0.8</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/PACT</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.7</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/products</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.7</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/creative</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>0.7</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/demo</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.7</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/profile</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.6</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/settings</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.6</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/board</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.6</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/cowork</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.6</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/privacy</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>yearly</changefreq>
-      <priority>0.5</priority>
-    </url>
-    <url>
-      <loc>https://ventures.isharehow.app/terms</loc>
-      <lastmod>2025-12-01</lastmod>
-      <changefreq>yearly</changefreq>
-      <priority>0.5</priority>
+        <loc>https://ventures.isharehow.app/terms</loc>
+        <lastmod>2025-12-09</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
     </url>
 </urlset>
