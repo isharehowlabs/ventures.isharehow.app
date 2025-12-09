@@ -5146,7 +5146,75 @@ def delete_task(task_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
-
+@app.route('/api/admin/tasks/link-to-user', methods=['POST'])
+@jwt_required()
+def link_tasks_to_user():
+    """Admin endpoint to link old tasks to a specific user (isharehow)"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        # Get current user and verify admin access
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Check if user is admin
+        is_admin = hasattr(user, 'is_admin') and user.is_admin
+        if not is_admin:
+            # Also check if user is isharehow
+            username = getattr(user, 'username', '').lower()
+            email = getattr(user, 'email', '').lower()
+            if username not in ['isharehow', 'admin'] and email != 'jeliyah@isharehowlabs.com':
+                return jsonify({'error': 'Admin access required'}), 403
+        
+        data = request.get_json() or {}
+        target_username = data.get('username', 'isharehow')
+        
+        # Find the target user
+        target_user = User.query.filter_by(username=target_username).first()
+        if not target_user:
+            # Try email
+            target_user = User.query.filter_by(email=target_username).first()
+        if not target_user:
+            return jsonify({'error': f'User "{target_username}" not found'}), 404
+        
+        # Find all tasks that don't have created_by set or have empty/null values
+        old_tasks = Task.query.filter(
+            (Task.created_by == None) | (Task.created_by == '') | (Task.created_by == 'anonymous')
+        ).all()
+        
+        linked_count = 0
+        user_id_str = str(target_user.id)
+        user_name = target_user.username or target_user.email or 'isharehow'
+        
+        for task in old_tasks:
+            # Link task to user
+            task.created_by = user_id_str
+            if not task.created_by_name:
+                task.created_by_name = user_name
+            # If task is not assigned, assign it to the user
+            if not task.assigned_to:
+                task.assigned_to = user_id_str
+                task.assigned_to_name = user_name
+            linked_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Linked {linked_count} tasks to user "{target_username}"',
+            'linkedCount': linked_count,
+            'userId': target_user.id,
+            'username': target_username
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error linking tasks to user: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to link tasks', 'message': str(e)}), 500
 
 # Track active/logged-in users via Socket.io connections
 active_users = {}  # user_id -> { name, email, last_seen, socket_id }

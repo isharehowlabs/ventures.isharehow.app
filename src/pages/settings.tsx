@@ -84,11 +84,49 @@ function SettingsPage() {
   const [blogRefreshLoading, setBlogRefreshLoading] = useState(false);
   const [blogRefreshSuccess, setBlogRefreshSuccess] = useState<string | null>(null);
   const [blogRefreshError, setBlogRefreshError] = useState<string | null>(null);
+  const [taskLinkLoading, setTaskLinkLoading] = useState(false);
+  const [taskLinkSuccess, setTaskLinkSuccess] = useState<string | null>(null);
+  const [taskLinkError, setTaskLinkError] = useState<string | null>(null);
 
   const handleReset = () => {
     resetSettings();
     setShowResetAlert(true);
     setTimeout(() => setShowResetAlert(false), 3000);
+  };
+
+  const handleLinkTasksToUser = async () => {
+    setTaskLinkLoading(true);
+    setTaskLinkError(null);
+    setTaskLinkSuccess(null);
+
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/admin/tasks/link-to-user`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: 'isharehow',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to link tasks' }));
+        throw new Error(errorData.error || errorData.message || 'Failed to link tasks');
+      }
+
+      const data = await response.json();
+      setTaskLinkSuccess(data.message || `Successfully linked ${data.linkedCount || 0} tasks to isharehow user!`);
+      setTimeout(() => setTaskLinkSuccess(null), 5000);
+    } catch (error: any) {
+      console.error('Error linking tasks:', error);
+      setTaskLinkError(error.message || 'Failed to link tasks');
+      setTimeout(() => setTaskLinkError(null), 5000);
+    } finally {
+      setTaskLinkLoading(false);
+    }
   };
 
   const handleRefreshBlogPosts = async () => {
@@ -690,6 +728,49 @@ function SettingsPage() {
                 >
                   {notificationSending ? 'Sending...' : 'Send Notification'}
                 </Button>
+              </Stack>
+            </Paper>
+
+            {/* Task Management */}
+            <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <AssignmentIcon sx={{ color: 'gold', fontSize: 32 }} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
+                  Task Management
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 3, borderColor: 'gold' }} />
+              
+              {taskLinkSuccess && (
+                <Alert severity="success" sx={{ mb: 3 }} onClose={() => setTaskLinkSuccess(null)}>
+                  {taskLinkSuccess}
+                </Alert>
+              )}
+              
+              {taskLinkError && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setTaskLinkError(null)}>
+                  {taskLinkError}
+                </Alert>
+              )}
+
+              <Stack spacing={3}>
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                    Link Old Tasks to isharehow User
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Link all old tasks in the database that don't have a creator assigned to the isharehow user account. This will make them visible again in your task lists.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={taskLinkLoading ? <CircularProgress size={20} /> : <AssignmentIcon />}
+                    onClick={handleLinkTasksToUser}
+                    disabled={taskLinkLoading}
+                  >
+                    {taskLinkLoading ? 'Linking Tasks...' : 'Link Old Tasks to isharehow'}
+                  </Button>
+                </Box>
               </Stack>
             </Paper>
 

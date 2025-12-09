@@ -59,6 +59,7 @@ interface Task {
   supportRequestId?: string;
   assignedTo?: string;
   assignedToName?: string;
+  createdAt?: string;
 }
 
 interface SupportRequest {
@@ -592,7 +593,10 @@ export default function SupportRequests() {
               <Autocomplete
                 fullWidth
                 options={tasks.filter(t => !t.supportRequestId || t.supportRequestId === editingRequest?.id)}
-                getOptionLabel={(option) => option.title || ''}
+                getOptionLabel={(option) => {
+                  const linked = option.supportRequestId ? ' (Linked)' : '';
+                  return `${option.title || ''}${linked}`;
+                }}
                 value={selectedTask}
                 onChange={(_, newValue) => {
                   setSelectedTask(newValue);
@@ -602,22 +606,38 @@ export default function SupportRequests() {
                     {...params}
                     label="Link Task (Optional)"
                     placeholder="Select a task to link..."
-                    helperText="Link a task from AI Agent or Co-Work tab"
+                    helperText="Link a task from AI Agent or Co-Work tab. Shows all tasks including old ones."
                   />
                 )}
                 renderOption={(props, option) => (
                   <Box component="li" {...props}>
                     <Stack>
-                      <Typography variant="body1">{option.title}</Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="body1">{option.title}</Typography>
+                        {option.supportRequestId && option.supportRequestId !== editingRequest?.id && (
+                          <Chip
+                            label="Already Linked"
+                            size="small"
+                            color="info"
+                            variant="outlined"
+                          />
+                        )}
+                      </Stack>
                       <Typography variant="caption" color="text.secondary">
                         {option.description?.substring(0, 50)}...
                       </Typography>
-                      <Chip
-                        label={option.status}
-                        size="small"
-                        sx={{ mt: 0.5 }}
-                        color={option.status === 'completed' ? 'success' : option.status === 'in-progress' ? 'warning' : 'default'}
-                      />
+                      <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                        <Chip
+                          label={option.status}
+                          size="small"
+                          color={option.status === 'completed' ? 'success' : option.status === 'in-progress' ? 'warning' : 'default'}
+                        />
+                        {option.createdAt && (
+                          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                            {new Date(option.createdAt).toLocaleDateString()}
+                          </Typography>
+                        )}
+                      </Stack>
                     </Stack>
                   </Box>
                 )}
@@ -793,28 +813,49 @@ export default function SupportRequests() {
               </FormControl>
               <Autocomplete
                 fullWidth
-                options={tasks.filter(t => !t.supportRequestId)}
-                getOptionLabel={(option) => option.title || ''}
+                options={tasks}
+                getOptionLabel={(option) => {
+                  const linked = option.supportRequestId ? ' (Already Linked)' : '';
+                  return `${option.title || ''}${linked}`;
+                }}
                 value={selectedTask}
                 onChange={(_, newValue) => {
-                  setSelectedTask(newValue);
+                  // Only allow linking if task is not already linked to another request
+                  if (newValue && !newValue.supportRequestId) {
+                    setSelectedTask(newValue);
+                  } else if (newValue && newValue.supportRequestId) {
+                    setError('This task is already linked to another support request');
+                    setTimeout(() => setError(null), 3000);
+                  } else {
+                    setSelectedTask(null);
+                  }
                 }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Link Task (Optional)"
                     placeholder="Select a task to link..."
-                    helperText="Link a task from AI Agent or Co-Work tab"
+                    helperText="Link a task from AI Agent or Co-Work tab. Shows all tasks including old ones."
                   />
                 )}
                 renderOption={(props, option) => (
                   <Box component="li" {...props}>
                     <Stack>
-                      <Typography variant="body1">{option.title}</Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="body1">{option.title}</Typography>
+                        {option.supportRequestId && (
+                          <Chip
+                            label="Already Linked"
+                            size="small"
+                            color="info"
+                            variant="outlined"
+                          />
+                        )}
+                      </Stack>
                       <Typography variant="caption" color="text.secondary">
                         {option.description?.substring(0, 50)}...
                       </Typography>
-                      <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                      <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap">
                         <Chip
                           label={option.status}
                           size="small"
@@ -826,6 +867,11 @@ export default function SupportRequests() {
                             size="small"
                             variant="outlined"
                           />
+                        )}
+                        {option.createdAt && (
+                          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                            {new Date(option.createdAt).toLocaleDateString()}
+                          </Typography>
                         )}
                       </Stack>
                     </Stack>
