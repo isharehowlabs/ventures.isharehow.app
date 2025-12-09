@@ -32,6 +32,7 @@ export default function EditClientDialog({ open, onClose, client, onSave, readOn
     status: 'pending',
     tier: 'starter',
     notes: '',
+    googleAnalyticsPropertyKey: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,6 +47,7 @@ export default function EditClientDialog({ open, onClose, client, onSave, readOn
         status: client.status || 'pending',
         tier: client.tier || 'starter',
         notes: client.notes || '',
+        googleAnalyticsPropertyKey: client.googleAnalyticsPropertyKey || '',
       });
     }
   }, [client]);
@@ -159,6 +161,16 @@ export default function EditClientDialog({ open, onClose, client, onSave, readOn
             fullWidth
             multiline
             rows={3}
+            disabled={readOnly}
+          />
+          
+          <TextField
+            label="Google Analytics Property Key"
+            value={formData.googleAnalyticsPropertyKey}
+            onChange={(e) => setFormData({ ...formData, googleAnalyticsPropertyKey: e.target.value })}
+            fullWidth
+            placeholder="G-XXXXXXXXXX"
+            helperText="Google Analytics 4 Property ID for tracking client analytics growth"
             disabled={readOnly}
           />
         </Box>

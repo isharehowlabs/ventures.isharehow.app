@@ -342,6 +342,17 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
     );
   };
 
+  // Initialize AdSense on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID) {
+      try {
+        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+      } catch (e) {
+        console.error('AdSense error:', e);
+      }
+    }
+  }, []);
+
   return (
     <>
       <Head>
@@ -350,6 +361,13 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
           name="description"
           content="Follow the iShareHow blog to learn about new product features, latest advancements in digital transformation, and community initiatives."
         />
+        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
+            crossOrigin="anonymous"
+          />
+        )}
       </Head>
 
       <AppShell active="blog">
@@ -612,11 +630,11 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
           </Container>
 
           {/* Ad Block */}
-          <Container maxWidth="lg" sx={{ py: 6 }}>
+          <Container maxWidth="lg" sx={{ py: 4 }}>
             <Paper
               elevation={2}
               sx={{
-                p: { xs: 3, md: 4 },
+                p: { xs: 2, md: 2.5 },
                 borderRadius: 2,
                 bgcolor: 'background.paper',
                 border: `1px solid ${theme.palette.divider}`,
@@ -630,11 +648,11 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                 variant="caption"
                 sx={{
                   display: 'block',
-                  mb: 2,
+                  mb: 1.5,
                   color: 'text.secondary',
                   textTransform: 'uppercase',
                   letterSpacing: 1,
-                  fontSize: '0.75rem',
+                  fontSize: '0.7rem',
                   fontWeight: 600,
                 }}
               >
@@ -642,24 +660,42 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
               </Typography>
               <Box
                 sx={{
-                  minHeight: { xs: 100, sm: 250, md: 300 },
+                  minHeight: { xs: 50, sm: 60, md: 70 },
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
                   borderRadius: 1,
                   border: `1px dashed ${theme.palette.divider}`,
+                  overflow: 'hidden',
+                  position: 'relative',
                 }}
               >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: 'text.secondary',
-                    fontSize: { xs: '0.85rem', md: '0.95rem' },
-                  }}
-                >
-                  Ad Space Available
-                </Typography>
+                {/* Google AdSense */}
+                {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ? (
+                  <ins
+                    className="adsbygoogle"
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      minHeight: '50px',
+                    }}
+                    data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}
+                    data-ad-slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_ID || ''}
+                    data-ad-format="auto"
+                    data-full-width-responsive="true"
+                  />
+                ) : (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: { xs: '0.75rem', md: '0.85rem' },
+                    }}
+                  >
+                    Ad Space Available
+                  </Typography>
+                )}
               </Box>
             </Paper>
           </Container>

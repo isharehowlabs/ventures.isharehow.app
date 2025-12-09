@@ -6570,6 +6570,7 @@ def create_client():
             notes=data.get('notes'),
             tags=json.dumps(data.get('tags', [])) if data.get('tags') else None,
             marketing_budget=data.get('marketingBudget'),
+            google_analytics_property_key=data.get('googleAnalyticsPropertyKey'),
             user_id=user.id
         )
         
@@ -6731,6 +6732,8 @@ def update_client(client_id):
             client.notes = data['notes']
         if 'tags' in data:
             client.tags = json.dumps(data['tags']) if data['tags'] else None
+        if 'googleAnalyticsPropertyKey' in data:
+            client.google_analytics_property_key = data['googleAnalyticsPropertyKey']
         
         client.updated_at = datetime.utcnow()
         db.session.commit()
@@ -9172,6 +9175,7 @@ if DB_AVAILABLE:
         notes = db.Column(db.Text, nullable=True)
         tags = db.Column(db.Text, nullable=True)  # JSON array of tags
         marketing_budget = db.Column(db.String(500), nullable=True)  # Marketing budget information
+        google_analytics_property_key = db.Column(db.String(100), nullable=True)  # Google Analytics Property ID (G-XXXXXXXXXX)
         user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Link to User account
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -9193,6 +9197,7 @@ if DB_AVAILABLE:
                 'notes': self.notes,
                 'tags': json.loads(self.tags) if self.tags else [],
                 'marketingBudget': self.marketing_budget,
+                'googleAnalyticsPropertyKey': self.google_analytics_property_key,
                 'userId': self.user_id,
                 'hasAccount': self.user_id is not None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
