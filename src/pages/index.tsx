@@ -60,7 +60,7 @@ import styles from '../styles/landing/LandingPage.module.css';
 const pricingTiers: PricingTier[] = [
   {
     id: 'diy-plus',
-    name: 'Freelances DIY Plus',
+    name: 'Freelancers DIY Plus',
     price: 299,
     priceAnnual: 2870, // ~20% discount
     description: 'Seed Stage Companies DIY',
@@ -559,23 +559,6 @@ const HomePage = () => {
                   startIcon={<ArrowDownwardIcon />}
                 >
                   View Pricing Plans
-                </Button>
-                <Button
-                  variant="text"
-                  size="large"
-                  onClick={() => {
-                    const element = document.getElementById('services');
-                    if (element) element.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  }}
-                  startIcon={<PlayArrowIcon />}
-                >
-                  Watch Demo
                 </Button>
               </Stack>
               <Typography

@@ -8873,21 +8873,27 @@ def delete_video(video_id):
 
 @require_session
 @app.route('/api/boards/<board_id>/snapshot', methods=['GET'])
+@jwt_required(optional=True)
 def get_board_snapshot(board_id):
     """Get board snapshot for Firebase fallback"""
     try:
-        user_info = get_user_info()
-        if not user_info:
-            return jsonify({'error': 'Authentication required'}), 401
+        # Try to get user info, but allow anonymous access
+        user_info = None
+        try:
+            user_info = get_user_info()
+        except Exception as auth_error:
+            # If authentication fails, allow anonymous access
+            print(f"Auth optional for board snapshot: {auth_error}")
         
         # In a full implementation, this would fetch from a database
         # For now, return a minimal snapshot structure
+        owner_id = user_info['id'] if user_info else 'anonymous'
         snapshot = {
             'boardId': board_id,
             'canvasState': {
                 'version': 0,
                 'lastUpdated': datetime.utcnow().isoformat(),
-                'ownerId': user_info['id'],
+                'ownerId': owner_id,
                 'actions': [],
                 'metadata': {}
             },
@@ -8895,26 +8901,40 @@ def get_board_snapshot(board_id):
             'notifications': []
         }
         
-        # Emit socket event
-        socketio.emit('board_snapshot_ready', {
-            'boardId': board_id,
-            'userId': user_info['id']
-        })
+        # Emit socket event only if user is authenticated
+        if user_info:
+            socketio.emit('board_snapshot_ready', {
+                'boardId': board_id,
+                'userId': user_info['id']
+            })
         
         return jsonify(snapshot), 200
     except Exception as e:
         db.session.rollback()  # Rollback failed transaction
         print(f"Error getting board snapshot: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': 'Failed to get board snapshot'}), 500
 
-@require_session
 @app.route('/api/boards/<board_id>/presence', methods=['GET', 'POST'])
+@jwt_required(optional=True)
 def board_presence(board_id):
     """Handle board presence updates"""
     try:
-        user_info = get_user_info()
-        if not user_info:
-            return jsonify({'error': 'Authentication required'}), 401
+        # Try to get user info, but allow anonymous access
+        user_info = None
+        try:
+            user_info = get_user_info()
+        except Exception as auth_error:
+            # If authentication fails, allow anonymous access
+            print(f"Auth optional for board presence: {auth_error}")
+        
+        # For POST requests, we need at least a userId
+        if request.method == 'POST' and not user_info:
+            # Try to get userId from request body
+            data = request.get_json() or {}
+            if not data.get('userId'):
+                return jsonify({'error': 'User ID required for presence updates'}), 400
         
         if request.method == 'GET':
             # Return current presence data
@@ -8922,10 +8942,15 @@ def board_presence(board_id):
             return jsonify({'presence': {}}), 200
         else:  # POST
             # Update presence
-            data = request.get_json()
+            data = request.get_json() or {}
+            
+            # Use user_info if available, otherwise use data from request
+            user_id = user_info['id'] if user_info else data.get('userId', 'anonymous')
+            user_name = user_info['name'] if user_info else data.get('userName', 'Anonymous User')
+            
             presence_data = {
-                'userId': user_info['id'],
-                'name': user_info['name'],
+                'userId': user_id,
+                'name': user_name,
                 'status': data.get('status', 'active'),
                 'cursor': data.get('cursor'),
                 'lastHeartbeat': datetime.utcnow().isoformat()

@@ -122,7 +122,7 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
 
     setUseFirebase(true);
     setupFirebaseListeners(database);
-  }, [boardId]);
+  }, [boardId, userId, userName]);
 
   const setupFirebaseListeners = (database: any) => {
     if (!boardId) return;
@@ -193,6 +193,7 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
       const backendUrl = getBackendUrl();
       const response = await fetchWithErrorHandling(`${backendUrl}/api/boards/${boardId}/snapshot`, {
         method: 'GET',
+        credentials: 'include', // Include cookies for JWT
       });
 
       if (response.ok) {
@@ -200,10 +201,37 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
         setCanvasState(data.canvasState);
         setIsConnected(true);
       } else {
-        setError('Failed to fetch board snapshot');
+        const errorData = await response.json().catch(() => ({}));
+        // If it's an auth error but we have userId/userName, continue with offline mode
+        if (response.status === 401 && userId && userName) {
+          console.warn('Authentication failed, using offline mode');
+          setCanvasState({
+            version: 0,
+            lastUpdated: new Date().toISOString(),
+            ownerId: userId,
+            actions: [],
+            metadata: {},
+          });
+          setIsConnected(false); // Mark as offline
+        } else {
+          setError(errorData.error || 'Failed to fetch board snapshot');
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch board');
+      // If we have userId/userName, continue with offline mode
+      if (userId && userName) {
+        console.warn('Network error, using offline mode:', err);
+        setCanvasState({
+          version: 0,
+          lastUpdated: new Date().toISOString(),
+          ownerId: userId,
+          actions: [],
+          metadata: {},
+        });
+        setIsConnected(false);
+      } else {
+        setError(err.message || 'Failed to fetch board');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -328,7 +356,16 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
       const backendUrl = getBackendUrl();
       fetchWithErrorHandling(`${backendUrl}/api/boards/${boardId}/presence`, {
         method: 'POST',
-        body: JSON.stringify({ status, cursor }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          status, 
+          cursor,
+          userId,
+          userName,
+        }),
+        credentials: 'include', // Include cookies for JWT
       }).catch(err => console.error('Failed to update presence:', err));
     }
   }, [boardId, userId, userName, useFirebase]);
