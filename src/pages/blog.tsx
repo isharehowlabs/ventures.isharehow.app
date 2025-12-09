@@ -344,7 +344,7 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
 
   // Initialize AdSense on mount
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID) {
+    if (typeof window !== 'undefined') {
       try {
         ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
       } catch (e) {
@@ -361,13 +361,11 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
           name="description"
           content="Follow the iShareHow blog to learn about new product features, latest advancements in digital transformation, and community initiatives."
         />
-        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
-          <script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
-            crossOrigin="anonymous"
-          />
-        )}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0501888641420535"
+          crossOrigin="anonymous"
+        />
       </Head>
 
       <AppShell active="blog">
@@ -672,30 +670,18 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                 }}
               >
                 {/* Google AdSense */}
-                {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ? (
-                  <ins
-                    className="adsbygoogle"
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      minHeight: '50px',
-                    }}
-                    data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}
-                    data-ad-slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_ID || ''}
-                    data-ad-format="auto"
-                    data-full-width-responsive="true"
-                  />
-                ) : (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: 'text.secondary',
-                      fontSize: { xs: '0.75rem', md: '0.85rem' },
-                    }}
-                  >
-                    Ad Space Available
-                  </Typography>
-                )}
+                <ins
+                  className="adsbygoogle"
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    minHeight: '50px',
+                  }}
+                  data-ad-client="ca-pub-0501888641420535"
+                  data-ad-slot=""
+                  data-ad-format="auto"
+                  data-full-width-responsive="true"
+                />
               </Box>
             </Paper>
           </Container>
