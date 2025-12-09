@@ -25,6 +25,7 @@ import { PricingTier } from './PricingTierCard';
 
 export interface Feature {
   name: string;
+  'diy-plus'?: string | boolean;
   essential?: string | boolean;
   growth?: string | boolean;
   premium?: string | boolean;

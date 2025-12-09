@@ -153,7 +153,7 @@ export default function BookDemoPage() {
             <Divider sx={{ my: 8 }} />
 
             {/* Book Demo Form */}
-            <Box sx={{ mb: 8 }}>
+            <Box sx={{ mb: 8, maxWidth: '100%' }}>
               <BookDemoForm
                 onSuccess={(clientId) => {
                   // Redirect to demo page after successful submission

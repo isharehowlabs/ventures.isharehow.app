@@ -160,8 +160,7 @@ export default function BookDemoForm({ onSuccess }: BookDemoFormProps) {
       sx={{
         p: { xs: 3, md: 4 },
         borderRadius: 3,
-        maxWidth: 600,
-        mx: 'auto',
+        width: '100%',
       }}
     >
       <Box sx={{ mb: 3, textAlign: 'center' }}>

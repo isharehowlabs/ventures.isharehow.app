@@ -55,6 +55,21 @@ import styles from '../styles/landing/LandingPage.module.css';
 
 const pricingTiers: PricingTier[] = [
   {
+    id: 'diy-plus',
+    name: 'Freelances DIY Plus',
+    price: 299,
+    priceAnnual: 2870, // ~20% discount
+    description: 'Seed Stage Companies DIY',
+    color: '#10b981',
+    features: [
+      'Pay Per Request',
+      'Avg. 2-3 biz-day turnarounds',
+      '2 revision rounds per deliverable',
+      'Brand & UX/UI production (landing pages, components, UX copy)',
+    ],
+    ctaText: 'Get Started',
+  },
+  {
     id: 'essential',
     name: 'Essential',
     price: 2500,
@@ -139,7 +154,16 @@ const pricingTiers: PricingTier[] = [
 
 const comparisonFeatures: Feature[] = [
   {
+    name: 'Pricing Model',
+    'diy-plus': 'Pay Per Request',
+    essential: 'Monthly Subscription',
+    growth: 'Monthly Subscription',
+    premium: 'Monthly Subscription',
+    enterprise: 'Monthly Subscription',
+  },
+  {
     name: 'Active Workstreams',
+    'diy-plus': 'Pay Per Request',
     essential: '1',
     growth: '2 concurrent',
     premium: '3 concurrent',
@@ -147,6 +171,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'Turnaround Time',
+    'diy-plus': 'Avg. 2-3 biz-day',
     essential: 'Avg. 2-3 biz-day',
     growth: '48-72 hr',
     premium: '24-48 hr',
@@ -154,6 +179,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'Revisions',
+    'diy-plus': '2 rounds',
     essential: '2 rounds',
     growth: '2-3 rounds',
     premium: 'Unlimited minor',
@@ -161,6 +187,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'Brand & UX/UI Production',
+    'diy-plus': true,
     essential: true,
     growth: true,
     premium: true,
@@ -168,6 +195,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'Content Creation',
+    'diy-plus': false,
     essential: '2-4 assets/mo',
     growth: '4-6 assets/mo',
     premium: 'Unlimited',
@@ -175,6 +203,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'Front-End Coding',
+    'diy-plus': false,
     essential: 'Up to 10 hrs/mo',
     growth: 'Up to 25 hrs/mo',
     premium: 'Up to 40 hrs/mo',
@@ -182,6 +211,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'SEO Services',
+    'diy-plus': false,
     essential: 'Light (2 pages/mo)',
     growth: 'Plan + briefs (4-6 pages/mo)',
     premium: 'Technical SEO',
@@ -189,6 +219,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'UX Audits',
+    'diy-plus': false,
     essential: false,
     growth: 'Quarterly',
     premium: 'Advanced research',
@@ -196,6 +227,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'Design Systems',
+    'diy-plus': false,
     essential: false,
     growth: true,
     premium: true,
@@ -203,6 +235,7 @@ const comparisonFeatures: Feature[] = [
   },
   {
     name: 'Analytics',
+    'diy-plus': false,
     essential: false,
     growth: false,
     premium: false,
