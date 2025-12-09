@@ -2722,11 +2722,12 @@ def verify_subscription():
 @jwt_required(optional=True)
 def create_hyperbeam_session():
     """Create a new Hyperbeam VM session"""
+    # Flask-CORS handles OPTIONS preflight automatically
     try:
-        # Get Hyperbeam API key from environment
-        hyperbeam_key = os.environ.get('HYPERBEAM_KEY')
+        # Get Hyperbeam API key from environment (check both uppercase and lowercase)
+        hyperbeam_key = os.environ.get('HYPERBEAM_KEY') or os.environ.get('hyperbeam_key')
         if not hyperbeam_key:
-            return jsonify({'error': 'Hyperbeam API key not configured'}), 500
+            return jsonify({'error': 'Hyperbeam API key not configured. Please set HYPERBEAM_KEY or hyperbeam_key in environment variables.'}), 500
         
         # Get parent domain from request (for iframe embedding)
         parent_domain = request.json.get('parent') if request.json else None
