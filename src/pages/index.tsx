@@ -343,6 +343,27 @@ const HomePage = () => {
   );
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  // Ensure theme is properly applied on mount, especially after auth redirects
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Force theme sync on mount
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      
+      // If no theme is set, get it from localStorage or system preference
+      if (!currentTheme) {
+        try {
+          const savedMode = localStorage.getItem('themeMode');
+          const systemPref = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          const theme = savedMode === 'light' || savedMode === 'dark' ? savedMode : systemPref;
+          html.setAttribute('data-theme', theme);
+        } catch (e) {
+          html.setAttribute('data-theme', 'light');
+        }
+      }
+    }
+  }, []);
+
   // Scroll to top button visibility
   useEffect(() => {
     const handleScroll = () => {

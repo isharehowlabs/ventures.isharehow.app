@@ -131,7 +131,6 @@
 
 /* Stats Bar */
 .statsBar {
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   padding: 60px 0;
   margin-top: -40px;
   position: relative;
@@ -140,8 +139,13 @@
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1);
 }
 
+:global([data-theme="light"]) .statsBar {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+
 :global([data-theme="dark"]) .statsBar {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
 }
 
 .statCard {
@@ -165,11 +169,14 @@
 }
 
 .statLabel {
-  color: #6c757d !important;
   font-weight: 600 !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-size: 0.875rem !important;
+}
+
+:global([data-theme="light"]) .statLabel {
+  color: #6c757d !important;
 }
 
 :global([data-theme="dark"]) .statLabel {
@@ -197,10 +204,13 @@
 .sectionSubtitle {
   font-size: 1.5rem !important;
   font-weight: 600 !important;
-  color: #6c757d !important;
   max-width: 700px;
   margin: 0 auto !important;
   line-height: 1.6;
+}
+
+:global([data-theme="light"]) .sectionSubtitle {
+  color: #6c757d !important;
 }
 
 :global([data-theme="dark"]) .sectionSubtitle {
@@ -214,13 +224,16 @@
   border-radius: 16px !important;
   overflow: hidden;
   position: relative;
+}
+
+:global([data-theme="light"]) .featureCard {
   background: #ffffff !important;
   border: 1px solid #e9ecef !important;
 }
 
 :global([data-theme="dark"]) .featureCard {
   background: #1e293b !important;
-  border-color: #334155 !important;
+  border: 1px solid #334155 !important;
 }
 
 .featureCard::before {
@@ -259,9 +272,12 @@
 
 /* Pricing Section */
 .pricingSection {
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   padding: 100px 0;
   position: relative;
+}
+
+:global([data-theme="light"]) .pricingSection {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
 }
 
 :global([data-theme="dark"]) .pricingSection {
@@ -286,16 +302,19 @@
   height: 100%;
   border-radius: 20px !important;
   padding: 40px !important;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
-  border: 1px solid #e9ecef !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
 
+:global([data-theme="light"]) .testimonialCard {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+  border: 1px solid #e9ecef !important;
+}
+
 :global([data-theme="dark"]) .testimonialCard {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-  border-color: #334155 !important;
+  border: 1px solid #334155 !important;
 }
 
 .testimonialCard::before {
