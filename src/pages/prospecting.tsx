@@ -24,7 +24,17 @@ import {
   AutoAwesome as AutoAwesomeIcon,
   RocketLaunch as RocketLaunchIcon,
   TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Email as EmailIcon,
+  LinkedIn as LinkedInIcon,
+  PlayCircle as PlayCircleIcon,
+  FlashOn as FlashIcon,
+  Speed as SpeedIcon,
+  CompareArrows as CompareArrowsIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
+import BeforeAfterMockup from '../components/landing/BeforeAfterMockup';
+import { Fade, Grow, Zoom } from '@mui/material';
 
 export default function ProspectingPage() {
   const theme = useTheme();
@@ -73,6 +83,34 @@ export default function ProspectingPage() {
           name="description"
           content="Struggling with ghosted SEO prospects? Join our live 10X SEO Prospecting Workshop—proven scripts, templates, and AI tools to land 5x more clients. Flash sale ends in 48 hours. Limited to 50 spots."
         />
+        <style>{`
+          @keyframes pulse {
+            0%, 100% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            50% {
+              transform: scale(1.05);
+              opacity: 0.8;
+            }
+          }
+          @keyframes shimmer {
+            0% {
+              left: -100%;
+            }
+            100% {
+              left: 100%;
+            }
+          }
+          @keyframes float {
+            0%, 100% {
+              transform: translateY(0px);
+            }
+            50% {
+              transform: translateY(-10px);
+            }
+          }
+        `}</style>
       </Head>
 
       <Box sx={{ bgcolor: 'background.default', color: 'text.primary', minHeight: '100vh' }}>
@@ -111,14 +149,53 @@ export default function ProspectingPage() {
                 ? 'linear-gradient(135deg, rgba(75, 93, 189, 0.15) 0%, rgba(107, 125, 215, 0.1) 100%)'
                 : 'linear-gradient(135deg, rgba(75, 93, 189, 0.08) 0%, rgba(107, 125, 215, 0.05) 100%)',
               border: `1px solid ${theme.palette.primary.main}40`,
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            <CardContent sx={{ p: { xs: 4, md: 6 }, textAlign: 'center' }}>
-              <Chip
-                label="🚨 FLASH SALE"
-                color="error"
-                sx={{ mb: 3, fontWeight: 700, fontSize: '0.9rem', py: 2.5 }}
-              />
+            {/* Animated Background Elements */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: -50,
+                right: -50,
+                width: 200,
+                height: 200,
+                borderRadius: '50%',
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}20, transparent)`,
+                animation: 'pulse 3s ease-in-out infinite',
+                zIndex: 0,
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: -30,
+                left: -30,
+                width: 150,
+                height: 150,
+                borderRadius: '50%',
+                background: `linear-gradient(135deg, ${theme.palette.secondary.main}20, transparent)`,
+                animation: 'pulse 4s ease-in-out infinite',
+                animationDelay: '1s',
+                zIndex: 0,
+              }}
+            />
+            <CardContent sx={{ p: { xs: 4, md: 6 }, textAlign: 'center', position: 'relative', zIndex: 1 }}>
+              <Zoom in timeout={500}>
+                <Chip
+                  label="🚨 FLASH SALE"
+                  color="error"
+                  icon={<FlashIcon />}
+                  sx={{
+                    mb: 3,
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    py: 2.5,
+                    animation: 'pulse 2s ease-in-out infinite',
+                  }}
+                />
+              </Zoom>
               <Typography
                 variant="h3"
                 fontWeight={800}
@@ -147,26 +224,40 @@ export default function ProspectingPage() {
                 (86% OFF!)
               </Typography>
 
-              <Paper
-                elevation={2}
-                sx={{
-                  bgcolor: 'error.main',
-                  color: 'white',
-                  p: 3,
-                  mb: 4,
-                  borderRadius: 2,
-                }}
-              >
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mb: 1 }}>
-                  <AccessTimeIcon />
-                  <Typography variant="h6" fontWeight={700}>
-                    Flash Sale Ends In: {timerString}
+              <Zoom in timeout={800}>
+                <Paper
+                  elevation={2}
+                  sx={{
+                    bgcolor: 'error.main',
+                    color: 'white',
+                    p: 3,
+                    mb: 4,
+                    borderRadius: 2,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                      animation: 'shimmer 3s infinite',
+                    },
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mb: 1, position: 'relative', zIndex: 1 }}>
+                    <AccessTimeIcon sx={{ animation: 'pulse 2s ease-in-out infinite' }} />
+                    <Typography variant="h6" fontWeight={700}>
+                      Flash Sale Ends In: {timerString}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" sx={{ opacity: 0.95, position: 'relative', zIndex: 1 }}>
+                    Only 50 Spots Left
                   </Typography>
-                </Stack>
-                <Typography variant="body2" sx={{ opacity: 0.95 }}>
-                  Only 50 Spots Left
-                </Typography>
-              </Paper>
+                </Paper>
+              </Zoom>
 
               <Button
                 variant="contained"
@@ -197,29 +288,111 @@ export default function ProspectingPage() {
 
           {/* Pain/Agitate Section */}
           <Box sx={{ mb: 6 }}>
-            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
-              Why Your SEO Outreach Feels Like Shouting Into the Wind
-            </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.8 }}>
-              As an agency founder building co-work dashboards and client wins, you know the drill: You pour hours into SEO audits, but prospects ghost you. Rankings stall, leads dry up, and your Analytics dashboard shows more frustration than growth.
-            </Typography>
-            <Stack spacing={2}>
-              {[
-                '80% of cold pitches ignored (even with "personalized" tweaks)',
-                'Wasted ad spend on unqualified tire-kickers',
-                'No scalable system to prospect high-ticket clients who value your AI-driven expertise',
-              ].map((item, index) => (
-                <Stack key={index} direction="row" spacing={2} alignItems="flex-start">
-                  <CloseIcon sx={{ color: 'error.main', mt: 0.5 }} />
-                  <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
-                    {item}
+            <Fade in timeout={600}>
+              <Box>
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: '50%',
+                      bgcolor: 'error.main',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      animation: 'pulse 2s ease-in-out infinite',
+                    }}
+                  >
+                    <CloseIcon sx={{ color: 'white', fontSize: 32 }} />
+                  </Box>
+                  <Typography variant="h4" fontWeight={700}>
+                    Why Your SEO Outreach Feels Like Shouting Into the Wind
                   </Typography>
                 </Stack>
-              ))}
-            </Stack>
-            <Typography variant="body1" sx={{ color: 'text.primary', mt: 3, fontWeight: 600 }}>
-              Sound familiar? It&apos;s not you—it&apos;s your process. Time to 10X it.
+                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.8 }}>
+                  As an agency founder building co-work dashboards and client wins, you know the drill: You pour hours into SEO audits, but prospects ghost you. Rankings stall, leads dry up, and your Analytics dashboard shows more frustration than growth.
+                </Typography>
+                <Grid container spacing={3} sx={{ mb: 3 }}>
+                  {[
+                    { icon: <EmailIcon />, text: '80% of cold pitches ignored (even with "personalized" tweaks)' },
+                    { icon: <TrendingDownIcon />, text: 'Wasted ad spend on unqualified tire-kickers' },
+                    { icon: <SpeedIcon />, text: 'No scalable system to prospect high-ticket clients who value your AI-driven expertise' },
+                  ].map((item, index) => (
+                    <Grid item xs={12} key={index}>
+                      <Grow in timeout={800 + index * 200}>
+                        <Card
+                          elevation={1}
+                          sx={{
+                            p: 2,
+                            bgcolor: 'background.paper',
+                            border: `1px solid ${theme.palette.error.main}30`,
+                            '&:hover': {
+                              transform: 'translateX(8px)',
+                              borderColor: theme.palette.error.main,
+                            },
+                            transition: 'all 0.3s',
+                          }}
+                        >
+                          <Stack direction="row" spacing={2} alignItems="flex-start">
+                            <Box
+                              sx={{
+                                color: 'error.main',
+                                mt: 0.5,
+                                '& svg': { fontSize: 28 },
+                              }}
+                            >
+                              {item.icon}
+                            </Box>
+                            <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.7, flex: 1 }}>
+                              {item.text}
+                            </Typography>
+                          </Stack>
+                        </Card>
+                      </Grow>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Box
+                  sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    textAlign: 'center',
+                    mt: 3,
+                  }}
+                >
+                  <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+                    Sound familiar? It&apos;s not you—it&apos;s your process.
+                  </Typography>
+                  <Typography variant="body1" sx={{ opacity: 0.95 }}>
+                    Time to 10X it. <strong>Begin now.</strong>
+                  </Typography>
+                </Box>
+              </Box>
+            </Fade>
+          </Box>
+
+          <Divider sx={{ my: 6 }} />
+
+          {/* Before/After AI Video Mockup Section */}
+          <Box sx={{ mb: 6 }}>
+            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 2, textAlign: 'center' }}>
+              See the Transformation: From Blank Screen to Viral Videos
             </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, textAlign: 'center', lineHeight: 1.8 }}>
+              Watch how AI Content Manager transforms your ideas into scroll-stopping content in minutes—not hours.
+            </Typography>
+            <BeforeAfterMockup
+              beforeImage="https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=1200&h=675&fit=crop"
+              afterImage="https://images.unsplash.com/photo-1611162616305-c69b3c7b5c9a?w=1200&h=675&fit=crop"
+              beforeLabel="Before: Hours of Work, Low Engagement"
+              afterLabel="After: Minutes to Create, Viral Results"
+              title="The AI Video Revolution"
+              description="Experience the power of fearless creativity with AI Content Manager"
+              autoAnimate={true}
+              animationSpeed={4000}
+            />
           </Box>
 
           <Divider sx={{ my: 6 }} />
@@ -236,28 +409,52 @@ export default function ProspectingPage() {
 
               <Stack spacing={2} sx={{ mb: 4 }}>
                 {[
-                  { label: 'Live Training: 10X Prospecting Scripts (Cold Email + LinkedIn DMs)', value: '$997' },
-                  { label: 'Bonus: AI SEO Audit Template (Integrates with Your Analytics Dashboard)', value: '$497' },
-                  { label: 'Bonus: 50 High-Ticket Client Personas + Outreach Tracker', value: '$297' },
-                  { label: 'Bonus: Private Co-Work Community Access (1 Month – Build Together!)', value: '$197' },
+                  { icon: <EmailIcon />, label: 'Live Training: 10X Prospecting Scripts (Cold Email + LinkedIn DMs)', value: '$997', color: 'primary.main' },
+                  { icon: <AutoAwesomeIcon />, label: 'Bonus: AI SEO Audit Template (Integrates with Your Analytics Dashboard)', value: '$497', color: 'secondary.main' },
+                  { icon: <TrendingUpIcon />, label: 'Bonus: 50 High-Ticket Client Personas + Outreach Tracker', value: '$297', color: 'success.main' },
+                  { icon: <RocketLaunchIcon />, label: 'Bonus: Private Co-Work Community Access (1 Month – Build Together!)', value: '$197', color: 'warning.main' },
                 ].map((item, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      py: 2,
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                    }}
-                  >
-                    <Typography variant="body1" sx={{ color: 'text.primary', flex: 1 }}>
-                      {item.label}
-                    </Typography>
-                    <Typography variant="h6" fontWeight={700} sx={{ color: 'text.secondary', ml: 2 }}>
-                      {item.value}
-                    </Typography>
-                  </Box>
+                  <Grow in timeout={600 + index * 150} key={index}>
+                    <Card
+                      elevation={1}
+                      sx={{
+                        p: 2,
+                        bgcolor: 'background.paper',
+                        border: `1px solid ${theme.palette.divider}`,
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: 4,
+                          borderColor: item.color,
+                        },
+                        transition: 'all 0.3s',
+                      }}
+                    >
+                      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                        <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
+                          <Box
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: '50%',
+                              bgcolor: `${item.color}20`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: item.color,
+                            }}
+                          >
+                            {item.icon}
+                          </Box>
+                          <Typography variant="body1" sx={{ color: 'text.primary', flex: 1 }}>
+                            {item.label}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="h6" fontWeight={700} sx={{ color: item.color, ml: 2 }}>
+                          {item.value}
+                        </Typography>
+                      </Stack>
+                    </Card>
+                  </Grow>
                 ))}
               </Stack>
 
@@ -294,37 +491,79 @@ export default function ProspectingPage() {
                       icon: <RocketLaunchIcon sx={{ fontSize: 28 }} />,
                       title: 'Instant Video Magic',
                       description: 'Drop a text prompt, blog link, tweet, or podcast URL—boom. Our AI analyzes 5M+ viral trends, auto-generates killer scripts, hooks, and visuals. No more "writer\'s block" or clunky editors.',
+                      color: 'primary.main',
                     },
                     {
                       icon: <VideoIcon sx={{ fontSize: 28 }} />,
                       title: 'Voice & Avatar Wizards',
                       description: 'Choose from 100+ hyper-realistic voices (male, female, accents galore) and AI influencers that look and sound like you. Record once, remix forever—perfect for faceless videos or branded avatars.',
+                      color: 'secondary.main',
                     },
                     {
                       icon: <TrendingUpIcon sx={{ fontSize: 28 }} />,
                       title: 'One-Click Publishing Power',
                       description: 'Optimized for every platform. Export watermark-free, SEO-boosted shorts ready to post. Plus, auto-scheduling and A/B testing to skyrocket your reach.',
+                      color: 'success.main',
                     },
                     {
                       icon: <AutoAwesomeIcon sx={{ fontSize: 28 }} />,
                       title: 'Autopilot Mode',
                       description: 'Set it and forget it. 5 smart "workers" crank out 10+ videos weekly while you sip coffee. Wake up to a content calendar full of fire.',
+                      color: 'warning.main',
                     },
                   ].map((feature, index) => (
                     <Grid item xs={12} sm={6} key={index}>
-                      <Card elevation={1} sx={{ height: '100%', bgcolor: 'background.paper' }}>
-                        <CardContent sx={{ p: 3 }}>
-                          <Box sx={{ color: 'primary.main', mb: 1.5 }}>
-                            {feature.icon}
-                          </Box>
-                          <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mb: 1 }}>
-                            {feature.title}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
-                            {feature.description}
-                          </Typography>
-                        </CardContent>
-                      </Card>
+                      <Grow in timeout={800 + index * 150}>
+                        <Card
+                          elevation={2}
+                          sx={{
+                            height: '100%',
+                            bgcolor: 'background.paper',
+                            border: `2px solid ${theme.palette[feature.color.split('.')[0] as 'primary' | 'secondary' | 'success' | 'warning'].main}30`,
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&:hover': {
+                              transform: 'translateY(-8px)',
+                              boxShadow: 8,
+                              borderColor: theme.palette[feature.color.split('.')[0] as 'primary' | 'secondary' | 'success' | 'warning'].main,
+                            },
+                            transition: 'all 0.3s',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: 4,
+                              background: `linear-gradient(90deg, ${theme.palette[feature.color.split('.')[0] as 'primary' | 'secondary' | 'success' | 'warning'].main}, transparent)`,
+                            }}
+                          />
+                          <CardContent sx={{ p: 3 }}>
+                            <Box
+                              sx={{
+                                color: feature.color,
+                                mb: 1.5,
+                                display: 'inline-flex',
+                                p: 1.5,
+                                borderRadius: '50%',
+                                bgcolor: `${feature.color}15`,
+                                animation: 'pulse 2s ease-in-out infinite',
+                                animationDelay: `${index * 0.2}s`,
+                              }}
+                            >
+                              {feature.icon}
+                            </Box>
+                            <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mb: 1 }}>
+                              {feature.title}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
+                              {feature.description}
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grow>
                     </Grid>
                   ))}
                 </Grid>
@@ -386,40 +625,96 @@ export default function ProspectingPage() {
 
           {/* Social Proof */}
           <Box sx={{ mb: 6 }}>
-            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 4 }}>
-              Agencies Just Like Yours Are 10Xing...
-            </Typography>
+            <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 4 }}>
+              <StarIcon sx={{ fontSize: 40, color: 'warning.main', animation: 'pulse 2s ease-in-out infinite' }} />
+              <Typography variant="h4" fontWeight={700}>
+                Agencies Just Like Yours Are 10Xing...
+              </Typography>
+              <StarIcon sx={{ fontSize: 40, color: 'warning.main', animation: 'pulse 2s ease-in-out infinite', animationDelay: '1s' }} />
+            </Stack>
             <Grid container spacing={3}>
               {[
                 {
                   quote: 'This workshop turned my SEO cold outreach from 2% response to 18% closes. Integrated the templates into my dashboard—clients now co-work on real-time wins. Revenue up 3x in Q4!',
                   author: 'Sarah J., Digital Agency Founder',
+                  icon: <TrendingUpIcon />,
                 },
                 {
                   quote: 'Hormozi + Cardone in one session? Game-changer for prospecting. The AI bonus alone saved me 20 hours/week.',
                   author: 'Mark T., SEO Consultant',
+                  icon: <RocketLaunchIcon />,
                 },
               ].map((testimonial, index) => (
                 <Grid item xs={12} md={6} key={index}>
-                  <Card elevation={2} sx={{ height: '100%', bgcolor: 'background.paper' }}>
-                    <CardContent sx={{ p: 4 }}>
-                      <Typography
-                        variant="body1"
+                  <Grow in timeout={800 + index * 200}>
+                    <Card
+                      elevation={3}
+                      sx={{
+                        height: '100%',
+                        bgcolor: 'background.paper',
+                        border: `2px solid ${theme.palette.primary.main}30`,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:hover': {
+                          transform: 'translateY(-8px)',
+                          boxShadow: 8,
+                          borderColor: theme.palette.primary.main,
+                        },
+                        transition: 'all 0.3s',
+                      }}
+                    >
+                      <Box
                         sx={{
-                          color: 'text.secondary',
-                          fontStyle: 'italic',
-                          mb: 3,
-                          lineHeight: 1.7,
+                          position: 'absolute',
+                          top: 0,
+                          right: 0,
+                          width: 100,
+                          height: 100,
+                          borderRadius: '0 0 0 100%',
+                          bgcolor: `${theme.palette.primary.main}10`,
                         }}
-                      >
-                        &quot;{testimonial.quote}&quot;
-                      </Typography>
-                      <Divider sx={{ my: 2 }} />
-                      <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
-                        – {testimonial.author}
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                      />
+                      <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
+                        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <StarIcon key={star} sx={{ fontSize: 20, color: 'warning.main' }} />
+                          ))}
+                        </Stack>
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            color: 'text.secondary',
+                            fontStyle: 'italic',
+                            mb: 3,
+                            lineHeight: 1.7,
+                            fontSize: '1.05rem',
+                          }}
+                        >
+                          &quot;{testimonial.quote}&quot;
+                        </Typography>
+                        <Divider sx={{ my: 2 }} />
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Box
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: '50%',
+                              bgcolor: 'primary.main',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                            }}
+                          >
+                            {testimonial.icon}
+                          </Box>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
+                            – {testimonial.author}
+                          </Typography>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grow>
                 </Grid>
               ))}
             </Grid>
@@ -462,45 +757,110 @@ export default function ProspectingPage() {
           </Box>
 
           {/* Final CTA */}
-          <Card
-            elevation={3}
-            sx={{
-              mb: 6,
-              background: isDark
-                ? 'linear-gradient(135deg, rgba(75, 93, 189, 0.15) 0%, rgba(107, 125, 215, 0.1) 100%)'
-                : 'linear-gradient(135deg, rgba(75, 93, 189, 0.08) 0%, rgba(107, 125, 215, 0.05) 100%)',
-              border: `1px solid ${theme.palette.primary.main}40`,
-            }}
-          >
-            <CardContent sx={{ p: { xs: 4, md: 6 }, textAlign: 'center' }}>
-              <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 2 }}>
-                Don&apos;t Let This Slip – Your Next Client is Waiting
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.7 }}>
-                Flash ends in <strong>{timerString}</strong>. Join the 10X movement and build client wins together.
-              </Typography>
-              <Button
-                variant="contained"
-                size="large"
-                fullWidth
-                onClick={claimSpot}
-                endIcon={<ArrowForwardIcon />}
+          <Zoom in timeout={1000}>
+            <Card
+              elevation={3}
+              sx={{
+                mb: 6,
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(75, 93, 189, 0.15) 0%, rgba(107, 125, 215, 0.1) 100%)'
+                  : 'linear-gradient(135deg, rgba(75, 93, 189, 0.08) 0%, rgba(107, 125, 215, 0.05) 100%)',
+                border: `2px solid ${theme.palette.primary.main}60`,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Animated urgency elements */}
+              <Box
                 sx={{
-                  bgcolor: 'primary.main',
-                  py: 2,
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                    transform: 'translateY(-2px)',
-                  },
-                  transition: 'all 0.3s',
+                  position: 'absolute',
+                  top: 20,
+                  right: 20,
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  bgcolor: 'error.main',
+                  opacity: 0.2,
+                  animation: 'pulse 2s ease-in-out infinite',
                 }}
-              >
-                Secure My $97 Spot Before It&apos;s Gone
-              </Button>
-            </CardContent>
-          </Card>
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 20,
+                  left: 20,
+                  width: 60,
+                  height: 60,
+                  borderRadius: '50%',
+                  bgcolor: 'warning.main',
+                  opacity: 0.2,
+                  animation: 'pulse 2.5s ease-in-out infinite',
+                  animationDelay: '0.5s',
+                }}
+              />
+              <CardContent sx={{ p: { xs: 4, md: 6 }, textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 2 }}>
+                  <FlashIcon sx={{ fontSize: 40, color: 'error.main', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  <Typography variant="h4" fontWeight={700} sx={{ mb: 0 }}>
+                    Don&apos;t Let This Slip – Your Next Client is Waiting
+                  </Typography>
+                  <FlashIcon sx={{ fontSize: 40, color: 'error.main', animation: 'pulse 1.5s ease-in-out infinite', animationDelay: '0.75s' }} />
+                </Stack>
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: 'error.main',
+                    color: 'white',
+                    mb: 4,
+                  }}
+                >
+                  <AccessTimeIcon />
+                  <Typography variant="h6" fontWeight={700}>
+                    Flash ends in {timerString}
+                  </Typography>
+                </Box>
+                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.7 }}>
+                  Join the 10X movement and build client wins together. <strong>Begin now.</strong>
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  onClick={claimSpot}
+                  endIcon={<ArrowForwardIcon />}
+                  sx={{
+                    bgcolor: 'primary.main',
+                    py: 2.5,
+                    fontSize: '1.2rem',
+                    fontWeight: 700,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                      transform: 'translateY(-4px) scale(1.02)',
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                      animation: 'shimmer 2s infinite',
+                    },
+                    transition: 'all 0.3s',
+                  }}
+                >
+                  Secure My $97 Spot Before It&apos;s Gone
+                </Button>
+              </CardContent>
+            </Card>
+          </Zoom>
 
           {/* Footer */}
           <Box component="footer" sx={{ textAlign: 'center', py: 4, borderTop: `1px solid ${theme.palette.divider}` }}>
