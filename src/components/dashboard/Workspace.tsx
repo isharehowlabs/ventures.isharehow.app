@@ -9,15 +9,20 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import CollaborativeDrawingPad from './CollaborativeDrawingPad';
+import BoardShell from '../board/BoardShell';
 import TasksPanel from './shared/TasksPanel';
 import { getBackendUrl } from '../../utils/backendUrl';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Workspace() {
+  const { user } = useAuth();
   const [iframeError, setIframeError] = useState<string | null>(null);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [hyperbeamUrl, setHyperbeamUrl] = useState<string | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
+  
+  // Generate a default board ID for the co-work space
+  const defaultBoardId = `cowork_${user?.id || 'shared'}`;
   
   // Create Hyperbeam session on component mount
   useEffect(() => {
@@ -75,14 +80,53 @@ export default function Workspace() {
     <Box sx={{ width: '100%' }}>
       <Grid container spacing={3}>
         
-        {/* Collaborative Drawing Pad */}
-        <Grid item xs={12} lg={6}>
-          <CollaborativeDrawingPad height={500} />
+        {/* Collaboration Board - Full Width */}
+        <Grid item xs={12}>
+          <Paper 
+            elevation={2} 
+            sx={{ 
+              p: 0, 
+              minHeight: 700, 
+              height: 'calc(100vh - 300px)', 
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+            }}
+          >
+            <Box 
+              sx={{ 
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: '100%',
+                width: '100%',
+              }}
+            >
+              <Box
+                sx={{
+                  height: '100%',
+                  width: '100%',
+                  '& > div': {
+                    height: '100% !important',
+                  },
+                }}
+              >
+                <BoardShell
+                  boardId={defaultBoardId}
+                  userId={user?.id?.toString() || 'anonymous'}
+                  userName={user?.name || user?.email || 'Anonymous User'}
+                />
+              </Box>
+            </Box>
+          </Paper>
         </Grid>
         
         {/* Tasks Section */}
-        <Grid item xs={12} lg={6}>
-          <TasksPanel height={500} />
+        <Grid item xs={12}>
+          <TasksPanel height={400} />
         </Grid>
 
         {/* Hyperbeam Embed */}

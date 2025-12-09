@@ -49,7 +49,8 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
   return (
     <Box
       sx={{
-        height: '100vh',
+        height: '100%',
+        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'background.default',

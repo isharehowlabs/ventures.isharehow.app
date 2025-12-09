@@ -384,8 +384,8 @@ export default function ProspectingPage() {
               Watch how AI Content Manager transforms your ideas into scroll-stopping content in minutes—not hours.
             </Typography>
             <BeforeAfterMockup
-              beforeImage="https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=1200&h=675&fit=crop"
-              afterImage="https://images.unsplash.com/photo-1611162616305-c69b3c7b5c9a?w=1200&h=675&fit=crop"
+              beforeImage="/images/before.jpg"
+              afterImage="/images/after.jpg"
               beforeLabel="Before: Hours of Work, Low Engagement"
               afterLabel="After: Minutes to Create, Viral Results"
               title="The AI Video Revolution"
