@@ -61,6 +61,7 @@ import EditClientDialog from './EditClientDialog';
 import AssignEmployeeDialog from './AssignEmployeeDialog';
 import { useAuth } from '../../../hooks/useAuth';
 import AdminClientAssignmentDialog from './AdminClientAssignmentDialog';
+import DashboardMetrics from '../DashboardMetrics';
 import {
   AdminPanelSettings as AdminPanelSettingsIcon,
   VpnKey as VpnKeyIcon,
@@ -150,12 +151,64 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
     notes: '',
   });
 
+  // Overview metrics state
+  const [metrics, setMetrics] = useState({
+    clients: 0,
+    projects: 0,
+    tasks: 0,
+    completion: 0,
+  });
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+
   useEffect(() => {
     fetchData();
+    fetchMetrics();
     if (isAdmin) {
       fetchAllUsers();
     }
   }, [statusFilter, employeeFilter, searchQuery, isAdmin]);
+
+  const fetchMetrics = async () => {
+    try {
+      setMetricsLoading(true);
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/metrics`, {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMetrics({
+          clients: data.clients || 0,
+          projects: data.projects || 0,
+          tasks: data.tasks || 0,
+          completion: data.completion || 0,
+        });
+        setMetricsError(null);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to fetch metrics' }));
+        setMetricsError(errorData.error || 'Failed to load metrics');
+        setMetrics({
+          clients: 0,
+          projects: 0,
+          tasks: 0,
+          completion: 0,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error fetching metrics:', err);
+      setMetricsError(err.message || 'Failed to load metrics');
+      setMetrics({
+        clients: 0,
+        projects: 0,
+        tasks: 0,
+        completion: 0,
+      });
+    } finally {
+      setMetricsLoading(false);
+    }
+  };
   
   const fetchAllUsers = async () => {
     if (!isAdmin) return;
@@ -659,6 +712,32 @@ export default function ClientEmployeeMatcher({ onAssignmentChange, onAddClient 
           {success}
         </Alert>
       )}
+
+      {/* Overview Section */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" fontWeight={700} gutterBottom>
+          Overview
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          Welcome to your mission control for managing clients across all your dashboards and systems.
+        </Typography>
+
+        {/* Dashboard Metrics */}
+        <Box sx={{ mb: 4 }}>
+          {metricsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <Typography>Loading metrics...</Typography>
+            </Box>
+          ) : metricsError ? (
+            <Box sx={{ p: 2, bgcolor: 'error.light', borderRadius: 1, mb: 2 }}>
+              <Typography variant="body2" color="error">
+                {metricsError}
+              </Typography>
+            </Box>
+          ) : null}
+          <DashboardMetrics metrics={metrics} />
+        </Box>
+      </Box>
 
       <Grid container spacing={3}>
         {/* Section 1: Prospects */}
