@@ -7474,13 +7474,31 @@ def create_support_request():
         }), 500
 
 @app.route('/api/creative/support-requests/<request_id>', methods=['PUT'])
+@jwt_required(optional=True)
 def update_support_request(request_id):
     """Update a support request - requires authentication and access"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        user = get_current_user()
+        # Try to get user from JWT first
+        user = None
+        try:
+            user_id = get_jwt_identity()
+            if user_id:
+                if str(user_id).isdigit():
+                    user = User.query.get(int(user_id))
+                if not user:
+                    user = User.query.filter_by(username=str(user_id)).first()
+                if not user:
+                    user = User.query.filter_by(email=str(user_id)).first()
+        except Exception as jwt_err:
+            app.logger.debug(f"JWT auth failed, trying get_current_user: {jwt_err}")
+        
+        # Fallback to get_current_user
+        if not user:
+            user = get_current_user()
+        
         if not user:
             return jsonify({'error': 'Authentication required'}), 401
         
@@ -7488,16 +7506,19 @@ def update_support_request(request_id):
         if not request_obj:
             return jsonify({'error': 'Support request not found'}), 404
         
-        # Check access - employees can update any request, assigned employees can update their client's requests
+        # Check access - admins and employees can update any request, assigned employees can update their client's requests
+        is_admin = hasattr(user, 'is_admin') and user.is_admin
         is_employee = hasattr(user, 'is_employee') and user.is_employee
-        if not is_employee and request_obj.client_id:
+        
+        # Allow admins and employees to update any request
+        if not is_admin and not is_employee and request_obj.client_id:
             # Check if user is assigned to this client
             assignment = ClientEmployeeAssignment.query.filter_by(
                 client_id=request_obj.client_id,
                 employee_id=user.id
             ).first()
             if not assignment:
-                return jsonify({'error': 'Access denied. You must be assigned to this client or be an employee.'}), 403
+                return jsonify({'error': 'Access denied. You must be assigned to this client or be an employee/admin.'}), 403
         
         data = request.get_json()
         

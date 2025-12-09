@@ -255,7 +255,9 @@ export default function SupportRequests() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update support request');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update support request' }));
+        const errorMessage = errorData.error || errorData.message || `Failed to update support request (${response.status})`;
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
