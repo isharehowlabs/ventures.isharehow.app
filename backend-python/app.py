@@ -7282,17 +7282,22 @@ def create_support_request():
         # Get client if client_id is provided
         client = None
         assigned_employee = None
+        
+        # Use explicitly provided assignedTo if available, otherwise auto-assign from client
+        assigned_to_value = data.get('assignedTo')
+        
         if data.get('clientId'):
             client = Client.query.get(data.get('clientId'))
-            if client:
-                # Find assigned employee for this client
+            if client and not assigned_to_value:
+                # Find assigned employee for this client (only if not explicitly provided)
                 assignment = ClientEmployeeAssignment.query.filter_by(
                     client_id=client.id
                 ).first()
                 if assignment:
                     assigned_employee = User.query.get(assignment.employee_id)
                     if assigned_employee:
-                        data['assignedTo'] = assigned_employee.username or assigned_employee.email or assigned_employee.name
+                        assigned_to_value = assigned_employee.username or assigned_employee.email or assigned_employee.name
+                        data['assignedTo'] = assigned_to_value
         
         # Check if payment is required for this request
         requires_payment = False
@@ -7331,7 +7336,7 @@ def create_support_request():
             description=data['description'],
             priority=data.get('priority', 'medium'),
             status='open',
-            assigned_to=data.get('assignedTo')
+            assigned_to=assigned_to_value
         )
         
         db.session.add(request_obj)
@@ -9272,10 +9277,23 @@ if DB_AVAILABLE:
             return None
         
         def to_dict(self):
-            # Count linked tasks
+            # Get linked tasks
+            linked_tasks = []
             linked_tasks_count = 0
             try:
-                linked_tasks_count = Task.query.filter_by(support_request_id=self.id).count()
+                linked_tasks_query = Task.query.filter_by(support_request_id=self.id).all()
+                linked_tasks_count = len(linked_tasks_query)
+                linked_tasks = [
+                    {
+                        'id': task.id,
+                        'title': task.title,
+                        'description': task.description,
+                        'status': task.status,
+                        'assignedTo': task.assigned_to,
+                        'assignedToName': task.assigned_to_name,
+                    }
+                    for task in linked_tasks_query
+                ]
             except Exception:
                 db.session.rollback()  # Rollback failed transaction
                 pass  # Ignore if tasks table doesn't exist or column doesn't exist
@@ -9299,6 +9317,7 @@ if DB_AVAILABLE:
                 'priority': self.priority,
                 'status': self.status,
                 'assignedTo': self.assigned_to,
+                'linkedTasks': linked_tasks,
                 'linkedTasksCount': linked_tasks_count,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
                 'updatedAt': self.updated_at.isoformat() if self.updated_at else None

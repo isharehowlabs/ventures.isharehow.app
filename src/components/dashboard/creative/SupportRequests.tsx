@@ -45,20 +45,41 @@ interface Client {
   email: string;
 }
 
+interface Employee {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'in-progress' | 'completed';
+  supportRequestId?: string;
+  assignedTo?: string;
+  assignedToName?: string;
+}
+
 interface SupportRequest {
   id: string;
   client: string;
+  clientId?: string;
   subject: string;
   status: 'open' | 'in-progress' | 'resolved';
   priority: 'low' | 'medium' | 'high';
   createdAt: string;
   description: string;
+  assignedTo?: string;
+  linkedTasks?: Task[];
 }
 
 
 export default function SupportRequests() {
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -66,6 +87,8 @@ export default function SupportRequests() {
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [editingRequest, setEditingRequest] = useState<SupportRequest | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [menuRequestId, setMenuRequestId] = useState<string | null>(null);
   const [newRequest, setNewRequest] = useState({
@@ -79,12 +102,15 @@ export default function SupportRequests() {
     description: '',
     priority: 'medium' as 'low' | 'medium' | 'high',
     status: 'open' as 'open' | 'in-progress' | 'resolved',
+    assignedTo: '',
   });
 
-  // Fetch support requests and clients on mount
+  // Fetch support requests, clients, employees, and tasks on mount
   useEffect(() => {
     fetchRequests();
     fetchClients();
+    fetchEmployees();
+    fetchTasks();
   }, []);
 
   const fetchClients = async () => {
@@ -99,6 +125,36 @@ export default function SupportRequests() {
       }
     } catch (err) {
       console.error('Error fetching clients:', err);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/creative/employees`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.employees || []);
+      }
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/tasks`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data.tasks || []);
+      }
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
     }
   };
 
@@ -138,11 +194,25 @@ export default function SupportRequests() {
   const handleEdit = (request: SupportRequest) => {
     setEditingRequest(request);
     setSelectedRequest(null);
+    
+    // Find and set the employee if assigned
+    const assignedEmployee = request.assignedTo 
+      ? employees.find(emp => emp.name === request.assignedTo || emp.email === request.assignedTo)
+      : null;
+    setSelectedEmployee(assignedEmployee || null);
+    
+    // Find and set the linked task if any
+    const linkedTask = request.linkedTasks && request.linkedTasks.length > 0
+      ? tasks.find(t => t.id === request.linkedTasks![0].id)
+      : null;
+    setSelectedTask(linkedTask || null);
+    
     setEditRequest({
       subject: request.subject,
       description: request.description,
       priority: request.priority,
       status: request.status,
+      assignedTo: request.assignedTo || '',
     });
     setDialogOpen(true);
     setMenuAnchor(null);
@@ -179,6 +249,7 @@ export default function SupportRequests() {
           description: editRequest.description,
           priority: editRequest.priority,
           status: editRequest.status,
+          assignedTo: selectedEmployee ? (selectedEmployee.name || selectedEmployee.email) : editRequest.assignedTo || null,
         }),
       });
 
@@ -187,15 +258,37 @@ export default function SupportRequests() {
       }
 
       const data = await response.json();
+      
+      // Link task if selected
+      if (selectedTask && selectedTask.id) {
+        try {
+          await fetch(`${backendUrl}/api/tasks/${selectedTask.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              supportRequestId: editingRequest.id,
+            }),
+          });
+        } catch (taskErr) {
+          console.error('Error linking task:', taskErr);
+        }
+      }
+      
       setRequests(requests.map(r => r.id === editingRequest.id ? data : r));
       setEditingRequest(null);
+      setSelectedEmployee(null);
+      setSelectedTask(null);
       setEditRequest({
         subject: '',
         description: '',
         priority: 'medium',
         status: 'open',
+        assignedTo: '',
       });
       setDialogOpen(false);
+      fetchRequests(); // Refresh to get updated data
+      fetchTasks(); // Refresh tasks
     } catch (err: any) {
       console.error('Error updating support request:', err);
       setError(err.message || 'Failed to update support request');
@@ -220,10 +313,11 @@ export default function SupportRequests() {
         credentials: 'include',
         body: JSON.stringify({
           client: selectedClient ? (selectedClient.company || selectedClient.name) : newRequest.client,
-          client_id: selectedClient?.id,
+          clientId: selectedClient?.id,
           subject: newRequest.subject,
           description: newRequest.description,
           priority: newRequest.priority,
+          assignedTo: selectedEmployee ? (selectedEmployee.name || selectedEmployee.email) : null,
         }),
       });
 
@@ -233,6 +327,23 @@ export default function SupportRequests() {
       }
 
       const data = await response.json();
+      
+      // Link task if selected
+      if (selectedTask && selectedTask.id) {
+        try {
+          await fetch(`${backendUrl}/api/tasks/${selectedTask.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              supportRequestId: data.id,
+            }),
+          });
+        } catch (taskErr) {
+          console.error('Error linking task:', taskErr);
+        }
+      }
+      
       setRequests([data, ...requests]);
       setSuccess('Support request created successfully');
       setNewRequest({
@@ -242,10 +353,14 @@ export default function SupportRequests() {
         priority: 'medium',
       });
       setSelectedClient(null);
+      setSelectedEmployee(null);
+      setSelectedTask(null);
       setDialogOpen(false);
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
+      fetchRequests(); // Refresh to get updated data
+      fetchTasks(); // Refresh tasks
     } catch (err: any) {
       console.error('Error creating support request:', err);
       setError(err.message || 'Failed to create support request');
@@ -315,6 +430,7 @@ export default function SupportRequests() {
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Client</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Subject</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Assigned To</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Priority</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Created</TableCell>
@@ -324,7 +440,7 @@ export default function SupportRequests() {
           <TableBody>
             {requests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     No support requests yet.
                   </Typography>
@@ -335,6 +451,13 @@ export default function SupportRequests() {
                 <TableRow key={request.id} hover>
                   <TableCell>{request.client}</TableCell>
                   <TableCell>{request.subject}</TableCell>
+                  <TableCell>
+                    {request.assignedTo ? (
+                      <Chip label={request.assignedTo} size="small" variant="outlined" />
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">Unassigned</Typography>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={request.status}
@@ -414,6 +537,7 @@ export default function SupportRequests() {
             description: '',
             priority: 'medium',
             status: 'open',
+            assignedTo: '',
           });
         }}
         maxWidth="md"
@@ -442,6 +566,61 @@ export default function SupportRequests() {
                 onChange={(e) =>
                   setEditRequest({ ...editRequest, description: e.target.value })
                 }
+              />
+              <FormControl fullWidth>
+                <InputLabel>Assigned Employee</InputLabel>
+                <Select
+                  value={selectedEmployee?.id || ''}
+                  label="Assigned Employee"
+                  onChange={(e) => {
+                    const emp = employees.find(em => em.id === Number(e.target.value));
+                    setSelectedEmployee(emp || null);
+                    setEditRequest({
+                      ...editRequest,
+                      assignedTo: emp ? (emp.name || emp.email) : '',
+                    });
+                  }}
+                >
+                  <MenuItem value="">Unassigned</MenuItem>
+                  {employees.map((emp) => (
+                    <MenuItem key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.email})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Autocomplete
+                fullWidth
+                options={tasks.filter(t => !t.supportRequestId || t.supportRequestId === editingRequest?.id)}
+                getOptionLabel={(option) => option.title || ''}
+                value={selectedTask}
+                onChange={(_, newValue) => {
+                  setSelectedTask(newValue);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Link Task (Optional)"
+                    placeholder="Select a task to link..."
+                    helperText="Link a task from AI Agent or Co-Work tab"
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Stack>
+                      <Typography variant="body1">{option.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.description?.substring(0, 50)}...
+                      </Typography>
+                      <Chip
+                        label={option.status}
+                        size="small"
+                        sx={{ mt: 0.5 }}
+                        color={option.status === 'completed' ? 'success' : option.status === 'in-progress' ? 'warning' : 'default'}
+                      />
+                    </Stack>
+                  </Box>
+                )}
               />
               <FormControl fullWidth>
                 <InputLabel>Priority</InputLabel>
@@ -489,6 +668,14 @@ export default function SupportRequests() {
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">
+                    Assigned To
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedRequest.assignedTo || 'Unassigned'}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
                     Subject
                   </Typography>
                   <Typography variant="body1">{selectedRequest.subject}</Typography>
@@ -499,6 +686,24 @@ export default function SupportRequests() {
                   </Typography>
                   <Typography variant="body1">{selectedRequest.description}</Typography>
                 </Box>
+                {selectedRequest.linkedTasks && selectedRequest.linkedTasks.length > 0 && (
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Linked Tasks
+                    </Typography>
+                    <Stack spacing={1}>
+                      {selectedRequest.linkedTasks.map((task) => (
+                        <Chip
+                          key={task.id}
+                          label={task.title}
+                          size="small"
+                          variant="outlined"
+                          sx={{ mr: 1, mb: 1 }}
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
                 <Stack direction="row" spacing={2}>
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary">
@@ -569,6 +774,65 @@ export default function SupportRequests() {
                 }
               />
               <FormControl fullWidth>
+                <InputLabel>Assigned Employee</InputLabel>
+                <Select
+                  value={selectedEmployee?.id || ''}
+                  label="Assigned Employee"
+                  onChange={(e) => {
+                    const emp = employees.find(em => em.id === Number(e.target.value));
+                    setSelectedEmployee(emp || null);
+                  }}
+                >
+                  <MenuItem value="">Unassigned</MenuItem>
+                  {employees.map((emp) => (
+                    <MenuItem key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.email})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Autocomplete
+                fullWidth
+                options={tasks.filter(t => !t.supportRequestId)}
+                getOptionLabel={(option) => option.title || ''}
+                value={selectedTask}
+                onChange={(_, newValue) => {
+                  setSelectedTask(newValue);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Link Task (Optional)"
+                    placeholder="Select a task to link..."
+                    helperText="Link a task from AI Agent or Co-Work tab"
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Stack>
+                      <Typography variant="body1">{option.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.description?.substring(0, 50)}...
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                        <Chip
+                          label={option.status}
+                          size="small"
+                          color={option.status === 'completed' ? 'success' : option.status === 'in-progress' ? 'warning' : 'default'}
+                        />
+                        {option.assignedToName && (
+                          <Chip
+                            label={`Assigned: ${option.assignedToName}`}
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
+                      </Stack>
+                    </Stack>
+                  </Box>
+                )}
+              />
+              <FormControl fullWidth>
                 <InputLabel>Priority</InputLabel>
                 <Select
                   value={newRequest.priority}
@@ -589,11 +853,13 @@ export default function SupportRequests() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => {
+          <Button           onClick={() => {
             setDialogOpen(false);
             setSelectedRequest(null);
             setEditingRequest(null);
             setSelectedClient(null);
+            setSelectedEmployee(null);
+            setSelectedTask(null);
             setNewRequest({
               client: '',
               subject: '',
@@ -605,6 +871,7 @@ export default function SupportRequests() {
               description: '',
               priority: 'medium',
               status: 'open',
+              assignedTo: '',
             });
           }}>
             {selectedRequest ? 'Close' : editingRequest ? 'Cancel' : 'Cancel'}
