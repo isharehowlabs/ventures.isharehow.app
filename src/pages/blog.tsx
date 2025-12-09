@@ -61,7 +61,7 @@ function PostPreview(props: BlogPost) {
           />
         ))}
       </Box>
-      <Typography component="h2" variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 1 }}>
+      <Typography component="h2" variant="h5" gutterBottom sx={{ fontWeight: 700, mb: 1.5, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
         <Link
           href={`/blog/${props.slug}`}
           style={{
@@ -73,11 +73,12 @@ function PostPreview(props: BlogPost) {
         </Link>
       </Typography>
       <Typography
-        variant="body2"
+        variant="body1"
         sx={{
           color: 'text.secondary',
           mb: 'auto',
-          lineHeight: 1.7,
+          lineHeight: 1.8,
+          fontSize: { xs: '0.95rem', md: '1rem' },
         }}
       >
         {props.description}
@@ -123,7 +124,7 @@ function PostPreview(props: BlogPost) {
       >
         <Box sx={{ position: 'relative' }}>
           {props.authors && props.authors.length > 0 && (
-            <Typography variant="body2" sx={{ fontWeight: 'medium', mb: 0.5 }}>
+            <Typography variant="body1" sx={{ fontWeight: 'medium', mb: 0.5, fontSize: { xs: '0.95rem', md: '1rem' } }}>
               {props.authors
                 .slice(0, 3)
                 .map((userId) => {
@@ -141,7 +142,7 @@ function PostPreview(props: BlogPost) {
             </Typography>
           )}
           {props.date && (
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.85rem', md: '0.9rem' } }}>
               {new Date(props.date).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
@@ -386,7 +387,8 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                   sx={{
                     color: 'text.secondary',
                     maxWidth: '700px',
-                    lineHeight: 1.7,
+                    lineHeight: 1.8,
+                    fontSize: { xs: '1rem', md: '1.1rem' },
                   }}
                 >
                   Discover insights, tutorials, and updates from our team. Learn about our services, community, and the latest in digital transformation.
@@ -468,8 +470,8 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
             <Box>
               <Typography
                 component="h2"
-                variant="h5"
-                sx={{ fontWeight: 700, mb: { xs: 2, sm: 3 }, mt: { xs: 0, md: 4 } }}
+                variant="h4"
+                sx={{ fontWeight: 700, mb: { xs: 2, sm: 3 }, mt: { xs: 0, md: 4 }, fontSize: { xs: '1.5rem', md: '2rem' } }}
               >
                 Posts{' '}
                 {Object.keys(selectedTags).length > 0 && (
@@ -537,8 +539,8 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                     <ArticleIcon sx={{ color: 'primary.main' }} />
                     <Typography
                       component="h3"
-                      variant="h6"
-                      sx={{ color: 'text.primary', fontWeight: 700 }}
+                      variant="h5"
+                      sx={{ color: 'text.primary', fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' } }}
                     >
                       Filter posts by tag
                     </Typography>
@@ -577,13 +579,13 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                 <Paper variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
                   <Typography
                     component="h3"
-                    variant="h6"
+                    variant="h5"
                     gutterBottom
-                    sx={{ color: 'text.primary', fontWeight: 700, mb: 2 }}
+                    sx={{ color: 'text.primary', fontWeight: 700, mb: 2, fontSize: { xs: '1.1rem', md: '1.25rem' } }}
                   >
                     About iShareHow Labs
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2, lineHeight: 1.7 }}>
+                  <Typography variant="body1" sx={{ color: 'text.secondary', mb: 2, lineHeight: 1.8, fontSize: { xs: '0.95rem', md: '1rem' } }}>
                     We deliver integrated Managed Services, Creative-as-a-Service, and Strategic Intelligence to help organizations achieve 30% efficiency gains.
                   </Typography>
                   <Button

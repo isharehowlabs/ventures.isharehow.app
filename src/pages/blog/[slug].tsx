@@ -182,7 +182,8 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                   variant="h6"
                   sx={{
                     color: 'text.secondary',
-                    lineHeight: 1.7,
+                    lineHeight: 1.8,
+                    fontSize: { xs: '1rem', md: '1.15rem' },
                   }}
                 >
                   {post.description}
@@ -213,7 +214,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                           );
                         })}
                       </AvatarGroup>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: { xs: '0.95rem', md: '1rem' } }}>
                         {post.authors
                           .map((userId) => AUTHORS[userId]?.name || userId)
                           .join(', ')}
@@ -223,7 +224,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                   {post.date && (
                     <Stack direction="row" spacing={1} alignItems="center">
                       <CalendarIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: { xs: '0.95rem', md: '1rem' } }}>
                         {new Date(post.date).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
@@ -273,27 +274,29 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                   sx={{
                     '& p': {
                       mb: 3,
-                      lineHeight: 1.8,
+                      lineHeight: 1.9,
                       color: 'text.primary',
+                      fontSize: { xs: '1rem', md: '1.1rem' },
                     },
                     '& h2': {
                       mt: 4,
                       mb: 2,
                       fontWeight: 700,
-                      fontSize: '1.75rem',
+                      fontSize: { xs: '1.75rem', md: '2rem' },
                     },
                     '& h3': {
                       mt: 3,
                       mb: 2,
                       fontWeight: 600,
-                      fontSize: '1.5rem',
+                      fontSize: { xs: '1.5rem', md: '1.75rem' },
                     },
                     '& ul, & ol': {
                       mb: 3,
                       pl: 4,
                       '& li': {
                         mb: 1,
-                        lineHeight: 1.8,
+                        lineHeight: 1.9,
+                        fontSize: { xs: '1rem', md: '1.1rem' },
                       },
                     },
                   }}
@@ -304,8 +307,9 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                   variant="body1"
                   sx={{
                     color: 'text.primary',
-                    lineHeight: 1.8,
+                    lineHeight: 1.9,
                     mb: 2,
+                    fontSize: { xs: '1rem', md: '1.1rem' },
                   }}
                 >
                   {post.description}
@@ -325,10 +329,10 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                   borderRadius: 2,
                 }}
               >
-                <Typography variant="h6" fontWeight={700} gutterBottom>
+                <Typography variant="h5" fontWeight={700} gutterBottom sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
                   Ready to Transform Your Business?
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, fontSize: { xs: '0.95rem', md: '1rem' } }}>
                   Join 100+ organizations achieving 30% efficiency gains with our integrated ecosystem.
                 </Typography>
                 <Button
