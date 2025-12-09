@@ -2718,6 +2718,89 @@ def verify_subscription():
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 
+@app.route('/api/hyperbeam/create-session', methods=['POST'])
+@jwt_required(optional=True)
+def create_hyperbeam_session():
+    """Create a new Hyperbeam VM session"""
+    try:
+        # Get Hyperbeam API key from environment
+        hyperbeam_key = os.environ.get('HYPERBEAM_KEY')
+        if not hyperbeam_key:
+            return jsonify({'error': 'Hyperbeam API key not configured'}), 500
+        
+        # Get parent domain from request (for iframe embedding)
+        parent_domain = request.json.get('parent') if request.json else None
+        if not parent_domain:
+            # Try to get from referer header
+            referer = request.headers.get('Referer', '')
+            if referer:
+                from urllib.parse import urlparse
+                parsed = urlparse(referer)
+                parent_domain = parsed.hostname
+        
+        # Make request to Hyperbeam API to create VM
+        headers = {
+            'Authorization': f'Bearer {hyperbeam_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Optional: Add parent domain to request if provided
+        payload = {}
+        if parent_domain:
+            payload['parent'] = parent_domain
+        
+        response = requests.post(
+            'https://engine.hyperbeam.com/v0/vm',
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            app.logger.error(f"Hyperbeam API error: {response.status_code} - {response.text}")
+            return jsonify({
+                'error': 'Failed to create Hyperbeam session',
+                'details': response.text
+            }), response.status_code
+        
+        data = response.json()
+        
+        # Extract session URL from response
+        # Hyperbeam API typically returns: { "embed_url": "...", "session_id": "...", etc. }
+        embed_url = data.get('embed_url') or data.get('url') or data.get('session_url')
+        session_id = data.get('session_id') or data.get('id')
+        
+        if not embed_url:
+            return jsonify({
+                'error': 'Invalid response from Hyperbeam API',
+                'response': data
+            }), 500
+        
+        # Add parent parameter to URL if provided
+        if parent_domain and 'parent=' not in embed_url:
+            separator = '&' if '?' in embed_url else '?'
+            embed_url = f"{embed_url}{separator}parent={parent_domain}"
+        
+        return jsonify({
+            'success': True,
+            'embedUrl': embed_url,
+            'sessionId': session_id,
+            'data': data
+        })
+        
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Hyperbeam API request error: {e}")
+        return jsonify({
+            'error': 'Failed to connect to Hyperbeam API',
+            'details': str(e)
+        }), 500
+    except Exception as e:
+        app.logger.error(f"Error creating Hyperbeam session: {e}")
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e)
+        }), 500
+
 @app.route('/api/auth/me', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def auth_me():

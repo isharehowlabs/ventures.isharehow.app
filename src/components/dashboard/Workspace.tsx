@@ -11,24 +11,53 @@ import {
 } from '@mui/material';
 import CollaborativeDrawingPad from './CollaborativeDrawingPad';
 import TasksPanel from './shared/TasksPanel';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 export default function Workspace() {
-  // Hyperbeam embed configuration
-  const baseUrl = "https://5e3drln9et7g5dz9zi8h2nkly.hyperbeam.com/Z_1SrobgS76pKHX6GaLkTw";
-  const token = "jASHNMS1E1pYOup41Jv4ntGDMXZCot_r94XOGkTPD0Q";
-  const HYPERBEAM_SESSION_ID = "67fd52ae-86e0-4bbe-a928-75fa19a2e44f";
-  const HYPERBEAM_ADMIN_TOKEN = "PYVxXA9Uiee8teWDEhZ_I2X3z6Tht7HHrxC6zec7tqM";
-  
   const [iframeError, setIframeError] = useState<string | null>(null);
   const [iframeLoading, setIframeLoading] = useState(true);
-  const [hyperbeamUrl, setHyperbeamUrl] = useState<string>(`${baseUrl}?token=${token}`);
+  const [hyperbeamUrl, setHyperbeamUrl] = useState<string | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   
-  // Update URL with parent domain once component mounts
+  // Create Hyperbeam session on component mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const parent = window.location.hostname;
-      setHyperbeamUrl(`${baseUrl}?token=${token}&parent=${parent}`);
-    }
+    const createHyperbeamSession = async () => {
+      try {
+        setSessionLoading(true);
+        const backendUrl = getBackendUrl();
+        const parent = typeof window !== 'undefined' ? window.location.hostname : '';
+        
+        const response = await fetch(`${backendUrl}/api/hyperbeam/create-session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ parent }),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.embedUrl) {
+          setHyperbeamUrl(data.embedUrl);
+          setIframeError(null);
+        } else {
+          throw new Error(data.error || 'Failed to get Hyperbeam session URL');
+        }
+      } catch (error: any) {
+        console.error('Error creating Hyperbeam session:', error);
+        setIframeError(error.message || 'Failed to create Hyperbeam session. Please try refreshing the page.');
+      } finally {
+        setSessionLoading(false);
+      }
+    };
+    
+    createHyperbeamSession();
   }, []);
 
   useEffect(() => {
@@ -79,7 +108,7 @@ export default function Workspace() {
                   {iframeError}
                 </Alert>
               )}
-              {iframeLoading && !iframeError && (
+              {(sessionLoading || iframeLoading) && !iframeError && (
                 <Box
                   sx={{
                     position: 'absolute',
@@ -87,36 +116,45 @@ export default function Workspace() {
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
                     zIndex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
                   }}
                 >
                   <CircularProgress />
+                  <Typography variant="body2" color="text.secondary">
+                    {sessionLoading ? 'Creating Hyperbeam session...' : 'Loading session...'}
+                  </Typography>
                 </Box>
               )}
-              <iframe
-                title="Hyperbeam Session"
-                src={hyperbeamUrl}
-                width="100%"
-                height="100%"
-                style={{ 
-                  border: 'none', 
-                  minHeight: 750,
-                  display: 'block',
-                  opacity: iframeLoading ? 0 : 1,
-                  transition: 'opacity 0.3s',
-                }}
-                allowFullScreen
-                allow="clipboard-read; clipboard-write; display-capture; microphone; camera; autoplay; fullscreen; geolocation; payment; usb; vr"
-                referrerPolicy="no-referrer-when-downgrade"
-                loading="eager"
-                onLoad={() => {
-                  setIframeLoading(false);
-                  setIframeError(null);
-                }}
-                onError={() => {
-                  setIframeLoading(false);
-                  setIframeError('Failed to load Hyperbeam session. The session may have expired or the URL is invalid.');
-                }}
-              />
+              {hyperbeamUrl && !sessionLoading && (
+                <iframe
+                  title="Hyperbeam Session"
+                  src={hyperbeamUrl}
+                  width="100%"
+                  height="100%"
+                  style={{ 
+                    border: 'none', 
+                    minHeight: 750,
+                    display: 'block',
+                    opacity: iframeLoading ? 0 : 1,
+                    transition: 'opacity 0.3s',
+                  }}
+                  allowFullScreen
+                  allow="clipboard-read; clipboard-write; display-capture; microphone; camera; autoplay; fullscreen; geolocation; payment; usb; vr"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  loading="eager"
+                  onLoad={() => {
+                    setIframeLoading(false);
+                    setIframeError(null);
+                  }}
+                  onError={() => {
+                    setIframeLoading(false);
+                    setIframeError('Failed to load Hyperbeam session. The session may have expired or the URL is invalid.');
+                  }}
+                />
+              )}
             </Box>
           </Paper>
         </Grid>
