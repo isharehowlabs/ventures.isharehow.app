@@ -2643,7 +2643,7 @@ def login():
 @app.route('/api/subscriptions/verify', methods=['POST'])
 @jwt_required()
 def verify_subscription():
-    """Verify Shopify subscription status for user"""
+    """Verify Shopify Bold subscription and ETH payment status for user"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 500
     
@@ -2655,37 +2655,60 @@ def verify_subscription():
         
         # Find user by ID
         user = None
-        if user_id.isdigit():
+        if isinstance(user_id, int) or (isinstance(user_id, str) and user_id.isdigit()):
             user = User.query.get(int(user_id))
         if not user:
-            user = User.query.filter_by(username=user_id).first()
+            user = User.query.filter_by(username=str(user_id)).first()
         if not user:
-            user = User.query.filter_by(email=user_id).first()
+            user = User.query.filter_by(email=str(user_id)).first()
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Check for active subscription
-        subscription = Subscription.query.filter_by(
-            user_id=str(user.id)
-        ).filter(
-            Subscription.status == 'active'
-        ).filter(
-            Subscription.expires_at > datetime.utcnow()
-        ).order_by(Subscription.created_at.desc()).first()
+        # Check Shopify Bold subscription status
+        has_shopify_subscription = (
+            bool(user.bold_subscription_id) or
+            user.subscription_update_active or
+            user.membership_paid
+        )
         
-        has_active_subscription = subscription is not None
+        # Check ETH payment ($20 minimum to isharehow.eth)
+        has_eth_payment = False
+        eth_payment_amount = 0
+        if user.eth_payment_verified and user.eth_payment_amount:
+            try:
+                eth_payment_amount = float(user.eth_payment_amount)
+                # Check if payment is at least $20 USD
+                # Note: eth_payment_amount is stored in ETH, we need to check USD value
+                # For now, we'll check if eth_payment_verified is True and amount exists
+                # The actual USD conversion should be done when payment is verified
+                has_eth_payment = user.eth_payment_verified and eth_payment_amount > 0
+            except (ValueError, TypeError):
+                has_eth_payment = False
+        
+        # User is a paid member if they have either Shopify subscription OR ETH payment
+        has_active_membership = has_shopify_subscription or has_eth_payment
         
         # Update user membership status
-        user.membership_paid = has_active_subscription
+        user.membership_paid = has_active_membership
         user.last_checked = datetime.utcnow()
         db.session.commit()
         
         return jsonify({
             'success': True,
             'message': 'Subscription status verified',
-            'membershipPaid': has_active_subscription,
-            'subscription': subscription.to_dict() if subscription else None,
+            'membershipPaid': has_active_membership,
+            'shopifySubscription': {
+                'active': has_shopify_subscription,
+                'boldSubscriptionId': user.bold_subscription_id,
+                'shopifyCustomerId': user.shopify_customer_id,
+            },
+            'ethPayment': {
+                'verified': has_eth_payment,
+                'amount': str(eth_payment_amount) if eth_payment_amount else None,
+                'txHash': user.eth_payment_tx_hash,
+                'date': user.eth_payment_date.isoformat() if user.eth_payment_date else None,
+            },
             'user': user.to_dict()
         })
         

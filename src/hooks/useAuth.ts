@@ -7,7 +7,7 @@ let globalAuthCheckPromise: Promise<void> | null = null;
 let globalAuthState: AuthState | null = null;
 let globalAuthListeners: Set<(state: AuthState) => void> = new Set();
 
-interface User {
+export interface User {
   id: string;
   userId?: string;  // Numeric database ID
   name: string;
@@ -20,6 +20,7 @@ interface User {
   patreonConnected?: boolean;
   // Subscription fields
   isPaidMember?: boolean;
+  membershipPaid?: boolean;  // Database field name for paid status
   membershipTier?: string;
   lifetimeSupportAmount?: number;
   membershipRenewalDate?: string;
@@ -27,6 +28,11 @@ interface User {
   subscriptionUpdateActive?: boolean;
   shopifyCustomerId?: string;
   boldSubscriptionId?: string;
+  // ETH payment fields
+  ethPaymentVerified?: boolean;
+  ethPaymentAmount?: string | number;
+  ethPaymentTxHash?: string;
+  ethPaymentDate?: string;
   // User roles
   isEmployee?: boolean;
   isAdmin?: boolean;

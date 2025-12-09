@@ -344,15 +344,25 @@ function ProfilePage() {
     ...(profileData || {}),
     // Ensure these critical fields are always available, prefer profileData
     id: profileData?.id || authUser?.id,
-    patreonId: profileData?.patreonId || authUser?.patreonId,
     createdAt: profileData?.createdAt || authUser?.createdAt,
     email: profileData?.email || authUser?.email,
     name: profileData?.name || authUser?.name,
     avatar: profileData?.avatar || profileData?.avatarUrl || authUser?.avatar,
     isPaidMember: profileData?.isPaidMember ?? authUser?.isPaidMember,
-    patreonConnected: profileData?.patreonConnected ?? authUser?.patreonConnected,
     isEmployee: profileData?.isEmployee ?? authUser?.isEmployee ?? false,
     isAdmin: profileData?.isAdmin ?? authUser?.isAdmin ?? false,
+    // Shopify/Bold subscription fields
+    boldSubscriptionId: profileData?.boldSubscriptionId || authUser?.boldSubscriptionId,
+    shopifyCustomerId: profileData?.shopifyCustomerId || authUser?.shopifyCustomerId,
+    subscriptionUpdateActive: profileData?.subscriptionUpdateActive ?? authUser?.subscriptionUpdateActive ?? false,
+    membershipPaid: profileData?.membershipPaid ?? authUser?.membershipPaid ?? false,
+    // ETH payment fields
+    ethPaymentVerified: profileData?.ethPaymentVerified ?? authUser?.ethPaymentVerified ?? false,
+    ethPaymentAmount: profileData?.ethPaymentAmount || authUser?.ethPaymentAmount,
+    ethPaymentTxHash: profileData?.ethPaymentTxHash || authUser?.ethPaymentTxHash,
+    ethPaymentDate: profileData?.ethPaymentDate || authUser?.ethPaymentDate,
+    // Last checked timestamp
+    lastChecked: profileData?.lastChecked || authUser?.lastChecked,
     // ENS/Web3 fields
     ensName: profileData?.ensName || authUser?.ensName,
     cryptoAddress: profileData?.cryptoAddress || authUser?.cryptoAddress,
@@ -684,12 +694,6 @@ function ProfilePage() {
                   
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Patreon ID
-                    </Typography>
-                    <Typography variant="body1">{user.patreonId || 'Not connected'}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       Member Since
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -724,17 +728,17 @@ function ProfilePage() {
                       )}
                       <Chip
                         label={
-                          user.patreonId === '56776112' ? 'Super Admin' :
+                          user.isAdmin ? 'Super Admin' :
                           user.isEmployee ? 'Staff' :
                           'Community Member'
                         }
                         color={
-                          user.patreonId === '56776112' ? 'error' :
+                          user.isAdmin ? 'error' :
                           user.isEmployee ? 'warning' :
                           'primary'
                         }
                         variant={
-                          user.patreonId === '56776112' || user.isEmployee ? 'filled' : 'outlined'
+                          user.isAdmin || user.isEmployee ? 'filled' : 'outlined'
                         }
                         size="small"
                       />
@@ -770,7 +774,7 @@ function ProfilePage() {
                         {verifyingMembership ? 'Verifying...' : 'Refresh Subscription Status'}
                       </Button>
                     </Stack>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                       {user.isEmployee && (
                         <Chip
                           label="Employee Access"
@@ -784,6 +788,22 @@ function ProfilePage() {
                         color={user.isPaidMember ? 'success' : 'default'}
                         size="small"
                       />
+                      {user.boldSubscriptionId && (
+                        <Chip
+                          label="Shopify Subscription"
+                          color="primary"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                      {user.ethPaymentVerified && (
+                        <Chip
+                          label="ETH Payment Verified"
+                          color="success"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
                     </Stack>
                     {user.lastChecked && (
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
@@ -793,31 +813,80 @@ function ProfilePage() {
                     {!user.isPaidMember && (
                       <Box sx={{ mt: 2 }}>
                         <Alert severity="info" sx={{ mb: 2 }}>
-                          Subscribe to access all dashboards and features. Monthly subscription: $17.77/month
+                          Subscribe to access all dashboards and features. Monthly subscription: $17.77/month via Shopify, or send $20 ETH to isharehow.eth
                         </Alert>
-                        <Button
-                          variant="contained"
-                          onClick={() => {
-                            // Redirect to Shopify subscription page
-                            window.location.href = 'https://shop.isharehow.app/pages/manage-subscriptions';
-                          }}
-                          sx={{
-                            bgcolor: 'primary.main',
-                            '&:hover': {
-                              bgcolor: 'primary.dark',
-                            },
-                            textTransform: 'none',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Subscribe Now
-                        </Button>
+                        <Stack direction="row" spacing={2} flexWrap="wrap">
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              window.location.href = 'https://shop.isharehow.app/pages/manage-subscriptions';
+                            }}
+                            sx={{
+                              bgcolor: 'primary.main',
+                              '&:hover': {
+                                bgcolor: 'primary.dark',
+                              },
+                              textTransform: 'none',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Subscribe via Shopify
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            onClick={() => {
+                              router.push('/link-wallet');
+                            }}
+                            sx={{
+                              textTransform: 'none',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Pay with ETH
+                          </Button>
+                        </Stack>
                       </Box>
                     )}
-                    {user.hasSubscriptionUpdate && (
-                      <Alert severity="success" sx={{ mt: 2 }}>
-                        Your subscription has been updated. {user.subscriptionUpdateActive ? 'Active' : 'Inactive'}
-                      </Alert>
+                    {/* Shopify Subscription Status */}
+                    {user.boldSubscriptionId && (
+                      <Box sx={{ mt: 2 }}>
+                        <Alert severity="success" sx={{ mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Shopify Subscription Active
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Subscription ID: {user.boldSubscriptionId}
+                            {user.shopifyCustomerId && ` • Customer ID: ${user.shopifyCustomerId}`}
+                          </Typography>
+                        </Alert>
+                      </Box>
+                    )}
+                    {/* ETH Payment Status */}
+                    {user.ethPaymentVerified && (
+                      <Box sx={{ mt: 2 }}>
+                        <Alert severity="success" sx={{ mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            ETH Payment Verified
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {user.ethPaymentAmount && `Amount: ${user.ethPaymentAmount} ETH`}
+                            {user.ethPaymentTxHash && (
+                              <>
+                                {' • '}
+                                <Link
+                                  href={`https://etherscan.io/tx/${user.ethPaymentTxHash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  sx={{ color: 'inherit', textDecoration: 'underline' }}
+                                >
+                                  View Transaction
+                                </Link>
+                              </>
+                            )}
+                            {user.ethPaymentDate && ` • Date: ${new Date(user.ethPaymentDate).toLocaleDateString()}`}
+                          </Typography>
+                        </Alert>
+                      </Box>
                     )}
                   </Box>
                   <Box>
@@ -827,54 +896,6 @@ function ProfilePage() {
                     <Typography variant="body1" sx={{ fontWeight: user.membershipTier ? 500 : 400 }}>
                       {user.membershipTier ? user.membershipTier.charAt(0).toUpperCase() + user.membershipTier.slice(1) : 'Not set'}
                     </Typography>
-                  </Box>
-                  {user.isPaidMember && user.membershipRenewalDate && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Next Renewal
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {new Date(user.membershipRenewalDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </Typography>
-                    </Box>
-                  )}
-                  {user.lifetimeSupportAmount && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                        Lifetime Support
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        ${user.lifetimeSupportAmount.toFixed(2)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Total amount supported over time
-                      </Typography>
-                    </Box>
-                  )}
-                  <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.light', borderRadius: 2 }}>
-                    <Typography variant="body2" color="primary.contrastText" sx={{ mb: 1, fontWeight: 500 }}>
-                      Support Our Mission
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      href="https://www.patreon.com/cw/JamelEliYah/membership"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        boxShadow: 2,
-                        '&:hover': { boxShadow: 4 }
-                      }}
-                      startIcon={<Settings />}
-                    >
-                      Increase Monthly Support
-                    </Button>
                   </Box>
                 </Stack>
               </Box>
