@@ -27,8 +27,8 @@ import {
 import AppShell from '../components/AppShell';
 import { getAllBlogPosts, getBlogPostBySlug, AUTHORS, BlogPost } from '../lib/blog';
 
-export const getStaticProps = () => {
-  const data = getAllBlogPosts();
+export const getStaticProps = async () => {
+  const data = await getAllBlogPosts();
   return {
     props: data,
   };

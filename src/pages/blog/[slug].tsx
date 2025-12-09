@@ -24,20 +24,20 @@ import AppShell from '../../components/AppShell';
 import { getAllBlogPosts, getBlogPostBySlug, AUTHORS } from '../../lib/blog';
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const { allBlogPosts } = getAllBlogPosts();
+  const { allBlogPosts } = await getAllBlogPosts();
   const paths = allBlogPosts.map((post) => ({
     params: { slug: post.slug },
   }));
 
   return {
     paths,
-    fallback: false,
+    fallback: 'blocking', // Use blocking fallback for better ISR support
   };
 };
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
   const slug = params?.slug as string;
-  const post = getBlogPostBySlug(slug);
+  const post = await getBlogPostBySlug(slug);
 
   if (!post) {
     return {

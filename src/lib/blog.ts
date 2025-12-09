@@ -14,74 +14,101 @@ export interface BlogData {
   tagInfo: Record<string, number>;
 }
 
-// Mock blog posts - replace with actual data source (CMS, markdown files, etc.)
-const blogPosts: BlogPost[] = [
-  {
-    slug: 'welcome-to-isharehow-blog',
-    title: 'Welcome to the iShareHow Blog',
-    description: 'Discover insights, tutorials, and updates from the iShareHow Labs team. Learn about our services, community, and the latest in digital transformation.',
-    date: '2025-01-15',
-    tags: ['announcement', 'community'],
-    authors: ['isharehow'],
-    image: '/images/blog/welcome.jpg',
-  },
-  {
-    slug: 'getting-started-with-caas',
-    title: 'Getting Started with Creative-as-a-Service',
-    description: 'Learn how our Creative-as-a-Service model can transform your business operations and help you scale without the overhead of traditional agencies.',
-    date: '2025-01-10',
-    tags: ['creative', 'services', 'tutorial'],
-    authors: ['isharehow'],
-    image: '/images/blog/caas.jpg',
-  },
-  {
-    slug: 'rise-journey-consciousness-levels',
-    title: 'Understanding the 7 Levels of Consciousness in Rise Journey',
-    description: 'Explore the seven levels of consciousness in our Rise Journey program and discover how each level contributes to your personal and professional growth.',
-    date: '2025-01-05',
-    tags: ['rise', 'wellness', 'consciousness'],
-    authors: ['isharehow'],
-    image: '/images/blog/rise.jpg',
-  },
-  {
-    slug: 'cooperation-community-building',
-    title: 'Building a Conscious Community: The iShareHow CoOperation',
-    description: 'Learn about our CoOperation model and how we\'re building a community of conscious creators who rise together.',
-    date: '2024-12-28',
-    tags: ['community', 'cooperation', 'growth'],
-    authors: ['isharehow'],
-    image: '/images/blog/cooperation.jpg',
-  },
-  {
-    slug: 'seo-prospecting-best-practices',
-    title: '10X Your SEO Prospecting: Best Practices for Agency Owners',
-    description: 'Discover proven strategies and scripts to improve your SEO prospecting and close more high-ticket clients.',
-    date: '2024-12-20',
-    tags: ['seo', 'prospecting', 'business'],
-    authors: ['isharehow'],
-    image: '/images/blog/seo.jpg',
-  },
-  {
-    slug: 'dashboard-features-overview',
-    title: 'Maximizing Your Co-Work Dashboard: Features and Tips',
-    description: 'Get the most out of your Co-Work Dashboard with these tips and tricks for collaboration and productivity.',
-    date: '2024-12-15',
-    tags: ['dashboard', 'productivity', 'tutorial'],
-    authors: ['isharehow'],
-    image: '/images/blog/dashboard.jpg',
-  },
-  {
-    slug: 'ai-content-creation-guide',
-    title: 'AI Content Creation: A Complete Guide for Modern Creators',
-    description: 'Learn how to leverage AI tools for content creation while maintaining authenticity and building your unique voice.',
-    date: '2024-12-10',
-    tags: ['ai', 'content', 'creativity'],
-    authors: ['isharehow'],
-    image: '/images/blog/ai.jpg',
-  },
-];
+// WordPress API configuration
+// Set NEXT_PUBLIC_WORDPRESS_URL in .env.local or use default
+const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://blog.isharehow.app';
+const WORDPRESS_API_BASE = `${WORDPRESS_URL}/wp-json/wp/v2`;
 
-// Author information
+// Helper function to strip HTML tags
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim();
+}
+
+// Helper function to truncate text
+function truncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength).trim() + '...';
+}
+
+// Transform WordPress post to our BlogPost format
+function transformWordPressPost(wpPost: any): BlogPost {
+  // Extract featured image
+  let featuredImage: string | null = null;
+  if (wpPost.featured_media && wpPost.featured_media > 0) {
+    // Try to get from embedded data first
+    const embeddedMedia = wpPost._embedded?.['wp:featuredmedia']?.[0];
+    if (embeddedMedia) {
+      featuredImage = embeddedMedia.source_url || embeddedMedia.media_details?.sizes?.full?.source_url || null;
+    }
+  }
+
+  // Extract tags from embedded terms
+  const tags: string[] = [];
+  
+  // Get categories (from wp:term[0] - categories)
+  if (wpPost._embedded?.['wp:term']?.[0]) {
+    wpPost._embedded['wp:term'][0].forEach((term: any) => {
+      if (term.taxonomy === 'category' && term.name) {
+        tags.push(term.name);
+      }
+    });
+  }
+  
+  // Get tags (from wp:term[1] - post_tag)
+  if (wpPost._embedded?.['wp:term']?.[1]) {
+    wpPost._embedded['wp:term'][1].forEach((term: any) => {
+      if (term.taxonomy === 'post_tag' && term.name) {
+        tags.push(term.name);
+      }
+    });
+  }
+
+  // Extract author
+  const authors: string[] = [];
+  if (wpPost._embedded?.author?.[0]) {
+    const author = wpPost._embedded.author[0];
+    authors.push(author.slug || `author-${author.id}`);
+    
+    // Store author info in AUTHORS if not already present
+    if (!AUTHORS[author.slug || `author-${author.id}`]) {
+      AUTHORS[author.slug || `author-${author.id}`] = {
+        name: author.name || 'Unknown Author',
+        avatar: author.avatar_urls?.['96'] || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name || 'Author')}&background=4B5DBD&color=fff`,
+        bio: author.description,
+      };
+    }
+  } else if (wpPost.author) {
+    // Fallback if embedded author not available
+    authors.push(`author-${wpPost.author}`);
+  }
+
+  // Extract excerpt (description) - strip HTML and truncate
+  let description = '';
+  if (wpPost.excerpt?.rendered) {
+    description = truncate(stripHtml(wpPost.excerpt.rendered), 200);
+  } else if (wpPost.excerpt) {
+    description = truncate(stripHtml(wpPost.excerpt), 200);
+  }
+
+  const result: BlogPost = {
+    slug: wpPost.slug,
+    title: wpPost.title?.rendered || wpPost.title || '',
+    description: description,
+    date: wpPost.date || wpPost.modified,
+    tags: tags,
+    authors: authors.length > 0 ? authors : ['isharehow'],
+    content: wpPost.content?.rendered || wpPost.content,
+  };
+  
+  // Only include image if it exists (null is serializable, undefined is not)
+  if (featuredImage) {
+    result.image = featuredImage;
+  }
+  
+  return result;
+}
+
+// Author information - dynamically populated from WordPress
 export const AUTHORS: Record<string, { name: string; avatar: string; bio?: string }> = {
   isharehow: {
     name: 'iShareHow Labs',
@@ -90,30 +117,86 @@ export const AUTHORS: Record<string, { name: string; avatar: string; bio?: strin
   },
 };
 
-export function getAllBlogPosts(): BlogData {
-  const allBlogPosts = [...blogPosts].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
+export async function getAllBlogPosts(): Promise<BlogData> {
+  try {
+    // Fetch posts from WordPress REST API with embedded data
+    const response = await fetch(
+      `${WORDPRESS_API_BASE}/posts?_embed&per_page=100&status=publish&orderby=date&order=desc`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-  // Calculate tag counts
-  const tagInfo: Record<string, number> = {};
-  allBlogPosts.forEach((post) => {
-    post.tags.forEach((tag) => {
-      tagInfo[tag] = (tagInfo[tag] || 0) + 1;
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    }
+
+    const wpPosts = await response.json();
+
+    // Transform WordPress posts to our format
+    const allBlogPosts = wpPosts.map(transformWordPressPost);
+
+    // Calculate tag counts
+    const tagInfo: Record<string, number> = {};
+    allBlogPosts.forEach((post) => {
+      post.tags.forEach((tag) => {
+        tagInfo[tag] = (tagInfo[tag] || 0) + 1;
+      });
     });
-  });
 
-  return {
-    allBlogPosts,
-    tagInfo,
-  };
+    return {
+      allBlogPosts,
+      tagInfo,
+    };
+  } catch (error) {
+    console.error('Error fetching blog posts from WordPress:', error);
+    
+    // Fallback to empty data
+    return {
+      allBlogPosts: [],
+      tagInfo: {},
+    };
+  }
 }
 
-export function getBlogPostBySlug(slug: string): BlogPost | undefined {
-  return blogPosts.find((post) => post.slug === slug);
+export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+  try {
+    // Fetch single post by slug
+    const response = await fetch(
+      `${WORDPRESS_API_BASE}/posts?slug=${encodeURIComponent(slug)}&_embed&status=publish`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return undefined;
+      }
+      throw new Error(`WordPress API error: ${response.status}`);
+    }
+
+    const wpPosts = await response.json();
+    
+    if (!wpPosts || wpPosts.length === 0) {
+      return undefined;
+    }
+
+    return transformWordPressPost(wpPosts[0]);
+  } catch (error) {
+    console.error('Error fetching blog post from WordPress:', error);
+    return undefined;
+  }
 }
 
-export function getBlogPostsByTag(tag: string): BlogPost[] {
-  return blogPosts.filter((post) => post.tags.includes(tag));
+export async function getBlogPostsByTag(tag: string): Promise<BlogPost[]> {
+  const data = await getAllBlogPosts();
+  return data.allBlogPosts.filter((post) => post.tags.includes(tag));
 }
 
