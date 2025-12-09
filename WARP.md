@@ -408,18 +408,15 @@ DELETE /api/tasks/<id>     - Delete task (no auth)
 
 ---
 
-## 📋 TODO: Database & Auth Rework
+## 📋 TODO: All Incomplete Tasks
 
-### Immediate Actions (This Session)
-- [x] Document current state in WARP.md
+### Database & Auth Rework
 - [ ] Create database schema diagram
 - [ ] List all tables and relationships
 - [ ] Identify data to migrate vs drop
 - [ ] Draft new User model schema
 - [ ] Plan migration sequence
 - [ ] Estimate breaking changes for frontend
-
-### Next Steps
 - [ ] Review and approve new schema design
 - [ ] Write Alembic migration scripts
 - [ ] Create data migration utilities
@@ -430,6 +427,95 @@ DELETE /api/tasks/<id>     - Delete task (no auth)
 - [ ] Deploy to staging
 - [ ] Test end-to-end
 - [ ] Deploy to production
+
+### Web3 Wallet & Multi-Auth - Frontend Implementation (PENDING)
+- [ ] Create `src/hooks/useWalletConnect.ts` - Connect to MetaMask, sign messages, handle account/chain changes
+- [ ] Update `src/hooks/useAuth.ts` - Add `loginWithWallet()`, `registerWithWallet()`, `linkWallet()`, `loginWithGoogle()`
+- [ ] Create `src/components/auth/WalletLoginButton.tsx` - "Connect Wallet" UI, nonce flow, signature signing, registration form
+- [ ] Create `src/components/auth/GoogleLoginButton.tsx` - "Sign in with Google" button, OAuth redirect
+- [ ] Update Login Page - Add wallet connect option, Google login option, "OR" divider
+- [ ] Create `src/pages/link-wallet.tsx` - For logged-in users to link wallet, Settings page integration
+
+### Web3 Wallet & Multi-Auth - Testing
+- [ ] Test wallet nonce generation
+- [ ] Test signature verification
+- [ ] Test wallet login (existing user)
+- [ ] Test wallet registration (new user)
+- [ ] Test wallet linking
+- [ ] Test Google OAuth flow
+- [ ] Test trial creation
+- [ ] Test tier access checks
+- [ ] Test upgrade options
+- [ ] Test MetaMask connection
+- [ ] Test sign message with MetaMask
+- [ ] Test complete wallet login flow
+- [ ] Test complete wallet registration flow
+- [ ] Test complete Google OAuth flow
+- [ ] Test trial expiration enforcement
+- [ ] Test dashboard access gating
+- [ ] Test support request limiting
+
+### Web3 Features - Missing Implementation
+- [ ] Implement `/api/web3/balance` endpoint - Referenced in Web3Panel but doesn't exist
+- [ ] Implement `/api/web3/transactions` endpoint - Referenced in Web3Panel but doesn't exist
+- [ ] Implement `/api/web3/price` endpoint - Referenced in Web3Panel but doesn't exist
+- [ ] Implement wallet-based authentication - "Sign in with Ethereum" button, message signing for login verification
+- [ ] Implement nonce generation for wallet auth
+- [ ] Implement signature verification endpoint
+- [ ] Implement wallet connection in auth flow - Wallet connect button on login page, link wallet to existing account
+- [ ] Implement ENS record writing - `set_ens_content_hash()` is currently a stub, needs wallet integration
+- [ ] Implement endpoint to update ENS records
+- [ ] Implement wallet transaction signing for on-chain updates
+- [ ] Implement smart contract integration - ABIs, contract interaction endpoints, token gating
+- [ ] Implement multi-chain support - Polygon, Arbitrum, Base, etc., chain switching, multi-wallet support
+
+### Sales Funnel Redesign - Launch Checklist
+- [ ] Add real client logos
+- [ ] Add video testimonials
+- [ ] Implement heatmapping
+
+### Creative Services Page - Launch Checklist
+- [ ] Test on mobile devices
+- [ ] Verify all links functional
+- [ ] Check animation performance
+- [ ] Validate contact email works
+- [ ] Test tier 3 signup flow
+- [ ] Review copy for typos
+- [ ] Optimize meta tags
+- [ ] Set up analytics tracking
+- [ ] Configure conversion goals
+- [ ] Test cross-browser compatibility
+
+### LookUp.Cafe - Production Enhancements
+- [ ] Add Redis for persistent room storage
+- [ ] Implement word database for drawing game
+- [ ] Add chat system for player communication
+- [ ] Create leaderboards for competitive play
+- [ ] Add more game types (trivia, word games, etc.)
+- [ ] Mobile app for better mobile experience
+- [ ] Voice chat integration
+- [ ] Analytics for game metrics
+
+### User Tier System - Integration
+- [ ] Integrate with wallet auth system
+- [ ] Integrate with Shopify Bold API
+- [ ] Implement ETH payment auto-detection
+- [ ] Implement subscription management dashboard
+- [ ] Create admin panel for user management
+- [ ] Implement data migration script for existing users
+
+### Shopify Integration
+- [ ] Complete Shopify webhook logic (fields exist but webhook logic incomplete)
+- [ ] Test Shopify subscription sync
+- [ ] Implement subscription cancellation handling
+- [ ] Implement subscription upgrade/downgrade flows
+
+### Environment Variables Setup
+- [ ] Set ALCHEMY_API_KEY in production
+- [ ] Set GOOGLE_CLIENT_ID in production
+- [ ] Set GOOGLE_CLIENT_SECRET in production
+- [ ] Set ISHAREHOW_ETH_ADDRESS with actual address
+- [ ] Set ENS_PROVIDER_URL with real Infura key (currently placeholder)
 
 ---
 

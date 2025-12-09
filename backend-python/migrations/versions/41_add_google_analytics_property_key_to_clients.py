@@ -1,6 +1,6 @@
 """Add google_analytics_property_key column to clients table
 
-Revision ID: 41_add_google_analytics_property_key
+Revision ID: 41_add_ga_property_key
 Revises: 40_add_marketing_budget
 Create Date: 2025-01-XX XX:XX:XX.XXXXXX
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '41_add_google_analytics_property_key'
+revision = '41_add_ga_property_key'  # Shortened to fit 32 char limit
 down_revision = '40_add_marketing_budget'
 branch_labels = None
 depends_on = None
