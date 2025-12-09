@@ -14,9 +14,6 @@ import {
   InputLabel,
   Slider,
   Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   IconButton,
   TextField,
   Tabs,
@@ -31,17 +28,15 @@ import {
 import {
   Settings as SettingsIcon,
   Dashboard as DashboardIcon,
-  ViewModule as ViewModuleIcon,
-  ExpandMore,
   Refresh,
   RestartAlt,
   AdminPanelSettings as AdminPanelSettingsIcon,
   Notifications as NotificationsIcon,
-  Brush as CreativeIcon,
   People as PeopleIcon,
   Assignment as AssignmentIcon,
   VpnKey as VpnKeyIcon,
   Close as CloseIcon,
+  Article as ArticleIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -50,16 +45,10 @@ import { getBackendUrl } from '../utils/backendUrl';
 import AdminClientAssignmentDialog from '../components/dashboard/creative/AdminClientAssignmentDialog';
 import { useRouter } from 'next/router';
 
-const PANEL_LABELS: Record<string, string> = {
-  streaming: 'Streaming Panel',
-  figma: 'Designs & Code Panel',
-  docs: 'Documents Panel',
-  // web3: 'Web3 Panel', // Removed - ENS info now in profile page
-};
 
 function SettingsPage() {
   const router = useRouter();
-  const { settings, updateDashboardSettings, updatePanelSettings, updateApiKeys, resetSettings } = useSettings();
+  const { settings, updateDashboardSettings, updateApiKeys, resetSettings } = useSettings();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -92,55 +81,126 @@ function SettingsPage() {
     fetchProfile();
   }, []);
   const [showResetAlert, setShowResetAlert] = useState(false);
-  const [panelOrders, setPanelOrders] = useState<Record<string, number>>(() => {
-    const orders: Record<string, number> = {};
-    Object.entries(settings.panels).forEach(([key, config]) => {
-      orders[key] = config.order;
-    });
-    return orders;
-  });
-
-  // Sync panel orders when settings change
-  useEffect(() => {
-    const orders: Record<string, number> = {};
-    Object.entries(settings.panels).forEach(([key, config]) => {
-      orders[key] = config.order;
-    });
-    setPanelOrders(orders);
-  }, [settings.panels]);
+  const [blogRefreshLoading, setBlogRefreshLoading] = useState(false);
+  const [blogRefreshSuccess, setBlogRefreshSuccess] = useState<string | null>(null);
+  const [blogRefreshError, setBlogRefreshError] = useState<string | null>(null);
 
   const handleReset = () => {
     resetSettings();
     setShowResetAlert(true);
     setTimeout(() => setShowResetAlert(false), 3000);
-    
-    // Reset panel orders state
-    const defaultOrders: Record<string, number> = {};
-    Object.entries(settings.panels).forEach(([key, config]) => {
-      defaultOrders[key] = config.order;
-    });
-    setPanelOrders(defaultOrders);
   };
 
-  const handlePanelOrderChange = (panelKey: string, newOrder: number) => {
-    const oldOrder = panelOrders[panelKey];
-    
-    // Find the panel that currently has the target order
-    const swapKey = Object.entries(panelOrders).find(
-      ([k, o]) => k !== panelKey && o === newOrder
-    )?.[0];
-    
-    // Update both panels' orders
-    const updatedOrders = { ...panelOrders };
-    updatedOrders[panelKey] = newOrder;
-    if (swapKey) {
-      updatedOrders[swapKey] = oldOrder;
-      updatePanelSettings(swapKey as any, { order: oldOrder });
+  const handleRefreshBlogPosts = async () => {
+    setBlogRefreshLoading(true);
+    setBlogRefreshError(null);
+    setBlogRefreshSuccess(null);
+
+    try {
+      const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://blog.isharehow.app';
+      const WORDPRESS_API_BASE = `${WORDPRESS_URL}/wp-json/wp/v2`;
+
+      // Fetch posts from WordPress
+      const response = await fetch(
+        `${WORDPRESS_API_BASE}/posts?_embed&per_page=100&status=publish&orderby=date&order=desc`
+      );
+
+      if (!response.ok) {
+        throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+      }
+
+      const wpPosts = await response.json();
+
+      // Transform and store in localStorage
+      const transformedPosts = wpPosts.map((wpPost: any) => {
+        // Extract featured image
+        let featuredImage: string | null = null;
+        if (wpPost.featured_media && wpPost.featured_media > 0) {
+          const embeddedMedia = wpPost._embedded?.['wp:featuredmedia']?.[0];
+          if (embeddedMedia) {
+            featuredImage = embeddedMedia.source_url || embeddedMedia.media_details?.sizes?.full?.source_url || null;
+          }
+        }
+
+        // Extract tags
+        const tags: string[] = [];
+        if (wpPost._embedded?.['wp:term']?.[0]) {
+          wpPost._embedded['wp:term'][0].forEach((term: any) => {
+            if (term.taxonomy === 'category' && term.name) {
+              tags.push(term.name);
+            }
+          });
+        }
+        if (wpPost._embedded?.['wp:term']?.[1]) {
+          wpPost._embedded['wp:term'][1].forEach((term: any) => {
+            if (term.taxonomy === 'post_tag' && term.name) {
+              tags.push(term.name);
+            }
+          });
+        }
+
+        // Extract author
+        const authors: string[] = [];
+        if (wpPost._embedded?.author?.[0]) {
+          const author = wpPost._embedded.author[0];
+          authors.push(author.slug || `author-${author.id}`);
+        }
+
+        // Extract excerpt
+        let description = '';
+        if (wpPost.excerpt?.rendered) {
+          description = wpPost.excerpt.rendered.replace(/<[^>]*>/g, '').trim();
+          if (description.length > 200) {
+            description = description.substring(0, 200).trim() + '...';
+          }
+        }
+
+        const post: any = {
+          slug: wpPost.slug,
+          title: wpPost.title?.rendered || wpPost.title || '',
+          description: description,
+          date: wpPost.date || wpPost.modified,
+          tags: tags,
+          authors: authors.length > 0 ? authors : ['isharehow'],
+          content: wpPost.content?.rendered || wpPost.content,
+        };
+
+        if (featuredImage) {
+          post.image = featuredImage;
+        }
+
+        return post;
+      });
+
+      // Calculate tag counts
+      const tagInfo: Record<string, number> = {};
+      transformedPosts.forEach((post: any) => {
+        post.tags.forEach((tag: string) => {
+          tagInfo[tag] = (tagInfo[tag] || 0) + 1;
+        });
+      });
+
+      // Store in localStorage
+      localStorage.setItem('blogPosts', JSON.stringify(transformedPosts));
+      localStorage.setItem('blogTagInfo', JSON.stringify(tagInfo));
+      localStorage.setItem('blogPostsLastRefresh', new Date().toISOString());
+
+      // Dispatch custom event to notify blog page (same tab)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('blogPostsRefreshed'));
+      }
+
+      setBlogRefreshSuccess(`Successfully refreshed ${transformedPosts.length} blog posts!`);
+      setTimeout(() => setBlogRefreshSuccess(null), 5000);
+    } catch (error: any) {
+      console.error('Error refreshing blog posts:', error);
+      setBlogRefreshError(error.message || 'Failed to refresh blog posts');
+      setTimeout(() => setBlogRefreshError(null), 5000);
+    } finally {
+      setBlogRefreshLoading(false);
     }
-    
-    setPanelOrders(updatedOrders);
-    updatePanelSettings(panelKey as any, { order: newOrder });
   };
+
 
   const handleSendNotification = async () => {
     if (!notificationTitle.trim() || !notificationMessage.trim()) {
@@ -428,7 +488,6 @@ function SettingsPage() {
         <Paper elevation={2} sx={{ mb: 3 }}>
           <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
             <Tab label="General" icon={<SettingsIcon />} iconPosition="start" />
-            <Tab label="Creative" icon={<CreativeIcon />} iconPosition="start" />
             {isAdmin && <Tab label="Admin" icon={<AdminPanelSettingsIcon />} iconPosition="start" />}
           </Tabs>
         </Paper>
@@ -474,89 +533,51 @@ function SettingsPage() {
           </Stack>
         </Paper>
 
-        {/* Panel Settings */}
-        <Paper elevation={2} sx={{ p: 4, mb: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-            <ViewModuleIcon color="primary" />
+        {/* Blog Refresh */}
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+            <ArticleIcon color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Component Panel Settings
+              Blog Management
             </Typography>
           </Stack>
-
-          <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 2 }} />
+          
+          {blogRefreshSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setBlogRefreshSuccess(null)}>
+              {blogRefreshSuccess}
+            </Alert>
+          )}
+          
+          {blogRefreshError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setBlogRefreshError(null)}>
+              {blogRefreshError}
+            </Alert>
+          )}
 
           <Stack spacing={2}>
-            {Object.entries(settings.panels).map(([key, config]) => (
-              <Accordion key={key} defaultExpanded={key === 'streaming'}>
-                <AccordionSummary expandIcon={<ExpandMore />}>
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', pr: 2 }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={config.visible}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            updatePanelSettings(key as any, { visible: e.target.checked });
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      }
-                      label={PANEL_LABELS[key] || key}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Box sx={{ flexGrow: 1 }} />
-                    <Typography variant="caption" color="text.secondary">
-                      Order: {config.order + 1}
-                    </Typography>
-                    {/* Web3 Panel removed - ENS info now in profile page */}
-                  </Stack>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Stack spacing={2}>
-                    <Box>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        Panel Order (1-{Object.keys(settings.panels).length})
-                      </Typography>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={panelOrders[key] === 0}
-                          onClick={() => {
-                            const newOrder = Math.max(0, panelOrders[key] - 1);
-                            handlePanelOrderChange(key, newOrder);
-                          }}
-                        >
-                          ↑ Move Up
-                        </Button>
-                        <TextField
-                          type="number"
-                          size="small"
-                          value={panelOrders[key] + 1}
-                          onChange={(e) => {
-                            const newOrder = Math.max(0, Math.min(Object.keys(settings.panels).length - 1, Number(e.target.value) - 1));
-                            handlePanelOrderChange(key, newOrder);
-                          }}
-                          inputProps={{ min: 1, max: Object.keys(settings.panels).length }}
-                          sx={{ width: 80 }}
-                        />
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={panelOrders[key] === Object.keys(settings.panels).length - 1}
-                          onClick={() => {
-                            const newOrder = Math.min(Object.keys(settings.panels).length - 1, panelOrders[key] + 1);
-                            handlePanelOrderChange(key, newOrder);
-                          }}
-                        >
-                          ↓ Move Down
-                        </Button>
-                      </Stack>
-                    </Box>
-                  </Stack>
-                </AccordionDetails>
-              </Accordion>
-            ))}
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                Refresh Blog Posts
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Manually fetch the latest blog posts from WordPress without rebuilding the site. The refreshed posts will be available immediately on the blog page.
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={blogRefreshLoading ? <CircularProgress size={20} /> : <Refresh />}
+                onClick={handleRefreshBlogPosts}
+                disabled={blogRefreshLoading}
+              >
+                {blogRefreshLoading ? 'Refreshing...' : 'Refresh Blog Posts'}
+              </Button>
+            </Box>
+            {typeof window !== 'undefined' && localStorage.getItem('blogPostsLastRefresh') && (
+              <Typography variant="caption" color="text.secondary">
+                Last refreshed: {new Date(localStorage.getItem('blogPostsLastRefresh') || '').toLocaleString()}
+              </Typography>
+            )}
           </Stack>
         </Paper>
 
@@ -584,13 +605,8 @@ function SettingsPage() {
           </Box>
         )}
 
-        {/* Creative Settings Tab */}
-        {activeTab === 1 && (
-          <CreativeSettingsTab />
-        )}
-
         {/* Admin Tab */}
-        {activeTab === 2 && isAdmin && (
+        {activeTab === 1 && isAdmin && (
           <Box>
             {/* Notification System */}
             <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
@@ -677,71 +693,6 @@ function SettingsPage() {
               </Stack>
             </Paper>
 
-            {/* Q&A Moderation Section */}
-            <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-                <SettingsIcon sx={{ color: 'gold', fontSize: 32 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
-                  Community Q&A Moderation
-                </Typography>
-              </Stack>
-              <Divider sx={{ mb: 3, borderColor: 'gold' }} />
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                Review, approve, or remove questions and answers. Set question visibility duration. Manage categories and highlight featured questions. Bulk moderation and audit logging supported.
-              </Typography>
-              <Stack spacing={2}>
-                <Button variant="contained" color="primary">Review Pending Questions</Button>
-                <Button variant="contained" color="secondary">Manage Answers</Button>
-                <Button variant="contained" color="info">Bulk Moderation</Button>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Typography variant="body2" sx={{ color: 'gold', minWidth: 180 }}>
-                    Set Question Visibility (hours):
-                  </Typography>
-                  <TextField type="number" size="small" defaultValue={48} inputProps={{ min: 1, max: 168 }} sx={{ width: 100 }} />
-                  <Button variant="outlined" color="success">Update</Button>
-                </Stack>
-                <Button variant="outlined" color="warning">Manage Categories</Button>
-                <Button variant="outlined" color="secondary">Bulk Category Management</Button>
-              </Stack>
-              <Divider sx={{ my: 3, borderColor: 'gold' }} />
-              {/* Audit Logging Section */}
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold', mb: 2 }}>
-                Audit Log (Render)
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                All admin actions are logged for review and compliance. Logs are available in the Render dashboard.
-              </Typography>
-              <Paper variant="outlined" sx={{ p: 2, background: 'rgba(255,255,224,0.15)', border: '1px solid gold' }}>
-                <Typography variant="body2" color="gold">
-                  {/* Example log entries - replace with real log data */}
-                  [2025-11-22 10:15] Admin Jane approved question #123<br />
-                  [2025-11-22 10:16] Admin Jane removed answer #456<br />
-                  [2025-11-22 10:17] Admin Jane updated category "Streaming"<br />
-                  [2025-11-22 10:18] Admin Jane performed bulk moderation<br />
-                </Typography>
-              </Paper>
-            </Paper>
-            
-            {/* Employee Management and Client Assignment moved to Creative Dashboard */}
-            <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-                <AdminPanelSettingsIcon sx={{ color: 'gold', fontSize: 32 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'gold' }}>
-                  Employee & Client Management
-                </Typography>
-              </Stack>
-              <Divider sx={{ mb: 3, borderColor: 'gold' }} />
-              <Typography variant="body1" sx={{ mb: 3 }}>
-                Employee Management and Client Assignment Management have been moved to the Creative Dashboard for better organization.
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<CreativeIcon />}
-                onClick={() => router.push('/creative')}
-              >
-                Go to Creative Dashboard
-              </Button>
-            </Paper>
           </Box>
         )}
       </Box>
@@ -831,92 +782,6 @@ function SettingsPage() {
   );
 }
 
-// Creative Settings Tab Component
-function CreativeSettingsTab() {
-  return (
-    <Box>
-      <Typography variant="h5" fontWeight={700} gutterBottom>
-        Creative Settings
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Configure default settings for the Creative Dashboard and client management
-      </Typography>
-
-      <Stack spacing={3}>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            Default Client Permissions
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Set default permissions for new clients when they are added to the system.
-          </Typography>
-          <FormControlLabel
-            control={<Switch defaultChecked />}
-            label="Auto-enable Co-Work Dashboard access"
-          />
-          <FormControlLabel
-            control={<Switch defaultChecked />}
-            label="Auto-enable RISE Dashboard access"
-          />
-          <FormControlLabel
-            control={<Switch />}
-            label="Require email verification before activation"
-          />
-        </Paper>
-
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            Notification Preferences
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Choose what notifications you want to receive for client activities.
-          </Typography>
-          <FormControlLabel
-            control={<Switch defaultChecked />}
-            label="Notify on new client sign-ups"
-          />
-          <FormControlLabel
-            control={<Switch defaultChecked />}
-            label="Notify on support requests"
-          />
-          <FormControlLabel
-            control={<Switch />}
-            label="Notify on client dashboard activity"
-          />
-        </Paper>
-
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            Analytics Integration
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Configure Google Analytics integration for client project tracking.
-          </Typography>
-          <Button variant="outlined" sx={{ mt: 1 }}>
-            Connect Google Analytics
-          </Button>
-        </Paper>
-
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            Employee Assignment
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Manage default employee assignments and sorting preferences.
-          </Typography>
-          <FormControlLabel
-            control={<Switch defaultChecked />}
-            label="Auto-assign clients based on workload"
-          />
-          <FormControlLabel
-            control={<Switch defaultChecked />}
-            label="Allow employees to sort their own projects"
-          />
-        </Paper>
-      </Stack>
-    </Box>
-  );
-}
 
 function App() {
   return (

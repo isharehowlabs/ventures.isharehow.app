@@ -25,7 +25,7 @@ import {
   Article as ArticleIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
-import { getAllBlogPosts, getBlogPostBySlug, AUTHORS, BlogPost } from '../lib/blog';
+import { getAllBlogPosts, getBlogPostBySlug, AUTHORS, BlogPost, BlogData } from '../lib/blog';
 
 export const getStaticProps = async () => {
   const data = await getAllBlogPosts();
@@ -181,8 +181,94 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
   const postListRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const [selectedTags, setSelectedTags] = useState<Record<string, boolean>>({});
+  
+  // Initialize blogData from localStorage if available, otherwise use props
+  const getInitialBlogData = (): BlogData => {
+    if (typeof window !== 'undefined') {
+      const cachedPosts = localStorage.getItem('blogPosts');
+      const cachedTagInfo = localStorage.getItem('blogTagInfo');
+      
+      if (cachedPosts && cachedTagInfo) {
+        try {
+          const posts = JSON.parse(cachedPosts);
+          const tagInfo = JSON.parse(cachedTagInfo);
+          return { allBlogPosts: posts, tagInfo };
+        } catch (error) {
+          console.error('Error parsing cached blog posts:', error);
+        }
+      }
+    }
+    return props;
+  };
 
-  const { allBlogPosts, tagInfo: rawTagInfo } = props;
+  const [blogData, setBlogData] = useState<BlogData>(getInitialBlogData());
+
+  // Check localStorage for cached blog posts on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cachedPosts = localStorage.getItem('blogPosts');
+      const cachedTagInfo = localStorage.getItem('blogTagInfo');
+      
+      if (cachedPosts && cachedTagInfo) {
+        try {
+          const posts = JSON.parse(cachedPosts);
+          const tagInfo = JSON.parse(cachedTagInfo);
+          setBlogData({ allBlogPosts: posts, tagInfo });
+        } catch (error) {
+          console.error('Error parsing cached blog posts:', error);
+        }
+      }
+    }
+  }, []);
+
+  // Listen for storage events to update when blog is refreshed from settings
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'blogPosts' || e.key === 'blogTagInfo') {
+          const cachedPosts = localStorage.getItem('blogPosts');
+          const cachedTagInfo = localStorage.getItem('blogTagInfo');
+          
+          if (cachedPosts && cachedTagInfo) {
+            try {
+              const posts = JSON.parse(cachedPosts);
+              const tagInfo = JSON.parse(cachedTagInfo);
+              setBlogData({ allBlogPosts: posts, tagInfo });
+            } catch (error) {
+              console.error('Error parsing cached blog posts:', error);
+            }
+          }
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Also listen for custom event (for same-tab updates)
+      const handleCustomStorage = () => {
+        const cachedPosts = localStorage.getItem('blogPosts');
+        const cachedTagInfo = localStorage.getItem('blogTagInfo');
+        
+        if (cachedPosts && cachedTagInfo) {
+          try {
+            const posts = JSON.parse(cachedPosts);
+            const tagInfo = JSON.parse(cachedTagInfo);
+            setBlogData({ allBlogPosts: posts, tagInfo });
+          } catch (error) {
+            console.error('Error parsing cached blog posts:', error);
+          }
+        }
+      };
+
+      window.addEventListener('blogPostsRefreshed', handleCustomStorage);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('blogPostsRefreshed', handleCustomStorage);
+      };
+    }
+  }, []);
+
+  const { allBlogPosts, tagInfo: rawTagInfo } = blogData;
   const [firstPost, secondPost, ...otherPosts] = allBlogPosts;
 
   // Calculate tag info excluding featured posts

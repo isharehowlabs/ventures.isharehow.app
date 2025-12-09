@@ -65,9 +65,58 @@ interface BlogPostPageProps {
   };
 }
 
-export default function BlogPostPage({ post }: BlogPostPageProps) {
+export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [post, setPost] = React.useState(staticPost);
+
+  // Check localStorage for cached post on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cachedPosts = localStorage.getItem('blogPosts');
+      
+      if (cachedPosts) {
+        try {
+          const posts = JSON.parse(cachedPosts);
+          const cachedPost = posts.find((p: any) => p.slug === staticPost.slug);
+          if (cachedPost) {
+            setPost(cachedPost);
+          }
+        } catch (error) {
+          console.error('Error parsing cached blog posts:', error);
+        }
+      }
+    }
+  }, [staticPost.slug]);
+
+  // Listen for storage events to update when blog is refreshed
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleStorageChange = () => {
+        const cachedPosts = localStorage.getItem('blogPosts');
+        
+        if (cachedPosts) {
+          try {
+            const posts = JSON.parse(cachedPosts);
+            const cachedPost = posts.find((p: any) => p.slug === staticPost.slug);
+            if (cachedPost) {
+              setPost(cachedPost);
+            }
+          } catch (error) {
+            console.error('Error parsing cached blog posts:', error);
+          }
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('blogPostsRefreshed', handleStorageChange);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('blogPostsRefreshed', handleStorageChange);
+      };
+    }
+  }, [staticPost.slug]);
 
   return (
     <>

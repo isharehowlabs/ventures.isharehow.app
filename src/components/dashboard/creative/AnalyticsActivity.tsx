@@ -112,26 +112,35 @@ export default function AnalyticsActivity() {
         </Alert>
       )}
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2" fontWeight={600} gutterBottom>
-          Google Analytics Integration
-        </Typography>
-        <Typography variant="body2">
-          Connect your Google Analytics account to import project data for clients.
-          Analytics data will be automatically synced and displayed here.
-        </Typography>
-        <Button
-          size="small"
-          variant="outlined"
-          sx={{ mt: 1 }}
-          onClick={() => {
-            // TODO: Open Google Analytics OAuth flow
-            console.log('Connect Google Analytics');
-          }}
-        >
-          Connect Google Analytics
-        </Button>
-      </Alert>
+      <Paper elevation={2} sx={{ p: 3, mb: 3, bgcolor: 'primary.main', color: 'white' }}>
+        <Stack spacing={2}>
+          <Typography variant="h6" fontWeight={700}>
+            Google Analytics Integration
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9 }}>
+            Connect your Google Analytics account to import project data for clients.
+            Analytics data will be automatically synced and displayed here.
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            sx={{
+              bgcolor: 'white',
+              color: 'primary.main',
+              alignSelf: 'flex-start',
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+              },
+            }}
+            onClick={() => {
+              // TODO: Open Google Analytics OAuth flow
+              console.log('Connect Google Analytics');
+            }}
+          >
+            Connect Google Analytics
+          </Button>
+        </Stack>
+      </Paper>
 
       {/* Client Selector */}
       <Paper sx={{ p: 2, mb: 3 }}>
