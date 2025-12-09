@@ -610,6 +610,59 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
               </Box>
             </Box>
           </Container>
+
+          {/* Ad Block */}
+          <Container maxWidth="lg" sx={{ py: 6 }}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                border: `1px solid ${theme.palette.divider}`,
+                textAlign: 'center',
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(75, 93, 189, 0.1) 0%, rgba(107, 125, 215, 0.05) 100%)'
+                  : 'linear-gradient(135deg, rgba(75, 93, 189, 0.05) 0%, rgba(107, 125, 215, 0.02) 100%)',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  mb: 2,
+                  color: 'text.secondary',
+                  textTransform: 'uppercase',
+                  letterSpacing: 1,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                }}
+              >
+                Advertisement
+              </Typography>
+              <Box
+                sx={{
+                  minHeight: { xs: 100, sm: 250, md: 300 },
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                  borderRadius: 1,
+                  border: `1px dashed ${theme.palette.divider}`,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: { xs: '0.85rem', md: '0.95rem' },
+                  }}
+                >
+                  Ad Space Available
+                </Typography>
+              </Box>
+            </Paper>
+          </Container>
         </Box>
       </AppShell>
     </>
