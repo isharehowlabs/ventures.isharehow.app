@@ -20,6 +20,10 @@ import {
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   ArrowForward as ArrowForwardIcon,
+  VideoLibrary as VideoIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  RocketLaunch as RocketLaunchIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 
 export default function ProspectingPage() {
@@ -259,6 +263,99 @@ export default function ProspectingPage() {
 
               <Divider sx={{ my: 3 }} />
 
+              {/* AI Content Manager - The Complete Package */}
+              <Box
+                sx={{
+                  p: 4,
+                  borderRadius: 3,
+                  background: isDark
+                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)'
+                    : 'linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
+                  border: `2px solid ${theme.palette.primary.main}40`,
+                  mb: 3,
+                }}
+              >
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                  <AutoAwesomeIcon sx={{ fontSize: 32, color: 'primary.main' }} />
+                  <Typography variant="h5" fontWeight={800} sx={{ color: 'primary.main' }}>
+                    🎯 What Completes the Package
+                  </Typography>
+                </Stack>
+                <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mb: 2 }}>
+                  AI Content Manager: Your 24/7 Creative Engine for Viral Videos
+                </Typography>
+                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.8 }}>
+                  Tired of Staring at a Blank Screen? Imagine churning out scroll-stopping videos for TikTok, Instagram Reels, and YouTube Shorts—without scripting, shooting, or editing for hours. That&apos;s the magic of AI Content Manager, the SaaS powerhouse that turns your wild ideas into polished, engagement-exploding content in minutes. Like Revid AI on steroids, but built for creators who demand total control and infinite scale.
+                </Typography>
+
+                <Grid container spacing={3} sx={{ mb: 3 }}>
+                  {[
+                    {
+                      icon: <RocketLaunchIcon sx={{ fontSize: 28 }} />,
+                      title: 'Instant Video Magic',
+                      description: 'Drop a text prompt, blog link, tweet, or podcast URL—boom. Our AI analyzes 5M+ viral trends, auto-generates killer scripts, hooks, and visuals. No more "writer\'s block" or clunky editors.',
+                    },
+                    {
+                      icon: <VideoIcon sx={{ fontSize: 28 }} />,
+                      title: 'Voice & Avatar Wizards',
+                      description: 'Choose from 100+ hyper-realistic voices (male, female, accents galore) and AI influencers that look and sound like you. Record once, remix forever—perfect for faceless videos or branded avatars.',
+                    },
+                    {
+                      icon: <TrendingUpIcon sx={{ fontSize: 28 }} />,
+                      title: 'One-Click Publishing Power',
+                      description: 'Optimized for every platform. Export watermark-free, SEO-boosted shorts ready to post. Plus, auto-scheduling and A/B testing to skyrocket your reach.',
+                    },
+                    {
+                      icon: <AutoAwesomeIcon sx={{ fontSize: 28 }} />,
+                      title: 'Autopilot Mode',
+                      description: 'Set it and forget it. 5 smart "workers" crank out 10+ videos weekly while you sip coffee. Wake up to a content calendar full of fire.',
+                    },
+                  ].map((feature, index) => (
+                    <Grid item xs={12} sm={6} key={index}>
+                      <Card elevation={1} sx={{ height: '100%', bgcolor: 'background.paper' }}>
+                        <CardContent sx={{ p: 3 }}>
+                          <Box sx={{ color: 'primary.main', mb: 1.5 }}>
+                            {feature.icon}
+                          </Box>
+                          <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mb: 1 }}>
+                            {feature.title}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
+                            {feature.description}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+
+                <Card
+                  elevation={2}
+                  sx={{
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    p: 3,
+                    borderRadius: 2,
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      fontStyle: 'italic',
+                      mb: 1,
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    &quot;I went from 1 video a week to 20—and my follower count exploded. AI Content Manager isn&apos;t a tool; it&apos;s my unfair advantage.&quot;
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600} sx={{ opacity: 0.95 }}>
+                    – Journey Through Consciousness, TikTok Influencer with 50K+ followers
+                  </Typography>
+                </Card>
+              </Box>
+
+              <Divider sx={{ my: 3 }} />
+
               <Box
                 sx={{
                   display: 'flex',
@@ -281,7 +378,7 @@ export default function ProspectingPage() {
                   Flash Price: Just $97
                 </Typography>
                 <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-                  You Save $400 + Get $1,491 in Bonuses
+                  You Save $400 + Get $1,491 in Bonuses + AI Content Manager Access
                 </Typography>
               </Box>
             </CardContent>

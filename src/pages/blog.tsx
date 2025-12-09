@@ -382,11 +382,6 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
           >
             <Container maxWidth="lg">
               <Stack spacing={2} alignItems="center" textAlign="center">
-                <Chip
-                  label="Blog"
-                  color="primary"
-                  sx={{ mb: 2, fontWeight: 700, fontSize: '0.9rem', py: 2.5 }}
-                />
                 <Typography
                   variant="h2"
                   component="h1"
