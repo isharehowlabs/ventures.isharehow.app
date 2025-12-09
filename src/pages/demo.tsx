@@ -1,18 +1,73 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Container,
   Typography,
   Button,
   Stack,
+  Divider,
 } from '@mui/material';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import AppShell from '../components/AppShell';
 import BookDemoForm from '../components/demo/BookDemoForm';
+import { ServiceFinderQuiz } from '../components/landing/ServiceFinderQuiz';
+import { creativeQuizData } from '../data/creativeQuizData';
+import { useStickyState } from '../hooks/useStickyState';
+import { ServiceScore } from '../types/landing';
+
+// Pricing tier info for quiz recommendations
+const pricingTierInfo = [
+  { id: 'essential', name: 'Essential', price: 2500 },
+  { id: 'growth', name: 'Growth', price: 5000 },
+  { id: 'premium', name: 'Premium', price: 8000 },
+  { id: 'enterprise', name: 'Enterprise', price: 12000 },
+];
 
 export default function BookDemoPage() {
   const router = useRouter();
+  const [quizStep, setQuizStep] = useStickyState<number>("creativeQuizStep", 0);
+  const [answers, setAnswers] = useStickyState<Record<string, number>>(
+    "creativeQuizAnswers",
+    {}
+  );
+
+  // Calculate recommended tiers based on quiz answers
+  const getRecommendedTiers = useMemo((): ServiceScore[] => {
+    const scores: Record<string, number> = {
+      essential: 0,
+      growth: 0,
+      premium: 0,
+      enterprise: 0,
+    };
+
+    Object.keys(answers).forEach((qid) => {
+      const question = creativeQuizData.find((q) => q.id === qid);
+      if (!question) return;
+      const answer = question.options[answers[qid]];
+      if (answer && answer.scores) {
+        Object.entries(answer.scores).forEach(([key, value]) => {
+          scores[key] = (scores[key] || 0) + (value ?? 0);
+        });
+      }
+    });
+
+    return Object.entries(scores)
+      .sort(([, a], [, b]) => b - a)
+      .filter(([, score]) => score > 0)
+      .slice(0, 3)
+      .map(([key]) => {
+        const tier = pricingTierInfo.find(t => t.id === key);
+        return {
+          key: key as any,
+          name: tier?.name || key,
+          description: `Recommended tier based on your needs - $${tier?.price.toLocaleString()}/mo`,
+          score: scores[key],
+          icon: '✨',
+          includes: [],
+        };
+      });
+  }, [answers]);
 
   return (
     <>
@@ -56,6 +111,46 @@ export default function BookDemoPage() {
                 Fill out the form below to schedule a personalized demo and explore our dashboards, AI tools, and see how we can help transform your business.
               </Typography>
             </Box>
+
+            {/* Creative as a Service Quiz */}
+            <Box sx={{ mb: 8 }} id="quiz">
+              <ServiceFinderQuiz
+                quizStep={quizStep}
+                answers={answers}
+                onAnswer={(qid, opt) => setAnswers((prev) => ({ ...prev, [qid]: opt }))}
+                onNext={() => {
+                  if (quizStep < creativeQuizData.length - 1) {
+                    setQuizStep(quizStep + 1);
+                  } else {
+                    const resultsElement = document.getElementById('results');
+                    if (resultsElement) {
+                      resultsElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }
+                }}
+                onPrev={() => {
+                  if (quizStep > 0) {
+                    setQuizStep(quizStep - 1);
+                  }
+                }}
+                onReset={() => {
+                  setQuizStep(0);
+                  setAnswers({});
+                  const quizElement = document.getElementById('quiz');
+                  if (quizElement) {
+                    quizElement.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                quizData={creativeQuizData}
+                topServices={getRecommendedTiers}
+                onNav={(view) => {
+                  const element = document.getElementById(view);
+                  if (element) element.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+            </Box>
+
+            <Divider sx={{ my: 8 }} />
 
             {/* Book Demo Form */}
             <Box sx={{ mb: 8 }}>

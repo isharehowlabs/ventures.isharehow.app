@@ -6,6 +6,12 @@ export type ServiceKey =
   | "support"
   | "platform";
 
+export type TierKey =
+  | "essential"
+  | "growth"
+  | "premium"
+  | "enterprise";
+
 export interface Service {
   name: string;
   icon: string;
@@ -16,7 +22,7 @@ export interface Service {
 export interface QuizOption {
   text: string;
   description: string;
-  scores: Partial<Record<ServiceKey, number>>;
+  scores: Partial<Record<ServiceKey | TierKey, number>>;
 }
 
 export interface QuizQuestion {
@@ -27,7 +33,7 @@ export interface QuizQuestion {
 }
 
 export interface ServiceScore extends Service {
-  key: ServiceKey;
+  key: ServiceKey | TierKey;
   score: number;
 }
 

@@ -25,10 +25,15 @@ import { PricingTier } from './PricingTierCard';
 
 export interface Feature {
   name: string;
-  starter: string | boolean;
-  professional: string | boolean;
-  enterprise: string | boolean;
+  essential?: string | boolean;
+  growth?: string | boolean;
+  premium?: string | boolean;
+  enterprise?: string | boolean;
+  // Legacy support
+  starter?: string | boolean;
+  professional?: string | boolean;
   category?: string;
+  [key: string]: string | boolean | undefined;
 }
 
 interface FeatureComparisonTableProps {
