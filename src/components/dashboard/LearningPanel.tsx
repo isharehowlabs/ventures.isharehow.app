@@ -37,7 +37,6 @@ import {
   Note as NoteIcon,
   Build as BuildIcon,
 } from '@mui/icons-material';
-import SEOProspectingBuilder from './creative/SEOProspectingBuilder';
 import type { SvgIconComponent } from '@mui/icons-material';
 
 interface LearningContent {
@@ -339,7 +338,6 @@ export default function LearningPanel() {
   const subtabMap: Record<string, number> = {
     courses: 0,
     pdfs: 1,
-    tools: 2,
   };
 
   // Initialize subtab from URL query parameter
@@ -447,12 +445,6 @@ export default function LearningPanel() {
               label="PDFs"
               sx={{ textTransform: 'none', fontWeight: 600 }}
             />
-            <Tab
-              icon={<BuildIcon />}
-              iconPosition="start"
-              label="Tools"
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            />
           </Tabs>
         </Box>
 
@@ -517,9 +509,6 @@ export default function LearningPanel() {
           </Stack>
         </TabPanel>
 
-        <TabPanel value={activeTab} index={2}>
-          <SEOProspectingBuilder />
-        </TabPanel>
       </Stack>
 
       {/* Expanded Video/Class Dialog with Notes */}

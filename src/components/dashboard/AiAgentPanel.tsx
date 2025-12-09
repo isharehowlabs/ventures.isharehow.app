@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useSettings } from '../../hooks/useSettings';
 import TasksPanel from './shared/TasksPanel';
+import SEOProspectingBuilder from './creative/SEOProspectingBuilder';
 
 // Optional imports for Figma/MCP features
 let useFigmaHook: any = null;
@@ -329,9 +330,9 @@ export default function AiAgentPanel() {
           <TasksPanel height={600} />
         </Grid>
 
-        {/* Design & Figma Section */}
-        <Grid item xs={12} md={4}>
-          <Paper elevation={2} sx={{ p: 3, height: 600, display: 'flex', flexDirection: 'column' }}>
+        {/* Design & Figma Section - Large Card */}
+        <Grid item xs={12} md={8}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h5" fontWeight={700}>Design & Figma</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -438,9 +439,9 @@ export default function AiAgentPanel() {
           </Paper>
         </Grid>
 
-        {/* AI Agent Content Manager Section */}
-        <Grid item xs={12} md={4}>
-          <Paper elevation={2} sx={{ p: 3, height: 600, display: 'flex', flexDirection: 'column' }}>
+        {/* AI Agent Content Manager Section - Large Card */}
+        <Grid item xs={12} md={8}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
               <AiAgentIcon sx={{ fontSize: 32, color: 'primary.main' }} />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
@@ -629,6 +630,13 @@ export default function AiAgentPanel() {
                 </Box>
               )}
             </Box>
+          </Paper>
+        </Grid>
+
+        {/* Tools Section - Large Card */}
+        <Grid item xs={12}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
+            <SEOProspectingBuilder />
           </Paper>
         </Grid>
       </Grid>

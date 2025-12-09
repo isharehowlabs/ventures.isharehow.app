@@ -23,10 +23,11 @@ import {
   Brush as CreativeIcon,
   LiveTv as LiveIcon,
   SportsEsports as GamesIcon,
+  School as LearningHubIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog';
+type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub';
 
 interface NavigationItem {
   key: NavKey;
@@ -105,6 +106,13 @@ const navigationItems: NavigationItem[] = [
     icon: <CreativeIcon />,
     authRequired: true,
     dividerAfter: true,
+  },
+  {
+    key: 'learning-hub',
+    label: 'Learning Hub',
+    href: '/learning-hub',
+    icon: <LearningHubIcon />,
+    authRequired: false,
   },
   {
     key: 'profile',

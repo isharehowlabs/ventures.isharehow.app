@@ -27,7 +27,6 @@ import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import DashboardMetrics from './DashboardMetrics';
 import { getBackendUrl } from '../../utils/backendUrl';
-import LearningPanel from './LearningPanel';
 import AiAgentPanel from './AiAgentPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
 import { useAuth } from '../../hooks/useAuth';
@@ -82,8 +81,7 @@ export default function CreativeDashboardPanel() {
     analytics: 1,
     support: 2,
     match: 3,
-    learning: 4,
-    ai: 5,
+    ai: 4,
   };
 
   // Initialize tab from URL query parameter
@@ -172,18 +170,11 @@ export default function CreativeDashboardPanel() {
               aria-controls="creative-tabpanel-3"
             />
             <Tab
-              icon={<SchoolIcon />}
-              iconPosition="start"
-              label="Learning Hub"
-              id="creative-tab-4"
-              aria-controls="creative-tabpanel-4"
-            />
-            <Tab
               icon={<SmartToyIcon />}
               iconPosition="start"
               label="AI Agent"
-              id="creative-tab-5"
-              aria-controls="creative-tabpanel-5"
+              id="creative-tab-4"
+              aria-controls="creative-tabpanel-4"
             />
           </Tabs>
         </Container>
@@ -205,9 +196,6 @@ export default function CreativeDashboardPanel() {
             <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
           </TabPanel>
           <TabPanel value={activeTab} index={4}>
-            <LearningPanel />
-          </TabPanel>
-          <TabPanel value={activeTab} index={5}>
             <AiAgentPanel />
           </TabPanel>
         </Container>
