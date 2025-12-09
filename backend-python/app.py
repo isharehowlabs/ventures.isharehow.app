@@ -7481,26 +7481,25 @@ def update_support_request(request_id):
         return jsonify({'error': 'Database not available'}), 503
     
     try:
-        # Try to get user from JWT first
-        user = None
-        try:
-            user_id = get_jwt_identity()
-            if user_id:
-                if str(user_id).isdigit():
-                    user = User.query.get(int(user_id))
-                if not user:
-                    user = User.query.filter_by(username=str(user_id)).first()
-                if not user:
-                    user = User.query.filter_by(email=str(user_id)).first()
-        except Exception as jwt_err:
-            app.logger.debug(f"JWT auth failed, trying get_current_user: {jwt_err}")
-        
-        # Fallback to get_current_user
+        # Get current user for authentication - try get_current_user first (more reliable)
+        user = get_current_user()
         if not user:
-            user = get_current_user()
-        
-        if not user:
-            return jsonify({'error': 'Authentication required'}), 401
+            # Try to get user from JWT
+            try:
+                user_id = get_jwt_identity()
+                if user_id:
+                    if str(user_id).isdigit():
+                        user = User.query.get(int(user_id))
+                    if not user:
+                        user = User.query.filter_by(username=str(user_id)).first()
+                    if not user:
+                        user = User.query.filter_by(patreon_id=str(user_id)).first()
+            except Exception as e:
+                db.session.rollback()  # Rollback failed transaction
+                app.logger.debug(f"Could not get user from JWT: {e}")
+            
+            if not user:
+                return jsonify({'error': 'Authentication required'}), 401
         
         request_obj = SupportRequest.query.get(request_id)
         if not request_obj:

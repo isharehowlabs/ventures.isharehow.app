@@ -203,7 +203,7 @@ export default function SupportRequests() {
     setSelectedEmployee(assignedEmployee || null);
     
     // Find and set the linked task if any
-    const linkedTask = request.linkedTasks && request.linkedTasks.length > 0
+    const linkedTask = request.linkedTasks && request.linkedTasks.length > 0 && request.linkedTasks[0]?.id
       ? tasks.find(t => t.id === request.linkedTasks![0].id)
       : null;
     setSelectedTask(linkedTask || null);
@@ -232,16 +232,19 @@ export default function SupportRequests() {
   };
 
   const handleUpdate = async () => {
-    if (!editingRequest || !editRequest.subject || !editRequest.description) {
+    if (!editingRequest || !editingRequest.id || !editRequest.subject || !editRequest.description) {
       setError('Subject and description are required');
       return;
     }
+
+    // Store the request ID before async operations
+    const requestId = editingRequest.id;
 
     setLoading(true);
     setError(null);
     try {
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/creative/support-requests/${editingRequest.id}`, {
+      const response = await fetch(`${backendUrl}/api/creative/support-requests/${requestId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -263,14 +266,14 @@ export default function SupportRequests() {
       const data = await response.json();
       
       // Link task if selected
-      if (selectedTask && selectedTask.id) {
+      if (selectedTask && selectedTask.id && requestId) {
         try {
           await fetch(`${backendUrl}/api/tasks/${selectedTask.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-              supportRequestId: editingRequest.id,
+              supportRequestId: requestId,
             }),
           });
         } catch (taskErr) {
@@ -278,7 +281,7 @@ export default function SupportRequests() {
         }
       }
       
-      setRequests(requests.map(r => r.id === editingRequest.id ? data : r));
+      setRequests(requests.map(r => r.id === requestId ? data : r));
       setEditingRequest(null);
       setSelectedEmployee(null);
       setSelectedTask(null);
@@ -332,7 +335,7 @@ export default function SupportRequests() {
       const data = await response.json();
       
       // Link task if selected
-      if (selectedTask && selectedTask.id) {
+      if (selectedTask && selectedTask.id && data && data.id) {
         try {
           await fetch(`${backendUrl}/api/tasks/${selectedTask.id}`, {
             method: 'PUT',
