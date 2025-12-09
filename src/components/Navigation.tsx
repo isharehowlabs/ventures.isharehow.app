@@ -88,9 +88,9 @@ const navigationItems: NavigationItem[] = [
   {
     key: 'labs',
     label: 'Co-Work Dashboard',
-    href: '/labs',
+    href: '/creative?tab=cowork',
     icon: <LabsIcon />,
-    authRequired: false, // Public but enhanced when authenticated
+    authRequired: true, // Now part of Creative Dashboard which requires auth
   },
   {
     key: 'rise',

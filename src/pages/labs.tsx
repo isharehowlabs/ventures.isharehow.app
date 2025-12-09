@@ -1,38 +1,34 @@
-import { Box, Typography } from '@mui/material';
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import Workspace from '../components/dashboard/Workspace';
-import FloatingAIChat from '../components/dashboard/FloatingAIChat';
 
 function LabsDashboard() {
-  return (
-    <AppShell active="labs">
-      {/* Header Section */}
-      <Box sx={{ p: { xs: 2, sm: 3 }, pb: 1 }}>
-        <Typography variant="h4" fontWeight={800} gutterBottom>
-          Labs Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Collaborate, code, and create together with your team
-        </Typography>
-      </Box>
+  const router = useRouter();
 
-      {/* Main Workspace Content - Single Scroll Grid Layout */}
-      <Box 
-        sx={{ 
-          px: { xs: 2, sm: 3 }, 
-          pb: 3, 
-          flexGrow: 1, 
-          display: 'flex', 
+  useEffect(() => {
+    // Redirect to Creative Dashboard with Co-Work tab
+    router.replace('/creative?tab=cowork');
+  }, [router]);
+
+  return (
+    <AppShell active="creative">
+      <Box
+        sx={{
+          display: 'flex',
           flexDirection: 'column',
-          overflow: 'auto'
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '50vh',
+          gap: 2,
         }}
       >
-        <Workspace />
+        <CircularProgress />
+        <Typography variant="body1" color="text.secondary">
+          Redirecting to Creative Dashboard...
+        </Typography>
       </Box>
-
-      {/* Floating AI Chat */}
-      <FloatingAIChat />
     </AppShell>
   );
 }

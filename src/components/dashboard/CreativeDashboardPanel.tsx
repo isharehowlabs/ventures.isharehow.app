@@ -21,6 +21,7 @@ import {
   SmartToy as SmartToyIcon,
   TrendingUp as TrendingUpIcon,
   AdminPanelSettings as AdminPanelSettingsIcon,
+  Science as LabsIcon,
 } from '@mui/icons-material';
 import AddClientDialog from './creative/AddClientDialog';
 import AnalyticsActivity from './creative/AnalyticsActivity';
@@ -29,6 +30,8 @@ import DashboardMetrics from './DashboardMetrics';
 import { getBackendUrl } from '../../utils/backendUrl';
 import AiAgentPanel from './AiAgentPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
+import Workspace from './Workspace';
+import FloatingAIChat from './FloatingAIChat';
 import { useAuth } from '../../hooks/useAuth';
 
 interface TabPanelProps {
@@ -81,7 +84,8 @@ export default function CreativeDashboardPanel() {
     analytics: 1,
     support: 2,
     match: 3,
-    ai: 4,
+    cowork: 4,
+    ai: 5,
   };
 
   // Initialize tab from URL query parameter
@@ -170,11 +174,18 @@ export default function CreativeDashboardPanel() {
               aria-controls="creative-tabpanel-3"
             />
             <Tab
+              icon={<LabsIcon />}
+              iconPosition="start"
+              label="Co-Work"
+              id="creative-tab-4"
+              aria-controls="creative-tabpanel-4"
+            />
+            <Tab
               icon={<SmartToyIcon />}
               iconPosition="start"
               label="AI Agent"
-              id="creative-tab-4"
-              aria-controls="creative-tabpanel-4"
+              id="creative-tab-5"
+              aria-controls="creative-tabpanel-5"
             />
           </Tabs>
         </Container>
@@ -196,6 +207,9 @@ export default function CreativeDashboardPanel() {
             <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
           </TabPanel>
           <TabPanel value={activeTab} index={4}>
+            <CoWorkTab />
+          </TabPanel>
+          <TabPanel value={activeTab} index={5}>
             <AiAgentPanel />
           </TabPanel>
         </Container>
@@ -206,6 +220,37 @@ export default function CreativeDashboardPanel() {
         open={addClientOpen}
         onClose={() => setAddClientOpen(false)}
       />
+
+      {/* Floating AI Chat - Available in Co-Work tab */}
+      {activeTab === 4 && <FloatingAIChat />}
+    </Box>
+  );
+}
+
+// Co-Work Tab Component
+function CoWorkTab() {
+  return (
+    <Box>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" fontWeight={700} gutterBottom>
+          Co-Work Dashboard
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Collaborate, code, and create together with your team
+        </Typography>
+      </Box>
+
+      {/* Main Workspace Content */}
+      <Box 
+        sx={{ 
+          flexGrow: 1, 
+          display: 'flex', 
+          flexDirection: 'column',
+          overflow: 'auto'
+        }}
+      >
+        <Workspace />
+      </Box>
     </Box>
   );
 }
