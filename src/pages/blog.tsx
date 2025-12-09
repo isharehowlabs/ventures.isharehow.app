@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import { getAllBlogPosts, getBlogPostBySlug, AUTHORS, BlogPost, BlogData } from '../lib/blog';
+import { decodeHtmlEntities } from '../utils/htmlEntities';
 
 export const getStaticProps = async () => {
   const data = await getAllBlogPosts();
@@ -69,7 +70,7 @@ function PostPreview(props: BlogPost) {
             textDecoration: 'none',
           }}
         >
-          {props.title}
+          {decodeHtmlEntities(props.title)}
         </Link>
       </Typography>
       <Typography
@@ -81,7 +82,7 @@ function PostPreview(props: BlogPost) {
           fontSize: { xs: '0.95rem', md: '1rem' },
         }}
       >
-        {props.description}
+        {decodeHtmlEntities(props.description)}
       </Typography>
       {props.authors && props.authors.length > 0 && (
         <AvatarGroup

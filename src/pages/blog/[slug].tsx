@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import AppShell from '../../components/AppShell';
 import { getAllBlogPosts, getBlogPostBySlug, AUTHORS } from '../../lib/blog';
+import { decodeHtmlEntities, decodeHtmlEntitiesInHtml } from '../../utils/htmlEntities';
 
 export const getStaticPaths: GetStaticPaths = async () => {
   const { allBlogPosts } = await getAllBlogPosts();
@@ -175,7 +176,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                     lineHeight: 1.2,
                   }}
                 >
-                  {post.title}
+                  {decodeHtmlEntities(post.title)}
                 </Typography>
 
                 <Typography
@@ -186,7 +187,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                     fontSize: { xs: '1rem', md: '1.15rem' },
                   }}
                 >
-                  {post.description}
+                  {decodeHtmlEntities(post.description)}
                 </Typography>
 
                 <Stack direction="row" spacing={3} alignItems="center" sx={{ flexWrap: 'wrap' }}>
@@ -300,7 +301,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                       },
                     },
                   }}
-                  dangerouslySetInnerHTML={{ __html: post.content }}
+                  dangerouslySetInnerHTML={{ __html: decodeHtmlEntitiesInHtml(post.content) }}
                 />
               ) : (
                 <Typography
@@ -312,7 +313,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
                     fontSize: { xs: '1rem', md: '1.1rem' },
                   }}
                 >
-                  {post.description}
+                  {decodeHtmlEntities(post.description)}
                 </Typography>
               )}
 

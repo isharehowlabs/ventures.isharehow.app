@@ -16,6 +16,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { PlayArrow as PlayIcon, Share as ShareIcon } from '@mui/icons-material';
+import { decodeHtmlEntities } from '../utils/htmlEntities';
 
 interface ContentItem {
   id: string;
@@ -345,7 +346,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
                 color: 'text.primary',
               }}
             >
-              {content.title}
+              {decodeHtmlEntities(content.title)}
             </Typography>
             <Typography
               variant="body2"
@@ -358,7 +359,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
                 overflow: 'hidden',
               }}
             >
-              {content.description}
+              {decodeHtmlEntities(content.description)}
             </Typography>
             {isVenturePartnership && (
               <Chip
