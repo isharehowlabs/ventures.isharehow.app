@@ -25,6 +25,7 @@ import { getTasksSocket } from '../../utils/socket';
 import { Socket } from 'socket.io-client';
 import { useWorkspaceUsers } from '../../hooks/useWorkspaceUsers';
 import { useAuth } from '../../hooks/useAuth';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 interface DrawingStroke {
   points: number[];
@@ -34,6 +35,12 @@ interface DrawingStroke {
   timestamp: number;
 }
 
+interface Employee {
+  id: number;
+  name: string;
+  email: string;
+}
+
 interface CollaborativeDrawingPadProps {
   height?: number;
 }
@@ -41,6 +48,40 @@ interface CollaborativeDrawingPadProps {
 export default function CollaborativeDrawingPad({ height = 500 }: CollaborativeDrawingPadProps) {
   const { user } = useAuth();
   const { users: workspaceUsers } = useWorkspaceUsers();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  
+  // Combine workspace users and employees for assignment options
+  const assigneeOptions = React.useMemo(() => {
+    const workspaceUserOptions = workspaceUsers.map(u => ({ id: String(u.id), name: u.name || u.email || 'Unknown' }));
+    const employeeOptions = employees.map(e => ({ id: String(e.id), name: `${e.name} (${e.email})` }));
+    
+    // Merge and deduplicate by id
+    const allOptions = [...workspaceUserOptions, ...employeeOptions];
+    const uniqueOptions = allOptions.filter((option, index, self) => 
+      index === self.findIndex(o => o.id === option.id)
+    );
+    return uniqueOptions;
+  }, [workspaceUsers, employees]);
+  
+  // Fetch employees from database
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const backendUrl = getBackendUrl();
+        const response = await fetch(`${backendUrl}/api/creative/employees`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setEmployees(data.employees || []);
+        }
+      } catch (err) {
+        console.error('Error fetching employees:', err);
+      }
+    };
+    
+    fetchEmployees();
+  }, []);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const isDrawingRef = useRef(false);
@@ -382,7 +423,7 @@ export default function CollaborativeDrawingPad({ height = 500 }: CollaborativeD
       {/* User Assignment */}
       <Box sx={{ mb: 2 }}>
         <Autocomplete
-          options={workspaceUsers}
+          options={assigneeOptions}
           getOptionLabel={(option) => option.name}
           value={assignedUser}
           onChange={(_, newValue) => {
@@ -400,7 +441,7 @@ export default function CollaborativeDrawingPad({ height = 500 }: CollaborativeD
               size="small"
               label="Assign Co-Drawer (Optional)"
               variant="outlined"
-              helperText="Assign another user to collaborate on this drawing"
+              helperText="Select from active workspace users or all employees"
             />
           )}
         />

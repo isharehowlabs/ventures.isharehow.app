@@ -59,6 +59,12 @@ interface TasksPanelProps {
   height?: number | string;
 }
 
+interface Employee {
+  id: number;
+  name: string;
+  email: string;
+}
+
 export default function TasksPanel({ height = 500 }: TasksPanelProps) {
   const { user } = useAuth();
   const { users: workspaceUsers } = useWorkspaceUsers();
@@ -85,6 +91,40 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
   );
   const [supportRequests, setSupportRequests] = useState<SupportRequest[]>([]);
   const [loadingSupportRequests, setLoadingSupportRequests] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  
+  // Combine workspace users and employees for assignment options
+  const assigneeOptions = React.useMemo(() => {
+    const workspaceUserOptions = workspaceUsers.map(u => ({ id: String(u.id), name: u.name || u.email || 'Unknown' }));
+    const employeeOptions = employees.map(e => ({ id: String(e.id), name: `${e.name} (${e.email})` }));
+    
+    // Merge and deduplicate by id
+    const allOptions = [...workspaceUserOptions, ...employeeOptions];
+    const uniqueOptions = allOptions.filter((option, index, self) => 
+      index === self.findIndex(o => o.id === option.id)
+    );
+    return uniqueOptions;
+  }, [workspaceUsers, employees]);
+  
+  // Fetch employees from database
+  React.useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const backendUrl = getBackendUrl();
+        const response = await fetch(`${backendUrl}/api/creative/employees`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setEmployees(data.employees || []);
+        }
+      } catch (err) {
+        console.error('Error fetching employees:', err);
+      }
+    };
+    
+    fetchEmployees();
+  }, []);
 
   // Fetch support requests for task linking
   React.useEffect(() => {
@@ -430,7 +470,7 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
             sx={{ mb: 2 }}
           />
           <Autocomplete
-            options={workspaceUsers}
+            options={assigneeOptions}
             getOptionLabel={(option) => option.name}
             value={selectedAssignee}
             onChange={(_, newValue) => setSelectedAssignee(newValue)}
@@ -440,6 +480,7 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
                 margin="dense"
                 label="Assign To (Optional)"
                 variant="outlined"
+                helperText="Select from active workspace users or all employees"
               />
             )}
             sx={{ mb: 2 }}
