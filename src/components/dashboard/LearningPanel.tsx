@@ -402,7 +402,7 @@ export default function LearningPanel() {
       <Stack spacing={4}>
         <Box>
           <Chip
-            label="Learning Hub"
+            label="Learning Dashboard"
             color="primary"
             icon={<SchoolOutlined fontSize="small" />}
             sx={{ fontWeight: 700, mb: 2, alignSelf: 'flex-start' }}
@@ -418,7 +418,7 @@ export default function LearningPanel() {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            Your Learning Hub
+            Your Learning Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
             Access your courses and video classes all in one place. Click any class to watch in a larger view and take notes.

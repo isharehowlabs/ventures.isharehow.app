@@ -100,19 +100,19 @@ const navigationItems: NavigationItem[] = [
     authRequired: false, // Public but enhanced when authenticated
   },
   {
+    key: 'learning-hub',
+    label: 'Learning Dashboard',
+    href: '/learning-hub',
+    icon: <LearningHubIcon />,
+    authRequired: false, // Public but enhanced when authenticated
+  },
+  {
     key: 'creative',
     label: 'Creative Dashboard',
     href: '/creative',
     icon: <CreativeIcon />,
     authRequired: true,
     dividerAfter: true,
-  },
-  {
-    key: 'learning-hub',
-    label: 'Learning Hub',
-    href: '/learning-hub',
-    icon: <LearningHubIcon />,
-    authRequired: false,
   },
   {
     key: 'profile',
