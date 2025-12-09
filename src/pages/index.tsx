@@ -43,6 +43,9 @@ import {
   ContactSupport as ContactSupportIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
   Launch as LaunchIcon,
+  DesignServices as DesignIcon,
+  Code as CodeIcon,
+  Palette as PaletteIcon,
 } from '@mui/icons-material';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -50,6 +53,7 @@ import AppShell from '../components/AppShell';
 import PricingTierCard, { PricingTier } from '../components/pricing/PricingTierCard';
 import PricingToggle from '../components/pricing/PricingToggle';
 import FeatureComparisonTable, { Feature } from '../components/pricing/FeatureComparisonTable';
+import BeforeAfterMockup from '../components/landing/BeforeAfterMockup';
 import { useStickyState } from '../hooks/useStickyState';
 import styles from '../styles/landing/LandingPage.module.css';
 
@@ -407,37 +411,122 @@ const HomePage = () => {
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
           {/* Hero Section - Premium Sales Funnel Style */}
           <Box className={styles.heroSection}>
+            {/* Floating Visual Elements */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '10%',
+                right: '5%',
+                width: { xs: 100, md: 200 },
+                height: { xs: 100, md: 200 },
+                opacity: 0.2,
+                animation: 'float 6s ease-in-out infinite',
+                zIndex: 0,
+              }}
+            >
+              <DesignIcon sx={{ fontSize: 'inherit', width: '100%', height: '100%', color: 'white' }} />
+            </Box>
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: '15%',
+                left: '5%',
+                width: { xs: 80, md: 150 },
+                height: { xs: 80, md: 150 },
+                opacity: 0.15,
+                animation: 'float 8s ease-in-out infinite',
+                animationDelay: '1s',
+                zIndex: 0,
+              }}
+            >
+              <CodeIcon sx={{ fontSize: 'inherit', width: '100%', height: '100%', color: 'white' }} />
+            </Box>
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                right: '15%',
+                width: { xs: 60, md: 120 },
+                height: { xs: 60, md: 120 },
+                opacity: 0.1,
+                animation: 'float 7s ease-in-out infinite',
+                animationDelay: '2s',
+                zIndex: 0,
+              }}
+            >
+              <PaletteIcon sx={{ fontSize: 'inherit', width: '100%', height: '100%', color: 'white' }} />
+            </Box>
+
             <Container maxWidth="lg" className={styles.heroContent}>
-              <Typography
-                variant="h1"
-                className={styles.heroTitle}
-                sx={{
-                  fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem', lg: '4rem' },
-                  mb: 3,
-                  lineHeight: 1.2,
-                }}
-              >
-                Transform Your Business with Managed Solutions That Scale
-              </Typography>
-              <Typography
-                variant="h2"
-                className={styles.heroSubtitle}
-                sx={{
-                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-                  mb: 2,
-                }}
-              >
-                Stop Juggling Complex IT. Start Scaling with Confidence.
-              </Typography>
-              <Typography
-                variant="h5"
-                className={styles.heroDescription}
-                sx={{
-                  fontSize: { xs: '1.1rem', md: '1.3rem' },
-                }}
-              >
-                Join 100+ organizations achieving <strong>30% efficiency gains</strong> with our integrated ecosystem of Managed Services, Creative-as-a-Service, and Strategic Intelligence.
-              </Typography>
+              <Grid container spacing={4} alignItems="center">
+                <Grid item xs={12} md={7}>
+                  <Typography
+                    variant="h1"
+                    className={styles.heroTitle}
+                    sx={{
+                      fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem', lg: '4rem' },
+                      mb: 3,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Transform Your Business with Managed Solutions That Scale
+                  </Typography>
+                  <Typography
+                    variant="h2"
+                    className={styles.heroSubtitle}
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      mb: 2,
+                    }}
+                  >
+                    Stop Juggling Complex IT. Start Scaling with Confidence.
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    className={styles.heroDescription}
+                    sx={{
+                      fontSize: { xs: '1.1rem', md: '1.3rem' },
+                    }}
+                  >
+                    Join 100+ organizations achieving <strong>30% efficiency gains</strong> with our integrated ecosystem of Managed Services, Creative-as-a-Service, and Strategic Intelligence.
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={5}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      height: { xs: 300, md: 400 },
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                      border: '2px solid rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        gap: 2,
+                        p: 4,
+                      }}
+                    >
+                      <RocketLaunchIcon sx={{ fontSize: 80, color: 'white', animation: 'pulse 2s ease-in-out infinite' }} />
+                      <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, textAlign: 'center' }}>
+                        Fearless Creativity
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', textAlign: 'center' }}>
+                        Bold Innovation. Visionary Ideas.
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
                 spacing={2}
@@ -555,22 +644,65 @@ const HomePage = () => {
                   <Grid item xs={12} sm={6} md={3} key={index}>
                     <Grow in timeout={600 + index * 150}>
                       <Card className={styles.featureCard}>
-                        <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                          <Avatar className={styles.featureIcon}>
-                            {feature.icon}
-                          </Avatar>
-                          <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mt: 2 }}>
-                            {feature.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
-                            {feature.description}
-                          </Typography>
+                        <CardContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+                          {/* Visual Background Pattern */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: '30%',
+                              background: `linear-gradient(135deg, ${
+                                index === 0 ? '#667eea' : index === 1 ? '#f093fb' : index === 2 ? '#4facfe' : '#43e97b'
+                              } 0%, ${
+                                index === 0 ? '#764ba2' : index === 1 ? '#f5576c' : index === 2 ? '#00f2fe' : '#38f9d7'
+                              } 100%)`,
+                              opacity: 0.08,
+                              zIndex: 0,
+                            }}
+                          />
+                          <Box sx={{ p: 4, position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Avatar 
+                              className={styles.featureIcon}
+                              sx={{
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                                animation: index === 0 ? 'pulse 2s ease-in-out infinite' : 'none',
+                              }}
+                            >
+                              {feature.icon}
+                            </Avatar>
+                            <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mt: 2 }}>
+                              {feature.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
+                              {feature.description}
+                            </Typography>
+                          </Box>
                         </CardContent>
                       </Card>
                     </Grow>
                   </Grid>
                 ))}
               </Grid>
+            </Container>
+          </Box>
+
+          <Divider sx={{ my: 8 }} />
+
+          {/* Before/After UX Mockup Section */}
+          <Box id="ux-transformation" sx={{ py: 10, mb: 8, bgcolor: 'background.default' }}>
+            <Container maxWidth="lg">
+              <BeforeAfterMockup
+                beforeImage="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=675&fit=crop"
+                afterImage="https://images.unsplash.com/photo-1551650975-87deedd944c3?w=1200&h=675&fit=crop"
+                beforeLabel="Before: Cluttered & Confusing"
+                afterLabel="After: Clean & Intuitive"
+                title="See the Transformation"
+                description="Experience the power of fearless creativity with our before/after UX transformations"
+                autoAnimate={true}
+                animationSpeed={4000}
+              />
             </Container>
           </Box>
 
@@ -607,50 +739,70 @@ const HomePage = () => {
                   <Grid item xs={12} md={6} key={index}>
                     <Slide direction="up" in timeout={600 + index * 150}>
                       <Card className={styles.featureCard}>
-                        <CardContent sx={{ p: 4 }}>
-                          <Stack direction="row" spacing={3}>
-                            <Avatar
-                              className={styles.featureIcon}
-                              sx={{
-                                bgcolor: 'secondary.main',
-                                width: 64,
-                                height: 64,
-                              }}
-                            >
-                              {service.icon}
-                            </Avatar>
-                            <Box sx={{ flexGrow: 1 }}>
-                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                                <Typography variant="h6" fontWeight={700}>
-                                  {service.title}
-                                </Typography>
-                                <Chip
-                                  label="Popular"
-                                  size="small"
-                                  color="primary"
-                                  sx={{ display: index === 0 ? 'flex' : 'none' }}
-                                />
-                              </Stack>
-                              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 2 }}>
-                                {service.description}
-                              </Typography>
-                              <Button
-                                variant="text"
-                                size="small"
-                                endIcon={<LaunchIcon />}
+                        <CardContent sx={{ p: 0, position: 'relative', overflow: 'hidden' }}>
+                          {/* Visual Background */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: '40%',
+                              background: `linear-gradient(135deg, ${
+                                index === 0 ? '#667eea' : index === 1 ? '#f093fb' : index === 2 ? '#4facfe' : '#43e97b'
+                              } 0%, ${
+                                index === 0 ? '#764ba2' : index === 1 ? '#f5576c' : index === 2 ? '#00f2fe' : '#38f9d7'
+                              } 100%)`,
+                              opacity: 0.1,
+                              zIndex: 0,
+                            }}
+                          />
+                          <Box sx={{ p: 4, position: 'relative', zIndex: 1 }}>
+                            <Stack direction="row" spacing={3}>
+                              <Avatar
+                                className={styles.featureIcon}
                                 sx={{
-                                  color: 'primary.main',
-                                  '&:hover': {
-                                    bgcolor: 'primary.main',
-                                    color: 'white',
-                                  },
+                                  bgcolor: 'secondary.main',
+                                  width: 64,
+                                  height: 64,
+                                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
                                 }}
-                                onClick={() => router.push('/creative-services')}
                               >
-                                Explore Service
-                              </Button>
-                            </Box>
-                          </Stack>
+                                {service.icon}
+                              </Avatar>
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                                  <Typography variant="h6" fontWeight={700}>
+                                    {service.title}
+                                  </Typography>
+                                  <Chip
+                                    label="Popular"
+                                    size="small"
+                                    color="primary"
+                                    sx={{ display: index === 0 ? 'flex' : 'none' }}
+                                  />
+                                </Stack>
+                                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 2 }}>
+                                  {service.description}
+                                </Typography>
+                                <Button
+                                  variant="text"
+                                  size="small"
+                                  endIcon={<LaunchIcon />}
+                                  sx={{
+                                    color: 'primary.main',
+                                    '&:hover': {
+                                      bgcolor: 'primary.main',
+                                      color: 'white',
+                                    },
+                                  }}
+                                  onClick={() => router.push('/creative-services')}
+                                >
+                                  Explore Service
+                                </Button>
+                              </Box>
+                            </Stack>
+                          </Box>
                         </CardContent>
                       </Card>
                     </Slide>
@@ -777,6 +929,129 @@ const HomePage = () => {
                 </Box>
               </Paper>
               </Fade>
+            </Container>
+          </Box>
+
+          <Divider sx={{ my: 8 }} />
+
+          {/* Video Demo Section */}
+          <Box id="demo-video" sx={{ py: 10, mb: 8, bgcolor: 'background.default' }}>
+            <Container maxWidth="lg">
+              <Box className={styles.sectionHeader}>
+                <Typography variant="h2" className={styles.sectionTitle}>
+                  See It In Action
+                </Typography>
+                <Typography variant="h5" className={styles.sectionSubtitle}>
+                  Watch how we transform businesses with fearless creativity
+                </Typography>
+              </Box>
+              <Grid container spacing={4}>
+                <Grid item xs={12} md={8}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '56.25%', // 16:9 aspect ratio
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                      bgcolor: 'grey.900',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                        cursor: 'pointer',
+                        transition: 'transform 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.02)',
+                        },
+                      }}
+                      onClick={() => {
+                        const element = document.getElementById('demo');
+                        if (element) element.scrollIntoView({ behavior: 'smooth' });
+                        else router.push('/demo');
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 100,
+                          height: 100,
+                          borderRadius: '50%',
+                          bgcolor: 'rgba(255,255,255,0.9)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                          transition: 'transform 0.3s ease',
+                          '&:hover': {
+                            transform: 'scale(1.1)',
+                          },
+                        }}
+                      >
+                        <PlayArrowIcon sx={{ fontSize: 48, color: 'primary.main', ml: 1 }} />
+                      </Box>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Stack spacing={3}>
+                    <Card sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+                        <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                          <RocketLaunchIcon />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6" fontWeight={700}>
+                            Fast Results
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            See improvements in days, not months
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Card>
+                    <Card sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+                        <Avatar sx={{ bgcolor: 'secondary.main', width: 48, height: 48 }}>
+                          <TrendingUpIcon />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6" fontWeight={700}>
+                            Proven Impact
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            30% efficiency gains on average
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Card>
+                    <Card sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+                        <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}>
+                          <StarIcon />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6" fontWeight={700}>
+                            Trusted Partner
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            100+ organizations trust us
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Card>
+                  </Stack>
+                </Grid>
+              </Grid>
             </Container>
           </Box>
 

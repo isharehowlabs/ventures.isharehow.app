@@ -1,13 +1,82 @@
+# robots.txt for ventures.isharehow.app
+# Updated: 2025-12-09
+
+# Allow all search engines
 User-agent: *
 Allow: /
 
-# Disallow internal/private paths
+# Disallow protected/private routes (require authentication)
+Disallow: /profile
+Disallow: /settings
+Disallow: /creative
+Disallow: /rise
+Disallow: /learning-hub
+Disallow: /cowork
+Disallow: /board
+Disallow: /link-wallet
+
+# Disallow API endpoints
 Disallow: /api/
+
+# Disallow internal/development paths
 Disallow: /backend-python/
 Disallow: /_next/
 Disallow: /node_modules/
 Disallow: /out/
 Disallow: /.git/
+Disallow: /static/
+Disallow: /web3/
+
+# Disallow old/redirected paths
+Disallow: /content
+Disallow: /labs
+Disallow: /PACT
+
+# Allow specific important paths explicitly
+Allow: /blog
+Allow: /blog/
+Allow: /demo
+Allow: /portfolio
+Allow: /products
+Allow: /prospecting
+Allow: /growth-machine
+Allow: /creative-services
+Allow: /live
+Allow: /lookupcafe
+Allow: /privacy
+Allow: /terms
+
+# Crawl delay (optional - helps prevent server overload)
+# Crawl-delay: 1
 
 # Sitemap location
 Sitemap: https://ventures.isharehow.app/sitemap.xml
+
+# Specific rules for major search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /backend-python/
+Disallow: /_next/
+Disallow: /profile
+Disallow: /settings
+Disallow: /creative
+Disallow: /rise
+Disallow: /learning-hub
+Disallow: /cowork
+Disallow: /board
+Disallow: /link-wallet
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /backend-python/
+Disallow: /_next/
+Disallow: /profile
+Disallow: /settings
+Disallow: /creative
+Disallow: /rise
+Disallow: /learning-hub
+Disallow: /cowork
+Disallow: /board
+Disallow: /link-wallet
