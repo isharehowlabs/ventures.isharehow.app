@@ -7324,6 +7324,7 @@ def create_support_request():
         
         # Create support request
         request_obj = SupportRequest(
+            user_id=user.id,  # Set user_id from authenticated user
             client_id=data.get('clientId'),
             # client_name column doesn't exist - will be computed from client relationship
             subject=data['subject'],
@@ -9248,6 +9249,7 @@ if DB_AVAILABLE:
         __tablename__ = 'support_requests'
         
         id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # User who created the request
         client_id = db.Column(db.String(36), db.ForeignKey('clients.id'), nullable=True, index=True)
         # Note: client_name column does not exist in database - use client_name property instead
         subject = db.Column(db.String(255), nullable=False)
@@ -9258,8 +9260,9 @@ if DB_AVAILABLE:
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
         
-        # Relationship to Client
+        # Relationships
         client = db.relationship('Client', foreign_keys=[client_id], backref='support_requests')
+        user = db.relationship('User', foreign_keys=[user_id], backref='support_requests')
         
         @property
         def client_name(self):
