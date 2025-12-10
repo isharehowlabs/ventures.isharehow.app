@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -33,62 +33,100 @@ import {
 import BoardShell from '../../board/BoardShell';
 import { useAuth } from '../../../hooks/useAuth';
 
-// Optional imports for Figma/MCP features
+// Optional imports for Figma/MCP features - memoized to prevent re-imports
 let useFigmaHook: any = null;
 let useMCPHook: any = null;
-try {
-  const figmaModule = require('../../../hooks/useFigma');
-  useFigmaHook = figmaModule.useFigma || figmaModule.default?.useFigma;
-} catch (err) {
-  console.warn('Figma hook not available:', err);
-}
-try {
-  const mcpModule = require('../../../hooks/useMCP');
-  useMCPHook = mcpModule.useMCP || mcpModule.default?.useMCP;
-} catch (err) {
-  console.warn('MCP hook not available:', err);
-}
+let hooksLoaded = false;
 
-export default function DesignFigmaPanel() {
-  const { user } = useAuth();
-  const [activeSubTab, setActiveSubTab] = useState(0);
-  
-  // Generate a default board ID for the design space
-  const defaultBoardId = `design_${user?.id || 'shared'}`;
-  
-  // Figma hooks (optional - try to load)
-  let figmaHook: any = null;
-  let mcpHook: any = null;
+const loadHooks = () => {
+  if (hooksLoaded) return;
   
   try {
-    if (useFigmaHook) {
-      figmaHook = useFigmaHook();
-    }
+    const figmaModule = require('../../../hooks/useFigma');
+    useFigmaHook = figmaModule.useFigma || figmaModule.default?.useFigma;
   } catch (err) {
     console.warn('Figma hook not available:', err);
   }
   
   try {
-    if (useMCPHook) {
-      mcpHook = useMCPHook();
-    }
+    const mcpModule = require('../../../hooks/useMCP');
+    useMCPHook = mcpModule.useMCP || mcpModule.default?.useMCP;
   } catch (err) {
     console.warn('MCP hook not available:', err);
   }
   
-  const files = figmaHook?.files || [];
-  const components = figmaHook?.components || [];
-  const componentStatuses = figmaHook?.componentStatuses || {};
+  hooksLoaded = true;
+};
+
+export default function DesignFigmaPanel() {
+  const { user } = useAuth();
+  const [activeSubTab, setActiveSubTab] = useState(0);
+  
+  // Generate a default board ID for the design space - memoized
+  const defaultBoardId = useMemo(() => `design_${user?.id || 'shared'}`, [user?.id]);
+  
+  // Load hooks once on mount
+  useEffect(() => {
+    loadHooks();
+  }, []);
+  
+  // Figma hooks - only call if available, using refs to prevent re-renders
+  const figmaHookRef = useRef<any>(null);
+  const mcpHookRef = useRef<any>(null);
+  
+  // Initialize hooks only once
+  useEffect(() => {
+    if (useFigmaHook && !figmaHookRef.current) {
+      try {
+        figmaHookRef.current = useFigmaHook();
+      } catch (err) {
+        console.warn('Figma hook initialization failed:', err);
+      }
+    }
+    
+    if (useMCPHook && !mcpHookRef.current) {
+      try {
+        mcpHookRef.current = useMCPHook();
+      } catch (err) {
+        console.warn('MCP hook initialization failed:', err);
+      }
+    }
+  }, []);
+  
+  const figmaHook = figmaHookRef.current;
+  const mcpHook = mcpHookRef.current;
+  
+  // Memoize hook values to prevent unnecessary re-renders
+  const files = useMemo(() => figmaHook?.files || [], [figmaHook?.files]);
+  const components = useMemo(() => figmaHook?.components || [], [figmaHook?.components]);
+  const componentStatuses = useMemo(() => figmaHook?.componentStatuses || {}, [figmaHook?.componentStatuses]);
   const figmaLoading = figmaHook?.isLoading || false;
   const figmaErrorMsg = figmaHook?.error || null;
-  const fetchFiles = figmaHook?.fetchFiles || (() => Promise.resolve());
-  const fetchComponents = figmaHook?.fetchComponents || (() => Promise.resolve());
-  const likeComponent = figmaHook?.likeComponent || (() => Promise.resolve());
-  const saveComponent = figmaHook?.saveComponent || (() => Promise.resolve());
-  const fetchComponentStatus = figmaHook?.fetchComponentStatus || (() => Promise.resolve());
   
-  const linkComponentToCode = mcpHook?.linkComponentToCode || (() => Promise.resolve());
-  const fetchCodeLinks = mcpHook?.fetchCodeLinks || (() => Promise.resolve());
+  // Memoize functions to prevent dependency issues
+  const fetchFiles = useCallback(() => {
+    return figmaHook?.fetchFiles ? figmaHook.fetchFiles() : Promise.resolve();
+  }, [figmaHook?.fetchFiles]);
+  
+  const fetchComponents = useCallback((fileKey: string) => {
+    return figmaHook?.fetchComponents ? figmaHook.fetchComponents(fileKey) : Promise.resolve();
+  }, [figmaHook?.fetchComponents]);
+  
+  const likeComponent = useCallback((componentId: string, liked: boolean, fileKey?: string) => {
+    return figmaHook?.likeComponent ? figmaHook.likeComponent(componentId, liked, fileKey) : Promise.resolve();
+  }, [figmaHook?.likeComponent]);
+  
+  const saveComponent = useCallback((componentId: string, saved: boolean, fileKey?: string) => {
+    return figmaHook?.saveComponent ? figmaHook.saveComponent(componentId, saved, fileKey) : Promise.resolve();
+  }, [figmaHook?.saveComponent]);
+  
+  const fetchCodeLinks = useCallback(() => {
+    return mcpHook?.fetchCodeLinks ? mcpHook.fetchCodeLinks() : Promise.resolve();
+  }, [mcpHook?.fetchCodeLinks]);
+  
+  const linkComponentToCode = useCallback((componentId: string, filePath: string, componentName: string, fileKey: string) => {
+    return mcpHook?.linkComponentToCode ? mcpHook.linkComponentToCode(componentId, filePath, componentName, fileKey) : Promise.resolve();
+  }, [mcpHook?.linkComponentToCode]);
 
   // Figma state
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -97,10 +135,11 @@ export default function DesignFigmaPanel() {
   const [codeFilePath, setCodeFilePath] = useState('');
   const [codeComponentName, setCodeComponentName] = useState('');
   const [loadingComponents, setLoadingComponents] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load Figma data (only if hooks are available)
+  // Load Figma data (only if hooks are available) - with proper cleanup
   useEffect(() => {
-    if (!useFigmaHook || !useMCPHook) return;
+    if (!useFigmaHook || !useMCPHook || isInitialized) return;
     
     let isMounted = true;
     const loadFigmaData = async () => {
@@ -109,29 +148,34 @@ export default function DesignFigmaPanel() {
           fetchFiles(),
           fetchCodeLinks(),
         ]);
+        if (isMounted) {
+          setIsInitialized(true);
+        }
       } catch (err) {
         if (isMounted) {
           console.error('Error loading Figma data:', err);
         }
       }
     };
+    
     loadFigmaData();
     
     return () => {
       isMounted = false;
     };
-  }, [fetchFiles, fetchCodeLinks]);
+  }, [fetchFiles, fetchCodeLinks, isInitialized]);
 
+  // Load components when file is selected - with proper cleanup
   useEffect(() => {
-    if (!selectedFile || !useFigmaHook) return;
+    if (!selectedFile || !useFigmaHook || !figmaHook) return;
     
     let isMounted = true;
     setLoadingComponents(true);
+    
     fetchComponents(selectedFile)
       .then(() => {
         if (!isMounted) return;
-        // Use a ref or state to get current components, or fetch status separately
-        // Avoid accessing components directly in the effect
+        // Components will be updated via hook state
       })
       .catch((err: any) => {
         if (isMounted) {
@@ -147,18 +191,18 @@ export default function DesignFigmaPanel() {
     return () => {
       isMounted = false;
     };
-  }, [selectedFile, fetchComponents]);
+  }, [selectedFile, fetchComponents, figmaHook]);
 
-  // Figma handlers
-  const handleRefreshFigma = () => {
+  // Figma handlers - memoized
+  const handleRefreshFigma = useCallback(() => {
     if (selectedFile) {
       fetchComponents(selectedFile);
     } else {
       fetchFiles();
     }
-  };
+  }, [selectedFile, fetchComponents, fetchFiles]);
 
-  const handleLike = async (componentId: string, e: React.MouseEvent) => {
+  const handleLike = useCallback(async (componentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const currentStatus = componentStatuses[componentId]?.liked || false;
     try {
@@ -166,9 +210,9 @@ export default function DesignFigmaPanel() {
     } catch (err) {
       console.error('Error liking component:', err);
     }
-  };
+  }, [componentStatuses, likeComponent, selectedFile]);
 
-  const handleSaveComponent = async (componentId: string, e: React.MouseEvent) => {
+  const handleSaveComponent = useCallback(async (componentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const currentStatus = componentStatuses[componentId]?.saved || false;
     try {
@@ -176,19 +220,57 @@ export default function DesignFigmaPanel() {
     } catch (err) {
       console.error('Error saving component:', err);
     }
-  };
+  }, [componentStatuses, saveComponent, selectedFile]);
 
-  const handleLinkComponent = async () => {
+  const handleLinkComponent = useCallback(async () => {
     if (!figmaComponentId || !codeFilePath) return;
     
     try {
       await linkComponentToCode(figmaComponentId, codeFilePath, codeComponentName, selectedFile || '');
       setLinkDialogOpen(false);
       fetchCodeLinks();
+      // Reset form
+      setFigmaComponentId('');
+      setCodeFilePath('');
+      setCodeComponentName('');
     } catch (err) {
       console.error('Error linking component:', err);
     }
-  };
+  }, [figmaComponentId, codeFilePath, codeComponentName, selectedFile, linkComponentToCode, fetchCodeLinks]);
+
+  // Memoize component list to prevent unnecessary re-renders
+  const componentList = useMemo(() => {
+    return components.map((comp: any) => (
+      <Grid item xs={12} sm={6} key={comp.key}>
+        <Card elevation={1}>
+          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+            <Typography variant="subtitle2" noWrap fontWeight={500}>
+              {comp.name}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+              <IconButton 
+                size="small" 
+                onClick={(e) => handleLike(comp.key, e)}
+                color={componentStatuses[comp.key]?.liked ? 'error' : 'default'}
+              >
+                <FavoriteIcon fontSize="small" />
+              </IconButton>
+              <IconButton 
+                size="small" 
+                onClick={(e) => handleSaveComponent(comp.key, e)}
+                color={componentStatuses[comp.key]?.saved ? 'primary' : 'default'}
+              >
+                <BookmarkIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    ));
+  }, [components, componentStatuses, handleLike, handleSaveComponent]);
+
+  // Prevent BoardShell from rendering when not active to improve performance
+  const shouldRenderBoard = activeSubTab === 1;
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -262,33 +344,7 @@ export default function DesignFigmaPanel() {
                       </Box>
                     ) : (
                       <Grid container spacing={2}>
-                        {components.map((comp: any) => (
-                          <Grid item xs={12} sm={6} key={comp.key}>
-                            <Card elevation={1}>
-                              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                                <Typography variant="subtitle2" noWrap fontWeight={500}>
-                                  {comp.name}
-                                </Typography>
-                                <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={(e) => handleLike(comp.key, e)}
-                                    color={componentStatuses[comp.key]?.liked ? 'error' : 'default'}
-                                  >
-                                    <FavoriteIcon fontSize="small" />
-                                  </IconButton>
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={(e) => handleSaveComponent(comp.key, e)}
-                                    color={componentStatuses[comp.key]?.saved ? 'primary' : 'default'}
-                                  >
-                                    <BookmarkIcon fontSize="small" />
-                                  </IconButton>
-                                </Box>
-                              </CardContent>
-                            </Card>
-                          </Grid>
-                        ))}
+                        {componentList}
                         
                         {components.length === 0 && (
                           <Grid item xs={12}>
@@ -314,8 +370,8 @@ export default function DesignFigmaPanel() {
           </Box>
         )}
 
-        {/* Collaboration Board Tab */}
-        {activeSubTab === 1 && (
+        {/* Collaboration Board Tab - Only render when active */}
+        {shouldRenderBoard && (
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
             <Box sx={{ mb: 2, flexShrink: 0 }}>
               <Typography variant="h6" gutterBottom>
@@ -412,4 +468,3 @@ export default function DesignFigmaPanel() {
     </Box>
   );
 }
-
