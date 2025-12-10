@@ -13019,12 +13019,14 @@ def get_analytics_data():
                 revenue_data.append({
                     'name': day_name,
                     'value': revenue,
-                    'previous': 0  # Will be filled from previous period
+                    'previous': 0,  # Will be filled from previous period
+                    'conversions': conversions  # Store conversions per day for conversion rate calculation
                 })
                 visitor_data.append({
                     'name': day_name,
                     'visitors': users,
-                    'pageViews': page_views
+                    'pageViews': page_views,
+                    'conversions': conversions  # Store conversions per day
                 })
             
             # Process previous period data
@@ -13071,33 +13073,47 @@ def get_analytics_data():
             previous_conversion_rate = (previous_conversions / previous_total_users * 100) if previous_total_users > 0 else 0
             conversion_trend = (conversion_rate - previous_conversion_rate) if previous_conversion_rate > 0 else 0
             
-            # Generate conversion data (weekly breakdown)
-            # Group revenue data by week
+            # Generate conversion data
+            # Use daily breakdown for data with less than 7 days, weekly for 7+ days
             conversion_data = []
-            weeks = len(revenue_data) // 7 if len(revenue_data) >= 7 else 1
-            for week in range(weeks):
-                week_start = week * 7
-                week_end = min(week_start + 7, len(revenue_data))
-                week_data = revenue_data[week_start:week_end]
-                week_conversions = sum(d.get('value', 0) for d in week_data)
-                week_users = sum(d.get('visitors', 0) for d in visitor_data[week_start:week_end]) if week_start < len(visitor_data) else 0
-                week_rate = (week_conversions / week_users * 100) if week_users > 0 else 0
-                conversion_data.append({
-                    'name': f'Week {week + 1}',
-                    'rate': round(week_rate, 2)
-                })
             
-            # If we don't have enough data for weeks, create daily conversion rates
-            if len(conversion_data) == 0:
+            if len(revenue_data) < 7:
+                # Daily breakdown for short date ranges
                 for i, rev_data in enumerate(revenue_data):
                     if i < len(visitor_data):
                         visitors = visitor_data[i].get('visitors', 0)
-                        revenue_val = rev_data.get('value', 0)
-                        rate = (revenue_val / visitors * 100) if visitors > 0 else 0
+                        conversions = visitor_data[i].get('conversions', 0)
+                        rate = (conversions / visitors * 100) if visitors > 0 else 0
                         conversion_data.append({
                             'name': rev_data['name'],
                             'rate': round(rate, 2)
                         })
+            else:
+                # Weekly breakdown for longer date ranges (7+ days)
+                weeks = len(revenue_data) // 7
+                for week in range(weeks):
+                    week_start = week * 7
+                    week_end = min(week_start + 7, len(revenue_data))
+                    week_users = sum(d.get('visitors', 0) for d in visitor_data[week_start:week_end]) if week_start < len(visitor_data) else 0
+                    week_conversions = sum(d.get('conversions', 0) for d in visitor_data[week_start:week_end]) if week_start < len(visitor_data) else 0
+                    week_rate = (week_conversions / week_users * 100) if week_users > 0 else 0
+                    conversion_data.append({
+                        'name': f'Week {week + 1}',
+                        'rate': round(week_rate, 2)
+                    })
+                
+                # Handle remaining days that don't form a complete week
+                remaining_days = len(revenue_data) % 7
+                if remaining_days > 0:
+                    week_start = weeks * 7
+                    week_end = len(revenue_data)
+                    week_users = sum(d.get('visitors', 0) for d in visitor_data[week_start:week_end]) if week_start < len(visitor_data) else 0
+                    week_conversions = sum(d.get('conversions', 0) for d in visitor_data[week_start:week_end]) if week_start < len(visitor_data) else 0
+                    week_rate = (week_conversions / week_users * 100) if week_users > 0 else 0
+                    conversion_data.append({
+                        'name': f'Week {weeks + 1}',
+                        'rate': round(week_rate, 2)
+                    })
             
             return jsonify({
                 'totalRevenue': round(current_revenue, 2),

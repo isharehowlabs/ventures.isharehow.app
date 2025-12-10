@@ -216,10 +216,14 @@ export default function AnalyticsActivity() {
   };
 
   // Calculate additional metrics
-  const avgSessionDuration = analyticsData ? (analyticsData.pageViews / analyticsData.totalUsers / 60).toFixed(1) : '0';
-  const bounceRate = analyticsData ? (100 - analyticsData.conversionRate * 2).toFixed(1) : '0';
+  // Note: avgSessionDuration and bounceRate require additional GA metrics that aren't currently fetched
+  // Using revenue per user as a meaningful metric instead
   const revenuePerUser = analyticsData && analyticsData.totalUsers > 0 
     ? (analyticsData.totalRevenue / analyticsData.totalUsers).toFixed(2) 
+    : '0';
+  // Pages per session is a more accurate metric than fake session duration
+  const pagesPerSession = analyticsData && analyticsData.totalUsers > 0
+    ? (analyticsData.pageViews / analyticsData.totalUsers).toFixed(1)
     : '0';
 
   return (
@@ -451,10 +455,10 @@ export default function AnalyticsActivity() {
           <Card sx={{ boxShadow: 2 }}>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Avg. Session Duration
+                Pages per User
               </Typography>
               <Typography variant="h5" fontWeight={700}>
-                {avgSessionDuration} min
+                {pagesPerSession}
               </Typography>
             </CardContent>
           </Card>
@@ -463,10 +467,10 @@ export default function AnalyticsActivity() {
           <Card sx={{ boxShadow: 2 }}>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Bounce Rate
+                Conversion Rate
               </Typography>
               <Typography variant="h5" fontWeight={700}>
-                {bounceRate}%
+                {analyticsData?.conversionRate?.toFixed(1) || '0'}%
               </Typography>
             </CardContent>
           </Card>

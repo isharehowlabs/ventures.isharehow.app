@@ -136,12 +136,12 @@ const getTheme = (mode: 'light' | 'dark') => {
             borderRadius: 5,
             background: mode === 'light' 
               ? 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' 
-              : 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
+              : 'linear-gradient(45deg, #ff8a80, #80deea)',
             minHeight: 24,
             '&:hover': {
               background: mode === 'light'
                 ? 'linear-gradient(45deg, #ff5252, #26a69a)'
-                : 'linear-gradient(45deg, #ff5252, #26a69a)',
+                : 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
             },
           },
           '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
