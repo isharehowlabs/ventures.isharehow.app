@@ -18,6 +18,7 @@ import {
   Support as SupportIcon,
   SmartToy as SmartToyIcon,
   Science as LabsIcon,
+  Web as WebIcon,
 } from '@mui/icons-material';
 import AddClientDialog from './creative/AddClientDialog';
 import AnalyticsActivity from './creative/AnalyticsActivity';
@@ -78,7 +79,8 @@ export default function CreativeDashboardPanel() {
     support: 1,
     match: 2,
     cowork: 3,
-    ai: 4,
+    browser: 4,
+    ai: 5,
   };
 
   // Initialize tab from URL query parameter

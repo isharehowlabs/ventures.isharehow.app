@@ -128,13 +128,19 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
             position: 'relative',
           }}
         >
-          {/* Left Sidebar - Presence */}
-          <Box sx={{ p: 2, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider' }}>
-            <PresenceSidebar />
-          </Box>
-
           {/* Left Toolbar */}
-          <Box sx={{ p: 2, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider' }}>
+          <Box 
+            sx={{ 
+              p: 2, 
+              bgcolor: 'background.paper', 
+              borderRight: 1, 
+              borderColor: 'divider',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              overflow: 'auto',
+            }}
+          >
             <Toolbar
               currentTool={currentTool}
               onToolChange={setCurrentTool}
@@ -143,6 +149,9 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
               strokeWidth={strokeWidth}
               onStrokeWidthChange={setStrokeWidth}
             />
+            
+            {/* Presence Sidebar at bottom */}
+            <PresenceSidebar />
           </Box>
 
           {/* Canvas Area */}
