@@ -24,10 +24,11 @@ import {
   SportsEsports as GamesIcon,
   School as LearningHubIcon,
   CreditCard as CreditCardIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about';
 
 interface NavigationItem {
   key: NavKey;
@@ -63,6 +64,12 @@ const navigationItems: NavigationItem[] = [
     label: 'Blog',
     href: '/blog',
     icon: <BlogIcon />,
+  },
+  {
+    key: 'about',
+    label: 'About',
+    href: '/about',
+    icon: <InfoIcon />,
   },
   {
     key: 'products',

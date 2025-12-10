@@ -12915,77 +12915,242 @@ def get_analytics_data():
         previous_start_str = previous_start.strftime('%Y-%m-%d')
         previous_end_str = previous_end.strftime('%Y-%m-%d')
         
-        # Check if we have Google Analytics credentials
-        import os
-        ga_credentials = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-        ga_api_key = os.environ.get('GOOGLE_ANALYTICS_API_KEY')
-        
-        if not ga_credentials and not ga_api_key:
-            # Return mock data structure for now - user needs to configure GA API
-            # In production, you would use the Google Analytics Data API here
+        # Try to use Google Analytics Data API
+        try:
+            from google.analytics.data import BetaAnalyticsDataClient
+            from google.oauth2 import service_account
+            import os
+            
+            # Check for credentials
+            ga_credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+            
+            if ga_credentials_path and os.path.exists(ga_credentials_path):
+                # Use service account credentials
+                credentials = service_account.Credentials.from_service_account_file(
+                    ga_credentials_path,
+                    scopes=['https://www.googleapis.com/auth/analytics.readonly']
+                )
+                client = BetaAnalyticsDataClient(credentials=credentials)
+            else:
+                # Try to use default credentials (for local development or GCP)
+                try:
+                    client = BetaAnalyticsDataClient()
+                except Exception as e:
+                    print(f"Google Analytics API not configured: {e}")
+                    # Return error indicating API needs to be configured
+                    return jsonify({
+                        'error': 'Google Analytics API not configured. Please set GOOGLE_APPLICATION_CREDENTIALS environment variable with path to your service account JSON file.',
+                        'message': 'To use real analytics data, you need to: 1) Create a service account in Google Cloud Console, 2) Enable Google Analytics Data API, 3) Download the JSON key file, 4) Set GOOGLE_APPLICATION_CREDENTIALS environment variable to the path of the JSON file.',
+                        'isMockData': True,
+                        'totalRevenue': 0,
+                        'totalUsers': 0,
+                        'pageViews': 0,
+                        'conversionRate': 0,
+                        'revenueTrend': 0,
+                        'usersTrend': 0,
+                        'pageViewsTrend': 0,
+                        'conversionTrend': 0,
+                        'revenueData': [],
+                        'visitorData': [],
+                        'conversionData': [],
+                    }), 200
+            
+            # Normalize property ID (handle both G-XXXXXXXXXX and numeric IDs)
+            if property_id.startswith('G-'):
+                property_id_clean = property_id
+            elif property_id.startswith('UA-'):
+                return jsonify({
+                    'error': 'Universal Analytics (UA) properties are no longer supported. Please use a GA4 property (G-XXXXXXXXXX format).',
+                    'isMockData': True,
+                }), 400
+            else:
+                # Assume it's a numeric property ID, format as properties/XXXXXXX
+                property_id_clean = f"properties/{property_id}"
+            
+            # Fetch current period data
+            current_response = client.run_report(
+                property=property_id_clean,
+                date_ranges=[{"start_date": start_date_str, "end_date": end_date_str}],
+                metrics=[
+                    {"name": "activeUsers"},
+                    {"name": "screenPageViews"},
+                    {"name": "conversions"},
+                    {"name": "totalRevenue"},
+                ],
+                dimensions=[{"name": "date"}],
+            )
+            
+            # Fetch previous period data for comparison
+            previous_response = client.run_report(
+                property=property_id_clean,
+                date_ranges=[{"start_date": previous_start_str, "end_date": previous_end_str}],
+                metrics=[
+                    {"name": "activeUsers"},
+                    {"name": "screenPageViews"},
+                    {"name": "conversions"},
+                    {"name": "totalRevenue"},
+                ],
+            )
+            
+            # Process current period data
+            current_total_users = 0
+            current_page_views = 0
+            current_conversions = 0
+            current_revenue = 0.0
+            revenue_data = []
+            visitor_data = []
+            
+            for row in current_response.rows:
+                date_value = row.dimension_values[0].value
+                # Format date for display (get day name or date)
+                date_obj = datetime.strptime(date_value, '%Y%m%d')
+                day_name = date_obj.strftime('%a')  # Mon, Tue, etc.
+                
+                users = int(row.metric_values[0].value) if row.metric_values[0].value else 0
+                page_views = int(row.metric_values[1].value) if row.metric_values[1].value else 0
+                conversions = float(row.metric_values[2].value) if row.metric_values[2].value else 0
+                revenue = float(row.metric_values[3].value) if row.metric_values[3].value else 0.0
+                
+                current_total_users += users
+                current_page_views += page_views
+                current_conversions += conversions
+                current_revenue += revenue
+                
+                revenue_data.append({
+                    'name': day_name,
+                    'value': revenue,
+                    'previous': 0  # Will be filled from previous period
+                })
+                visitor_data.append({
+                    'name': day_name,
+                    'visitors': users,
+                    'pageViews': page_views
+                })
+            
+            # Process previous period data
+            previous_total_users = 0
+            previous_page_views = 0
+            previous_conversions = 0
+            previous_revenue = 0.0
+            previous_revenue_by_date = {}
+            
+            for row in previous_response.rows:
+                users = int(row.metric_values[0].value) if row.metric_values[0].value else 0
+                page_views = int(row.metric_values[1].value) if row.metric_values[1].value else 0
+                conversions = float(row.metric_values[2].value) if row.metric_values[2].value else 0
+                revenue = float(row.metric_values[3].value) if row.metric_values[3].value else 0.0
+                
+                previous_total_users += users
+                previous_page_views += page_views
+                previous_conversions += conversions
+                previous_revenue += revenue
+                
+                # If we have date dimension, use it
+                if row.dimension_values:
+                    date_value = row.dimension_values[0].value
+                    date_obj = datetime.strptime(date_value, '%Y%m%d')
+                    day_name = date_obj.strftime('%a')
+                    previous_revenue_by_date[day_name] = revenue
+            
+            # Match previous period revenue to current period dates
+            for i, rev_data in enumerate(revenue_data):
+                day_name = rev_data['name']
+                if day_name in previous_revenue_by_date:
+                    rev_data['previous'] = previous_revenue_by_date[day_name]
+                elif i < len(previous_revenue_by_date):
+                    # Fallback: use index if available
+                    rev_data['previous'] = list(previous_revenue_by_date.values())[i] if previous_revenue_by_date else 0
+            
+            # Calculate trends
+            revenue_trend = ((current_revenue - previous_revenue) / previous_revenue * 100) if previous_revenue > 0 else 0
+            users_trend = ((current_total_users - previous_total_users) / previous_total_users * 100) if previous_total_users > 0 else 0
+            page_views_trend = ((current_page_views - previous_page_views) / previous_page_views * 100) if previous_page_views > 0 else 0
+            
+            # Calculate conversion rate
+            conversion_rate = (current_conversions / current_total_users * 100) if current_total_users > 0 else 0
+            previous_conversion_rate = (previous_conversions / previous_total_users * 100) if previous_total_users > 0 else 0
+            conversion_trend = (conversion_rate - previous_conversion_rate) if previous_conversion_rate > 0 else 0
+            
+            # Generate conversion data (weekly breakdown)
+            # Group revenue data by week
+            conversion_data = []
+            weeks = len(revenue_data) // 7 if len(revenue_data) >= 7 else 1
+            for week in range(weeks):
+                week_start = week * 7
+                week_end = min(week_start + 7, len(revenue_data))
+                week_data = revenue_data[week_start:week_end]
+                week_conversions = sum(d.get('value', 0) for d in week_data)
+                week_users = sum(d.get('visitors', 0) for d in visitor_data[week_start:week_end]) if week_start < len(visitor_data) else 0
+                week_rate = (week_conversions / week_users * 100) if week_users > 0 else 0
+                conversion_data.append({
+                    'name': f'Week {week + 1}',
+                    'rate': round(week_rate, 2)
+                })
+            
+            # If we don't have enough data for weeks, create daily conversion rates
+            if len(conversion_data) == 0:
+                for i, rev_data in enumerate(revenue_data):
+                    if i < len(visitor_data):
+                        visitors = visitor_data[i].get('visitors', 0)
+                        revenue_val = rev_data.get('value', 0)
+                        rate = (revenue_val / visitors * 100) if visitors > 0 else 0
+                        conversion_data.append({
+                            'name': rev_data['name'],
+                            'rate': round(rate, 2)
+                        })
+            
             return jsonify({
-                'totalRevenue': 45231,
-                'totalUsers': 8282,
-                'pageViews': 48500,
-                'conversionRate': 3.24,
-                'revenueTrend': 12.5,
-                'usersTrend': 8.2,
-                'pageViewsTrend': -2.4,
-                'conversionTrend': 5.1,
-                'revenueData': [
-                    {'name': 'Mon', 'value': 4000, 'previous': 3000},
-                    {'name': 'Tue', 'value': 3000, 'previous': 2800},
-                    {'name': 'Wed', 'value': 5000, 'previous': 4200},
-                    {'name': 'Thu', 'value': 4500, 'previous': 3900},
-                    {'name': 'Fri', 'value': 6000, 'previous': 5000},
-                    {'name': 'Sat', 'value': 5500, 'previous': 4800},
-                    {'name': 'Sun', 'value': 7000, 'previous': 5500},
-                ],
-                'visitorData': [
-                    {'name': 'Mon', 'visitors': 2400, 'pageViews': 4800},
-                    {'name': 'Tue', 'visitors': 1398, 'pageViews': 3200},
-                    {'name': 'Wed', 'visitors': 9800, 'pageViews': 12000},
-                    {'name': 'Thu', 'visitors': 3908, 'pageViews': 6500},
-                    {'name': 'Fri', 'visitors': 4800, 'pageViews': 8200},
-                    {'name': 'Sat', 'visitors': 3800, 'pageViews': 7100},
-                    {'name': 'Sun', 'visitors': 4300, 'pageViews': 7800},
-                ],
-                'conversionData': [
-                    {'name': 'Week 1', 'rate': 2.4},
-                    {'name': 'Week 2', 'rate': 3.2},
-                    {'name': 'Week 3', 'rate': 2.8},
-                    {'name': 'Week 4', 'rate': 4.1},
-                ],
-                'message': 'Google Analytics API not configured. Showing sample data. Please configure GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_ANALYTICS_API_KEY environment variables.'
+                'totalRevenue': round(current_revenue, 2),
+                'totalUsers': current_total_users,
+                'pageViews': current_page_views,
+                'conversionRate': round(conversion_rate, 2),
+                'revenueTrend': round(revenue_trend, 2),
+                'usersTrend': round(users_trend, 2),
+                'pageViewsTrend': round(page_views_trend, 2),
+                'conversionTrend': round(conversion_trend, 2),
+                'revenueData': revenue_data,
+                'visitorData': visitor_data,
+                'conversionData': conversion_data,
+                'isMockData': False,
             }), 200
-        
-        # TODO: Implement actual Google Analytics Data API integration
-        # This would use the Google Analytics Data API (GA4) to fetch real data
-        # Example:
-        # from google.analytics.data import BetaAnalyticsDataClient
-        # client = BetaAnalyticsDataClient()
-        # response = client.run_report(
-        #     request={
-        #         "property": f"properties/{property_id}",
-        #         "date_ranges": [{"start_date": start_date_str, "end_date": end_date_str}],
-        #         "dimensions": [{"name": "date"}],
-        #         "metrics": [
-        #             {"name": "activeUsers"},
-        #             {"name": "screenPageViews"},
-        #             {"name": "conversions"},
-        #             {"name": "totalRevenue"}
-        #         ]
-        #     }
-        # )
-        
-        # For now, return a structure indicating API needs to be configured
-        return jsonify({
-            'error': 'Google Analytics API integration not yet implemented. Please configure the Google Analytics Data API.',
-            'propertyId': property_id,
-            'timeRange': time_range,
-            'startDate': start_date_str,
-            'endDate': end_date_str
-        }), 501
+            
+        except ImportError:
+            # Google Analytics Data API library not installed
+            return jsonify({
+                'error': 'Google Analytics Data API library not installed. Please install: pip install google-analytics-data',
+                'isMockData': True,
+                'totalRevenue': 0,
+                'totalUsers': 0,
+                'pageViews': 0,
+                'conversionRate': 0,
+                'revenueTrend': 0,
+                'usersTrend': 0,
+                'pageViewsTrend': 0,
+                'conversionTrend': 0,
+                'revenueData': [],
+                'visitorData': [],
+                'conversionData': [],
+            }), 200
+        except Exception as ga_error:
+            print(f"Error fetching Google Analytics data: {str(ga_error)}")
+            import traceback
+            traceback.print_exc()
+            # Return error but don't fail completely - let frontend handle it
+            return jsonify({
+                'error': f'Failed to fetch Google Analytics data: {str(ga_error)}',
+                'isMockData': True,
+                'totalRevenue': 0,
+                'totalUsers': 0,
+                'pageViews': 0,
+                'conversionRate': 0,
+                'revenueTrend': 0,
+                'usersTrend': 0,
+                'pageViewsTrend': 0,
+                'conversionTrend': 0,
+                'revenueData': [],
+                'visitorData': [],
+                'conversionData': [],
+            }), 200
         
     except Exception as e:
         print(f"Error fetching analytics data: {str(e)}")

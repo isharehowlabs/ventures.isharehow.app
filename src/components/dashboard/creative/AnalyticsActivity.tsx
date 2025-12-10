@@ -152,7 +152,31 @@ export default function AnalyticsActivity() {
       }
 
       const data = await response.json();
-      setAnalyticsData(data);
+      
+      // Check if this is mock data or an error
+      if (data.error && data.isMockData) {
+        setError(data.error);
+        // Still set data to show zeros/empty, but show the error message
+        setAnalyticsData({
+          totalRevenue: data.totalRevenue || 0,
+          totalUsers: data.totalUsers || 0,
+          pageViews: data.pageViews || 0,
+          conversionRate: data.conversionRate || 0,
+          revenueTrend: data.revenueTrend || 0,
+          usersTrend: data.usersTrend || 0,
+          pageViewsTrend: data.pageViewsTrend || 0,
+          conversionTrend: data.conversionTrend || 0,
+          revenueData: data.revenueData || [],
+          visitorData: data.visitorData || [],
+          conversionData: data.conversionData || [],
+        });
+      } else if (data.error) {
+        setError(data.error);
+        setAnalyticsData(null);
+      } else {
+        setAnalyticsData(data);
+        setError(null);
+      }
       setLastSync(new Date());
     } catch (err: any) {
       console.error('Error fetching analytics data:', err);
@@ -340,7 +364,7 @@ export default function AnalyticsActivity() {
 
       {error && (
         <Alert 
-          severity="error" 
+          severity={error.includes('not configured') || error.includes('not installed') ? 'warning' : 'error'}
           sx={{ mb: 3 }} 
           onClose={() => setError(null)}
           action={
@@ -349,7 +373,27 @@ export default function AnalyticsActivity() {
             </Button>
           }
         >
-          {error}
+          <Typography variant="body2" fontWeight={600} gutterBottom>
+            {error.includes('not configured') || error.includes('not installed') 
+              ? 'Google Analytics API Not Configured' 
+              : 'Error Loading Analytics Data'}
+          </Typography>
+          <Typography variant="body2">
+            {error}
+          </Typography>
+          {error.includes('GOOGLE_APPLICATION_CREDENTIALS') && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="caption" component="div">
+                <strong>To fix this:</strong>
+                <ol style={{ marginTop: 8, paddingLeft: 20 }}>
+                  <li>Create a service account in Google Cloud Console</li>
+                  <li>Enable Google Analytics Data API for your project</li>
+                  <li>Download the JSON key file</li>
+                  <li>Set GOOGLE_APPLICATION_CREDENTIALS environment variable to the JSON file path</li>
+                </ol>
+              </Typography>
+            </Box>
+          )}
         </Alert>
       )}
 
