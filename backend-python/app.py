@@ -1141,6 +1141,73 @@ def api_best_sellers():
         best_sellers = sorted(product_map.values(), key=lambda x: x['totalSold'], reverse=True)[:10]
         return jsonify({'bestSellers': best_sellers, 'totalOrders': len(orders)})
 
+# Shopify Customers Query for CRM
+CUSTOMERS_QUERY = '''
+    query getCustomers($first: Int!, $after: String) {
+        customers(first: $first, after: $after, sortKey: CREATED_AT, reverse: true) {
+            edges {
+                node {
+                    id
+                    email
+                    firstName
+                    lastName
+                    phone
+                    totalSpent {
+                        amount
+                        currencyCode
+                    }
+                    ordersCount
+                    createdAt
+                    tags
+                }
+            }
+            pageInfo { hasNextPage endCursor }
+        }
+    }
+'''
+
+@app.route('/api/shopify/customers', methods=['GET'])
+@jwt_required()
+def api_shopify_customers():
+    """Fetch Shopify customers for CRM dashboard"""
+    try:
+        first = int(request.args.get('first', 50))
+        after = request.args.get('after')
+        variables = {'first': first, 'after': after}
+        
+        data, error = shopify_graphql(CUSTOMERS_QUERY, variables)
+        if error:
+            return jsonify(error), 500
+        
+        if not data or 'customers' not in data or 'edges' not in data['customers']:
+            return jsonify({'error': 'Invalid response from Shopify API', 'customers': []}), 200
+        
+        customers = []
+        for edge in data['customers']['edges']:
+            node = edge['node']
+            total_spent = float(node.get('totalSpent', {}).get('amount', 0)) if node.get('totalSpent') else 0
+            customers.append({
+                'id': node['id'],
+                'email': node.get('email', ''),
+                'firstName': node.get('firstName'),
+                'lastName': node.get('lastName'),
+                'phone': node.get('phone'),
+                'totalSpent': total_spent,
+                'ordersCount': node.get('ordersCount', 0),
+                'createdAt': node.get('createdAt'),
+                'tags': node.get('tags', []),
+            })
+        
+        return jsonify({
+            'customers': customers,
+            'pageInfo': data['customers']['pageInfo']
+        })
+    except Exception as e:
+        print(f"Error fetching Shopify customers: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch customers', 'message': str(e), 'customers': []}), 200
+
 # --- MCPServer Singleton (in-memory, like JS) ---
 class MCPServer:
     def __init__(self):

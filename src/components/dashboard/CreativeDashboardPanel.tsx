@@ -31,7 +31,6 @@ import AddClientDialog from './creative/AddClientDialog';
 import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import AiAgentPanel from './AiAgentPanel';
-import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
 import DesignFigmaPanel from './creative/DesignFigmaPanel';
 import Workspace from './Workspace';
 import TasksPanel from './shared/TasksPanel';
@@ -76,17 +75,15 @@ export default function CreativeDashboardPanel() {
   const tabMap: Record<string, number> = {
     analytics: 0,
     support: 1,
-    match: 2,
-    tasks: 3,
-    browser: 4,
-    design: 5,
-    ai: 6,
+    tasks: 2,
+    browser: 3,
+    design: 4,
+    ai: 5,
   };
 
   const tabs = [
     { key: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
     { key: 'support', label: 'Support', icon: <SupportIcon /> },
-    { key: 'match', label: 'Matching', icon: <PeopleIcon /> },
     { key: 'tasks', label: 'To-Do & Tasks', icon: <WorkIcon /> },
     { key: 'browser', label: 'Browser', icon: <BrowserIcon /> },
     { key: 'design', label: 'Design & Figma', icon: <DesignIcon /> },
@@ -188,22 +185,14 @@ export default function CreativeDashboardPanel() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
-          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <ClientEmployeeMatcher />
-            </CardContent>
-          </Card>
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={3}>
           <CoWorkTab />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={3}>
           <BrowserSessionTab />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={5}>
+        <TabPanel value={activeTab} index={4}>
           <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <DesignFigmaPanel />
@@ -211,7 +200,7 @@ export default function CreativeDashboardPanel() {
           </Card>
         </TabPanel>
 
-        <TabPanel value={activeTab} index={6}>
+        <TabPanel value={activeTab} index={5}>
           <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <AiAgentPanel />
@@ -226,7 +215,7 @@ export default function CreativeDashboardPanel() {
         onClose={() => setAddClientOpen(false)}
       />
 
-      {/* Floating AI Chat - Available in Co-Work tab */}
+      {/* Floating AI Chat - Available in Browser tab */}
       {activeTab === 3 && <FloatingAIChat />}
     </Box>
   );

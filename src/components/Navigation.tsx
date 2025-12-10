@@ -26,10 +26,11 @@ import {
   CreditCard as CreditCardIcon,
   Info as InfoIcon,
   Business as BusinessIcon,
+  PeopleAlt as CrmIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm';
 
 interface NavigationItem {
   key: NavKey;
@@ -118,6 +119,13 @@ const navigationItems: NavigationItem[] = [
     label: 'Creative Dashboard',
     href: '/creative',
     icon: <CreativeIcon />,
+    authRequired: true,
+  },
+  {
+    key: 'crm',
+    label: 'CRM',
+    href: '/crm',
+    icon: <CrmIcon />,
     authRequired: true,
     dividerAfter: true,
   },
