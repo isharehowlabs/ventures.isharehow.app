@@ -1,302 +1,145 @@
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
-// SaasAble Color Scheme - Clean Light Theme Only
-export const saasableColors = {
-  // Primary - Indigo
-  primary: {
-    main: '#6366f1',      // Indigo 500
-    light: '#818cf8',     // Indigo 400
-    dark: '#4f46e5',      // Indigo 600
-    contrastText: '#ffffff',
-  },
-  
-  // Pure white backgrounds - NO GRAY
-  background: {
-    default: '#ffffff',   // Pure white
-    paper: '#ffffff',     // Pure white
-  },
-  
-  // Text colors
-  text: {
-    primary: '#1e293b',   // Dark slate
-    secondary: '#64748b', // Slate 500
-    disabled: '#94a3b8',  // Slate 400
-  },
-  
-  // Border colors
-  border: {
-    light: '#e2e8f0',     // Slate 200
-    main: '#cbd5e1',      // Slate 300
-  },
-  
-  // Status colors
-  success: {
-    main: '#10b981',
-    light: '#34d399',
-    dark: '#059669',
-  },
-  
-  warning: {
-    main: '#f59e0b',
-    light: '#fbbf24',
-    dark: '#d97706',
-  },
-  
-  error: {
-    main: '#ef4444',
-    light: '#f87171',
-    dark: '#dc2626',
-  },
-  
-  info: {
-    main: '#3b82f6',
-    light: '#60a5fa',
-    dark: '#2563eb',
-  },
-  
-  // Chart colors
-  chart: {
-    primary: '#6366f1',
-    secondary: '#a78bfa',
-    tertiary: '#10b981',
-    quaternary: '#f59e0b',
-    cyan: '#22d3ee',
-    rose: '#f43f5e',
-  },
-};
+// MUI X Default Colors - Standard Material-UI Palette
+// Reference: https://mui.com/material-ui/customization/palette/
 
 const getTheme = (mode: 'light' | 'dark') => {
-  // Force light mode always - ignore dark mode
   const baseTheme = createTheme({
   palette: {
-    mode: 'light', // Always light
+    mode,
+    // Default MUI primary color (blue)
     primary: {
-      main: saasableColors.primary.main,
-      light: saasableColors.primary.light,
-      dark: saasableColors.primary.dark,
-      contrastText: saasableColors.primary.contrastText,
+      light: '#42a5f5',
+      main: '#1976d2',
+      dark: '#1565c0',
+      contrastText: '#fff',
     },
+    // Default MUI secondary color (purple)
     secondary: {
-      main: '#64748b',
-      light: '#94a3b8',
-      dark: '#475569',
+      light: '#ba68c8',
+      main: '#9c27b0',
+      dark: '#7b1fa2',
       contrastText: '#fff',
     },
-    background: {
-      default: '#ffffff',  // Pure white always
-      paper: '#ffffff',    // Pure white always
-    },
-    text: {
-      primary: saasableColors.text.primary,
-      secondary: saasableColors.text.secondary,
-      disabled: saasableColors.text.disabled,
-    },
-    success: {
-      main: saasableColors.success.main,
-      light: saasableColors.success.light,
-      dark: saasableColors.success.dark,
-      contrastText: '#fff',
-    },
-    warning: {
-      main: saasableColors.warning.main,
-      light: saasableColors.warning.light,
-      dark: saasableColors.warning.dark,
-      contrastText: '#fff',
-    },
+    // Default MUI error color
     error: {
-      main: saasableColors.error.main,
-      light: saasableColors.error.light,
-      dark: saasableColors.error.dark,
+      light: '#ef5350',
+      main: '#d32f2f',
+      dark: '#c62828',
       contrastText: '#fff',
     },
+    // Default MUI warning color
+    warning: {
+      light: '#ff9800',
+      main: '#ed6c02',
+      dark: '#e65100',
+      contrastText: '#fff',
+    },
+    // Default MUI info color
     info: {
-      main: saasableColors.info.main,
-      light: saasableColors.info.light,
-      dark: saasableColors.info.dark,
+      light: '#03a9f4',
+      main: '#0288d1',
+      dark: '#01579b',
       contrastText: '#fff',
     },
-    divider: saasableColors.border.light,
+    // Default MUI success color
+    success: {
+      light: '#4caf50',
+      main: '#2e7d32',
+      dark: '#1b5e20',
+      contrastText: '#fff',
+    },
+    // Default MUI backgrounds
+    background: {
+      default: mode === 'light' ? '#fff' : '#121212',
+      paper: mode === 'light' ? '#fff' : '#121212',
+    },
+    // Default MUI text colors
+    text: {
+      primary: mode === 'light' ? 'rgba(0, 0, 0, 0.87)' : '#fff',
+      secondary: mode === 'light' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.7)',
+      disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.38)' : 'rgba(255, 255, 255, 0.5)',
+    },
+    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
   },
   typography: {
-    fontFamily: '"Urbanist", "Inter", "DM Sans", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
-      fontWeight: 700,
-      fontSize: '3rem',
-      lineHeight: 1.2,
-      letterSpacing: '-0.02em',
+      fontWeight: 300,
+      fontSize: '6rem',
+      lineHeight: 1.167,
+      letterSpacing: '-0.01562em',
     },
     h2: {
-      fontWeight: 700,
-      fontSize: '2.5rem',
-      lineHeight: 1.3,
-      letterSpacing: '-0.01em',
+      fontWeight: 300,
+      fontSize: '3.75rem',
+      lineHeight: 1.2,
+      letterSpacing: '-0.00833em',
     },
     h3: {
-      fontWeight: 600,
-      fontSize: '2rem',
-      lineHeight: 1.4,
+      fontWeight: 400,
+      fontSize: '3rem',
+      lineHeight: 1.167,
+      letterSpacing: '0em',
     },
     h4: {
-      fontWeight: 600,
-      fontSize: '1.5rem',
-      lineHeight: 1.4,
+      fontWeight: 400,
+      fontSize: '2.125rem',
+      lineHeight: 1.235,
+      letterSpacing: '0.00735em',
     },
     h5: {
-      fontWeight: 600,
-      fontSize: '1.25rem',
-      lineHeight: 1.5,
+      fontWeight: 400,
+      fontSize: '1.5rem',
+      lineHeight: 1.334,
+      letterSpacing: '0em',
     },
     h6: {
-      fontWeight: 600,
-      fontSize: '1rem',
-      lineHeight: 1.5,
+      fontWeight: 500,
+      fontSize: '1.25rem',
+      lineHeight: 1.6,
+      letterSpacing: '0.0075em',
     },
     body1: {
+      fontWeight: 400,
       fontSize: '1rem',
-      lineHeight: 1.7,
+      lineHeight: 1.5,
+      letterSpacing: '0.00938em',
     },
     body2: {
+      fontWeight: 400,
       fontSize: '0.875rem',
-      lineHeight: 1.6,
+      lineHeight: 1.43,
+      letterSpacing: '0.01071em',
     },
     button: {
-      textTransform: 'none',
-      fontWeight: 600,
+      fontWeight: 500,
+      fontSize: '0.875rem',
+      lineHeight: 1.75,
+      letterSpacing: '0.02857em',
+      textTransform: 'uppercase',
     },
   },
   shape: {
-    borderRadius: 8,
+    borderRadius: 4,
   },
-  shadows: [
-    'none',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 2px 4px rgba(0,0,0,0.1)',
-    '0 4px 6px rgba(0,0,0,0.1)',
-    '0 5px 15px rgba(0,0,0,0.1)',
-    '0 10px 24px rgba(0,0,0,0.1)',
-    '0 15px 35px rgba(0,0,0,0.1)',
-    '0 20px 40px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-    '0 1px 3px rgba(0,0,0,0.1)',
-  ],
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        html: {
-          colorScheme: 'light',
-          backgroundColor: '#ffffff',
-        },
         body: {
-          margin: 0,
-          padding: 0,
-          boxSizing: 'border-box',
-          lineHeight: 1.5,
-          fontFamily: '"Urbanist", "Inter", "DM Sans", "Roboto", "Helvetica", "Arial", sans-serif',
-          backgroundColor: '#ffffff', // Pure white
-          scrollbarColor: `${saasableColors.primary.main} #ffffff`,
+          scrollbarColor: mode === 'light' ? '#bbb #fff' : '#6b6b6b #2b2b2b',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
-            width: 12,
-            height: 12,
+            width: 8,
+            height: 8,
           },
           '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
             borderRadius: 8,
-            backgroundColor: saasableColors.text.disabled,
+            backgroundColor: mode === 'light' ? '#bbb' : '#6b6b6b',
             minHeight: 24,
-            border: '2px solid #ffffff',
           },
           '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
-            backgroundColor: '#ffffff',
+            backgroundColor: mode === 'light' ? '#fff' : '#2b2b2b',
           },
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          textTransform: 'none',
-          fontWeight: 600,
-          padding: '10px 24px',
-        },
-        contained: {
-          boxShadow: 'none',
-          '&:hover': {
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          },
-        },
-        outlined: {
-          borderWidth: 1.5,
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          border: `1px solid ${saasableColors.border.light}`,
-          backgroundColor: '#ffffff',
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: 6,
-          fontWeight: 500,
-        },
-      },
-    },
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          '& .MuiOutlinedInput-root': {
-            borderRadius: 8,
-            backgroundColor: '#ffffff',
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-          backgroundColor: '#ffffff',
-        },
-        elevation1: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          backgroundColor: '#ffffff',
-        },
-      },
-    },
-    MuiTab: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: '0.875rem',
         },
       },
     },
@@ -306,9 +149,8 @@ const getTheme = (mode: 'light' | 'dark') => {
   return responsiveFontSizes(baseTheme);
 };
 
-// Always return light theme
 export const lightTheme = getTheme('light');
-export const darkTheme = getTheme('light'); // Force light even for "dark"
+export const darkTheme = getTheme('dark');
 
 // Default export for backward compatibility
 export default getTheme;

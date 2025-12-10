@@ -106,7 +106,7 @@ export default function CreativeDashboardPanel() {
   };
 
   return (
-    <Box sx={{ bgcolor: "#ffffff", minHeight: '100vh', pb: 4 }}>
+    <Box sx={{ bgcolor: "background.default", minHeight: '100vh', pb: 4 }}>
       {/* Header */}
       <Box sx={{ 
         bgcolor: 'white', 
