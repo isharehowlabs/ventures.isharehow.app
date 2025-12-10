@@ -1534,6 +1534,14 @@ def require_session(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def login_required(f):
+    """Decorator to require authenticated user (JWT required)"""
+    @wraps(f)
+    @jwt_required()
+    def decorated_function(*args, **kwargs):
+        return f(*args, **kwargs)
+    return decorated_function
+
 def send_push_notification(user_id: int, notification: Notification):
     """Send push notification to user's devices"""
     if not WEBPUSH_AVAILABLE or not DB_AVAILABLE:
