@@ -182,9 +182,11 @@ export default function AiAgentPanel() {
   return (
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Grid container spacing={3}>
-        {/* Tasks Section */}
-        <Grid item xs={12} md={4}>
-          <TasksPanel height={600} />
+        {/* Tasks Section - Large Card */}
+        <Grid item xs={12}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 600 }}>
+            <TasksPanel height={600} />
+          </Paper>
         </Grid>
 
         {/* AI Agent Content Manager Section - Large Card */}
@@ -193,7 +195,7 @@ export default function AiAgentPanel() {
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
               <AiAgentIcon sx={{ fontSize: 32, color: 'primary.main' }} />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                AI Agent Content Manager
+                Ai Content Agent
               </Typography>
             </Stack>
 

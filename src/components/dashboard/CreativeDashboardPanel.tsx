@@ -34,6 +34,7 @@ import AiAgentPanel from './AiAgentPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
 import DesignFigmaPanel from './creative/DesignFigmaPanel';
 import Workspace from './Workspace';
+import TasksPanel from './shared/TasksPanel';
 import FloatingAIChat from './FloatingAIChat';
 import StatCard from './StatCard';
 import ChartCard from './ChartCard';
@@ -245,7 +246,12 @@ function CoWorkTab() {
           </Typography>
         </Box>
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          <Workspace />
+          {/* Tasks Section Only - Collaboration Board moved to Design & Figma tab */}
+          <Box sx={{ width: '100%' }}>
+            <Box sx={{ mb: 3 }}>
+              <TasksPanel height={600} />
+            </Box>
+          </Box>
         </Box>
       </CardContent>
     </Card>

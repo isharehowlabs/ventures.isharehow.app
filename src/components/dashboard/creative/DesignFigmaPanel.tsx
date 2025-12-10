@@ -20,12 +20,18 @@ import {
   Button,
   TextField,
   Tooltip,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
   Favorite as FavoriteIcon,
   Bookmark as BookmarkIcon,
+  Palette as DesignIcon,
+  Gesture as BoardIcon,
 } from '@mui/icons-material';
+import BoardShell from '../../board/BoardShell';
+import { useAuth } from '../../../hooks/useAuth';
 
 // Optional imports for Figma/MCP features
 let useFigmaHook: any = null;
@@ -44,6 +50,12 @@ try {
 }
 
 export default function DesignFigmaPanel() {
+  const { user } = useAuth();
+  const [activeSubTab, setActiveSubTab] = useState(0);
+  
+  // Generate a default board ID for the design space
+  const defaultBoardId = `design_${user?.id || 'shared'}`;
+  
   // Figma hooks (optional - try to load)
   let figmaHook: any = null;
   let mcpHook: any = null;
@@ -163,105 +175,178 @@ export default function DesignFigmaPanel() {
       <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h5" fontWeight={700}>Design & Figma</Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="Refresh">
-              <IconButton onClick={handleRefreshFigma} size="small">
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => setLinkDialogOpen(true)}
-              disabled={!selectedFile || components.length === 0}
-            >
-              Link to Code
-            </Button>
-          </Box>
         </Box>
         
-        {!useFigmaHook || !useMCPHook ? (
-          <Alert severity="info">
-            Figma integration not available. Check your configuration.
-          </Alert>
-        ) : (
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {figmaErrorMsg && <Alert severity="error" sx={{ mb: 2 }}>{figmaErrorMsg}</Alert>}
-            
-            <Box sx={{ mb: 2 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Figma File</InputLabel>
-                <Select
-                  value={selectedFile || ''}
-                  label="Select Figma File"
-                  onChange={(e) => setSelectedFile(e.target.value)}
-                >
-                  <MenuItem value="">-- Select a file --</MenuItem>
-                  {files.map((file: any) => (
-                    <MenuItem key={file.key} value={file.key}>{file.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+        {/* Sub-tabs for Figma and Collaboration Board */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={activeSubTab} onChange={(e, newValue) => setActiveSubTab(newValue)}>
+            <Tab icon={<DesignIcon />} iconPosition="start" label="Figma Components" />
+            <Tab icon={<BoardIcon />} iconPosition="start" label="Collaboration Board" />
+          </Tabs>
+        </Box>
 
-            {selectedFile && (
-              <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                {loadingComponents ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <CircularProgress size={24} />
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Loading components...
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Grid container spacing={2}>
-                    {components.map((comp: any) => (
-                      <Grid item xs={12} sm={6} key={comp.key}>
-                        <Card elevation={1}>
-                          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                            <Typography variant="subtitle2" noWrap fontWeight={500}>
-                              {comp.name}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
-                              <IconButton 
-                                size="small" 
-                                onClick={(e) => handleLike(comp.key, e)}
-                                color={componentStatuses[comp.key]?.liked ? 'error' : 'default'}
-                              >
-                                <FavoriteIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton 
-                                size="small" 
-                                onClick={(e) => handleSaveComponent(comp.key, e)}
-                                color={componentStatuses[comp.key]?.saved ? 'primary' : 'default'}
-                              >
-                                <BookmarkIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                    
-                    {components.length === 0 && (
-                      <Grid item xs={12}>
-                        <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
-                          No components found in this file.
+        {/* Figma Components Tab */}
+        {activeSubTab === 0 && (
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Figma Integration</Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Refresh">
+                  <IconButton onClick={handleRefreshFigma} size="small">
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setLinkDialogOpen(true)}
+                  disabled={!selectedFile || components.length === 0}
+                >
+                  Link to Code
+                </Button>
+              </Box>
+            </Box>
+            
+            {!useFigmaHook || !useMCPHook ? (
+              <Alert severity="info">
+                Figma integration not available. Check your configuration.
+              </Alert>
+            ) : (
+              <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {figmaErrorMsg && <Alert severity="error" sx={{ mb: 2 }}>{figmaErrorMsg}</Alert>}
+                
+                <Box sx={{ mb: 2 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Select Figma File</InputLabel>
+                    <Select
+                      value={selectedFile || ''}
+                      label="Select Figma File"
+                      onChange={(e) => setSelectedFile(e.target.value)}
+                    >
+                      <MenuItem value="">-- Select a file --</MenuItem>
+                      {files.map((file: any) => (
+                        <MenuItem key={file.key} value={file.key}>{file.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                {selectedFile && (
+                  <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                    {loadingComponents ? (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <CircularProgress size={24} />
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                          Loading components...
                         </Typography>
+                      </Box>
+                    ) : (
+                      <Grid container spacing={2}>
+                        {components.map((comp: any) => (
+                          <Grid item xs={12} sm={6} key={comp.key}>
+                            <Card elevation={1}>
+                              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                                <Typography variant="subtitle2" noWrap fontWeight={500}>
+                                  {comp.name}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => handleLike(comp.key, e)}
+                                    color={componentStatuses[comp.key]?.liked ? 'error' : 'default'}
+                                  >
+                                    <FavoriteIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => handleSaveComponent(comp.key, e)}
+                                    color={componentStatuses[comp.key]?.saved ? 'primary' : 'default'}
+                                  >
+                                    <BookmarkIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        ))}
+                        
+                        {components.length === 0 && (
+                          <Grid item xs={12}>
+                            <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
+                              No components found in this file.
+                            </Typography>
+                          </Grid>
+                        )}
                       </Grid>
                     )}
-                  </Grid>
+                  </Box>
+                )}
+                
+                {!selectedFile && (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Select a Figma file to view components
+                    </Typography>
+                  </Box>
                 )}
               </Box>
             )}
-            
-            {!selectedFile && (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Select a Figma file to view components
-                </Typography>
+          </Box>
+        )}
+
+        {/* Collaboration Board Tab */}
+        {activeSubTab === 1 && (
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Collaboration Board - {defaultBoardId}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Collaborate, design, and create together with your team in real-time
+              </Typography>
+            </Box>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                flexGrow: 1,
+                p: 0, 
+                minHeight: 600, 
+                height: 'calc(100vh - 300px)', 
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
+                bgcolor: 'background.default',
+              }}
+            >
+              <Box 
+                sx={{ 
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: '100%',
+                  width: '100%',
+                }}
+              >
+                <Box
+                  sx={{
+                    height: '100%',
+                    width: '100%',
+                    '& > div': {
+                      height: '100% !important',
+                    },
+                  }}
+                >
+                  <BoardShell
+                    boardId={defaultBoardId}
+                    userId={user?.id?.toString() || 'anonymous'}
+                    userName={user?.name || user?.email || 'Anonymous User'}
+                  />
+                </Box>
               </Box>
-            )}
+            </Paper>
           </Box>
         )}
       </Paper>
