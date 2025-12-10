@@ -23,6 +23,7 @@ import {
   WorkOutline as WorkIcon,
   Language as BrowserIcon,
   Psychology as AiIcon,
+  Palette as DesignIcon,
 } from '@mui/icons-material';
 
 // Component imports - keeping all existing functionality
@@ -31,6 +32,7 @@ import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import AiAgentPanel from './AiAgentPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
+import DesignFigmaPanel from './creative/DesignFigmaPanel';
 import Workspace from './Workspace';
 import FloatingAIChat from './FloatingAIChat';
 import StatCard from './StatCard';
@@ -76,7 +78,8 @@ export default function CreativeDashboardPanel() {
     match: 2,
     cowork: 3,
     browser: 4,
-    ai: 5,
+    design: 5,
+    ai: 6,
   };
 
   const tabs = [
@@ -85,6 +88,7 @@ export default function CreativeDashboardPanel() {
     { key: 'match', label: 'Matching', icon: <PeopleIcon /> },
     { key: 'cowork', label: 'Co-Work', icon: <WorkIcon /> },
     { key: 'browser', label: 'Browser', icon: <BrowserIcon /> },
+    { key: 'design', label: 'Design & Figma', icon: <DesignIcon /> },
     { key: 'ai', label: 'AI Agent', icon: <AiIcon /> },
   ];
 
@@ -199,6 +203,14 @@ export default function CreativeDashboardPanel() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={5}>
+          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+            <CardContent sx={{ p: 3 }}>
+              <DesignFigmaPanel />
+            </CardContent>
+          </Card>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={6}>
           <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <AiAgentPanel />
