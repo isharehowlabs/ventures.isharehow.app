@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, Typography, Box, Avatar } from '@mui/material';
+import { Card, CardContent, Typography, Box, Avatar, CircularProgress } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
@@ -10,9 +10,10 @@ interface StatCardProps {
   trend?: number;
   trendLabel?: string;
   color?: string;
+  loading?: boolean;
 }
 
-export default function StatCard({ title, value, icon, trend, trendLabel, color = '#6366f1' }: StatCardProps) {
+export default function StatCard({ title, value, icon, trend, trendLabel, color = '#6366f1', loading = false }: StatCardProps) {
   const isPositiveTrend = trend && trend > 0;
   
   return (
@@ -39,9 +40,15 @@ export default function StatCard({ title, value, icon, trend, trendLabel, color 
           </Avatar>
         </Box>
         
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          {value}
-        </Typography>
+        {loading ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 48 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : (
+          <Typography variant="h4" fontWeight={700} gutterBottom>
+            {value}
+          </Typography>
+        )}
         
         {trend !== undefined && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

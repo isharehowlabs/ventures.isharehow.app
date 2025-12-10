@@ -12868,3 +12868,128 @@ def assign_client_to_user(user_id):
         db.session.rollback()
         return jsonify({'error': f'Failed to assign client: {str(e)}'}), 500
 
+@app.route('/api/analytics/data', methods=['POST'])
+@jwt_required()
+def get_analytics_data():
+    """Fetch Google Analytics data for a property"""
+    try:
+        requester = get_current_user()
+        if not requester:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.get_json() or {}
+        property_id = data.get('propertyId', '').strip()
+        time_range = data.get('timeRange', '7d')
+        
+        if not property_id:
+            return jsonify({'error': 'Google Analytics Property ID is required'}), 400
+        
+        # Calculate date range
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        
+        if time_range == '24h':
+            start_date = now - timedelta(days=1)
+            previous_start = start_date - timedelta(days=1)
+            previous_end = start_date
+        elif time_range == '7d':
+            start_date = now - timedelta(days=7)
+            previous_start = start_date - timedelta(days=7)
+            previous_end = start_date
+        elif time_range == '30d':
+            start_date = now - timedelta(days=30)
+            previous_start = start_date - timedelta(days=30)
+            previous_end = start_date
+        elif time_range == '90d':
+            start_date = now - timedelta(days=90)
+            previous_start = start_date - timedelta(days=90)
+            previous_end = start_date
+        else:
+            start_date = now - timedelta(days=7)
+            previous_start = start_date - timedelta(days=7)
+            previous_end = start_date
+        
+        # Format dates for Google Analytics API (YYYY-MM-DD)
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = now.strftime('%Y-%m-%d')
+        previous_start_str = previous_start.strftime('%Y-%m-%d')
+        previous_end_str = previous_end.strftime('%Y-%m-%d')
+        
+        # Check if we have Google Analytics credentials
+        import os
+        ga_credentials = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+        ga_api_key = os.environ.get('GOOGLE_ANALYTICS_API_KEY')
+        
+        if not ga_credentials and not ga_api_key:
+            # Return mock data structure for now - user needs to configure GA API
+            # In production, you would use the Google Analytics Data API here
+            return jsonify({
+                'totalRevenue': 45231,
+                'totalUsers': 8282,
+                'pageViews': 48500,
+                'conversionRate': 3.24,
+                'revenueTrend': 12.5,
+                'usersTrend': 8.2,
+                'pageViewsTrend': -2.4,
+                'conversionTrend': 5.1,
+                'revenueData': [
+                    {'name': 'Mon', 'value': 4000, 'previous': 3000},
+                    {'name': 'Tue', 'value': 3000, 'previous': 2800},
+                    {'name': 'Wed', 'value': 5000, 'previous': 4200},
+                    {'name': 'Thu', 'value': 4500, 'previous': 3900},
+                    {'name': 'Fri', 'value': 6000, 'previous': 5000},
+                    {'name': 'Sat', 'value': 5500, 'previous': 4800},
+                    {'name': 'Sun', 'value': 7000, 'previous': 5500},
+                ],
+                'visitorData': [
+                    {'name': 'Mon', 'visitors': 2400, 'pageViews': 4800},
+                    {'name': 'Tue', 'visitors': 1398, 'pageViews': 3200},
+                    {'name': 'Wed', 'visitors': 9800, 'pageViews': 12000},
+                    {'name': 'Thu', 'visitors': 3908, 'pageViews': 6500},
+                    {'name': 'Fri', 'visitors': 4800, 'pageViews': 8200},
+                    {'name': 'Sat', 'visitors': 3800, 'pageViews': 7100},
+                    {'name': 'Sun', 'visitors': 4300, 'pageViews': 7800},
+                ],
+                'conversionData': [
+                    {'name': 'Week 1', 'rate': 2.4},
+                    {'name': 'Week 2', 'rate': 3.2},
+                    {'name': 'Week 3', 'rate': 2.8},
+                    {'name': 'Week 4', 'rate': 4.1},
+                ],
+                'message': 'Google Analytics API not configured. Showing sample data. Please configure GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_ANALYTICS_API_KEY environment variables.'
+            }), 200
+        
+        # TODO: Implement actual Google Analytics Data API integration
+        # This would use the Google Analytics Data API (GA4) to fetch real data
+        # Example:
+        # from google.analytics.data import BetaAnalyticsDataClient
+        # client = BetaAnalyticsDataClient()
+        # response = client.run_report(
+        #     request={
+        #         "property": f"properties/{property_id}",
+        #         "date_ranges": [{"start_date": start_date_str, "end_date": end_date_str}],
+        #         "dimensions": [{"name": "date"}],
+        #         "metrics": [
+        #             {"name": "activeUsers"},
+        #             {"name": "screenPageViews"},
+        #             {"name": "conversions"},
+        #             {"name": "totalRevenue"}
+        #         ]
+        #     }
+        # )
+        
+        # For now, return a structure indicating API needs to be configured
+        return jsonify({
+            'error': 'Google Analytics API integration not yet implemented. Please configure the Google Analytics Data API.',
+            'propertyId': property_id,
+            'timeRange': time_range,
+            'startDate': start_date_str,
+            'endDate': end_date_str
+        }), 501
+        
+    except Exception as e:
+        print(f"Error fetching analytics data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to fetch analytics data: {str(e)}'}), 500
+

@@ -8,6 +8,7 @@ import {
   Select,
   MenuItem,
   FormControl,
+  InputLabel,
   Button,
   CircularProgress,
   Card,
@@ -16,6 +17,8 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  TextField,
+  Alert,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -69,6 +72,20 @@ const conversionData = [
   { name: 'Week 4', rate: 4.1 },
 ];
 
+interface AnalyticsData {
+  totalRevenue: number;
+  totalUsers: number;
+  pageViews: number;
+  conversionRate: number;
+  revenueTrend: number;
+  usersTrend: number;
+  pageViewsTrend: number;
+  conversionTrend: number;
+  revenueData: Array<{ name: string; value: number; previous: number }>;
+  visitorData: Array<{ name: string; visitors: number; pageViews: number }>;
+  conversionData: Array<{ name: string; rate: number }>;
+}
+
 export default function AnalyticsActivity() {
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [clients, setClients] = useState<Client[]>([]);
@@ -76,6 +93,9 @@ export default function AnalyticsActivity() {
   const [loadingClients, setLoadingClients] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [gaPropertyId, setGaPropertyId] = useState<string>('');
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -97,16 +117,56 @@ export default function AnalyticsActivity() {
     fetchClients();
   }, []);
 
-  const handleRefresh = async () => {
+  const fetchAnalyticsData = async (propertyId: string, range: string) => {
+    if (!propertyId) {
+      setAnalyticsData(null);
+      return;
+    }
+
     setLoading(true);
+    setError(null);
     try {
-      // Simulate API call - replace with real analytics API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/analytics/data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          propertyId,
+          timeRange: range,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch analytics data');
+      }
+
+      const data = await response.json();
+      setAnalyticsData(data);
       setLastSync(new Date());
+    } catch (err: any) {
+      console.error('Error fetching analytics data:', err);
+      setError(err.message || 'Failed to load analytics data');
+      setAnalyticsData(null);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleRefresh = async () => {
+    if (gaPropertyId) {
+      await fetchAnalyticsData(gaPropertyId, timeRange);
+    }
+  };
+
+  useEffect(() => {
+    if (gaPropertyId && timeRange) {
+      fetchAnalyticsData(gaPropertyId, timeRange);
+    }
+  }, [gaPropertyId, timeRange]);
 
   return (
     <Box>
@@ -125,7 +185,16 @@ export default function AnalyticsActivity() {
             </Typography>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Stack direction="row" spacing={2} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+            <Stack direction="row" spacing={2} justifyContent={{ xs: 'flex-start', md: 'flex-end' }} flexWrap="wrap">
+              <TextField
+                size="small"
+                label="Google Analytics Property ID"
+                placeholder="G-XXXXXXXXXX or UA-XXXXX-X"
+                value={gaPropertyId}
+                onChange={(e) => setGaPropertyId(e.target.value)}
+                sx={{ minWidth: 250 }}
+                helperText="Enter your GA4 Property ID"
+              />
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <Select
                   value={timeRange}
@@ -173,46 +242,56 @@ export default function AnalyticsActivity() {
         </Grid>
       </Box>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
       {/* Stat Cards Row */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Revenue"
-            value="$45,231"
+            value={analyticsData ? `$${analyticsData.totalRevenue.toLocaleString()}` : '$0'}
             icon={<AttachMoney />}
-            trend={12.5}
+            trend={analyticsData?.revenueTrend || 0}
             trendLabel="vs last period"
             color="#10b981"
+            loading={loading && !analyticsData}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Users"
-            value="8,282"
+            value={analyticsData ? analyticsData.totalUsers.toLocaleString() : '0'}
             icon={<People />}
-            trend={8.2}
+            trend={analyticsData?.usersTrend || 0}
             trendLabel="vs last period"
             color="#6366f1"
+            loading={loading && !analyticsData}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Page Views"
-            value="48.5K"
+            value={analyticsData ? `${(analyticsData.pageViews / 1000).toFixed(1)}K` : '0'}
             icon={<Visibility />}
-            trend={-2.4}
+            trend={analyticsData?.pageViewsTrend || 0}
             trendLabel="vs last period"
             color="#f59e0b"
+            loading={loading && !analyticsData}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Conversion Rate"
-            value="3.24%"
+            value={analyticsData ? `${analyticsData.conversionRate.toFixed(2)}%` : '0%'}
             icon={<ShoppingCart />}
-            trend={5.1}
+            trend={analyticsData?.conversionTrend || 0}
             trendLabel="vs last period"
             color="#8b5cf6"
+            loading={loading && !analyticsData}
           />
         </Grid>
       </Grid>
@@ -231,7 +310,7 @@ export default function AnalyticsActivity() {
             }
           >
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={revenueData}>
+              <AreaChart data={analyticsData?.revenueData || revenueData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
@@ -276,7 +355,7 @@ export default function AnalyticsActivity() {
             subtitle="Weekly trend"
           >
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={conversionData}>
+              <LineChart data={analyticsData?.conversionData || conversionData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#888" fontSize={12} />
                 <YAxis stroke="#888" fontSize={12} />
@@ -320,7 +399,7 @@ export default function AnalyticsActivity() {
             }
           >
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={visitorData}>
+              <BarChart data={analyticsData?.visitorData || visitorData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#888" fontSize={12} />
                 <YAxis stroke="#888" fontSize={12} />
