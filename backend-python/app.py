@@ -1387,6 +1387,8 @@ def safe_get_user(user_id):
         if not user:
             user = User.query.filter_by(patreon_id=str(user_id)).first()
         if not user:
+            user = User.query.filter_by(ens_name=str(user_id)).first()
+        if not user:
             user = User.query.filter_by(email=str(user_id)).first()
         
         return user
@@ -1464,6 +1466,8 @@ def safe_get_user(user_id):
                 if not user:
                     user = User.query.filter_by(patreon_id=str(user_id)).first()
                 if not user:
+                    user = User.query.filter_by(ens_name=str(user_id)).first()
+                if not user:
                     user = User.query.filter_by(email=str(user_id)).first()
                 
                 return user
@@ -1488,7 +1492,7 @@ def safe_get_user(user_id):
                     SELECT id, username, email, password_hash, membership_paid,
                            last_checked, created_at, updated_at
                     FROM users 
-                    WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id OR email = :user_id)
+                    WHERE ({id_condition} OR username = :user_id OR patreon_id = :user_id OR ens_name = :user_id OR email = :user_id)
                     LIMIT 1
                 """), params)
                 row = result.fetchone()
@@ -10082,151 +10086,214 @@ def admin_change_password(user_id):
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 500
 
-@app.route('/api/admin/users/<user_id>', methods=['DELETE', 'OPTIONS'])
+@app.route('/api/admin/users/<user_id>', methods=['PUT', 'DELETE', 'OPTIONS'])
 @jwt_required()
-def delete_user(user_id):
-    """Delete a user (admin only)"""
+def update_or_delete_user(user_id):
+    """Update or delete a user (admin only)"""
+    # Handle CORS preflight
     if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
-        response.headers.add('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+        allowed_origins = ['https://ventures.isharehow.app']
+        if os.environ.get('FLASK_ENV') != 'production':
+            allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+        
+        if origin in allowed_origins:
+            cors_origin = origin
+        else:
+            cors_origin = 'https://ventures.isharehow.app'
+        
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
         response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Methods', 'PUT, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         return response
     
-    if not DB_AVAILABLE:
-        return jsonify({'error': 'Database not available'}), 500
+    # Check if requester is admin
+    requester = get_current_user()
+    if not requester:
+        origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+        allowed_origins = ['https://ventures.isharehow.app']
+        if os.environ.get('FLASK_ENV') != 'production':
+            allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
+        
+        if origin in allowed_origins:
+            cors_origin = origin
+        else:
+            cors_origin = 'https://ventures.isharehow.app'
+        
+        response = jsonify({'error': 'Authentication required'})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 401
     
-    try:
-        # Get current admin user
-        admin_user_id = get_jwt_identity()
-        if not admin_user_id:
-            return jsonify({'error': 'Not authenticated'}), 401
+    is_admin = getattr(requester, 'is_admin', False)
+    if not is_admin:
+        origin = request.headers.get('Origin', 'https://ventures.isharehow.app')
+        allowed_origins = ['https://ventures.isharehow.app']
+        if os.environ.get('FLASK_ENV') != 'production':
+            allowed_origins.extend(['http://localhost:5000', 'http://localhost:3000'])
         
-        admin_user = safe_get_user(admin_user_id)
-        if not admin_user:
-            return jsonify({'error': 'Admin user not found'}), 404
+        if origin in allowed_origins:
+            cors_origin = origin
+        else:
+            cors_origin = 'https://ventures.isharehow.app'
         
-        # Check if user is admin
-        if not (hasattr(admin_user, 'is_admin') and admin_user.is_admin):
-            return jsonify({'error': 'Admin access required'}), 403
+        response = jsonify({'error': 'Admin access required'})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 403
+    
+    # Handle PUT request - update user
+    if request.method == 'PUT':
+        if not DB_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
         
-        # Get user to delete
-        user_to_delete = safe_get_user(user_id)
-        if not user_to_delete:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # Prevent self-deletion
-        if (hasattr(user_to_delete, 'id') and hasattr(admin_user, 'id') and 
-            str(user_to_delete.id) == str(admin_user.id)):
-            return jsonify({'error': 'Cannot delete your own account'}), 400
-        
-        user_id_to_delete = user_to_delete.id if hasattr(user_to_delete, 'id') else user_id
-        
-        # Ensure user_id_to_delete is an integer
         try:
-            user_id_to_delete = int(user_id_to_delete)
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid user ID format'}), 400
-        
-        # Delete related records first (to avoid foreign key constraints)
-        try:
-            from sqlalchemy import text
-            from sqlalchemy.exc import ProgrammingError, OperationalError, InternalError
+            # Find user by ID, username, patreon_id, or ens_name
+            user = safe_get_user(user_id)
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
             
-            with db.engine.connect() as conn:
-                # Use a transaction with savepoints for each operation
-                trans = conn.begin()
-                try:
-                    user_id_str = str(user_id_to_delete)
-                    
-                    # Get user info first (before any deletes)
-                    user_result = conn.execute(text("SELECT email, ens_name FROM users WHERE id = :user_id"), 
-                                              {'user_id': user_id_to_delete})
-                    user_row = user_result.fetchone()
-                    
-                    # Helper function to execute with savepoint
-                    def execute_with_savepoint(statement, params, operation_name):
-                        savepoint = conn.begin_nested()
-                        try:
-                            conn.execute(statement, params)
-                            savepoint.commit()
-                        except (ProgrammingError, OperationalError, InternalError) as e:
-                            savepoint.rollback()
-                            app.logger.warning(f"Could not {operation_name}: {e}")
-                        except Exception as e:
-                            savepoint.rollback()
-                            app.logger.warning(f"Unexpected error in {operation_name}: {e}")
-                    
-                    # Delete user profiles (linked by email or ens_name)
-                    if user_row and user_row[0]:
-                        execute_with_savepoint(
-                            text("DELETE FROM user_profiles WHERE email = :email OR ens_name = :ens_name"),
-                            {'email': user_row[0], 'ens_name': user_row[1] if user_row[1] else ''},
-                            "delete user_profiles"
-                        )
-                    
-                    # Delete client assignments
-                    execute_with_savepoint(
-                        text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"),
-                        {'user_id': user_id_to_delete},
-                        "delete client_employee_assignments"
-                    )
-                    
-                    # Update support requests assigned_to
-                    execute_with_savepoint(
-                        text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"),
-                        {'user_id': user_id_str},
-                        "update support_requests"
-                    )
-                    
-                    # Delete notifications
-                    execute_with_savepoint(
-                        text("DELETE FROM notifications WHERE user_id = :user_id"),
-                        {'user_id': user_id_to_delete},
-                        "delete notifications"
-                    )
-                    
-                    # Delete subscriptions
-                    execute_with_savepoint(
-                        text("DELETE FROM subscriptions WHERE user_id = :user_id"),
-                        {'user_id': user_id_to_delete},
-                        "delete subscriptions"
-                    )
-                    
-                    # Delete tasks
-                    execute_with_savepoint(
-                        text("DELETE FROM tasks WHERE created_by = :user_id OR assigned_to = :user_id"),
-                        {'user_id': user_id_to_delete},
-                        "delete tasks"
-                    )
-                    
-                    # Finally, delete the user (this must succeed)
-                    conn.execute(text("DELETE FROM users WHERE id = :user_id"), 
-                                {'user_id': user_id_to_delete})
-                    
-                    # Commit the transaction
-                    trans.commit()
-                    
-                except Exception as e:
-                    # Rollback on any error
-                    trans.rollback()
-                    raise
+            data = request.get_json() or {}
             
-            return jsonify({'message': 'User deleted successfully'}), 200
-        except Exception as delete_error:
+            # Update allowed fields
+            if 'email' in data and data['email']:
+                if hasattr(user, 'email'):
+                    user.email = data['email']
+            
+            if 'username' in data and data['username']:
+                if hasattr(user, 'username'):
+                    user.username = data['username']
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'User updated successfully',
+                'user': user.to_dict() if hasattr(user, 'to_dict') else {'id': str(getattr(user, 'id', ''))}
+            }), 200
+        except Exception as e:
             db.session.rollback()
-            app.logger.error(f"Error deleting user: {delete_error}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({'error': 'Failed to delete user', 'details': str(delete_error)}), 500
+            print(f"Error updating user: {e}")
+            return jsonify({'error': f'Failed to update user: {str(e)}'}), 500
+    
+    # Handle DELETE request - delete user
+    if request.method == 'DELETE':
+        if not DB_AVAILABLE:
+            return jsonify({'error': 'Database not available'}), 500
         
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error in delete_user endpoint: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': 'Failed to delete user', 'details': str(e)}), 500
+        try:
+            # Get user to delete
+            user_to_delete = safe_get_user(user_id)
+            if not user_to_delete:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Prevent self-deletion
+            requester_id = getattr(requester, 'id', None)
+            user_to_delete_id = getattr(user_to_delete, 'id', None)
+            if requester_id and user_to_delete_id and str(requester_id) == str(user_to_delete_id):
+                return jsonify({'error': 'Cannot delete your own account'}), 400
+            
+            user_id_to_delete = user_to_delete.id if hasattr(user_to_delete, 'id') else user_id
+            
+            # Ensure user_id_to_delete is an integer
+            try:
+                user_id_to_delete = int(user_id_to_delete)
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid user ID format'}), 400
+            
+            # Delete related records first (to avoid foreign key constraints)
+            try:
+                from sqlalchemy import text
+                from sqlalchemy.exc import ProgrammingError, OperationalError, InternalError
+                
+                with db.engine.connect() as conn:
+                    # Use a transaction with savepoints for each operation
+                    trans = conn.begin()
+                    try:
+                        user_id_str = str(user_id_to_delete)
+                        
+                        # Get user info first (before any deletes)
+                        user_result = conn.execute(text("SELECT email, ens_name FROM users WHERE id = :user_id"), 
+                                                  {'user_id': user_id_to_delete})
+                        user_row = user_result.fetchone()
+                        
+                        # Helper function to execute with savepoint
+                        def execute_with_savepoint(statement, params, operation_name):
+                            savepoint = conn.begin_nested()
+                            try:
+                                conn.execute(statement, params)
+                                savepoint.commit()
+                            except (ProgrammingError, OperationalError, InternalError) as e:
+                                savepoint.rollback()
+                                app.logger.warning(f"Could not {operation_name}: {e}")
+                            except Exception as e:
+                                savepoint.rollback()
+                                app.logger.warning(f"Unexpected error in {operation_name}: {e}")
+                        
+                        # Delete user profiles (linked by email or ens_name)
+                        if user_row and user_row[0]:
+                            execute_with_savepoint(
+                                text("DELETE FROM user_profiles WHERE email = :email OR ens_name = :ens_name"),
+                                {'email': user_row[0], 'ens_name': user_row[1] if user_row[1] else ''},
+                                "delete user_profiles"
+                            )
+                        
+                        # Delete client assignments
+                        execute_with_savepoint(
+                            text("DELETE FROM client_employee_assignments WHERE employee_id = :user_id"),
+                            {'user_id': user_id_to_delete},
+                            "delete client_employee_assignments"
+                        )
+                        
+                        # Update support requests assigned_to
+                        execute_with_savepoint(
+                            text("UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = :user_id"),
+                            {'user_id': user_id_str},
+                            "update support_requests"
+                        )
+                        
+                        # Delete notifications
+                        execute_with_savepoint(
+                            text("DELETE FROM notifications WHERE user_id = :user_id"),
+                            {'user_id': user_id_to_delete},
+                            "delete notifications"
+                        )
+                        
+                        # Delete subscriptions
+                        execute_with_savepoint(
+                            text("DELETE FROM subscriptions WHERE user_id = :user_id"),
+                            {'user_id': user_id_to_delete},
+                            "delete subscriptions"
+                        )
+                        
+                        # Delete tasks
+                        execute_with_savepoint(
+                            text("DELETE FROM tasks WHERE created_by = :user_id OR assigned_to = :user_id"),
+                            {'user_id': user_id_to_delete},
+                            "delete tasks"
+                        )
+                        
+                        # Finally, delete the user (this must succeed)
+                        conn.execute(text("DELETE FROM users WHERE id = :user_id"), 
+                                    {'user_id': user_id_to_delete})
+                        
+                        # Commit the transaction
+                        trans.commit()
+                        
+                    except Exception as e:
+                        # Rollback on any error
+                        trans.rollback()
+                        raise
+                
+                return jsonify({'message': 'User deleted successfully'}), 200
+            except Exception as delete_error:
+                db.session.rollback()
+                app.logger.error(f"Error deleting user: {delete_error}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({'error': 'Failed to delete user', 'details': str(delete_error)}), 500
 
 @app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
 @require_admin
@@ -12475,7 +12542,7 @@ def get_active_rooms():
 # User Management Extended Routes - Client Assignment, Tasks, Support
 # ============================================================================
 
-@app.route('/api/admin/users/<int:user_id>/clients', methods=['GET'])
+@app.route('/api/admin/users/<user_id>/clients', methods=['GET'])
 @login_required
 def get_user_clients(user_id):
     """Get clients assigned to a specific user/employee"""
@@ -12485,10 +12552,15 @@ def get_user_clients(user_id):
         if not requester or not requester.is_admin:
             return jsonify({'error': 'Admin access required'}), 403
         
-        # Verify user exists
-        user = User.query.get(user_id)
+        # Verify user exists - support ID, username, ENS name, or patreon_id
+        user = safe_get_user(user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
+        
+        # Get the actual user ID for the query
+        actual_user_id = getattr(user, 'id', None)
+        if not actual_user_id:
+            return jsonify({'error': 'User ID not found'}), 404
         
         # Get assigned clients from creative_clients table
         # Assuming there's a client-employee relationship
@@ -12502,7 +12574,7 @@ def get_user_clients(user_id):
             ORDER BY c.created_at DESC
         """)
         
-        result = db.session.execute(query, {'user_id': user_id})
+        result = db.session.execute(query, {'user_id': actual_user_id})
         clients = []
         
         for row in result:
@@ -12528,7 +12600,7 @@ def get_user_clients(user_id):
         return jsonify({'error': f'Failed to get clients: {str(e)}'}), 500
 
 
-@app.route('/api/admin/users/<int:user_id>/unassign-client/<client_id>', methods=['DELETE', 'OPTIONS'])
+@app.route('/api/admin/users/<user_id>/unassign-client/<client_id>', methods=['DELETE', 'OPTIONS'])
 @login_required
 def unassign_client_from_user(user_id, client_id):
     """Remove client assignment from user"""
@@ -12541,10 +12613,15 @@ def unassign_client_from_user(user_id, client_id):
         if not requester or not requester.is_admin:
             return jsonify({'error': 'Admin access required'}), 403
         
-        # Verify user exists
-        user = User.query.get(user_id)
+        # Verify user exists - support ID, username, ENS name, or patreon_id
+        user = safe_get_user(user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
+        
+        # Get the actual user ID for the query
+        actual_user_id = getattr(user, 'id', None)
+        if not actual_user_id:
+            return jsonify({'error': 'User ID not found'}), 404
         
         # Update client to remove assignment
         from sqlalchemy import text
@@ -12558,7 +12635,7 @@ def unassign_client_from_user(user_id, client_id):
         
         result = db.session.execute(query, {
             'client_id': client_id,
-            'user_id': user_id
+            'user_id': actual_user_id
         })
         db.session.commit()
         
@@ -12576,20 +12653,31 @@ def unassign_client_from_user(user_id, client_id):
         return jsonify({'error': f'Failed to unassign client: {str(e)}'}), 500
 
 
-@app.route('/api/admin/users/<int:user_id>/tasks', methods=['GET'])
+@app.route('/api/admin/users/<user_id>/tasks', methods=['GET'])
 @login_required
 def get_user_tasks(user_id):
     """Get tasks assigned to a specific user"""
     try:
-        # Check if requester is admin or the user themselves
-        requester = get_current_user()
-        if not requester or (not requester.is_admin and requester.id != user_id):
-            return jsonify({'error': 'Access denied'}), 403
-        
-        # Verify user exists
-        user = User.query.get(user_id)
+        # Verify user exists - support ID, username, ENS name, or patreon_id
+        user = safe_get_user(user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
+        
+        # Get the actual user ID for the query
+        actual_user_id = getattr(user, 'id', None)
+        if not actual_user_id:
+            return jsonify({'error': 'User ID not found'}), 404
+        
+        # Check if requester is admin or the user themselves
+        requester = get_current_user()
+        if not requester:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        requester_id = getattr(requester, 'id', None)
+        is_admin = getattr(requester, 'is_admin', False)
+        
+        if not is_admin and requester_id != actual_user_id:
+            return jsonify({'error': 'Access denied'}), 403
         
         # Get tasks from tasks table
         from sqlalchemy import text
@@ -12610,7 +12698,7 @@ def get_user_tasks(user_id):
                 t.due_date ASC
         """)
         
-        result = db.session.execute(query, {'user_id': user_id})
+        result = db.session.execute(query, {'user_id': actual_user_id})
         tasks = []
         
         for row in result:
@@ -12638,20 +12726,31 @@ def get_user_tasks(user_id):
         return jsonify({'error': f'Failed to get tasks: {str(e)}'}), 500
 
 
-@app.route('/api/admin/users/<int:user_id>/support-requests', methods=['GET'])
+@app.route('/api/admin/users/<user_id>/support-requests', methods=['GET'])
 @login_required
 def get_user_support_requests(user_id):
     """Get support requests assigned to a specific user"""
     try:
-        # Check if requester is admin or the user themselves
-        requester = get_current_user()
-        if not requester or (not requester.is_admin and requester.id != user_id):
-            return jsonify({'error': 'Access denied'}), 403
-        
-        # Verify user exists
-        user = User.query.get(user_id)
+        # Verify user exists - support ID, username, ENS name, or patreon_id
+        user = safe_get_user(user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
+        
+        # Get the actual user ID for the query
+        actual_user_id = getattr(user, 'id', None)
+        if not actual_user_id:
+            return jsonify({'error': 'User ID not found'}), 404
+        
+        # Check if requester is admin or the user themselves
+        requester = get_current_user()
+        if not requester:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        requester_id = getattr(requester, 'id', None)
+        is_admin = getattr(requester, 'is_admin', False)
+        
+        if not is_admin and requester_id != actual_user_id:
+            return jsonify({'error': 'Access denied'}), 403
         
         # Get support requests from support_requests table
         from sqlalchemy import text
@@ -12673,7 +12772,7 @@ def get_user_support_requests(user_id):
                 sr.created_at DESC
         """)
         
-        result = db.session.execute(query, {'user_id': user_id})
+        result = db.session.execute(query, {'user_id': actual_user_id})
         requests = []
         
         for row in result:
@@ -12701,9 +12800,9 @@ def get_user_support_requests(user_id):
         return jsonify({'error': f'Failed to get support requests: {str(e)}'}), 500
 
 
-@app.route('/api/admin/users/<int:user_id>/assign-client', methods=['POST', 'OPTIONS'])
+@app.route('/api/admin/users/<user_id>/assign-client', methods=['POST', 'OPTIONS'])
 @login_required
-def assign_client_to_user(user_id, client_id):
+def assign_client_to_user(user_id):
     """Assign a client to a user/employee"""
     if request.method == 'OPTIONS':
         return '', 204
@@ -12720,10 +12819,18 @@ def assign_client_to_user(user_id, client_id):
         if not client_id:
             return jsonify({'error': 'Client ID required'}), 400
         
-        # Verify user exists
-        user = User.query.get(user_id)
+        # Verify user exists - support ID, username, ENS name, or patreon_id
+        user = safe_get_user(user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
+        
+        # Get the actual user ID for the query
+        actual_user_id = getattr(user, 'id', None)
+        if not actual_user_id:
+            return jsonify({'error': 'User ID not found'}), 404
+        
+        # Get username for assignment
+        username = getattr(user, 'username', None) or getattr(user, 'ens_name', None) or str(actual_user_id)
         
         # Update client assignment
         from sqlalchemy import text
@@ -12736,8 +12843,8 @@ def assign_client_to_user(user_id, client_id):
         """)
         
         result = db.session.execute(query, {
-            'user_id': user_id,
-            'username': user.username,
+            'user_id': actual_user_id,
+            'username': username,
             'client_id': client_id
         })
         db.session.commit()
