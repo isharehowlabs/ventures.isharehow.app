@@ -77,7 +77,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
   const handleLogin = () => {
     // Redirect to login page (or current page if it shows login form)
     // The ProtectedRoute component will show the login form
-    router.push('/labs');
+    router.push('/creative?tab=cowork');
   };
 
   const drawerContent = (

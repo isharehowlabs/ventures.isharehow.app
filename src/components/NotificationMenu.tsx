@@ -138,7 +138,7 @@ export default function NotificationMenu() {
     if (timerState?.location === 'rise') {
       router.push('/rise');
     } else if (timerState?.location === 'cowork') {
-      router.push('/labs');
+      router.push('/creative?tab=cowork');
     }
     handleClose();
   };

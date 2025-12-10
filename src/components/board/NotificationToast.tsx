@@ -40,7 +40,7 @@ export default function NotificationToast() {
           title: getNotificationTitle(latest.type),
           message: latest.message,
           metadata: {
-            link: '/labs',
+            link: '/creative?tab=cowork',
             actor: latest.actor ? {
               id: latest.actor.userId,
               name: latest.actor.name,

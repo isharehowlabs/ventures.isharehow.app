@@ -48,8 +48,8 @@ export default function PresenceSidebar() {
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
-        minWidth: 250,
-        maxWidth: 300,
+        width: '100%',
+        maxWidth: '100%',
         maxHeight: '100%',
         overflow: 'auto',
       }}

@@ -33,7 +33,7 @@ const searchableItems: SearchResult[] = [
   { title: 'Home', type: 'page', href: '/', icon: <ArticleIcon /> },
   { title: 'Portfolio', type: 'content', href: '/portfolio', icon: <ArticleIcon /> },
   { title: 'Products', type: 'product', href: '/products', icon: <ProductIcon /> },
-  { title: 'Co-Work Dashboard', type: 'page', href: '/labs', icon: <LabsIcon /> },
+  { title: 'Co-Work Dashboard', type: 'page', href: '/creative?tab=cowork', icon: <LabsIcon /> },
   { title: 'RISE Dashboard', type: 'page', href: '/rise', icon: <RiseIcon /> },
   { title: 'Profile', type: 'page', href: '/profile', icon: <ArticleIcon /> },
   { title: 'Settings', type: 'page', href: '/settings', icon: <ArticleIcon /> },

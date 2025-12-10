@@ -185,7 +185,7 @@ export default function LiveUpdates() {
         type: 'live-update',
         title: 'Component Linked',
         message: `Component "${data.componentName}" linked to ${data.filePath}`,
-        metadata: { link: '/labs' },
+        metadata: { link: '/creative?tab=cowork' },
       }).catch(err => console.error('Failed to add notification:', err));
     });
 
@@ -203,7 +203,7 @@ export default function LiveUpdates() {
         type: 'live-update',
         title: 'Document Updated',
         message: `Document "${data.title}" has been updated`,
-        metadata: { link: '/labs' },
+        metadata: { link: '/creative?tab=cowork' },
       }).catch(err => console.error('Failed to add notification:', err));
     });
 
@@ -222,7 +222,7 @@ export default function LiveUpdates() {
         type: 'twitch',
         title: '🔴 Live on Twitch!',
         message: data.message || 'Your stream is now live. Join the co-work session!',
-        metadata: { link: '/labs' },
+        metadata: { link: '/creative?tab=cowork' },
       }).catch(err => console.error('Failed to add notification:', err));
       
       // Also send browser notification
@@ -254,7 +254,7 @@ export default function LiveUpdates() {
         title: data.title || '📢 Admin Update',
         message: data.message || 'New update from admin',
         metadata: { 
-          link: data.link || '/labs',
+          link: data.link || '/creative?tab=cowork',
           actor: data.author ? { id: 'admin', name: data.author } : undefined,
         },
       }).catch(err => console.error('Failed to add notification:', err));

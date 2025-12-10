@@ -84,7 +84,7 @@ export default function PomodoroTimer({ location = 'rise' }: PomodoroTimerProps)
               metadata: {
                 timerDuration: duration,
                 timerType: 'focus',
-                link: location === 'rise' ? '/rise' : '/labs',
+                link: location === 'rise' ? '/rise' : '/creative?tab=cowork',
               },
             }).catch(err => console.error('Failed to add notification:', err));
           } else {
@@ -96,7 +96,7 @@ export default function PomodoroTimer({ location = 'rise' }: PomodoroTimerProps)
               metadata: {
                 timerDuration: duration,
                 timerType: 'break',
-                link: location === 'rise' ? '/rise' : '/labs',
+                link: location === 'rise' ? '/rise' : '/creative?tab=cowork',
               },
             }).catch(err => console.error('Failed to add notification:', err));
           }

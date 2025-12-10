@@ -139,19 +139,26 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
               flexDirection: 'column',
               gap: 2,
               overflow: 'auto',
+              width: 280,
+              minWidth: 280,
+              maxWidth: 280,
             }}
           >
-            <Toolbar
-              currentTool={currentTool}
-              onToolChange={setCurrentTool}
-              currentColor={currentColor}
-              onColorChange={setCurrentColor}
-              strokeWidth={strokeWidth}
-              onStrokeWidthChange={setStrokeWidth}
-            />
+            <Box sx={{ flexShrink: 0 }}>
+              <Toolbar
+                currentTool={currentTool}
+                onToolChange={setCurrentTool}
+                currentColor={currentColor}
+                onColorChange={setCurrentColor}
+                strokeWidth={strokeWidth}
+                onStrokeWidthChange={setStrokeWidth}
+              />
+            </Box>
             
             {/* Presence Sidebar at bottom */}
-            <PresenceSidebar />
+            <Box sx={{ flexShrink: 0, mt: 'auto' }}>
+              <PresenceSidebar />
+            </Box>
           </Box>
 
           {/* Canvas Area */}

@@ -61,8 +61,8 @@ export default function Toolbar({
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
-        minWidth: 200,
-        maxWidth: 250,
+        width: '100%',
+        maxWidth: '100%',
       }}
     >
       {/* Drawing Tools */}
