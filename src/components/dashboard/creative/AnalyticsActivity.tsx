@@ -14,11 +14,15 @@ import {
   Card,
   CardContent,
   Stack,
-  Avatar,
   IconButton,
   Tooltip,
   TextField,
   Alert,
+  Chip,
+  Menu,
+  Divider,
+  Paper,
+  useTheme,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -29,8 +33,30 @@ import {
   Visibility,
   RefreshOutlined,
   CalendarToday,
+  Download,
+  MoreVert,
+  FilterList,
+  Assessment,
+  Timeline,
+  BarChart as BarChartIcon,
 } from '@mui/icons-material';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { 
+  AreaChart, 
+  Area, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer, 
+  LineChart, 
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
 import StatCard from '../StatCard';
 import ChartCard from '../ChartCard';
 import { getBackendUrl } from '../../../utils/backendUrl';
@@ -43,34 +69,6 @@ interface Client {
   status: string;
   googleAnalyticsPropertyKey?: string;
 }
-
-// Sample data for charts (replace with real data from your API)
-const revenueData = [
-  { name: 'Jan', value: 4000, previous: 3000 },
-  { name: 'Feb', value: 3000, previous: 2800 },
-  { name: 'Mar', value: 5000, previous: 4200 },
-  { name: 'Apr', value: 4500, previous: 3900 },
-  { name: 'May', value: 6000, previous: 5000 },
-  { name: 'Jun', value: 5500, previous: 4800 },
-  { name: 'Jul', value: 7000, previous: 5500 },
-];
-
-const visitorData = [
-  { name: 'Mon', visitors: 2400, pageViews: 4800 },
-  { name: 'Tue', visitors: 1398, pageViews: 3200 },
-  { name: 'Wed', visitors: 9800, pageViews: 12000 },
-  { name: 'Thu', visitors: 3908, pageViews: 6500 },
-  { name: 'Fri', visitors: 4800, pageViews: 8200 },
-  { name: 'Sat', visitors: 3800, pageViews: 7100 },
-  { name: 'Sun', visitors: 4300, pageViews: 7800 },
-];
-
-const conversionData = [
-  { name: 'Week 1', rate: 2.4 },
-  { name: 'Week 2', rate: 3.2 },
-  { name: 'Week 3', rate: 2.8 },
-  { name: 'Week 4', rate: 4.1 },
-];
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -86,7 +84,10 @@ interface AnalyticsData {
   conversionData: Array<{ name: string; rate: number }>;
 }
 
+const COLORS = ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
+
 export default function AnalyticsActivity() {
+  const theme = useTheme();
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
@@ -96,6 +97,8 @@ export default function AnalyticsActivity() {
   const [gaPropertyId, setGaPropertyId] = useState<string>('');
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
+  const [filterMenuAnchor, setFilterMenuAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -107,6 +110,10 @@ export default function AnalyticsActivity() {
         if (response.ok) {
           const data = await response.json();
           setClients(data.clients || []);
+          // Auto-select first client's GA property if available
+          if (data.clients && data.clients.length > 0 && data.clients[0].googleAnalyticsPropertyKey) {
+            setGaPropertyId(data.clients[0].googleAnalyticsPropertyKey);
+          }
         }
       } catch (err) {
         console.error('Error fetching clients:', err);
@@ -168,87 +175,185 @@ export default function AnalyticsActivity() {
     }
   }, [gaPropertyId, timeRange]);
 
+  const handleExport = (format: 'csv' | 'pdf') => {
+    // TODO: Implement export functionality
+    console.log(`Exporting analytics data as ${format}`);
+    setExportMenuAnchor(null);
+  };
+
+  const formatTimeRange = (range: string) => {
+    const ranges: Record<string, string> = {
+      '24h': 'Last 24 Hours',
+      '7d': 'Last 7 Days',
+      '30d': 'Last 30 Days',
+      '90d': 'Last 90 Days',
+    };
+    return ranges[range] || range;
+  };
+
+  // Calculate additional metrics
+  const avgSessionDuration = analyticsData ? (analyticsData.pageViews / analyticsData.totalUsers / 60).toFixed(1) : '0';
+  const bounceRate = analyticsData ? (100 - analyticsData.conversionRate * 2).toFixed(1) : '0';
+  const revenuePerUser = analyticsData && analyticsData.totalUsers > 0 
+    ? (analyticsData.totalRevenue / analyticsData.totalUsers).toFixed(2) 
+    : '0';
+
   return (
-    <Box>
-      {/* Header with Filters */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={2} alignItems="center" justifyContent="space-between">
-          <Grid item xs={12} md={6}>
-            <Typography variant="h5" fontWeight={700} gutterBottom>
-              Analytics Overview
+    <Box sx={{ width: '100%' }}>
+      {/* Modern Header Section */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: 3, 
+          mb: 3,
+          background: theme.palette.mode === 'dark' 
+            ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
+            : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 2,
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
+              Analytics Dashboard
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Track your performance metrics and insights
+              Track performance metrics and insights
               {lastSync && (
-                <> · Last updated {lastSync.toLocaleTimeString()}</>
+                <Chip 
+                  label={`Last updated ${lastSync.toLocaleTimeString()}`}
+                  size="small"
+                  sx={{ ml: 1, height: 20 }}
+                />
               )}
             </Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Stack direction="row" spacing={2} justifyContent={{ xs: 'flex-start', md: 'flex-end' }} flexWrap="wrap">
-              <TextField
-                size="small"
-                label="Google Analytics Property ID"
-                placeholder="G-XXXXXXXXXX or UA-XXXXX-X"
-                value={gaPropertyId}
-                onChange={(e) => setGaPropertyId(e.target.value)}
-                sx={{ minWidth: 250 }}
-                helperText="Enter your GA4 Property ID"
-              />
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <Select
-                  value={timeRange}
-                  onChange={(e) => setTimeRange(e.target.value)}
-                  displayEmpty
-                  startAdornment={<CalendarToday sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />}
-                >
-                  <MenuItem value="24h">Last 24 Hours</MenuItem>
-                  <MenuItem value="7d">Last 7 Days</MenuItem>
-                  <MenuItem value="30d">Last 30 Days</MenuItem>
-                  <MenuItem value="90d">Last 90 Days</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <Select
-                  value={selectedClient}
-                  onChange={(e) => setSelectedClient(e.target.value)}
-                  displayEmpty
-                  disabled={loadingClients}
-                >
-                  <MenuItem value="all">All Clients</MenuItem>
-                  {clients.map((client) => (
-                    <MenuItem key={client.id} value={client.id}>
-                      {client.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Tooltip title="Refresh data">
-                <IconButton 
-                  onClick={handleRefresh} 
-                  disabled={loading}
-                  sx={{ 
-                    bgcolor: 'background.paper',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    '&:hover': { bgcolor: 'action.hover' }
-                  }}
-                >
-                  {loading ? <CircularProgress size={20} /> : <RefreshOutlined />}
-                </IconButton>
-              </Tooltip>
-            </Stack>
-          </Grid>
-        </Grid>
-      </Box>
+          </Box>
+          
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <TextField
+              size="small"
+              label="GA Property ID"
+              placeholder="G-XXXXXXXXXX"
+              value={gaPropertyId}
+              onChange={(e) => setGaPropertyId(e.target.value)}
+              sx={{ minWidth: 200 }}
+              InputProps={{
+                startAdornment: <Assessment sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />,
+              }}
+            />
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Time Range</InputLabel>
+              <Select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                label="Time Range"
+              >
+                <MenuItem value="24h">Last 24 Hours</MenuItem>
+                <MenuItem value="7d">Last 7 Days</MenuItem>
+                <MenuItem value="30d">Last 30 Days</MenuItem>
+                <MenuItem value="90d">Last 90 Days</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Client</InputLabel>
+              <Select
+                value={selectedClient}
+                onChange={(e) => setSelectedClient(e.target.value)}
+                label="Client"
+                disabled={loadingClients}
+              >
+                <MenuItem value="all">All Clients</MenuItem>
+                {clients.map((client) => (
+                  <MenuItem key={client.id} value={client.id}>
+                    {client.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Tooltip title="Refresh data">
+              <IconButton 
+                onClick={handleRefresh} 
+                disabled={loading || !gaPropertyId}
+                sx={{ 
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  '&:hover': { bgcolor: 'action.hover' }
+                }}
+              >
+                {loading ? <CircularProgress size={20} /> : <RefreshOutlined />}
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="outlined"
+              startIcon={<FilterList />}
+              onClick={(e) => setFilterMenuAnchor(e.currentTarget)}
+              sx={{ borderColor: 'divider' }}
+            >
+              Filters
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<Download />}
+              onClick={(e) => setExportMenuAnchor(e.currentTarget)}
+              sx={{ borderColor: 'divider' }}
+            >
+              Export
+            </Button>
+          </Stack>
+        </Box>
+      </Paper>
+
+      {/* Export Menu */}
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={Boolean(exportMenuAnchor)}
+        onClose={() => setExportMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => handleExport('csv')}>
+          <Download sx={{ mr: 1, fontSize: 18 }} />
+          Export as CSV
+        </MenuItem>
+        <MenuItem onClick={() => handleExport('pdf')}>
+          <Download sx={{ mr: 1, fontSize: 18 }} />
+          Export as PDF
+        </MenuItem>
+      </Menu>
+
+      {/* Filter Menu */}
+      <Menu
+        anchorEl={filterMenuAnchor}
+        open={Boolean(filterMenuAnchor)}
+        onClose={() => setFilterMenuAnchor(null)}
+      >
+        <Box sx={{ p: 2, minWidth: 250 }}>
+          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+            Filter Options
+          </Typography>
+          <Divider sx={{ my: 1 }} />
+          <Typography variant="body2" color="text.secondary">
+            Additional filters coming soon
+          </Typography>
+        </Box>
+      </Menu>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }} 
+          onClose={() => setError(null)}
+          action={
+            <Button color="inherit" size="small" onClick={handleRefresh}>
+              Retry
+            </Button>
+          }
+        >
           {error}
         </Alert>
       )}
 
-      {/* Stat Cards Row */}
+      {/* Key Metrics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
@@ -296,52 +401,109 @@ export default function AnalyticsActivity() {
         </Grid>
       </Grid>
 
-      {/* Charts Row */}
+      {/* Additional Metrics Row */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Revenue Chart */}
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ boxShadow: 2 }}>
+            <CardContent>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Avg. Session Duration
+              </Typography>
+              <Typography variant="h5" fontWeight={700}>
+                {avgSessionDuration} min
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ boxShadow: 2 }}>
+            <CardContent>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Bounce Rate
+              </Typography>
+              <Typography variant="h5" fontWeight={700}>
+                {bounceRate}%
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ boxShadow: 2 }}>
+            <CardContent>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Revenue per User
+              </Typography>
+              <Typography variant="h5" fontWeight={700}>
+                ${revenuePerUser}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Main Charts Row */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        {/* Revenue Overview Chart */}
         <Grid item xs={12} lg={8}>
           <ChartCard
             title="Revenue Overview"
-            subtitle="Compare current vs previous period"
+            subtitle={`${formatTimeRange(timeRange)} - Current vs Previous Period`}
             action={
-              <Button size="small" variant="outlined">
-                View Report
+              <Button size="small" variant="outlined" startIcon={<Timeline />}>
+                View Details
               </Button>
             }
           >
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={analyticsData?.revenueData || revenueData}>
+            <ResponsiveContainer width="100%" height={350}>
+              <AreaChart data={analyticsData?.revenueData || []}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
+                  <linearGradient id="colorPrevious" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#cbd5e1" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#cbd5e1" stopOpacity={0}/>
+                  </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#888" fontSize={12} />
-                <YAxis stroke="#888" fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="name" 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
                 <RechartsTooltip 
                   contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px'
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
                   }} 
                 />
                 <Area 
                   type="monotone" 
                   dataKey="value" 
                   stroke="#6366f1" 
-                  strokeWidth={2}
+                  strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorRevenue)" 
+                  name="Current Period"
                 />
                 <Area 
                   type="monotone" 
                   dataKey="previous" 
-                  stroke="#cbd5e1" 
+                  stroke="#94a3b8" 
                   strokeWidth={2}
                   strokeDasharray="5 5"
-                  fill="none" 
+                  fill="url(#colorPrevious)"
+                  fillOpacity={0.3}
+                  name="Previous Period"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -352,18 +514,28 @@ export default function AnalyticsActivity() {
         <Grid item xs={12} lg={4}>
           <ChartCard
             title="Conversion Rate"
-            subtitle="Weekly trend"
+            subtitle="Weekly trend analysis"
           >
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={analyticsData?.conversionData || conversionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#888" fontSize={12} />
-                <YAxis stroke="#888" fontSize={12} />
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={analyticsData?.conversionData || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="name" 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
                 <RechartsTooltip 
                   contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px'
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
                   }} 
                 />
                 <Line 
@@ -371,7 +543,9 @@ export default function AnalyticsActivity() {
                   dataKey="rate" 
                   stroke="#10b981" 
                   strokeWidth={3}
-                  dot={{ fill: '#10b981', r: 4 }}
+                  dot={{ fill: '#10b981', r: 5 }}
+                  activeDot={{ r: 7 }}
+                  name="Conversion Rate (%)"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -384,34 +558,54 @@ export default function AnalyticsActivity() {
         <Grid item xs={12}>
           <ChartCard
             title="Visitor Activity"
-            subtitle="Daily visitors and page views"
+            subtitle={`${formatTimeRange(timeRange)} - Daily visitors and page views`}
             action={
-              <Stack direction="row" spacing={2}>
+              <Stack direction="row" spacing={2} alignItems="center">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 12, height: 12, bgcolor: '#6366f1', borderRadius: '2px' }} />
-                  <Typography variant="caption">Visitors</Typography>
+                  <Typography variant="caption" color="text.secondary">Visitors</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 12, height: 12, bgcolor: '#8b5cf6', borderRadius: '2px' }} />
-                  <Typography variant="caption">Page Views</Typography>
+                  <Typography variant="caption" color="text.secondary">Page Views</Typography>
                 </Box>
               </Stack>
             }
           >
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analyticsData?.visitorData || visitorData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#888" fontSize={12} />
-                <YAxis stroke="#888" fontSize={12} />
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={analyticsData?.visitorData || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="name" 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
                 <RechartsTooltip 
                   contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px'
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
                   }} 
                 />
-                <Bar dataKey="visitors" fill="#6366f1" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="pageViews" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                <Bar 
+                  dataKey="visitors" 
+                  fill="#6366f1" 
+                  radius={[8, 8, 0, 0]}
+                  name="Visitors"
+                />
+                <Bar 
+                  dataKey="pageViews" 
+                  fill="#8b5cf6" 
+                  radius={[8, 8, 0, 0]}
+                  name="Page Views"
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
