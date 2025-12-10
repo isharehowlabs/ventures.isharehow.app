@@ -26,7 +26,14 @@ import {
   ToggleButton,
   Checkbox,
   Autocomplete,
-  Snackbar
+  Snackbar,
+  Stack,
+  Grid,
+  Avatar,
+  Divider,
+  useTheme,
+  alpha,
+  LinearProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -39,6 +46,10 @@ import {
   Refresh as RefreshIcon,
   Person as PersonIcon,
   PersonOutline as PersonOutlineIcon,
+  Task as TaskIcon,
+  Assignment as AssignmentIcon,
+  Today as TodayIcon,
+  FilterList as FilterListIcon,
 } from '@mui/icons-material';
 import { useTasks, Task } from '../../../hooks/useTasks';
 import { useWorkspaceUsers } from '../../../hooks/useWorkspaceUsers';
@@ -66,6 +77,7 @@ interface Employee {
 }
 
 export default function TasksPanel({ height = 500 }: TasksPanelProps) {
+  const theme = useTheme();
   const { user } = useAuth();
   const { users: workspaceUsers } = useWorkspaceUsers();
   const { tasks, createTask, updateTask, deleteTask, updateTaskNotes, isLoading: tasksLoading, error: tasksErrorMsg, authRequired, refresh, isStale } = useTasks();
@@ -194,9 +206,14 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     return true; // 'all'
   });
 
-  // Count tasks for each filter
+  // Count tasks for stats
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length;
+  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
   const myTasksCount = tasks.filter(t => t.assignedTo === user?.id).length;
   const createdByMeCount = tasks.filter(t => t.createdBy === user?.id).length;
+  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const handleTaskToggle = async (id: string) => {
     const task = tasks.find(t => t.id === id);
@@ -221,6 +238,8 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     setTaskHyperlinks('');
     setTaskStatus('pending');
     setTaskSupportRequestId('');
+    setSelectedAssignee(null);
+    setTaskNotes('');
     setTaskDialogOpen(true);
   };
 
@@ -233,6 +252,14 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     setTaskStatus(task.status);
     setTaskSupportRequestId(task.supportRequestId || '');
     setTaskNotes(task.notes || '');
+    
+    // Set assignee if task is assigned
+    if (task.assignedTo && task.assignedToName) {
+      setSelectedAssignee({ id: task.assignedTo, name: task.assignedToName });
+    } else {
+      setSelectedAssignee(null);
+    }
+    
     setTaskDialogOpen(true);
   };
 
@@ -280,6 +307,8 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
           hyperlinks: hyperlinksArray,
           status: taskStatus,
           supportRequestId: taskSupportRequestId || undefined,
+          assignedTo: selectedAssignee?.id || undefined,
+          assignedToName: selectedAssignee?.name || undefined,
         });
         
         if (taskStatus === 'completed') {
@@ -307,26 +336,172 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
 
   return (
     <>
-      <Paper elevation={2} sx={{ p: 3, height, display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h5" fontWeight={700}>Tasks</Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="Refresh">
-              <IconButton onClick={refresh} size="small">
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
+      <Box sx={{ height, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Header Section */}
+        <Box>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Box>
+              <Typography variant="h4" fontWeight={800} gutterBottom>
+                Todo List
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Manage your tasks and track progress
+              </Typography>
+            </Box>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={handleOpenCreateTask}
-              size="small"
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3,
+              }}
             >
               Add Task
             </Button>
-          </Box>
+          </Stack>
+
+          {/* Stats Cards */}
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={6} sm={3}>
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                    <TaskIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h5" fontWeight={700}>
+                      {totalTasks}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Total
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.main, 0.05)} 100%)`,
+                  border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Avatar sx={{ bgcolor: 'success.main', width: 40, height: 40 }}>
+                    <CheckCircleIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h5" fontWeight={700}>
+                      {completedTasks}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Completed
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.main, 0.05)} 100%)`,
+                  border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Avatar sx={{ bgcolor: 'warning.main', width: 40, height: 40 }}>
+                    <InProgressIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h5" fontWeight={700}>
+                      {inProgressTasks}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      In Progress
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)} 0%, ${alpha(theme.palette.info.main, 0.05)} 100%)`,
+                  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Avatar sx={{ bgcolor: 'info.main', width: 40, height: 40 }}>
+                    <PendingIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h5" fontWeight={700}>
+                      {pendingTasks}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Pending
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* Progress Bar */}
+          <Paper
+            elevation={2}
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              mb: 3,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+            }}
+          >
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+              <Typography variant="body2" fontWeight={600} color="text.secondary">
+                Completion Rate
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="primary.main">
+                {completionRate}%
+              </Typography>
+            </Stack>
+            <LinearProgress
+              variant="determinate"
+              value={completionRate}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 4,
+                  background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                },
+              }}
+            />
+          </Paper>
         </Box>
-        
+
+        {/* Error Messages */}
         {tasksErrorMsg && (
           <Alert severity="error" sx={{ mb: 2 }}>{tasksErrorMsg}</Alert>
         )}
@@ -339,218 +514,310 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
           </Alert>
         )}
 
+        {/* Filter Tabs */}
+        <Paper elevation={2} sx={{ borderRadius: 2, p: 1 }}>
+          <ToggleButtonGroup
+            value={taskFilter}
+            exclusive
+            onChange={handleFilterChange}
+            fullWidth
+            size="small"
+            aria-label="task filter"
+            sx={{
+              '& .MuiToggleButton-root': {
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 1.5,
+                py: 1,
+              },
+            }}
+          >
+            <ToggleButton value="all" aria-label="all tasks">
+              All ({totalTasks})
+            </ToggleButton>
+            <ToggleButton value="my-tasks" aria-label="my tasks">
+              My Tasks ({myTasksCount})
+            </ToggleButton>
+            <ToggleButton value="created-by-me" aria-label="created by me">
+              Created by Me ({createdByMeCount})
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Paper>
+
+        {/* Tasks List */}
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
-            <ToggleButtonGroup
-              value={taskFilter}
-              exclusive
-              onChange={handleFilterChange}
-              size="small"
-              aria-label="task filter"
+          {tasksLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : filteredTasks.length === 0 ? (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 6,
+                textAlign: 'center',
+                borderRadius: 2,
+                border: `2px dashed ${alpha(theme.palette.divider, 0.5)}`,
+              }}
             >
-              <ToggleButton value="all" aria-label="all tasks">
-                All Tasks ({tasks.length})
-              </ToggleButton>
-              <ToggleButton value="my-tasks" aria-label="my tasks">
-                My Tasks ({myTasksCount})
-              </ToggleButton>
-              <ToggleButton value="created-by-me" aria-label="created by me">
-                Created by Me ({createdByMeCount})
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
-          {filteredTasks.map((task) => (
-            <Card key={task.id} sx={{ mb: 2 }} elevation={1}>
-              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                  <Checkbox
-                    checked={task.status === 'completed'}
-                    onChange={() => handleTaskToggle(task.id)}
-                    disabled={tasksLoading}
-                    size="small"
-                  />
-                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Typography 
-                      variant="subtitle1" 
-                      fontWeight={500}
-                      sx={{ textDecoration: task.status === 'completed' ? 'line-through' : 'none' }}
-                    >
-                      {task.title}
-                    </Typography>
-                    {task.description && (
-                      <Typography variant="body2" color="text.secondary" noWrap>
-                        {task.description}
-                      </Typography>
-                    )}
-                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                      <Chip label={task.status} size="small" color={getStatusColor(task.status) as any} />
-                      {task.hyperlinks && task.hyperlinks.length > 0 && (
-                        <Chip icon={<LinkIcon />} label={`${task.hyperlinks.length}`} size="small" variant="outlined" />
-                      )}
-                      {task.createdByName && (
-                        <Chip 
-                          icon={<PersonOutlineIcon />} 
-                          label={`By: ${task.createdByName}`} 
-                          size="small" 
-                          variant="outlined"
-                          sx={{ fontSize: '0.7rem' }}
-                        />
-                      )}
-                      {task.assignedToName ? (
-                        <Chip 
-                          icon={<PersonIcon />} 
-                          label={`→ ${task.assignedToName}`} 
-                          size="small" 
-                          color="primary"
-                          variant="outlined"
-                          sx={{ fontSize: '0.7rem' }}
-                        />
-                      ) : task.assignedTo === undefined && (
-                        <Chip 
-                          label="Unassigned" 
-                          size="small" 
-                          variant="outlined"
-                          sx={{ fontSize: '0.7rem', opacity: 0.6 }}
-                        />
-                      )}
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <IconButton size="small" onClick={() => handleOpenEditTask(task)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDeleteTask(task.id)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
-          
-          {tasks.length === 0 && !tasksLoading && (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="body2" color="text.secondary">
-                No tasks yet. Add your first task to get started!
+              <TaskIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No tasks found
               </Typography>
-            </Box>
-          )}
-          
-          {tasksLoading && (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <CircularProgress size={24} />
-            </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {taskFilter === 'all' 
+                  ? 'Get started by adding your first task!'
+                  : `No tasks match the "${taskFilter}" filter.`}
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreateTask}
+                sx={{ textTransform: 'none' }}
+              >
+                Add Task
+              </Button>
+            </Paper>
+          ) : (
+            <Stack spacing={2}>
+              {filteredTasks.map((task) => (
+                <Card
+                  key={task.id}
+                  elevation={2}
+                  sx={{
+                    borderRadius: 2,
+                    transition: 'all 0.2s',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                    '&:hover': {
+                      boxShadow: 4,
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      <Checkbox
+                        checked={task.status === 'completed'}
+                        onChange={() => handleTaskToggle(task.id)}
+                        disabled={tasksLoading}
+                        sx={{ mt: 0.5 }}
+                      />
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={600}
+                          sx={{
+                            textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                            color: task.status === 'completed' ? 'text.secondary' : 'text.primary',
+                            mb: 0.5,
+                          }}
+                        >
+                          {task.title}
+                        </Typography>
+                        {task.description && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              mb: 1.5,
+                              textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                            }}
+                          >
+                            {task.description}
+                          </Typography>
+                        )}
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1 }}>
+                          <Chip
+                            label={task.status}
+                            size="small"
+                            color={getStatusColor(task.status) as any}
+                            icon={getStatusIcon(task.status)}
+                            sx={{ fontWeight: 600 }}
+                          />
+                          {task.hyperlinks && task.hyperlinks.length > 0 && (
+                            <Chip
+                              icon={<LinkIcon />}
+                              label={`${task.hyperlinks.length} link${task.hyperlinks.length > 1 ? 's' : ''}`}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                        </Stack>
+                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                          {task.createdByName && (
+                            <Chip
+                              icon={<PersonOutlineIcon />}
+                              label={task.createdByName}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem' }}
+                            />
+                          )}
+                          {task.assignedToName ? (
+                            <Chip
+                              icon={<PersonIcon />}
+                              label={task.assignedToName}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem' }}
+                            />
+                          ) : task.assignedTo === undefined && (
+                            <Chip
+                              label="Unassigned"
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem', opacity: 0.6 }}
+                            />
+                          )}
+                          {task.createdAt && (
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(task.createdAt).toLocaleDateString()}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </Box>
+                      <Stack direction="row" spacing={0.5}>
+                        <Tooltip title="Edit">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenEditTask(task)}
+                            sx={{ color: 'primary.main' }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteTask(task.id)}
+                            sx={{ color: 'error.main' }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
           )}
         </Box>
-      </Paper>
+      </Box>
 
       {/* Task Dialog */}
-      <Dialog open={taskDialogOpen} onClose={() => setTaskDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editMode === 'create' ? 'Add Task' : 'Edit Task'}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Title"
-            fullWidth
-            variant="outlined"
-            value={taskTitle}
-            onChange={(e) => setTaskTitle(e.target.value)}
-            sx={{ mb: 2, mt: 1 }}
-          />
-          <TextField
-            margin="dense"
-            label="Description"
-            fullWidth
-            variant="outlined"
-            multiline
-            rows={3}
-            value={taskDescription}
-            onChange={(e) => setTaskDescription(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <Autocomplete
-            options={assigneeOptions}
-            getOptionLabel={(option) => option.name}
-            value={selectedAssignee}
-            onChange={(_, newValue) => setSelectedAssignee(newValue)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                margin="dense"
-                label="Assign To (Optional)"
-                variant="outlined"
-                helperText="Select from active workspace users or all employees"
-              />
-            )}
-            sx={{ mb: 2 }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Collaborative Notes {isSavingNotes && '(Saving...)'}
+      <Dialog
+        open={taskDialogOpen}
+        onClose={() => setTaskDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>
+            {editMode === 'create' ? 'Add New Task' : 'Edit Task'}
           </Typography>
-          <TextField
-            margin="dense"
-            label="Notes (Shared Workspace)"
-            fullWidth
-            variant="outlined"
-            multiline
-            rows={6}
-            value={taskNotes}
-            onChange={(e) => handleNotesChange(e.target.value)}
-            placeholder="Start typing to collaborate with your team..."
-            sx={{ mb: 2 }}
-            helperText={editMode === 'edit' ? "Changes auto-save. Shared with assigned user in real-time." : "Add notes that will be shared with your team."}
-          />
-          <TextField
-            margin="dense"
-            label="Hyperlinks (comma-separated)"
-            fullWidth
-            variant="outlined"
-            value={taskHyperlinks}
-            onChange={(e) => setTaskHyperlinks(e.target.value)}
-            placeholder="https://example.com, https://another.com"
-            sx={{ mb: 2 }}
-          />
-          {loadingSupportRequests ? (
-            <CircularProgress size={24} />
-          ) : supportRequests.length > 0 && (
-            <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
-              <InputLabel>Link to Support Request (Optional)</InputLabel>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              autoFocus
+              label="Title"
+              fullWidth
+              variant="outlined"
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+              required
+            />
+            <TextField
+              label="Description"
+              fullWidth
+              variant="outlined"
+              multiline
+              rows={3}
+              value={taskDescription}
+              onChange={(e) => setTaskDescription(e.target.value)}
+            />
+            <Autocomplete
+              options={assigneeOptions}
+              getOptionLabel={(option) => option.name}
+              value={selectedAssignee}
+              onChange={(_, newValue) => setSelectedAssignee(newValue)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Assign To (Optional)"
+                  variant="outlined"
+                  helperText="Select from active workspace users or all employees"
+                />
+              )}
+            />
+            <TextField
+              label="Notes (Shared Workspace)"
+              fullWidth
+              variant="outlined"
+              multiline
+              rows={4}
+              value={taskNotes}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              placeholder="Start typing to collaborate with your team..."
+              helperText={editMode === 'edit' ? "Changes auto-save. Shared with assigned user in real-time." : "Add notes that will be shared with your team."}
+            />
+            <TextField
+              label="Hyperlinks (comma-separated)"
+              fullWidth
+              variant="outlined"
+              value={taskHyperlinks}
+              onChange={(e) => setTaskHyperlinks(e.target.value)}
+              placeholder="https://example.com, https://another.com"
+            />
+            {loadingSupportRequests ? (
+              <CircularProgress size={24} />
+            ) : supportRequests.length > 0 && (
+              <FormControl fullWidth>
+                <InputLabel>Link to Support Request (Optional)</InputLabel>
+                <Select
+                  value={taskSupportRequestId}
+                  label="Link to Support Request (Optional)"
+                  onChange={(e) => setTaskSupportRequestId(e.target.value)}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  {supportRequests.map((req) => (
+                    <MenuItem key={req.id} value={req.id}>
+                      {req.subject} ({req.status})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
               <Select
-                value={taskSupportRequestId}
-                label="Link to Support Request (Optional)"
-                onChange={(e) => setTaskSupportRequestId(e.target.value)}
+                value={taskStatus}
+                label="Status"
+                onChange={(e) => setTaskStatus(e.target.value as 'pending' | 'in-progress' | 'completed')}
               >
-                <MenuItem value="">None</MenuItem>
-                {supportRequests.map((req) => (
-                  <MenuItem key={req.id} value={req.id}>
-                    {req.subject} ({req.status})
-                  </MenuItem>
-                ))}
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="in-progress">In Progress</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
               </Select>
             </FormControl>
-          )}
-          <FormControl fullWidth margin="dense">
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={taskStatus}
-              label="Status"
-              onChange={(e) => setTaskStatus(e.target.value as 'pending' | 'in-progress' | 'completed')}
-            >
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="in-progress">In Progress</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-            </Select>
-          </FormControl>
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTaskDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ p: 2.5, pt: 1 }}>
+          <Button onClick={() => setTaskDialogOpen(false)} sx={{ textTransform: 'none' }}>
+            Cancel
+          </Button>
           <Button
             onClick={handleSaveTask}
             variant="contained"
             disabled={!taskTitle.trim() || tasksLoading || authRequired}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
-            {editMode === 'create' ? 'Add' : 'Save'}
+            {editMode === 'create' ? 'Add Task' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -569,4 +836,3 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     </>
   );
 }
-
