@@ -200,37 +200,77 @@ interface BoardShellProps {
 export default function BoardShell({ boardId, userId, userName, onClose }: BoardShellProps) {
   return (
     <BoardProvider userId={userId} userName={userName}>
-      <BoardShellWrapper boardId={boardId} onClose={onClose} />
+      <BoardShellWrapper boardId={boardId} userId={userId} userName={userName} onClose={onClose} />
     </BoardProvider>
   );
 }
 
 // Wrapper to set boardId after provider is ready
-function BoardShellWrapper({ boardId, onClose }: { boardId: string; onClose?: () => void }) {
-  const { actions } = useBoardContext();
+function BoardShellWrapper({ boardId, userId, userName, onClose }: { boardId: string; userId: string; userName: string; onClose?: () => void }) {
+  const { actions, presence } = useBoardContext();
+  const hasJoinedRef = React.useRef(false);
+  const boardIdRef = React.useRef<string | null>(null);
+  const joinNotificationSentRef = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    actions.setBoardId(boardId);
+    // Only set boardId if it changed
+    if (boardIdRef.current !== boardId) {
+      boardIdRef.current = boardId;
+      actions.setBoardId(boardId);
+      hasJoinedRef.current = false; // Reset join flag when board changes
+    }
+  }, [boardId, actions]);
 
-    // Broadcast join notification
-    actions.broadcastNotification({
-      type: 'join',
-      message: 'joined the board',
-      severity: 'info',
-      actor: { userId: '', name: '' }, // Will be filled by context
-    });
+  useEffect(() => {
+    // Only send join notification once per board session
+    if (!boardId || hasJoinedRef.current) return;
+
+    // Check if we've already sent a join notification for this board
+    if (joinNotificationSentRef.current.has(boardId)) {
+      hasJoinedRef.current = true;
+      return;
+    }
+
+    // Check if user is already in presence (avoid duplicate notifications on re-renders)
+    const isAlreadyPresent = presence.has(userId);
+    if (isAlreadyPresent) {
+      hasJoinedRef.current = true;
+      return;
+    }
+
+    // Mark that we're joining
+    hasJoinedRef.current = true;
+    joinNotificationSentRef.current.add(boardId);
+
+    // Update presence first
+    actions.updatePresence('active');
+    
+    // Send notification after a delay to avoid spam on rapid re-renders
+    const joinTimer = setTimeout(() => {
+      actions.broadcastNotification({
+        type: 'join',
+        message: 'joined the board',
+        severity: 'info',
+        actor: { userId, name: userName },
+      });
+    }, 1000);
 
     // Cleanup on unmount
     return () => {
-      actions.broadcastNotification({
-        type: 'leave',
-        message: 'left the board',
-        severity: 'info',
-        actor: { userId: '', name: '' },
-      });
-      actions.updatePresence('offline');
+      clearTimeout(joinTimer);
+      if (hasJoinedRef.current) {
+        actions.broadcastNotification({
+          type: 'leave',
+          message: 'left the board',
+          severity: 'info',
+          actor: { userId, name: userName },
+        });
+        actions.updatePresence('offline');
+        hasJoinedRef.current = false;
+        joinNotificationSentRef.current.delete(boardId);
+      }
     };
-  }, [boardId, actions]);
+  }, [boardId, userId, userName, presence, actions]);
 
   return <BoardShellContent onClose={onClose} />;
 }
