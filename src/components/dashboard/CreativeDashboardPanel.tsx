@@ -185,7 +185,7 @@ export default function CreativeDashboardPanel() {
         <TabPanel value={activeTab} index={2}>
           <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
-              <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
+              <ClientEmployeeMatcher />
             </CardContent>
           </Card>
         </TabPanel>
