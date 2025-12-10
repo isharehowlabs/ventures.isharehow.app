@@ -49,18 +49,18 @@ const getTheme = (mode: 'light' | 'dark') => {
       dark: '#1b5e20',
       contrastText: '#fff',
     },
-    // Default MUI backgrounds
+    // Default MUI backgrounds - matching CSS variables from index.css
     background: {
-      default: mode === 'light' ? '#fff' : '#121212',
-      paper: mode === 'light' ? '#fff' : '#121212',
+      default: mode === 'light' ? '#FFFFFF' : '#0f172a',
+      paper: mode === 'light' ? '#FFFFFF' : '#1e293b',
     },
-    // Default MUI text colors
+    // Default MUI text colors - matching CSS variables from index.css
     text: {
-      primary: mode === 'light' ? 'rgba(0, 0, 0, 0.87)' : '#fff',
-      secondary: mode === 'light' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.7)',
-      disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.38)' : 'rgba(255, 255, 255, 0.5)',
+      primary: mode === 'light' ? '#212529' : '#f7fafc',
+      secondary: mode === 'light' ? '#6c757d' : '#cbd5e0',
+      disabled: mode === 'light' ? 'rgba(33, 37, 41, 0.38)' : 'rgba(247, 250, 252, 0.5)',
     },
-    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+    divider: mode === 'light' ? '#dee2e6' : '#334155',
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
@@ -127,18 +127,25 @@ const getTheme = (mode: 'light' | 'dark') => {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          scrollbarColor: mode === 'light' ? '#bbb #fff' : '#6b6b6b #2b2b2b',
+          scrollbarColor: mode === 'light' ? '#bbb #FFFFFF' : '#6b6b6b #1e293b',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
-            width: 8,
-            height: 8,
+            width: 10,
+            height: 10,
           },
           '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
-            borderRadius: 8,
-            backgroundColor: mode === 'light' ? '#bbb' : '#6b6b6b',
+            borderRadius: 5,
+            background: mode === 'light' 
+              ? 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' 
+              : 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
             minHeight: 24,
+            '&:hover': {
+              background: mode === 'light'
+                ? 'linear-gradient(45deg, #ff5252, #26a69a)'
+                : 'linear-gradient(45deg, #ff5252, #26a69a)',
+            },
           },
           '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
-            backgroundColor: mode === 'light' ? '#fff' : '#2b2b2b',
+            backgroundColor: mode === 'light' ? '#FFFFFF' : '#1e293b',
           },
         },
       },
