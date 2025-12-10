@@ -1,7 +1,6 @@
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
-// SaasAble Color Scheme - Exact Match
-// Based on https://admin.saasable.io/dashboard/analytics/overview
+// SaasAble Color Scheme - Clean Light Theme Only
 export const saasableColors = {
   // Primary - Indigo
   primary: {
@@ -11,10 +10,10 @@ export const saasableColors = {
     contrastText: '#ffffff',
   },
   
-  // Backgrounds
+  // Pure white backgrounds - NO GRAY
   background: {
-    default: '#f8f9fa',   // Light gray background
-    paper: '#ffffff',     // White cards
+    default: '#ffffff',   // Pure white
+    paper: '#ffffff',     // Pure white
   },
   
   // Text colors
@@ -32,44 +31,45 @@ export const saasableColors = {
   
   // Status colors
   success: {
-    main: '#10b981',      // Green 500
-    light: '#34d399',     // Green 400
-    dark: '#059669',      // Green 600
+    main: '#10b981',
+    light: '#34d399',
+    dark: '#059669',
   },
   
   warning: {
-    main: '#f59e0b',      // Amber 500
-    light: '#fbbf24',     // Amber 400
-    dark: '#d97706',      // Amber 600
+    main: '#f59e0b',
+    light: '#fbbf24',
+    dark: '#d97706',
   },
   
   error: {
-    main: '#ef4444',      // Red 500
-    light: '#f87171',     // Red 400
-    dark: '#dc2626',      // Red 600
+    main: '#ef4444',
+    light: '#f87171',
+    dark: '#dc2626',
   },
   
   info: {
-    main: '#3b82f6',      // Blue 500
-    light: '#60a5fa',     // Blue 400
-    dark: '#2563eb',      // Blue 600
+    main: '#3b82f6',
+    light: '#60a5fa',
+    dark: '#2563eb',
   },
   
   // Chart colors
   chart: {
-    primary: '#6366f1',   // Indigo
-    secondary: '#a78bfa', // Purple 400
-    tertiary: '#10b981',  // Green
-    quaternary: '#f59e0b', // Amber
-    cyan: '#22d3ee',      // Cyan 400
-    rose: '#f43f5e',      // Rose 500
+    primary: '#6366f1',
+    secondary: '#a78bfa',
+    tertiary: '#10b981',
+    quaternary: '#f59e0b',
+    cyan: '#22d3ee',
+    rose: '#f43f5e',
   },
 };
 
 const getTheme = (mode: 'light' | 'dark') => {
+  // Force light mode always - ignore dark mode
   const baseTheme = createTheme({
   palette: {
-    mode,
+    mode: 'light', // Always light
     primary: {
       main: saasableColors.primary.main,
       light: saasableColors.primary.light,
@@ -77,19 +77,19 @@ const getTheme = (mode: 'light' | 'dark') => {
       contrastText: saasableColors.primary.contrastText,
     },
     secondary: {
-      main: '#64748b',     // Slate for secondary actions
+      main: '#64748b',
       light: '#94a3b8',
       dark: '#475569',
       contrastText: '#fff',
     },
     background: {
-      default: mode === 'light' ? saasableColors.background.default : '#0f172a',
-      paper: mode === 'light' ? saasableColors.background.paper : '#1e293b',
+      default: '#ffffff',  // Pure white always
+      paper: '#ffffff',    // Pure white always
     },
     text: {
-      primary: mode === 'light' ? saasableColors.text.primary : '#f7fafc',
-      secondary: mode === 'light' ? saasableColors.text.secondary : '#cbd5e0',
-      disabled: mode === 'light' ? saasableColors.text.disabled : '#94a3b8',
+      primary: saasableColors.text.primary,
+      secondary: saasableColors.text.secondary,
+      disabled: saasableColors.text.disabled,
     },
     success: {
       main: saasableColors.success.main,
@@ -115,7 +115,7 @@ const getTheme = (mode: 'light' | 'dark') => {
       dark: saasableColors.info.dark,
       contrastText: '#fff',
     },
-    divider: mode === 'light' ? saasableColors.border.light : '#334155',
+    divider: saasableColors.border.light,
   },
   typography: {
     fontFamily: '"Urbanist", "Inter", "DM Sans", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -198,14 +198,8 @@ const getTheme = (mode: 'light' | 'dark') => {
     MuiCssBaseline: {
       styleOverrides: {
         html: {
-          colorScheme: mode === 'light' ? 'light' : 'dark',
-          transition: "none",
-          '&[data-theme="light"]': {
-            backgroundColor: saasableColors.background.default,
-          },
-          '&[data-theme="dark"]': {
-            backgroundColor: "#0f172a",
-          },
+          colorScheme: 'light',
+          backgroundColor: '#ffffff',
         },
         body: {
           margin: 0,
@@ -213,20 +207,20 @@ const getTheme = (mode: 'light' | 'dark') => {
           boxSizing: 'border-box',
           lineHeight: 1.5,
           fontFamily: '"Urbanist", "Inter", "DM Sans", "Roboto", "Helvetica", "Arial", sans-serif',
-          backgroundColor: mode === 'light' ? saasableColors.background.default : '#0f172a',
-          scrollbarColor: mode === 'light' ? `${saasableColors.primary.main} ${saasableColors.background.default}` : `${saasableColors.primary.main} #0f172a`,
+          backgroundColor: '#ffffff', // Pure white
+          scrollbarColor: `${saasableColors.primary.main} #ffffff`,
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
             width: 12,
             height: 12,
           },
           '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
             borderRadius: 8,
-            backgroundColor: mode === 'light' ? saasableColors.text.disabled : saasableColors.primary.main,
+            backgroundColor: saasableColors.text.disabled,
             minHeight: 24,
-            border: mode === 'light' ? `2px solid ${saasableColors.background.paper}` : '2px solid #0f172a',
+            border: '2px solid #ffffff',
           },
           '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
-            backgroundColor: mode === 'light' ? saasableColors.background.default : '#0f172a',
+            backgroundColor: '#ffffff',
           },
         },
       },
@@ -255,7 +249,8 @@ const getTheme = (mode: 'light' | 'dark') => {
         root: {
           borderRadius: 8,
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          border: mode === 'light' ? `1px solid ${saasableColors.border.light}` : '1px solid #334155',
+          border: `1px solid ${saasableColors.border.light}`,
+          backgroundColor: '#ffffff',
         },
       },
     },
@@ -272,6 +267,7 @@ const getTheme = (mode: 'light' | 'dark') => {
         root: {
           '& .MuiOutlinedInput-root': {
             borderRadius: 8,
+            backgroundColor: '#ffffff',
           },
         },
       },
@@ -280,6 +276,7 @@ const getTheme = (mode: 'light' | 'dark') => {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          backgroundColor: '#ffffff',
         },
         elevation1: {
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -290,6 +287,7 @@ const getTheme = (mode: 'light' | 'dark') => {
       styleOverrides: {
         root: {
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          backgroundColor: '#ffffff',
         },
       },
     },
@@ -308,8 +306,9 @@ const getTheme = (mode: 'light' | 'dark') => {
   return responsiveFontSizes(baseTheme);
 };
 
+// Always return light theme
 export const lightTheme = getTheme('light');
-export const darkTheme = getTheme('dark');
+export const darkTheme = getTheme('light'); // Force light even for "dark"
 
 // Default export for backward compatibility
 export default getTheme;
