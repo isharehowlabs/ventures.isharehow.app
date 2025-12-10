@@ -12462,3 +12462,288 @@ def get_active_rooms():
         print(f'[LookUp.Cafe] Error fetching active rooms: {e}')
         return jsonify({'error': str(e)}), 500
 
+
+# ============================================================================
+# User Management Extended Routes - Client Assignment, Tasks, Support
+# ============================================================================
+
+@app.route('/api/admin/users/<int:user_id>/clients', methods=['GET'])
+@login_required
+def get_user_clients(user_id):
+    """Get clients assigned to a specific user/employee"""
+    try:
+        # Check if requester is admin
+        requester = get_current_user()
+        if not requester or not requester.is_admin:
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        # Verify user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get assigned clients from creative_clients table
+        # Assuming there's a client-employee relationship
+        from sqlalchemy import text
+        
+        query = text("""
+            SELECT c.id, c.name, c.email, c.company, c.status, 
+                   c.assigned_employee_id, c.created_at
+            FROM creative_clients c
+            WHERE c.assigned_employee_id = :user_id
+            ORDER BY c.created_at DESC
+        """)
+        
+        result = db.session.execute(query, {'user_id': user_id})
+        clients = []
+        
+        for row in result:
+            clients.append({
+                'id': str(row.id),
+                'name': row.name,
+                'email': row.email,
+                'company': row.company,
+                'status': row.status,
+                'assignedEmployeeId': row.assigned_employee_id,
+                'createdAt': row.created_at.isoformat() if row.created_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'clients': clients,
+            'count': len(clients)
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting user clients: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': f'Failed to get clients: {str(e)}'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/unassign-client/<client_id>', methods=['DELETE', 'OPTIONS'])
+@login_required
+def unassign_client_from_user(user_id, client_id):
+    """Remove client assignment from user"""
+    if request.method == 'OPTIONS':
+        return '', 204
+        
+    try:
+        # Check if requester is admin
+        requester = get_current_user()
+        if not requester or not requester.is_admin:
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        # Verify user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Update client to remove assignment
+        from sqlalchemy import text
+        
+        query = text("""
+            UPDATE creative_clients 
+            SET assigned_employee_id = NULL, 
+                assigned_employee = NULL
+            WHERE id = :client_id AND assigned_employee_id = :user_id
+        """)
+        
+        result = db.session.execute(query, {
+            'client_id': client_id,
+            'user_id': user_id
+        })
+        db.session.commit()
+        
+        if result.rowcount == 0:
+            return jsonify({'error': 'Client assignment not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Client unassigned successfully'
+        }), 200
+        
+    except Exception as e:
+        print(f"Error unassigning client: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': f'Failed to unassign client: {str(e)}'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/tasks', methods=['GET'])
+@login_required
+def get_user_tasks(user_id):
+    """Get tasks assigned to a specific user"""
+    try:
+        # Check if requester is admin or the user themselves
+        requester = get_current_user()
+        if not requester or (not requester.is_admin and requester.id != user_id):
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Verify user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get tasks from tasks table
+        from sqlalchemy import text
+        
+        query = text("""
+            SELECT t.id, t.title, t.description, t.status, t.priority,
+                   t.due_date, t.created_at, t.client_id, c.name as client_name
+            FROM tasks t
+            LEFT JOIN creative_clients c ON t.client_id = c.id
+            WHERE t.assigned_to = :user_id
+            ORDER BY 
+                CASE t.priority
+                    WHEN 'high' THEN 1
+                    WHEN 'medium' THEN 2
+                    WHEN 'low' THEN 3
+                    ELSE 4
+                END,
+                t.due_date ASC
+        """)
+        
+        result = db.session.execute(query, {'user_id': user_id})
+        tasks = []
+        
+        for row in result:
+            tasks.append({
+                'id': row.id,
+                'title': row.title,
+                'description': row.description,
+                'status': row.status,
+                'priority': row.priority,
+                'due_date': row.due_date.isoformat() if row.due_date else None,
+                'created_at': row.created_at.isoformat() if row.created_at else None,
+                'client_id': row.client_id,
+                'client_name': row.client_name
+            })
+        
+        return jsonify({
+            'success': True,
+            'tasks': tasks,
+            'count': len(tasks)
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting user tasks: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': f'Failed to get tasks: {str(e)}'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/support-requests', methods=['GET'])
+@login_required
+def get_user_support_requests(user_id):
+    """Get support requests assigned to a specific user"""
+    try:
+        # Check if requester is admin or the user themselves
+        requester = get_current_user()
+        if not requester or (not requester.is_admin and requester.id != user_id):
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Verify user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get support requests from support_requests table
+        from sqlalchemy import text
+        
+        query = text("""
+            SELECT sr.id, sr.subject, sr.description, sr.status, sr.priority,
+                   sr.created_at, sr.updated_at, sr.client_id, c.name as client_name
+            FROM support_requests sr
+            LEFT JOIN creative_clients c ON sr.client_id = c.id
+            WHERE sr.assigned_to = :user_id
+            ORDER BY 
+                CASE sr.priority
+                    WHEN 'urgent' THEN 1
+                    WHEN 'high' THEN 2
+                    WHEN 'medium' THEN 3
+                    WHEN 'low' THEN 4
+                    ELSE 5
+                END,
+                sr.created_at DESC
+        """)
+        
+        result = db.session.execute(query, {'user_id': user_id})
+        requests = []
+        
+        for row in result:
+            requests.append({
+                'id': row.id,
+                'subject': row.subject,
+                'description': row.description,
+                'status': row.status,
+                'priority': row.priority,
+                'created_at': row.created_at.isoformat() if row.created_at else None,
+                'updated_at': row.updated_at.isoformat() if row.updated_at else None,
+                'client_id': row.client_id,
+                'client_name': row.client_name
+            })
+        
+        return jsonify({
+            'success': True,
+            'requests': requests,
+            'count': len(requests)
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting support requests: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': f'Failed to get support requests: {str(e)}'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/assign-client', methods=['POST', 'OPTIONS'])
+@login_required
+def assign_client_to_user(user_id, client_id):
+    """Assign a client to a user/employee"""
+    if request.method == 'OPTIONS':
+        return '', 204
+        
+    try:
+        # Check if requester is admin
+        requester = get_current_user()
+        if not requester or not requester.is_admin:
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        data = request.get_json()
+        client_id = data.get('client_id')
+        
+        if not client_id:
+            return jsonify({'error': 'Client ID required'}), 400
+        
+        # Verify user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Update client assignment
+        from sqlalchemy import text
+        
+        query = text("""
+            UPDATE creative_clients 
+            SET assigned_employee_id = :user_id,
+                assigned_employee = :username
+            WHERE id = :client_id
+        """)
+        
+        result = db.session.execute(query, {
+            'user_id': user_id,
+            'username': user.username,
+            'client_id': client_id
+        })
+        db.session.commit()
+        
+        if result.rowcount == 0:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Client assigned successfully'
+        }), 200
+        
+    except Exception as e:
+        print(f"Error assigning client: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': f'Failed to assign client: {str(e)}'}), 500
+

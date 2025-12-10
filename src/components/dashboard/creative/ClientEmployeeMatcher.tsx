@@ -1,14 +1,15 @@
 'use client';
 
 import { getBackendUrl } from '../../../utils/backendUrl';
+import EditUserDialog from './EditUserDialog';
 import React, { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, Button, TextField, InputAdornment,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
   IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Chip, Avatar,
-  Dialog, DialogTitle, DialogContent, DialogActions, Grid, FormControl,
+  Dialog, Tab, Tabs, DialogTitle, DialogContent, DialogActions, Grid, FormControl,
   InputLabel, Select, Radio, RadioGroup, FormControlLabel, FormLabel,
-  Checkbox, Alert, CircularProgress, Breadcrumbs, Link, Tabs, Tab,
+  Checkbox, Alert, CircularProgress, Breadcrumbs, Link,
   Switch, Divider, Stack, Autocomplete,
 } from '@mui/material';
 import {
@@ -114,6 +115,12 @@ export default function ClientEmployeeMatcher() {
 
   // Assignment state
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [editDialogTab, setEditDialogTab] = useState(0);
+  const [assignedClients, setAssignedClients] = useState<Client[]>([]);
+  const [userTasks, setUserTasks] = useState<any[]>([]);
+  const [userSupportRequests, setUserSupportRequests] = useState<any[]>([]);
+  const [loadingTabs, setLoadingTabs] = useState(false);
+
 
   const backendUrl = getBackendUrl();
 
@@ -193,6 +200,10 @@ export default function ClientEmployeeMatcher() {
         isClient: selectedUser.is_client || false,
         systemsConnected: [],
       });
+      setEditDialogTab(0);
+      if (selectedUser) {
+        fetchUserData(selectedUser.id);
+      }
       setEditDialogOpen(true);
     }
     handleMenuClose();
@@ -214,6 +225,54 @@ export default function ClientEmployeeMatcher() {
     setAssignClientDialogOpen(true);
     handleMenuClose();
   };
+
+  const fetchUserData = async (userId: number) => {
+    setLoadingTabs(true);
+    try {
+      const [clientsRes, tasksRes, supportRes] = await Promise.all([
+        fetch(`${backendUrl}/api/admin/users/${userId}/clients`, { credentials: 'include' }),
+        fetch(`${backendUrl}/api/admin/users/${userId}/tasks`, { credentials: 'include' }),
+        fetch(`${backendUrl}/api/admin/users/${userId}/support-requests`, { credentials: 'include' })
+      ]);
+      
+      if (clientsRes.ok) {
+        const data = await clientsRes.json();
+        setAssignedClients(data.clients || []);
+      }
+      if (tasksRes.ok) {
+        const data = await tasksRes.json();
+        setUserTasks(data.tasks || []);
+      }
+      if (supportRes.ok) {
+        const data = await supportRes.json();
+        setUserSupportRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+    } finally {
+      setLoadingTabs(false);
+    }
+  };
+
+  const handleUnassignClient = async (clientId: string) => {
+    if (!selectedUser) return;
+    try {
+      const res = await fetch(`${backendUrl}/api/admin/users/${selectedUser.id}/unassign-client/${clientId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        setSuccess('Client unassigned successfully');
+        fetchUserData(selectedUser.id);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to unassign client');
+      }
+    } catch (err) {
+      setError('Failed to unassign client');
+    }
+  };
+
 
   const handleUpdateUser = async () => {
     if (!selectedUser) return;
@@ -536,173 +595,14 @@ export default function ClientEmployeeMatcher() {
       </Menu>
 
       {/* Edit User Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Typography variant="h6" fontWeight={600}>Edit User</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Update user settings and permissions
-          </Typography>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box display="flex" justifyContent="center" mb={3}>
-            <Box position="relative">
-              <Avatar src={selectedUser?.profile_image} sx={{ width: 80, height: 80 }}>
-                {editForm.firstName?.[0] || 'U'}
-              </Avatar>
-              <IconButton
-                size="small"
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  '&:hover': { bgcolor: 'primary.dark' },
-                }}
-              >
-                <CameraIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </Box>
-
-          <Typography variant="subtitle2" fontWeight={600} mb={2}>Personal Details</Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="First Name"
-                required
-                value={editForm.firstName}
-                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Last Name"
-                required
-                value={editForm.lastName}
-                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Username"
-                required
-                value={editForm.username}
-                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                required
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Phone"
-                value={editForm.phone}
-                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Joining Date"
-                type="date"
-                InputLabelProps={{ shrink: true }}
-                value={editForm.joiningDate}
-                onChange={(e) => setEditForm({ ...editForm, joiningDate: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Zip/Code"
-                value={editForm.zipcode}
-                onChange={(e) => setEditForm({ ...editForm, zipcode: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Address"
-                multiline
-                rows={2}
-                value={editForm.address}
-                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-              />
-            </Grid>
-          </Grid>
-
-          <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>Permissions</Typography>
-          <Stack spacing={2}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={editForm.isAdmin}
-                  onChange={(e) => setEditForm({ ...editForm, isAdmin: e.target.checked })}
-                />
-              }
-              label="Admin Access"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={editForm.isEmployee}
-                  onChange={(e) => setEditForm({ ...editForm, isEmployee: e.target.checked })}
-                />
-              }
-              label="Employee Status"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={editForm.isClient}
-                  onChange={(e) => setEditForm({ ...editForm, isClient: e.target.checked })}
-                />
-              }
-              label="Client Status"
-            />
-          </Stack>
-
-          <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>Status</Typography>
-          <RadioGroup
-            row
-            value={editForm.status}
-            onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
-          >
-            <FormControlLabel value="active" control={<Radio />} label="Active" />
-            <FormControlLabel value="pending" control={<Radio />} label="Pending" />
-            <FormControlLabel value="reported" control={<Radio />} label="Reported" />
-            <FormControlLabel value="blocked" control={<Radio />} label="Blocked" />
-          </RadioGroup>
-
-          {editForm.isClient && (
-            <>
-              <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>Systems Connected</Typography>
-              <Autocomplete
-                multiple
-                options={SYSTEMS}
-                value={editForm.systemsConnected}
-                onChange={(e, newValue) => setEditForm({ ...editForm, systemsConnected: newValue })}
-                renderInput={(params) => <TextField {...params} label="Select Systems" />}
-              />
-            </>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleUpdateUser}>Update User</Button>
-        </DialogActions>
-      </Dialog>
+      <EditUserDialog
+        open={editDialogOpen}
+        user={selectedUser}
+        onClose={() => setEditDialogOpen(false)}
+        onSuccess={setSuccess}
+        onError={setError}
+        availableClients={clients}
+      />
 
       {/* Change Password Dialog */}
       <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} maxWidth="xs" fullWidth>
