@@ -238,13 +238,13 @@ export default function AnalyticsActivity() {
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#888" fontSize={12} />
                 <YAxis stroke="#888" fontSize={12} />
                 <RechartsTooltip 
                   contentStyle={{ 
                     backgroundColor: '#fff', 
-                    border: '1px solid #e0e0e0',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px'
                   }} 
                 />
@@ -259,7 +259,7 @@ export default function AnalyticsActivity() {
                 <Area 
                   type="monotone" 
                   dataKey="previous" 
-                  stroke="#d1d5db" 
+                  stroke="#cbd5e1" 
                   strokeWidth={2}
                   strokeDasharray="5 5"
                   fill="none" 
@@ -277,13 +277,13 @@ export default function AnalyticsActivity() {
           >
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={conversionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#888" fontSize={12} />
                 <YAxis stroke="#888" fontSize={12} />
                 <RechartsTooltip 
                   contentStyle={{ 
                     backgroundColor: '#fff', 
-                    border: '1px solid #e0e0e0',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px'
                   }} 
                 />
@@ -321,13 +321,13 @@ export default function AnalyticsActivity() {
           >
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={visitorData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#888" fontSize={12} />
                 <YAxis stroke="#888" fontSize={12} />
                 <RechartsTooltip 
                   contentStyle={{ 
                     backgroundColor: '#fff', 
-                    border: '1px solid #e0e0e0',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px'
                   }} 
                 />

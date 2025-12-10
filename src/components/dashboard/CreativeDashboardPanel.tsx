@@ -106,7 +106,7 @@ export default function CreativeDashboardPanel() {
   };
 
   return (
-    <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh', pb: 4 }}>
+    <Box sx={{ bgcolor: "background.default", minHeight: '100vh', pb: 4 }}>
       {/* Header */}
       <Box sx={{ 
         bgcolor: 'white', 
@@ -142,12 +142,12 @@ export default function CreativeDashboardPanel() {
                 fontSize: '0.95rem',
                 fontWeight: 500,
                 '&.Mui-selected': {
-                  color: '#6366f1',
+                  color: 'primary.main',
                   fontWeight: 600,
                 },
               },
               '& .MuiTabs-indicator': {
-                bgcolor: '#6366f1',
+                bgcolor: 'primary.main',
                 height: 3,
               },
             }}

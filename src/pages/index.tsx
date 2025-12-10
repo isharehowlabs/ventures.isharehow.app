@@ -637,9 +637,9 @@ const HomePage = () => {
                               right: 0,
                               height: '30%',
                               background: `linear-gradient(135deg, ${
-                                index === 0 ? '#667eea' : index === 1 ? '#f093fb' : index === 2 ? '#4facfe' : '#43e97b'
+                                index === 0 ? '#6366f1' : index === 1 ? '#a78bfa' : index === 2 ? '#3b82f6' : '#10b981'
                               } 0%, ${
-                                index === 0 ? '#764ba2' : index === 1 ? '#f5576c' : index === 2 ? '#00f2fe' : '#38f9d7'
+                                index === 0 ? '#4f46e5' : index === 1 ? '#f43f5e' : index === 2 ? '#22d3ee' : '#34d399'
                               } 100%)`,
                               opacity: 0.08,
                               zIndex: 0,
@@ -732,9 +732,9 @@ const HomePage = () => {
                               right: 0,
                               height: '40%',
                               background: `linear-gradient(135deg, ${
-                                index === 0 ? '#667eea' : index === 1 ? '#f093fb' : index === 2 ? '#4facfe' : '#43e97b'
+                                index === 0 ? '#6366f1' : index === 1 ? '#a78bfa' : index === 2 ? '#3b82f6' : '#10b981'
                               } 0%, ${
-                                index === 0 ? '#764ba2' : index === 1 ? '#f5576c' : index === 2 ? '#00f2fe' : '#38f9d7'
+                                index === 0 ? '#4f46e5' : index === 1 ? '#f43f5e' : index === 2 ? '#22d3ee' : '#34d399'
                               } 100%)`,
                               opacity: 0.1,
                               zIndex: 0,
@@ -811,7 +811,7 @@ const HomePage = () => {
                       left: 0,
                       right: 0,
                       height: 4,
-                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                      background: 'linear-gradient(90deg, #6366f1 0%, #4f46e5 100%)',
                     },
                   }}
                 >
