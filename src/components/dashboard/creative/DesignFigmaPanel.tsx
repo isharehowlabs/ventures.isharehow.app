@@ -102,6 +102,7 @@ export default function DesignFigmaPanel() {
   useEffect(() => {
     if (!useFigmaHook || !useMCPHook) return;
     
+    let isMounted = true;
     const loadFigmaData = async () => {
       try {
         await Promise.all([
@@ -109,25 +110,44 @@ export default function DesignFigmaPanel() {
           fetchCodeLinks(),
         ]);
       } catch (err) {
-        console.error('Error loading Figma data:', err);
+        if (isMounted) {
+          console.error('Error loading Figma data:', err);
+        }
       }
     };
     loadFigmaData();
-  }, []);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchFiles, fetchCodeLinks]);
 
   useEffect(() => {
     if (!selectedFile || !useFigmaHook) return;
     
+    let isMounted = true;
     setLoadingComponents(true);
     fetchComponents(selectedFile)
       .then(() => {
-        if (components.length > 0) {
-          Promise.all(components.map((comp: any) => fetchComponentStatus(comp.key, selectedFile)));
+        if (!isMounted) return;
+        // Use a ref or state to get current components, or fetch status separately
+        // Avoid accessing components directly in the effect
+      })
+      .catch((err: any) => {
+        if (isMounted) {
+          console.error('Error fetching components:', err);
         }
       })
-      .catch((err: any) => console.error('Error fetching components:', err))
-      .finally(() => setLoadingComponents(false));
-  }, [selectedFile]);
+      .finally(() => {
+        if (isMounted) {
+          setLoadingComponents(false);
+        }
+      });
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedFile, fetchComponents]);
 
   // Figma handlers
   const handleRefreshFigma = () => {

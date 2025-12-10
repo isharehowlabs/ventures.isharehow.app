@@ -110,6 +110,9 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
   useEffect(() => {
     if (!boardId) return;
 
+    let cleanupFunctions: (() => void)[] = [];
+    let isMounted = true;
+
     const database = getFirebaseDatabase();
     const configured = isFirebaseConfigured();
 
@@ -121,12 +124,6 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
     }
 
     setUseFirebase(true);
-    setupFirebaseListeners(database);
-  }, [boardId, userId, userName]);
-
-  const setupFirebaseListeners = (database: any) => {
-    if (!boardId) return;
-
     setIsLoading(true);
     setError(null);
 
@@ -134,6 +131,7 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
       // Canvas state listener
       const canvasRef = ref(database, `boards/${boardId}/canvasState`);
       const unsubCanvas = onValue(canvasRef, (snapshot) => {
+        if (!isMounted) return;
         const data = snapshot.val();
         if (data) {
           setCanvasState(data);
@@ -141,15 +139,18 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
         }
         setIsLoading(false);
       }, (error) => {
+        if (!isMounted) return;
         console.error('Firebase canvas error:', error);
         setError('Failed to connect to Firebase');
         setUseFirebase(false);
         fetchBoardSnapshot();
       });
+      cleanupFunctions.push(() => unsubCanvas());
 
       // Presence listener
       const presenceRef = ref(database, `boards/${boardId}/presence`);
       const unsubPresence = onValue(presenceRef, (snapshot) => {
+        if (!isMounted) return;
         const data = snapshot.val();
         if (data) {
           const presenceMap = new Map<string, PresenceData>();
@@ -159,30 +160,35 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
           setPresence(presenceMap);
         }
       });
+      cleanupFunctions.push(() => unsubPresence());
 
       // Notifications listener
       const notifRef = ref(database, `boards/${boardId}/notifications`);
       const unsubNotif = onValue(notifRef, (snapshot) => {
+        if (!isMounted) return;
         const data = snapshot.val();
         if (data) {
           const notifArray = Object.values(data) as BoardNotification[];
           setNotifications(notifArray.slice(-20)); // Keep last 20
         }
       });
-
-      // Cleanup
-      return () => {
-        unsubCanvas();
-        unsubPresence();
-        unsubNotif();
-      };
+      cleanupFunctions.push(() => unsubNotif());
     } catch (error) {
-      console.error('Error setting up Firebase listeners:', error);
-      setError('Failed to setup Firebase listeners');
-      setUseFirebase(false);
-      fetchBoardSnapshot();
+      if (isMounted) {
+        console.error('Error setting up Firebase listeners:', error);
+        setError('Failed to setup Firebase listeners');
+        setUseFirebase(false);
+        fetchBoardSnapshot();
+      }
     }
-  };
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      cleanupFunctions.forEach(cleanup => cleanup());
+      cleanupFunctions = [];
+    };
+  }, [boardId, userId, userName]);
 
   const fetchBoardSnapshot = async () => {
     if (!boardId) return;
