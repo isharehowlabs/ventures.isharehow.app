@@ -23,10 +23,11 @@ import {
   LiveTv as LiveIcon,
   SportsEsports as GamesIcon,
   School as LearningHubIcon,
+  CreditCard as CreditCardIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub';
 
 interface NavigationItem {
   key: NavKey;
@@ -111,6 +112,13 @@ const navigationItems: NavigationItem[] = [
     label: 'Profile',
     href: '/profile',
     icon: <PersonIcon />,
+    authRequired: true,
+  },
+  {
+    key: 'billing',
+    label: 'Billing',
+    href: '/billing',
+    icon: <CreditCardIcon />,
     authRequired: true,
   },
   {

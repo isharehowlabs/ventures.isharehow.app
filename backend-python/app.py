@@ -12993,3 +12993,89 @@ def get_analytics_data():
         traceback.print_exc()
         return jsonify({'error': f'Failed to fetch analytics data: {str(e)}'}), 500
 
+@app.route('/api/billing/payment-methods', methods=['GET'])
+@jwt_required()
+def get_payment_methods():
+    """Get user's payment methods"""
+    try:
+        requester = get_current_user()
+        if not requester:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # TODO: Integrate with payment provider (Stripe, etc.) to get real payment methods
+        # For now, return empty array or mock data
+        return jsonify({
+            'paymentMethods': []
+        }), 200
+        
+    except Exception as e:
+        print(f"Error fetching payment methods: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to fetch payment methods: {str(e)}'}), 500
+
+@app.route('/api/billing/invoices', methods=['GET'])
+@jwt_required()
+def get_invoices():
+    """Get user's billing invoices"""
+    try:
+        requester = get_current_user()
+        if not requester:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # TODO: Integrate with payment provider to get real invoices
+        # For now, return empty array or mock data
+        return jsonify({
+            'invoices': []
+        }), 200
+        
+    except Exception as e:
+        print(f"Error fetching invoices: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to fetch invoices: {str(e)}'}), 500
+
+@app.route('/api/subscriptions/cancel', methods=['POST'])
+@jwt_required()
+def cancel_subscription():
+    """Cancel user's subscription"""
+    try:
+        requester = get_current_user()
+        if not requester:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # TODO: Integrate with payment provider to cancel subscription
+        # For now, return success
+        return jsonify({
+            'success': True,
+            'message': 'Subscription will be canceled at the end of the billing period'
+        }), 200
+        
+    except Exception as e:
+        print(f"Error canceling subscription: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to cancel subscription: {str(e)}'}), 500
+
+@app.route('/api/subscriptions/resume', methods=['POST'])
+@jwt_required()
+def resume_subscription():
+    """Resume user's canceled subscription"""
+    try:
+        requester = get_current_user()
+        if not requester:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # TODO: Integrate with payment provider to resume subscription
+        # For now, return success
+        return jsonify({
+            'success': True,
+            'message': 'Subscription has been resumed'
+        }), 200
+        
+    except Exception as e:
+        print(f"Error resuming subscription: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to resume subscription: {str(e)}'}), 500
+
