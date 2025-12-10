@@ -10294,6 +10294,12 @@ def update_or_delete_user(user_id):
                 import traceback
                 traceback.print_exc()
                 return jsonify({'error': 'Failed to delete user', 'details': str(delete_error)}), 500
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error in delete operation: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': 'Failed to delete user', 'details': str(e)}), 500
 
 @app.route('/api/admin/users/<user_id>/employee', methods=['PUT'])
 @require_admin
