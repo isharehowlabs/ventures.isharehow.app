@@ -1,5 +1,6 @@
 'use client';
 
+import { getBackendUrl } from '../../../utils/backendUrl';
 import React, { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, Button, TextField, InputAdornment,
@@ -114,7 +115,7 @@ export default function ClientEmployeeMatcher() {
   // Assignment state
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+  const backendUrl = getBackendUrl();
 
   useEffect(() => {
     fetchUsers();
