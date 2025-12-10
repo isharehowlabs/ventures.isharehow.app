@@ -57,9 +57,9 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
       }}
     >
       {/* Header */}
-      <AppBar position="static" elevation={1}>
+      <AppBar position="static" elevation={1} sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
         <MuiToolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" sx={{ flexGrow: 1, color: 'text.primary', fontWeight: 600 }}>
             Collaboration Board {boardId && `- ${boardId}`}
           </Typography>
           
@@ -68,7 +68,7 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
             <Alert
               severity="warning"
               icon={<CloudOffIcon />}
-              sx={{ mr: 2 }}
+              sx={{ mr: 2, bgcolor: 'warning.light', color: 'warning.contrastText' }}
               action={
                 <Button size="small" color="inherit" onClick={() => window.location.reload()}>
                   Reconnect
@@ -128,6 +128,11 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
             position: 'relative',
           }}
         >
+          {/* Left Sidebar - Presence */}
+          <Box sx={{ p: 2, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider' }}>
+            <PresenceSidebar />
+          </Box>
+
           {/* Left Toolbar */}
           <Box sx={{ p: 2, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider' }}>
             <Toolbar
@@ -159,11 +164,6 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
               strokeWidth={strokeWidth}
             />
             <CursorOverlay />
-          </Box>
-
-          {/* Right Sidebar */}
-          <Box sx={{ p: 2, bgcolor: 'background.paper', borderLeft: 1, borderColor: 'divider' }}>
-            <PresenceSidebar />
           </Box>
         </Box>
       )}
