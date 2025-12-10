@@ -25,10 +25,11 @@ import {
   School as LearningHubIcon,
   CreditCard as CreditCardIcon,
   Info as InfoIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise';
 
 interface NavigationItem {
   key: NavKey;
@@ -76,6 +77,12 @@ const navigationItems: NavigationItem[] = [
     label: 'Products',
     href: '/products',
     icon: <ShoppingBagIcon />,
+  },
+  {
+    key: 'enterprise',
+    label: 'Enterprise',
+    href: '/enterprise',
+    icon: <BusinessIcon />,
   },
   {
     key: 'live',

@@ -2,8 +2,7 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Redirect /live to /labs
-    RewriteRule ^live/?$ /labs/ [R=301,L]
+    # Removed redirect from /live to /labs - /live should work independently
     
     # Rewrite API requests
     RewriteCond %{REQUEST_URI} ^/api/products
