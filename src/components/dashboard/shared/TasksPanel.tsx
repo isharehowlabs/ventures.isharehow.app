@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -17,7 +17,10 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Menu,
   MenuItem,
+  ListItemIcon,
+  ListItemText,
   Alert,
   CircularProgress,
   Card,
@@ -34,6 +37,7 @@ import {
   useTheme,
   alpha,
   LinearProgress,
+  Badge,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -50,6 +54,8 @@ import {
   Assignment as AssignmentIcon,
   Today as TodayIcon,
   FilterList as FilterListIcon,
+  MoreVert as MoreVertIcon,
+  DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
 import { useTasks, Task } from '../../../hooks/useTasks';
 import { useWorkspaceUsers } from '../../../hooks/useWorkspaceUsers';
@@ -75,6 +81,34 @@ interface Employee {
   name: string;
   email: string;
 }
+
+interface KanbanColumn {
+  id: 'pending' | 'in-progress' | 'completed';
+  title: string;
+  color: string;
+  icon: React.ReactNode;
+}
+
+const KANBAN_COLUMNS: KanbanColumn[] = [
+  {
+    id: 'pending',
+    title: 'To Do',
+    color: '#9e9e9e',
+    icon: <PendingIcon />,
+  },
+  {
+    id: 'in-progress',
+    title: 'In Progress',
+    color: '#ff9800',
+    icon: <InProgressIcon />,
+  },
+  {
+    id: 'completed',
+    title: 'Done',
+    color: '#4caf50',
+    icon: <CheckCircleIcon />,
+  },
+];
 
 export default function TasksPanel({ height = 500 }: TasksPanelProps) {
   const theme = useTheme();
@@ -104,6 +138,10 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
   const [supportRequests, setSupportRequests] = useState<SupportRequest[]>([]);
   const [loadingSupportRequests, setLoadingSupportRequests] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [draggedOverColumn, setDraggedOverColumn] = useState<string | null>(null);
+  const [taskMenuAnchor, setTaskMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedTaskForMenu, setSelectedTaskForMenu] = useState<Task | null>(null);
   
   // Combine workspace users and employees for assignment options
   const assigneeOptions = React.useMemo(() => {
@@ -206,6 +244,23 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     return true; // 'all'
   });
 
+  // Group tasks by status for kanban columns
+  const tasksByStatus = React.useMemo(() => {
+    const grouped: Record<string, Task[]> = {
+      'pending': [],
+      'in-progress': [],
+      'completed': [],
+    };
+    
+    filteredTasks.forEach(task => {
+      if (grouped[task.status]) {
+        grouped[task.status].push(task);
+      }
+    });
+    
+    return grouped;
+  }, [filteredTasks]);
+
   // Count tasks for stats
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
@@ -214,6 +269,47 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
   const myTasksCount = tasks.filter(t => t.assignedTo === user?.id).length;
   const createdByMeCount = tasks.filter(t => t.createdBy === user?.id).length;
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDraggedTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', task.id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDraggedOverColumn(columnId);
+  };
+
+  const handleDragLeave = () => {
+    setDraggedOverColumn(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStatus: 'pending' | 'in-progress' | 'completed') => {
+    e.preventDefault();
+    setDraggedOverColumn(null);
+    
+    if (!draggedTask) return;
+    
+    // Don't update if status hasn't changed
+    if (draggedTask.status === targetStatus) {
+      setDraggedTask(null);
+      return;
+    }
+    
+    try {
+      await updateTask(draggedTask.id, { status: targetStatus });
+      if (targetStatus === 'completed') {
+        trackTaskCompleted(draggedTask.id, (user as any)?.userRole || 'user', 'cowork');
+      }
+    } catch (err) {
+      console.error('Error updating task status:', err);
+    } finally {
+      setDraggedTask(null);
+    }
+  };
 
   const handleTaskToggle = async (id: string) => {
     const task = tasks.find(t => t.id === id);
@@ -261,6 +357,18 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     }
     
     setTaskDialogOpen(true);
+    setTaskMenuAnchor(null);
+  };
+
+  const handleTaskMenuOpen = (event: React.MouseEvent<HTMLElement>, task: Task) => {
+    event.stopPropagation();
+    setTaskMenuAnchor(event.currentTarget);
+    setSelectedTaskForMenu(task);
+  };
+
+  const handleTaskMenuClose = () => {
+    setTaskMenuAnchor(null);
+    setSelectedTaskForMenu(null);
   };
 
   const handleNotesChange = (newNotes: string) => {
@@ -325,6 +433,7 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
   const handleDeleteTask = async (id: string) => {
     try {
       await deleteTask(id);
+      handleTaskMenuClose();
     } catch (err) {
       console.error('Error deleting task:', err);
     }
@@ -342,10 +451,10 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
             <Box>
               <Typography variant="h4" fontWeight={800} gutterBottom>
-                Todo List
+                Kanban Board
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Manage your tasks and track progress
+                Drag and drop tasks to update their status
               </Typography>
             </Box>
             <Button
@@ -544,164 +653,219 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
           </ToggleButtonGroup>
         </Paper>
 
-        {/* Tasks List */}
+        {/* Kanban Board */}
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
           {tasksLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
-          ) : filteredTasks.length === 0 ? (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 6,
-                textAlign: 'center',
-                borderRadius: 2,
-                border: `2px dashed ${alpha(theme.palette.divider, 0.5)}`,
-              }}
-            >
-              <TaskIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No tasks found
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {taskFilter === 'all' 
-                  ? 'Get started by adding your first task!'
-                  : `No tasks match the "${taskFilter}" filter.`}
-              </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={handleOpenCreateTask}
-                sx={{ textTransform: 'none' }}
-              >
-                Add Task
-              </Button>
-            </Paper>
           ) : (
-            <Stack spacing={2}>
-              {filteredTasks.map((task) => (
-                <Card
-                  key={task.id}
-                  elevation={2}
-                  sx={{
-                    borderRadius: 2,
-                    transition: 'all 0.2s',
-                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-                    '&:hover': {
-                      boxShadow: 4,
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                    <Stack direction="row" spacing={2} alignItems="flex-start">
-                      <Checkbox
-                        checked={task.status === 'completed'}
-                        onChange={() => handleTaskToggle(task.id)}
-                        disabled={tasksLoading}
-                        sx={{ mt: 0.5 }}
-                      />
-                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={600}
-                          sx={{
-                            textDecoration: task.status === 'completed' ? 'line-through' : 'none',
-                            color: task.status === 'completed' ? 'text.secondary' : 'text.primary',
-                            mb: 0.5,
-                          }}
-                        >
-                          {task.title}
-                        </Typography>
-                        {task.description && (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              mb: 1.5,
-                              textDecoration: task.status === 'completed' ? 'line-through' : 'none',
-                            }}
-                          >
-                            {task.description}
-                          </Typography>
-                        )}
-                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1 }}>
-                          <Chip
-                            label={task.status}
-                            size="small"
-                            color={getStatusColor(task.status) as any}
-                            icon={getStatusIcon(task.status)}
-                            sx={{ fontWeight: 600 }}
-                          />
-                          {task.hyperlinks && task.hyperlinks.length > 0 && (
-                            <Chip
-                              icon={<LinkIcon />}
-                              label={`${task.hyperlinks.length} link${task.hyperlinks.length > 1 ? 's' : ''}`}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                        </Stack>
-                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                          {task.createdByName && (
-                            <Chip
-                              icon={<PersonOutlineIcon />}
-                              label={task.createdByName}
-                              size="small"
-                              variant="outlined"
-                              sx={{ fontSize: '0.7rem' }}
-                            />
-                          )}
-                          {task.assignedToName ? (
-                            <Chip
-                              icon={<PersonIcon />}
-                              label={task.assignedToName}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                              sx={{ fontSize: '0.7rem' }}
-                            />
-                          ) : task.assignedTo === undefined && (
-                            <Chip
-                              label="Unassigned"
-                              size="small"
-                              variant="outlined"
-                              sx={{ fontSize: '0.7rem', opacity: 0.6 }}
-                            />
-                          )}
-                          {task.createdAt && (
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(task.createdAt).toLocaleDateString()}
+            <Grid container spacing={2} sx={{ height: '100%', alignItems: 'flex-start' }}>
+              {KANBAN_COLUMNS.map((column) => {
+                const columnTasks = tasksByStatus[column.id] || [];
+                const isDraggedOver = draggedOverColumn === column.id;
+                
+                return (
+                  <Grid item xs={12} md={4} key={column.id} sx={{ height: '100%' }}>
+                    <Paper
+                      elevation={2}
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        borderRadius: 2,
+                        border: `2px solid ${isDraggedOver ? column.color : 'transparent'}`,
+                        bgcolor: isDraggedOver ? alpha(column.color, 0.05) : 'background.paper',
+                        transition: 'all 0.2s',
+                      }}
+                      onDragOver={(e) => handleDragOver(e, column.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, column.id)}
+                    >
+                      {/* Column Header */}
+                      <Box
+                        sx={{
+                          p: 2,
+                          borderBottom: `2px solid ${alpha(column.color, 0.2)}`,
+                          bgcolor: alpha(column.color, 0.05),
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Box sx={{ color: column.color }}>
+                              {column.icon}
+                            </Box>
+                            <Typography variant="h6" fontWeight={700}>
+                              {column.title}
                             </Typography>
-                          )}
+                            <Badge
+                              badgeContent={columnTasks.length}
+                              color={column.id === 'completed' ? 'success' : column.id === 'in-progress' ? 'warning' : 'default'}
+                              sx={{
+                                '& .MuiBadge-badge': {
+                                  bgcolor: column.color,
+                                },
+                              }}
+                            />
+                          </Stack>
                         </Stack>
                       </Box>
-                      <Stack direction="row" spacing={0.5}>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenEditTask(task)}
-                            sx={{ color: 'primary.main' }}
+
+                      {/* Column Tasks */}
+                      <Box
+                        sx={{
+                          flexGrow: 1,
+                          overflowY: 'auto',
+                          p: 2,
+                          minHeight: 200,
+                        }}
+                      >
+                        {columnTasks.length === 0 ? (
+                          <Box
+                            sx={{
+                              textAlign: 'center',
+                              py: 4,
+                              color: 'text.secondary',
+                              border: `2px dashed ${alpha(theme.palette.divider, 0.5)}`,
+                              borderRadius: 2,
+                            }}
                           >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteTask(task.id)}
-                            sx={{ color: 'error.main' }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              ))}
-            </Stack>
+                            <Typography variant="body2">No tasks</Typography>
+                          </Box>
+                        ) : (
+                          <Stack spacing={2}>
+                            {columnTasks.map((task) => (
+                              <Card
+                                key={task.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, task)}
+                                elevation={draggedTask?.id === task.id ? 8 : 2}
+                                sx={{
+                                  borderRadius: 2,
+                                  cursor: 'grab',
+                                  transition: 'all 0.2s',
+                                  border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                                  opacity: draggedTask?.id === task.id ? 0.5 : 1,
+                                  '&:hover': {
+                                    boxShadow: 4,
+                                    transform: 'translateY(-2px)',
+                                  },
+                                  '&:active': {
+                                    cursor: 'grabbing',
+                                  },
+                                }}
+                              >
+                                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                                  <Stack spacing={1.5}>
+                                    {/* Task Header */}
+                                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                                      <DragIndicatorIcon
+                                        sx={{
+                                          color: 'text.secondary',
+                                          fontSize: 20,
+                                          mt: 0.5,
+                                          cursor: 'grab',
+                                        }}
+                                      />
+                                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                                        <Typography
+                                          variant="subtitle2"
+                                          fontWeight={600}
+                                          onClick={() => handleOpenEditTask(task)}
+                                          sx={{
+                                            textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                                            color: task.status === 'completed' ? 'text.secondary' : 'text.primary',
+                                            mb: 0.5,
+                                            wordBreak: 'break-word',
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          {task.title}
+                                        </Typography>
+                                        {task.description && (
+                                          <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{
+                                              mb: 1,
+                                              textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                                              wordBreak: 'break-word',
+                                            }}
+                                          >
+                                            {task.description}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                      <IconButton
+                                        size="small"
+                                        onClick={(e) => handleTaskMenuOpen(e, task)}
+                                        sx={{ mt: -1, mr: -1 }}
+                                      >
+                                        <MoreVertIcon fontSize="small" />
+                                      </IconButton>
+                                    </Stack>
+
+                                    {/* Task Meta */}
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                                      {task.hyperlinks && task.hyperlinks.length > 0 && (
+                                        <Chip
+                                          icon={<LinkIcon />}
+                                          label={`${task.hyperlinks.length} link${task.hyperlinks.length > 1 ? 's' : ''}`}
+                                          size="small"
+                                          variant="outlined"
+                                          sx={{ fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                    </Stack>
+
+                                    {/* Task Footer */}
+                                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
+                                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                                        {task.assignedToName ? (
+                                          <Tooltip title={task.assignedToName}>
+                                            <Avatar
+                                              sx={{
+                                                width: 24,
+                                                height: 24,
+                                                bgcolor: 'primary.main',
+                                                fontSize: '0.7rem',
+                                              }}
+                                            >
+                                              {task.assignedToName.charAt(0).toUpperCase()}
+                                            </Avatar>
+                                          </Tooltip>
+                                        ) : task.assignedTo === undefined && (
+                                          <Chip
+                                            label="Unassigned"
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ fontSize: '0.65rem', height: 20 }}
+                                          />
+                                        )}
+                                        {task.createdByName && (
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                            by {task.createdByName}
+                                          </Typography>
+                                        )}
+                                      </Stack>
+                                      {task.createdAt && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                          {new Date(task.createdAt).toLocaleDateString()}
+                                        </Typography>
+                                      )}
+                                    </Stack>
+                                  </Stack>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </Stack>
+                        )}
+                      </Box>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
           )}
         </Box>
       </Box>
@@ -821,6 +985,34 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Task Menu */}
+      <Menu
+        anchorEl={taskMenuAnchor}
+        open={Boolean(taskMenuAnchor)}
+        onClose={handleTaskMenuClose}
+      >
+        <MenuItem onClick={() => {
+          if (selectedTaskForMenu) {
+            handleOpenEditTask(selectedTaskForMenu);
+          }
+        }}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => {
+          if (selectedTaskForMenu) {
+            handleDeleteTask(selectedTaskForMenu.id);
+          }
+        }}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {/* Toast notification */}
       <Snackbar
