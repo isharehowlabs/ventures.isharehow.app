@@ -1,27 +1,31 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
+  Container,
+  Typography,
   Tabs,
   Tab,
   Paper,
-  Typography,
-  Container,
   useTheme,
   useMediaQuery,
-  Alert,
+  Card,
+  CardContent,
+  Grid,
+  Button,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
-  People as PeopleIcon,
-  Analytics as AnalyticsIcon,
-  Support as SupportIcon,
-  SmartToy as SmartToyIcon,
-  Science as LabsIcon,
-  Web as WebIcon,
+  BarChart as BarChartIcon,
+  SupportAgent as SupportIcon,
+  PeopleAlt as PeopleIcon,
+  WorkOutline as WorkIcon,
+  Language as BrowserIcon,
+  Psychology as AiIcon,
 } from '@mui/icons-material';
+
+// Component imports - keeping all existing functionality
 import AddClientDialog from './creative/AddClientDialog';
 import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
@@ -29,6 +33,8 @@ import AiAgentPanel from './AiAgentPanel';
 import ClientEmployeeMatcher from './creative/ClientEmployeeMatcher';
 import Workspace from './Workspace';
 import FloatingAIChat from './FloatingAIChat';
+import StatCard from './StatCard';
+import ChartCard from './ChartCard';
 import { useAuth } from '../../hooks/useAuth';
 import { getBackendUrl } from '../../utils/backendUrl';
 
@@ -63,20 +69,7 @@ export default function CreativeDashboardPanel() {
   const { user } = useAuth();
   const isAdmin = user?.isAdmin || false;
   
-  // Debug admin status
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      console.log('[CreativeDashboard] Admin check:', {
-        isAdmin,
-        userIsAdmin: user?.isAdmin,
-        userId: user?.id,
-        username: user?.username,
-        fullUser: user
-      });
-    }
-  }, [user, isAdmin]);
-
-  // Map tab names to indices
+  // Tab configuration
   const tabMap: Record<string, number> = {
     analytics: 0,
     support: 1,
@@ -86,7 +79,16 @@ export default function CreativeDashboardPanel() {
     ai: 5,
   };
 
-  // Initialize tab from URL query parameter
+  const tabs = [
+    { key: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
+    { key: 'support', label: 'Support', icon: <SupportIcon /> },
+    { key: 'match', label: 'Matching', icon: <PeopleIcon /> },
+    { key: 'cowork', label: 'Co-Work', icon: <WorkIcon /> },
+    { key: 'browser', label: 'Browser', icon: <BrowserIcon /> },
+    { key: 'ai', label: 'AI Agent', icon: <AiIcon /> },
+  ];
+
+  // Initialize tab from URL
   useEffect(() => {
     const tabParam = router.query.tab as string;
     if (tabParam && tabMap[tabParam] !== undefined) {
@@ -96,124 +98,116 @@ export default function CreativeDashboardPanel() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-    
-    // Update URL with tab parameter
     const tabNames = Object.keys(tabMap);
     const tabName = tabNames.find(key => tabMap[key] === newValue);
     if (tabName) {
-      router.push({
-        pathname: router.pathname,
-        query: { ...router.query, tab: tabName },
-      }, undefined, { shallow: true });
+      router.push(`/creative?tab=${tabName}`, undefined, { shallow: true });
     }
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh', pb: 4 }}>
       {/* Header */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          background: 'linear-gradient(135deg, #6366F1 0%, #8b5cf6 100%)',
-          color: 'white',
-          borderRadius: 0,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Typography variant="h4" fontWeight={800} gutterBottom>
+      <Box sx={{ 
+        bgcolor: 'white', 
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        mb: 3
+      }}>
+        <Container maxWidth="xl" sx={{ py: 3 }}>
+          <Typography variant="h4" fontWeight={700} gutterBottom>
             Creative Dashboard
           </Typography>
-          <Typography variant="body1" sx={{ opacity: 0.9 }}>
+          <Typography variant="body1" color="text.secondary">
             Your central hub for managing clients across all dashboards and systems
           </Typography>
         </Container>
-      </Paper>
+      </Box>
 
-      {/* Tabs */}
-      <Paper elevation={1} sx={{ borderRadius: 0 }}>
-        <Container maxWidth="xl">
+      <Container maxWidth="xl">
+        {/* Modern Tab Navigation */}
+        <Paper sx={{ 
+          mb: 3,
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        }}>
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
             variant={isMobile ? 'scrollable' : 'standard'}
-            scrollButtons="auto"
+            scrollButtons={isMobile ? 'auto' : false}
             sx={{
-              borderBottom: 1,
-              borderColor: 'divider',
+              '& .MuiTab-root': {
+                minHeight: 64,
+                textTransform: 'none',
+                fontSize: '0.95rem',
+                fontWeight: 500,
+                '&.Mui-selected': {
+                  color: '#6366f1',
+                  fontWeight: 600,
+                },
+              },
+              '& .MuiTabs-indicator': {
+                bgcolor: '#6366f1',
+                height: 3,
+              },
             }}
           >
-            <Tab
-              icon={<AnalyticsIcon />}
-              iconPosition="start"
-              label="Analytics & Activity"
-              id="creative-tab-0"
-              aria-controls="creative-tabpanel-0"
-            />
-            <Tab
-              icon={<SupportIcon />}
-              iconPosition="start"
-              label="Support Requests"
-              id="creative-tab-1"
-              aria-controls="creative-tabpanel-1"
-            />
-            <Tab
-              icon={<PeopleIcon />}
-              iconPosition="start"
-              label="Match Clients & Employees"
-              id="creative-tab-2"
-              aria-controls="creative-tabpanel-2"
-            />
-            <Tab
-              icon={<LabsIcon />}
-              iconPosition="start"
-              label="Co-Work"
-              id="creative-tab-3"
-              aria-controls="creative-tabpanel-3"
-            />
-            <Tab
-              icon={<WebIcon />}
-              iconPosition="start"
-              label="Browser Session"
-              id="creative-tab-4"
-              aria-controls="creative-tabpanel-4"
-            />
-            <Tab
-              icon={<SmartToyIcon />}
-              iconPosition="start"
-              label="AI Agent"
-              id="creative-tab-5"
-              aria-controls="creative-tabpanel-5"
-            />
+            {tabs.map((tab, index) => (
+              <Tab
+                key={tab.key}
+                label={tab.label}
+                icon={tab.icon}
+                iconPosition="start"
+                id={`creative-tab-${index}`}
+                aria-controls={`creative-tabpanel-${index}`}
+              />
+            ))}
           </Tabs>
-        </Container>
-      </Paper>
+        </Paper>
 
-      {/* Tab Content */}
-      <Box sx={{ flexGrow: 1, overflow: 'auto', bgcolor: 'background.default' }}>
-        <Container maxWidth="xl" sx={{ py: 3 }}>
-          <TabPanel value={activeTab} index={0}>
-            <AnalyticsActivity />
-          </TabPanel>
-          <TabPanel value={activeTab} index={1}>
-            <SupportRequests />
-          </TabPanel>
-          <TabPanel value={activeTab} index={2}>
-            <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
-          </TabPanel>
-          <TabPanel value={activeTab} index={3}>
-            <CoWorkTab />
-          </TabPanel>
-          <TabPanel value={activeTab} index={4}>
-            <BrowserSessionTab />
-          </TabPanel>
-          <TabPanel value={activeTab} index={5}>
-            <AiAgentPanel />
-          </TabPanel>
-        </Container>
-      </Box>
+        {/* Tab Panels */}
+        <TabPanel value={activeTab} index={0}>
+          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+            <CardContent sx={{ p: 3 }}>
+              <AnalyticsActivity />
+            </CardContent>
+          </Card>
+        </TabPanel>
 
-      {/* Add Client Dialog */}
+        <TabPanel value={activeTab} index={1}>
+          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+            <CardContent sx={{ p: 3 }}>
+              <SupportRequests />
+            </CardContent>
+          </Card>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+            <CardContent sx={{ p: 3 }}>
+              <ClientEmployeeMatcher onAddClient={() => setAddClientOpen(true)} />
+            </CardContent>
+          </Card>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
+          <CoWorkTab />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={4}>
+          <BrowserSessionTab />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={5}>
+          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+            <CardContent sx={{ p: 3 }}>
+              <AiAgentPanel />
+            </CardContent>
+          </Card>
+        </TabPanel>
+      </Container>
+
+      {/* Dialogs */}
       <AddClientDialog
         open={addClientOpen}
         onClose={() => setAddClientOpen(false)}
@@ -225,35 +219,28 @@ export default function CreativeDashboardPanel() {
   );
 }
 
-// Co-Work Tab Component
+// Co-Work Tab Component (Modernized)
 function CoWorkTab() {
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" fontWeight={700} gutterBottom>
-          Co-Work Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Collaborate, code, and create together with your team
-        </Typography>
-      </Box>
-
-      {/* Main Workspace Content */}
-      <Box 
-        sx={{ 
-          flexGrow: 1, 
-          display: 'flex', 
-          flexDirection: 'column',
-          overflow: 'auto'
-        }}
-      >
-        <Workspace />
-      </Box>
-    </Box>
+    <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" fontWeight={700} gutterBottom>
+            Co-Work Dashboard
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Collaborate, code, and create together with your team
+          </Typography>
+        </Box>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <Workspace />
+        </Box>
+      </CardContent>
+    </Card>
   );
 }
 
-// Browser Session Tab Component
+// Browser Session Tab Component (Modernized)
 function BrowserSessionTab() {
   const [iframeError, setIframeError] = useState<string | null>(null);
   const [iframeLoading, setIframeLoading] = useState(true);
@@ -296,101 +283,76 @@ function BrowserSessionTab() {
         setSessionLoading(false);
       }
     };
-    
+
     createHyperbeamSession();
   }, []);
 
-  useEffect(() => {
-    // Set a timeout to detect if iframe fails to load
-    const timeout = setTimeout(() => {
-      if (iframeLoading) {
-        setIframeError('Hyperbeam session is taking longer than expected to load. Please check your connection or try refreshing the page.');
-      }
-    }, 10000); // 10 second timeout
-
-    return () => clearTimeout(timeout);
-  }, [iframeLoading]);
-
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" fontWeight={700} gutterBottom>
-          Browser Session
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Shared browser environment for collaborative browsing and testing
-        </Typography>
-      </Box>
+    <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" fontWeight={700} gutterBottom>
+            Browser Session
+          </Typography>
+          <Typography variant="body1" color="text.secondary" gutterBottom>
+            Shared browser powered by Hyperbeam
+          </Typography>
+        </Box>
 
-      <Paper elevation={2} sx={{ p: 3, minHeight: 700, height: 'calc(100vh - 300px)', display: 'flex', flexDirection: 'column' }}>
-        <Box
-          sx={{
-            flex: 1,
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2,
-            overflow: 'hidden',
-            bgcolor: 'background.paper',
-            minHeight: 650,
-            position: 'relative',
-          }}
-        >
-          {iframeError && (
-            <Alert severity="warning" sx={{ m: 2 }}>
-              {iframeError}
-            </Alert>
-          )}
-          {(sessionLoading || iframeLoading) && !iframeError && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
-              <CircularProgress />
-              <Typography variant="body2" color="text.secondary">
-                {sessionLoading ? 'Creating Hyperbeam session...' : 'Loading session...'}
-              </Typography>
-            </Box>
-          )}
-          {hyperbeamUrl && !sessionLoading && (
+        {sessionLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {iframeError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {iframeError}
+          </Alert>
+        )}
+
+        {!sessionLoading && hyperbeamUrl && (
+          <Box sx={{ 
+            position: 'relative', 
+            width: '100%', 
+            height: '70vh',
+            bgcolor: '#000',
+            borderRadius: 1,
+            overflow: 'hidden'
+          }}>
+            {iframeLoading && (
+              <Box sx={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: 0, 
+                right: 0, 
+                bottom: 0, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                bgcolor: 'rgba(0,0,0,0.5)'
+              }}>
+                <CircularProgress />
+              </Box>
+            )}
             <iframe
-              title="Hyperbeam Session"
               src={hyperbeamUrl}
-              width="100%"
-              height="100%"
-              style={{ 
-                border: 'none', 
-                minHeight: 650,
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
                 display: 'block',
-                opacity: iframeLoading ? 0 : 1,
-                transition: 'opacity 0.3s',
               }}
-              allowFullScreen
-              allow="clipboard-read; clipboard-write; display-capture; microphone; camera; autoplay; fullscreen; geolocation; payment; usb; vr"
-              referrerPolicy="no-referrer-when-downgrade"
-              loading="lazy"
-              onLoad={() => {
-                setIframeLoading(false);
-                setIframeError(null);
-              }}
+              allow="clipboard-read; clipboard-write; microphone; camera; display-capture"
+              onLoad={() => setIframeLoading(false)}
               onError={() => {
                 setIframeLoading(false);
-                setIframeError('Failed to load Hyperbeam session. The session may have expired or the URL is invalid.');
+                setIframeError('Failed to load Hyperbeam session');
               }}
             />
-          )}
-        </Box>
-      </Paper>
-    </Box>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
   );
 }
-
-
