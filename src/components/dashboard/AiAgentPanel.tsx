@@ -440,7 +440,7 @@ export default function AiAgentPanel() {
         </Grid>
 
         {/* AI Agent Content Manager Section - Large Card */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12}>
           <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
               <AiAgentIcon sx={{ fontSize: 32, color: 'primary.main' }} />
@@ -633,8 +633,8 @@ export default function AiAgentPanel() {
           </Paper>
         </Grid>
 
-        {/* Instructions Card - Right side of AI Agent Content Manager */}
-        <Grid item xs={12} md={4}>
+        {/* Instructions Card - Full Width */}
+        <Grid item xs={12}>
           <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
               How to Format Video Scripts
