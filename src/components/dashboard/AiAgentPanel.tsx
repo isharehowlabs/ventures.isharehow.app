@@ -633,6 +633,91 @@ export default function AiAgentPanel() {
           </Paper>
         </Grid>
 
+        {/* Instructions Card - Right side of AI Agent Content Manager */}
+        <Grid item xs={12} md={4}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+              How to Format Video Scripts
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Format this into a video script that follows these tips:
+            </Typography>
+            
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                  1. Use short and punctuated sentences
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Correct punctuation helps the generated voice to be much better.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                  2. Use brackets for media guidance
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  When generating voice, [text between brackets] will be ignored but can be used to guide the AI with the media generation.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                  3. Add pauses with break tags
+                </Typography>
+                <Typography variant="body2" color="text.secondary" component="div">
+                  Use <code style={{ backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>&lt;break time="1.0s" /&gt;</code> to mark a pause in the generated voice.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                  4. Use line breaks for slide separation
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Use breaking lines to force slide separation and media change.
+                </Typography>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
+                  Script Example:
+                </Typography>
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    p: 2, 
+                    bgcolor: '#f9f9f9', 
+                    borderRadius: 1,
+                    fontFamily: 'monospace',
+                    fontSize: '0.875rem',
+                    whiteSpace: 'pre-wrap',
+                    overflow: 'auto',
+                    maxHeight: 300
+                  }}
+                >
+{`[close-up of a cat]
+Did you know how to make viral videos?
+
+[cat playing with a ball]
+First, you need to grab the viewer's attention.
+
+<break time="1.0s" />
+
+[cat chasing a laser pointer]
+Then, you need to keep them engaged.
+
+[cat sleeping]
+Finally, you need to make them share it.`}
+                </Paper>
+              </Box>
+            </Stack>
+          </Paper>
+        </Grid>
+
         {/* Tools Section - Large Card */}
         <Grid item xs={12}>
           <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
