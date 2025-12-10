@@ -77,7 +77,7 @@ export default function CreativeDashboardPanel() {
     analytics: 0,
     support: 1,
     match: 2,
-    cowork: 3,
+    tasks: 3,
     browser: 4,
     design: 5,
     ai: 6,
@@ -87,7 +87,7 @@ export default function CreativeDashboardPanel() {
     { key: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
     { key: 'support', label: 'Support', icon: <SupportIcon /> },
     { key: 'match', label: 'Matching', icon: <PeopleIcon /> },
-    { key: 'cowork', label: 'Co-Work', icon: <WorkIcon /> },
+    { key: 'tasks', label: 'To-Do & Tasks', icon: <WorkIcon /> },
     { key: 'browser', label: 'Browser', icon: <BrowserIcon /> },
     { key: 'design', label: 'Design & Figma', icon: <DesignIcon /> },
     { key: 'ai', label: 'AI Agent', icon: <AiIcon /> },
@@ -232,17 +232,17 @@ export default function CreativeDashboardPanel() {
   );
 }
 
-// Co-Work Tab Component (Modernized)
+// To-Do & Tasks Tab Component
 function CoWorkTab() {
   return (
     <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ mb: 3 }}>
           <Typography variant="h5" fontWeight={700} gutterBottom>
-            Co-Work Dashboard
+            To-Do & Tasks
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Collaborate, code, and create together with your team
+            Manage your tasks and track your progress
           </Typography>
         </Box>
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>

@@ -171,14 +171,14 @@ export default function DesignFigmaPanel() {
   };
 
   return (
-    <Box>
-      <Paper elevation={2} sx={{ p: 3, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper elevation={2} sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h5" fontWeight={700}>Design & Figma</Typography>
         </Box>
         
         {/* Sub-tabs for Figma and Collaboration Board */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, flexShrink: 0 }}>
           <Tabs value={activeSubTab} onChange={(e, newValue) => setActiveSubTab(newValue)}>
             <Tab icon={<DesignIcon />} iconPosition="start" label="Figma Components" />
             <Tab icon={<BoardIcon />} iconPosition="start" label="Collaboration Board" />
@@ -187,7 +187,7 @@ export default function DesignFigmaPanel() {
 
         {/* Figma Components Tab */}
         {activeSubTab === 0 && (
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Figma Integration</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -296,8 +296,8 @@ export default function DesignFigmaPanel() {
 
         {/* Collaboration Board Tab */}
         {activeSubTab === 1 && (
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <Box sx={{ mb: 2 }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+            <Box sx={{ mb: 2, flexShrink: 0 }}>
               <Typography variant="h6" gutterBottom>
                 Collaboration Board - {defaultBoardId}
               </Typography>
@@ -305,48 +305,37 @@ export default function DesignFigmaPanel() {
                 Collaborate, design, and create together with your team in real-time
               </Typography>
             </Box>
-            <Paper 
-              elevation={0} 
+            <Box 
               sx={{ 
                 flexGrow: 1,
-                p: 0, 
-                minHeight: 600, 
-                height: 'calc(100vh - 300px)', 
+                minHeight: 0,
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
                 bgcolor: 'background.default',
+                borderRadius: 1,
               }}
             >
-              <Box 
-                sx={{ 
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
+              <Box
+                sx={{
                   height: '100%',
                   width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  '& > div': {
+                    height: '100% !important',
+                    minHeight: '100% !important',
+                  },
                 }}
               >
-                <Box
-                  sx={{
-                    height: '100%',
-                    width: '100%',
-                    '& > div': {
-                      height: '100% !important',
-                    },
-                  }}
-                >
-                  <BoardShell
-                    boardId={defaultBoardId}
-                    userId={user?.id?.toString() || 'anonymous'}
-                    userName={user?.name || user?.email || 'Anonymous User'}
-                  />
-                </Box>
+                <BoardShell
+                  boardId={defaultBoardId}
+                  userId={user?.id?.toString() || 'anonymous'}
+                  userName={user?.name || user?.email || 'Anonymous User'}
+                />
               </Box>
-            </Paper>
+            </Box>
           </Box>
         )}
       </Paper>
