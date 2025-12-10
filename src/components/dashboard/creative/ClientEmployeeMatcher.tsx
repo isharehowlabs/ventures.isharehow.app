@@ -2,55 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  TextField,
-  InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Chip,
-  Avatar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormLabel,
-  Checkbox,
-  Alert,
-  CircularProgress,
-  Breadcrumbs,
-  Link,
+  Box, Paper, Typography, Button, TextField, InputAdornment,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
+  IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Chip, Avatar,
+  Dialog, DialogTitle, DialogContent, DialogActions, Grid, FormControl,
+  InputLabel, Select, Radio, RadioGroup, FormControlLabel, FormLabel,
+  Checkbox, Alert, CircularProgress, Breadcrumbs, Link, Tabs, Tab,
+  Switch, Divider, Stack, Autocomplete,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  Add as AddIcon,
-  MoreVert as MoreVertIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Block as BlockIcon,
-  Home as HomeIcon,
-  Person as PersonIcon,
-  CameraAlt as CameraIcon,
+  Search as SearchIcon, Add as AddIcon, MoreVert as MoreVertIcon,
+  Edit as EditIcon, Delete as DeleteIcon, Block as BlockIcon,
+  Home as HomeIcon, Person as PersonIcon, CameraAlt as CameraIcon,
+  VpnKey as PasswordIcon, Work as WorkIcon, Assignment as AssignmentIcon,
 } from '@mui/icons-material';
+import { useAuth } from '../../../hooks/useAuth';
 
 interface User {
   id: number;
@@ -70,6 +36,21 @@ interface User {
   status?: 'active' | 'pending' | 'blocked' | 'reported';
 }
 
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  company: string;
+  status: 'active' | 'inactive' | 'pending' | 'prospect';
+  systemsConnected: string[];
+  assignedEmployee?: string;
+  assignedEmployeeId?: number;
+  tags?: string[];
+  createdAt: string;
+  phone?: string;
+  notes?: string;
+}
+
 interface UserRole {
   value: string;
   label: string;
@@ -77,30 +58,22 @@ interface UserRole {
 }
 
 const ROLES: UserRole[] = [
-  {
-    value: 'super_admin',
-    label: 'Super Admin',
-    description: 'Has full access to all settings, users, and system configurations.',
-  },
-  {
-    value: 'admin',
-    label: 'Admin',
-    description: 'Manages users, roles, and system settings with high-level access.',
-  },
-  {
-    value: 'engineer',
-    label: 'Engineer',
-    description: 'Handles technical operations, infrastructure, and system maintenance.',
-  },
-  {
-    value: 'developer',
-    label: 'Developer',
-    description: 'Develops and maintains applications, features, and integrations.',
-  },
+  { value: 'super_admin', label: 'Super Admin', description: 'Has full access to all settings, users, and system configurations.' },
+  { value: 'admin', label: 'Admin', description: 'Manages users, roles, and system settings with high-level access.' },
+  { value: 'engineer', label: 'Engineer', description: 'Handles technical operations, infrastructure, and system maintenance.' },
+  { value: 'developer', label: 'Developer', description: 'Develops and maintains applications, features, and integrations.' },
+  { value: 'employee', label: 'Employee', description: 'Regular employee with standard access.' },
+  { value: 'client', label: 'Client', description: 'External client with limited access.' },
 ];
 
+const SYSTEMS = ['CRM', 'Analytics', 'Email Marketing', 'Project Management', 'Support Desk', 'Billing'];
+
 export default function ClientEmployeeMatcher() {
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || false;
+  
   const [users, setUsers] = useState<User[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
@@ -109,6 +82,10 @@ export default function ClientEmployeeMatcher() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [assignClientDialogOpen, setAssignClientDialogOpen] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -121,19 +98,43 @@ export default function ClientEmployeeMatcher() {
     address: '',
     joiningDate: '',
     status: 'active' as 'active' | 'pending' | 'blocked' | 'reported',
-    role: 'admin',
+    role: 'employee',
+    isEmployee: false,
+    isAdmin: false,
+    isClient: false,
+    systemsConnected: [] as string[],
   });
+
+  // Password form state
+  const [passwordForm, setPasswordForm] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // Assignment state
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
   useEffect(() => {
     fetchUsers();
+    fetchClients();
   }, []);
+
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${backendUrl}/api/users`, {
+      const response = await fetch(`${backendUrl}/api/admin/users`, {
         credentials: 'include',
       });
       
@@ -141,10 +142,26 @@ export default function ClientEmployeeMatcher() {
         const data = await response.json();
         setUsers(data.users || []);
       }
-    } catch (error) {
-      console.error('Error fetching users:', error);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Failed to load users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const response = await fetch(`${backendUrl}/api/creative/clients`, {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setClients(data.clients || []);
+      }
+    } catch (err) {
+      console.error('Error fetching clients:', err);
     }
   };
 
@@ -169,7 +186,11 @@ export default function ClientEmployeeMatcher() {
         address: selectedUser.address || '',
         joiningDate: selectedUser.joining_date || new Date().toISOString().split('T')[0],
         status: selectedUser.status || 'active',
-        role: selectedUser.is_admin ? 'super_admin' : 'admin',
+        role: selectedUser.is_admin ? 'super_admin' : selectedUser.is_employee ? 'employee' : selectedUser.is_client ? 'client' : 'employee',
+        isEmployee: selectedUser.is_employee || false,
+        isAdmin: selectedUser.is_admin || false,
+        isClient: selectedUser.is_client || false,
+        systemsConnected: [],
       });
       setEditDialogOpen(true);
     }
@@ -181,11 +202,15 @@ export default function ClientEmployeeMatcher() {
     handleMenuClose();
   };
 
-  const handleBlockClick = async () => {
-    if (selectedUser) {
-      // Implement block user logic
-      console.log('Block user:', selectedUser.id);
-    }
+  const handlePasswordClick = () => {
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setPasswordDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleAssignClientsClick = () => {
+    setSelectedClientIds([]);
+    setAssignClientDialogOpen(true);
     handleMenuClose();
   };
 
@@ -193,12 +218,10 @@ export default function ClientEmployeeMatcher() {
     if (!selectedUser) return;
 
     try {
-      const response = await fetch(`${backendUrl}/api/users/${selectedUser.id}`, {
+      const response = await fetch(`${backendUrl}/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           first_name: editForm.firstName,
           last_name: editForm.lastName,
@@ -209,16 +232,22 @@ export default function ClientEmployeeMatcher() {
           address: editForm.address,
           joining_date: editForm.joiningDate,
           status: editForm.status,
-          is_admin: editForm.role === 'super_admin' || editForm.role === 'admin',
+          is_admin: editForm.isAdmin,
+          is_employee: editForm.isEmployee,
+          is_client: editForm.isClient,
         }),
       });
 
       if (response.ok) {
+        setSuccess('User updated successfully');
         fetchUsers();
         setEditDialogOpen(false);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to update user');
       }
-    } catch (error) {
-      console.error('Error updating user:', error);
+    } catch (err) {
+      setError('Failed to update user');
     }
   };
 
@@ -226,17 +255,100 @@ export default function ClientEmployeeMatcher() {
     if (!selectedUser) return;
 
     try {
-      const response = await fetch(`${backendUrl}/api/users/${selectedUser.id}`, {
+      const response = await fetch(`${backendUrl}/api/admin/users/${selectedUser.id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
 
       if (response.ok) {
+        setSuccess('User deleted successfully');
         fetchUsers();
         setDeleteDialogOpen(false);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete user');
       }
-    } catch (error) {
-      console.error('Error deleting user:', error);
+    } catch (err) {
+      setError('Failed to delete user');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!selectedUser) return;
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/users/${selectedUser.id}/password`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordForm.newPassword }),
+      });
+
+      if (response.ok) {
+        setSuccess('Password changed successfully');
+        setPasswordDialogOpen(false);
+        setPasswordForm({ newPassword: '', confirmPassword: '' });
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to change password');
+      }
+    } catch (err) {
+      setError('Failed to change password');
+    }
+  };
+
+  const handleAssignClients = async () => {
+    if (!selectedUser || selectedClientIds.length === 0) return;
+
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/users/${selectedUser.id}/assign-clients`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientIds: selectedClientIds }),
+      });
+
+      if (response.ok) {
+        setSuccess(`Assigned ${selectedClientIds.length} client(s) successfully`);
+        setAssignClientDialogOpen(false);
+        setSelectedClientIds([]);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to assign clients');
+      }
+    } catch (err) {
+      setError('Failed to assign clients');
+    }
+  };
+
+  const toggleEmployeeStatus = async (userId: number, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/users/${userId}/employee`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isEmployee: !currentStatus }),
+      });
+
+      if (response.ok) {
+        setSuccess(`Employee status ${!currentStatus ? 'enabled' : 'disabled'}`);
+        fetchUsers();
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to update employee status');
+      }
+    } catch (err) {
+      setError('Failed to update employee status');
     }
   };
 
@@ -250,10 +362,7 @@ export default function ClientEmployeeMatcher() {
     );
   });
 
-  const paginatedUsers = filteredUsers.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  const paginatedUsers = filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -263,6 +372,13 @@ export default function ClientEmployeeMatcher() {
       case 'reported': return 'info';
       default: return 'default';
     }
+  };
+
+  const getUserRole = (user: User) => {
+    if (user.is_admin) return 'Super Admin';
+    if (user.is_employee) return 'Employee';
+    if (user.is_client) return 'Client';
+    return 'User';
   };
 
   if (loading) {
@@ -275,34 +391,26 @@ export default function ClientEmployeeMatcher() {
 
   return (
     <Box>
+      {/* Alerts */}
+      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>{success}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 2 }}>
-        <Link
-          href="/"
-          color="inherit"
-          sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
-        >
+        <Link href="/" color="inherit" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <HomeIcon sx={{ mr: 0.5, fontSize: 20 }} />
           Home
         </Link>
         <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
           <PersonIcon sx={{ mr: 0.5, fontSize: 20 }} />
-          User
+          User Management
         </Typography>
       </Breadcrumbs>
 
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" fontWeight={600}>
-          User
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {/* Add new user logic */}}
-        >
-          Add New
-        </Button>
+        <Typography variant="h5" fontWeight={600}>User Management</Typography>
+        <Button variant="contained" startIcon={<AddIcon />}>Add New User</Button>
       </Box>
 
       {/* Search and Table */}
@@ -310,7 +418,7 @@ export default function ClientEmployeeMatcher() {
         <Box p={2}>
           <TextField
             fullWidth
-            placeholder="Search here"
+            placeholder="Search by name, email, or username..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             InputProps={{
@@ -320,7 +428,6 @@ export default function ClientEmployeeMatcher() {
                 </InputAdornment>
               ),
             }}
-            sx={{ mb: 2 }}
           />
         </Box>
 
@@ -328,11 +435,10 @@ export default function ClientEmployeeMatcher() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox />
-                </TableCell>
+                <TableCell padding="checkbox"><Checkbox /></TableCell>
                 <TableCell>Profile</TableCell>
                 <TableCell>Email & Username</TableCell>
+                <TableCell>Role</TableCell>
                 <TableCell>Address</TableCell>
                 <TableCell>Date</TableCell>
                 <TableCell>Status</TableCell>
@@ -342,39 +448,30 @@ export default function ClientEmployeeMatcher() {
             <TableBody>
               {paginatedUsers.map((user) => (
                 <TableRow key={user.id} hover>
-                  <TableCell padding="checkbox">
-                    <Checkbox />
-                  </TableCell>
+                  <TableCell padding="checkbox"><Checkbox /></TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1.5}>
-                      <Avatar
-                        src={user.profile_image}
-                        alt={user.username}
-                        sx={{ width: 40, height: 40 }}
-                      >
+                      <Avatar src={user.profile_image} sx={{ width: 40, height: 40 }}>
                         {user.first_name?.[0] || user.username?.[0]}
                       </Avatar>
                       <Box>
                         <Typography variant="body2" fontWeight={500}>
                           {user.first_name} {user.last_name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          #{user.id}
-                        </Typography>
+                        <Typography variant="caption" color="text.secondary">#{user.id}</Typography>
                       </Box>
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">{user.email}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {user.username}
-                    </Typography>
+                    <Typography variant="caption" color="text.secondary">{user.username}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={getUserRole(user)} size="small" color="primary" variant="outlined" />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">{user.address || 'N/A'}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {user.zipcode || ''}
-                    </Typography>
+                    <Typography variant="caption" color="text.secondary">{user.zipcode || ''}</Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
@@ -390,10 +487,7 @@ export default function ClientEmployeeMatcher() {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, user)}
-                    >
+                    <IconButton size="small" onClick={(e) => handleMenuOpen(e, user)}>
                       <MoreVertIcon />
                     </IconButton>
                   </TableCell>
@@ -418,54 +512,40 @@ export default function ClientEmployeeMatcher() {
       </Paper>
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
         <MenuItem onClick={handleEditClick}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Edit User</ListItemText>
         </MenuItem>
+        <MenuItem onClick={handlePasswordClick}>
+          <ListItemIcon><PasswordIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Change Password</ListItemText>
+        </MenuItem>
+        {selectedUser?.is_employee && (
+          <MenuItem onClick={handleAssignClientsClick}>
+            <ListItemIcon><AssignmentIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Assign Clients</ListItemText>
+          </MenuItem>
+        )}
+        <Divider />
         <MenuItem onClick={handleDeleteClick}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleBlockClick}>
-          <ListItemIcon>
-            <BlockIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Block</ListItemText>
+          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText>Delete User</ListItemText>
         </MenuItem>
       </Menu>
 
       {/* Edit User Dialog */}
-      <Dialog
-        open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          <Typography variant="h6" fontWeight={600}>
-            Edit User
-          </Typography>
+          <Typography variant="h6" fontWeight={600}>Edit User</Typography>
           <Typography variant="body2" color="text.secondary">
-            Extending or new user custom settings and permissions.
+            Update user settings and permissions
           </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          {/* Profile Image */}
           <Box display="flex" justifyContent="center" mb={3}>
             <Box position="relative">
-              <Avatar
-                src={selectedUser?.profile_image}
-                sx={{ width: 80, height: 80 }}
-              >
+              <Avatar src={selectedUser?.profile_image} sx={{ width: 80, height: 80 }}>
                 {editForm.firstName?.[0] || 'U'}
               </Avatar>
               <IconButton
@@ -484,10 +564,7 @@ export default function ClientEmployeeMatcher() {
             </Box>
           </Box>
 
-          {/* Personal Detail */}
-          <Typography variant="subtitle2" fontWeight={600} mb={2}>
-            Personal Detail
-          </Typography>
+          <Typography variant="subtitle2" fontWeight={600} mb={2}>Personal Details</Typography>
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <TextField
@@ -529,8 +606,7 @@ export default function ClientEmployeeMatcher() {
             <Grid item xs={6}>
               <TextField
                 fullWidth
-                label="Contact Us"
-                placeholder="US"
+                label="Phone"
                 value={editForm.phone}
                 onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
               />
@@ -565,10 +641,38 @@ export default function ClientEmployeeMatcher() {
             </Grid>
           </Grid>
 
-          {/* Status */}
-          <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>
-            Status
-          </Typography>
+          <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>Permissions</Typography>
+          <Stack spacing={2}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={editForm.isAdmin}
+                  onChange={(e) => setEditForm({ ...editForm, isAdmin: e.target.checked })}
+                />
+              }
+              label="Admin Access"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={editForm.isEmployee}
+                  onChange={(e) => setEditForm({ ...editForm, isEmployee: e.target.checked })}
+                />
+              }
+              label="Employee Status"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={editForm.isClient}
+                  onChange={(e) => setEditForm({ ...editForm, isClient: e.target.checked })}
+                />
+              }
+              label="Client Status"
+            />
+          </Stack>
+
+          <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>Status</Typography>
           <RadioGroup
             row
             value={editForm.status}
@@ -577,54 +681,82 @@ export default function ClientEmployeeMatcher() {
             <FormControlLabel value="active" control={<Radio />} label="Active" />
             <FormControlLabel value="pending" control={<Radio />} label="Pending" />
             <FormControlLabel value="reported" control={<Radio />} label="Reported" />
-            <FormControlLabel value="blocked" control={<Radio />} label="Block" />
+            <FormControlLabel value="blocked" control={<Radio />} label="Blocked" />
           </RadioGroup>
 
-          {/* Roles */}
-          <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>
-            Roles
-          </Typography>
-          <RadioGroup
-            value={editForm.role}
-            onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-          >
-            {ROLES.map((role) => (
-              <Box key={role.value} mb={2}>
-                <FormControlLabel
-                  value={role.value}
-                  control={<Radio />}
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>
-                        {role.label}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {role.description}
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Box>
-            ))}
-          </RadioGroup>
+          {editForm.isClient && (
+            <>
+              <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>Systems Connected</Typography>
+              <Autocomplete
+                multiple
+                options={SYSTEMS}
+                value={editForm.systemsConnected}
+                onChange={(e, newValue) => setEditForm({ ...editForm, systemsConnected: newValue })}
+                renderInput={(params) => <TextField {...params} label="Select Systems" />}
+              />
+            </>
+          )}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setEditDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleUpdateUser}>
-            Update User
-          </Button>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleUpdateUser}>Update User</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Change Password</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Set a new password for {selectedUser?.username}
+          </Typography>
+          <Stack spacing={2}>
+            <TextField
+              fullWidth
+              label="New Password"
+              type="password"
+              value={passwordForm.newPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+            />
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              type="password"
+              value={passwordForm.confirmPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleChangePassword}>Change Password</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assign Clients Dialog */}
+      <Dialog open={assignClientDialogOpen} onClose={() => setAssignClientDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Assign Clients</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Select clients to assign to {selectedUser?.username}
+          </Typography>
+          <Autocomplete
+            multiple
+            options={clients}
+            getOptionLabel={(option) => `${option.name} (${option.company})`}
+            value={clients.filter(c => selectedClientIds.includes(c.id))}
+            onChange={(e, newValue) => setSelectedClientIds(newValue.map(c => c.id))}
+            renderInput={(params) => <TextField {...params} label="Select Clients" />}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssignClientDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleAssignClients}>Assign Clients</Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -635,12 +767,8 @@ export default function ClientEmployeeMatcher() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="contained" color="error" onClick={handleDeleteUser}>
-            Delete
-          </Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteUser}>Delete</Button>
         </DialogActions>
       </Dialog>
     </Box>
