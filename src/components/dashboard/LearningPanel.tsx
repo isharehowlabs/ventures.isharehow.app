@@ -8,6 +8,7 @@ import {
   Box,
   Button,
   Card,
+  CardContent,
   Chip,
   Divider,
   Grid,
@@ -21,6 +22,9 @@ import {
   DialogTitle,
   TextField,
   Paper,
+  LinearProgress,
+  useTheme,
+  alpha,
 } from '@mui/material';
 import {
   ArticleOutlined,
@@ -36,6 +40,10 @@ import {
   Close as CloseIcon,
   Note as NoteIcon,
   Build as BuildIcon,
+  TrendingUp,
+  AccessTime,
+  CheckCircle,
+  Bookmark,
 } from '@mui/icons-material';
 import type { SvgIconComponent } from '@mui/icons-material';
 
@@ -52,6 +60,8 @@ interface LearningContent {
   lessons?: number;
   uploadDate?: string;
   pdfResources?: string[];
+  progress?: number;
+  enrolled?: number;
 }
 
 interface PDFResource {
@@ -66,7 +76,7 @@ interface PDFResource {
   thumbnail?: string;
 }
 
-// Combined courses and video classes
+// Combined courses and video classes - KEEPING ALL VIDEO CLASSES
 const learningContent: LearningContent[] = [
   {
     id: 'video-1',
@@ -78,6 +88,8 @@ const learningContent: LearningContent[] = [
     category: 'General',
     videoUrl: 'https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp',
     uploadDate: new Date().toISOString().split('T')[0],
+    progress: 45,
+    enrolled: 1250,
   },
   {
     id: 'course-1',
@@ -89,6 +101,8 @@ const learningContent: LearningContent[] = [
     category: 'AI Development',
     videoUrl: 'https://www.youtube.com/playlist?list=PLwyVPJ9qE2K8vj0Wfb4rxAmZntkysHPlE',
     uploadDate: new Date().toISOString().split('T')[0],
+    progress: 30,
+    enrolled: 890,
   },
 ];
 
@@ -109,118 +123,207 @@ const pdfResources: PDFResource[] = [
 const LearningContentCard: FC<{ 
   content: LearningContent;
   onClick: () => void;
-}> = ({ content, onClick }) => (
-  <Card
-    variant="outlined"
-    onClick={onClick}
-    sx={{
-      borderRadius: 3,
-      height: '100%',
-      p: 3,
-      borderColor: 'divider',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 2,
-      transition: 'transform 0.2s, box-shadow 0.2s',
-      cursor: 'pointer',
-      '&:hover': {
-        transform: 'translateY(-4px)',
-        boxShadow: 4,
-      },
-    }}
-  >
-    {content.videoUrl ? (
+}> = ({ content, onClick }) => {
+  const theme = useTheme();
+  
+  return (
+    <Card
+      variant="outlined"
+      onClick={onClick}
+      sx={{
+        borderRadius: 3,
+        height: '100%',
+        overflow: 'hidden',
+        borderColor: 'divider',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        cursor: 'pointer',
+        position: 'relative',
+        '&:hover': {
+          transform: 'translateY(-8px)',
+          boxShadow: 8,
+        },
+      }}
+    >
+      {/* Video/Thumbnail Section */}
       <Box
         sx={{
           position: 'relative',
           width: '100%',
           paddingTop: '56.25%', // 16:9 aspect ratio
-          borderRadius: 2,
           overflow: 'hidden',
           bgcolor: 'grey.200',
         }}
       >
-        <iframe
-          src={content.videoUrl}
-          title={content.title}
-          style={{
+        {content.videoUrl ? (
+          <iframe
+            src={content.videoUrl}
+            title={content.title}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              border: 0,
+            }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : content.thumbnail ? (
+          <Box
+            component="img"
+            src={content.thumbnail}
+            alt={content.title}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              bgcolor: 'primary.light',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <PlayCircleOutline sx={{ fontSize: 64, color: 'primary.main' }} />
+          </Box>
+        )}
+        {/* Progress Overlay */}
+        {content.progress !== undefined && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              bgcolor: alpha('#000', 0.7),
+              p: 1,
+            }}
+          >
+            <LinearProgress
+              variant="determinate"
+              value={content.progress}
+              sx={{
+                height: 4,
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.primary.main, 0.2),
+                '& .MuiLinearProgress-bar': {
+                  bgcolor: theme.palette.primary.main,
+                },
+              }}
+            />
+            <Typography variant="caption" sx={{ color: 'white', mt: 0.5, display: 'block' }}>
+              {content.progress}% Complete
+            </Typography>
+          </Box>
+        )}
+        {/* Level Badge */}
+        <Chip
+          label={content.level}
+          size="small"
+          sx={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            border: 0,
+            top: 12,
+            right: 12,
+            bgcolor: content.level === 'Advanced' 
+              ? 'error.main' 
+              : content.level === 'Intermediate' 
+              ? 'warning.main' 
+              : 'success.main',
+            color: 'white',
+            fontWeight: 700,
           }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
         />
       </Box>
-    ) : content.thumbnail ? (
-      <Box
-        component="img"
-        src={content.thumbnail}
-        alt={content.title}
-        sx={{
-          width: '100%',
-          height: 160,
-          objectFit: 'cover',
-          borderRadius: 2,
-        }}
-      />
-    ) : (
-      <Box
-        sx={{
-          width: '100%',
-          height: 160,
-          borderRadius: 2,
-          bgcolor: 'primary.light',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <PlayCircleOutline sx={{ fontSize: 64, color: 'primary.main' }} />
-      </Box>
-    )}
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Chip
-        label={content.level}
-        size="small"
-        color={content.level === 'Advanced' ? 'secondary' : content.level === 'Intermediate' ? 'default' : 'primary'}
-        sx={{ fontWeight: 600 }}
-      />
-      {content.lessons && (
-        <Typography variant="body2" color="text.secondary">
-          {content.lessons} lessons
-        </Typography>
-      )}
-    </Stack>
-    <Box>
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-        {content.title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        {content.description}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        By {content.instructor} · {content.duration}
-      </Typography>
-    </Box>
-    <Divider />
-    <Button
-      variant="contained"
-      color="primary"
-      startIcon={<PlayCircleOutline />}
-      sx={{ textTransform: 'none', fontWeight: 700, mt: 'auto' }}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-    >
-      {content.videoUrl ? 'Watch Class' : 'Start Course'}
-    </Button>
-  </Card>
-);
+
+      <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <Stack spacing={1.5} sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.3 }}>
+            {content.title}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, mb: 1 }}>
+            {content.description}
+          </Typography>
+          
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <Chip
+              label={content.category}
+              size="small"
+              variant="outlined"
+              sx={{ fontWeight: 600 }}
+            />
+            {content.enrolled && (
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <SchoolOutlined sx={{ fontSize: 16, color: 'text.secondary' }} />
+                <Typography variant="caption" color="text.secondary">
+                  {content.enrolled}
+                </Typography>
+              </Stack>
+            )}
+          </Stack>
+
+          <Divider sx={{ my: 1 }} />
+
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                {content.instructor.charAt(0)}
+              </Avatar>
+              <Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Instructor
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {content.instructor}
+                </Typography>
+              </Box>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <AccessTime sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography variant="caption" color="text.secondary">
+                {content.duration}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Stack>
+
+        <Button
+          variant="contained"
+          color="primary"
+          fullWidth
+          startIcon={<PlayCircleOutline />}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 700,
+            mt: 2,
+            py: 1.5,
+            borderRadius: 2,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+        >
+          {content.videoUrl ? 'Watch Class' : 'Start Course'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
 
 const PDFCard: FC<{ pdf: PDFResource }> = ({ pdf }) => (
   <Card
@@ -237,7 +340,7 @@ const PDFCard: FC<{ pdf: PDFResource }> = ({ pdf }) => (
       transition: 'transform 0.2s, box-shadow 0.2s',
       '&:hover': {
         transform: 'translateY(-2px)',
-        boxShadow: 2,
+        boxShadow: 4,
       },
     }}
   >
@@ -254,7 +357,7 @@ const PDFCard: FC<{ pdf: PDFResource }> = ({ pdf }) => (
         <PictureAsPdf fontSize="large" />
       </Avatar>
       <Stack spacing={1} sx={{ flexGrow: 1 }}>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
           <Chip
             label={pdf.category}
             size="small"
@@ -329,6 +432,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function LearningPanel() {
+  const theme = useTheme();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedContent, setSelectedContent] = useState<LearningContent | null>(null);
@@ -397,121 +501,267 @@ export default function LearningPanel() {
     setNotes((prev) => ({ ...prev, [contentId]: value }));
   };
 
+  // Calculate stats
+  const totalCourses = learningContent.length;
+  const totalPDFs = pdfResources.length;
+  const inProgress = learningContent.filter(c => c.progress && c.progress > 0 && c.progress < 100).length;
+  const completed = learningContent.filter(c => c.progress === 100).length;
+  const avgProgress = learningContent.length > 0
+    ? Math.round(learningContent.reduce((sum, c) => sum + (c.progress || 0), 0) / learningContent.length)
+    : 0;
+
   return (
-    <Box sx={{ height: '100%', overflow: 'auto', p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ height: '100%', overflow: 'auto' }}>
       <Stack spacing={4}>
-        <Box>
-          <Chip
-            label="Learning Dashboard"
-            color="primary"
-            icon={<SchoolOutlined fontSize="small" />}
-            sx={{ fontWeight: 700, mb: 2, alignSelf: 'flex-start' }}
-          />
-          <Typography
-            variant="h4"
+        {/* Stats Cards */}
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
+                  <MenuBookOutlined />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" fontWeight={700}>
+                    {totalCourses}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Courses
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.main, 0.05)} 100%)`,
+                border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar sx={{ bgcolor: 'success.main', width: 56, height: 56 }}>
+                  <CheckCircle />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" fontWeight={700}>
+                    {completed}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Completed
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.main, 0.05)} 100%)`,
+                border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar sx={{ bgcolor: 'warning.main', width: 56, height: 56 }}>
+                  <TrendingUp />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" fontWeight={700}>
+                    {inProgress}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    In Progress
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)} 0%, ${alpha(theme.palette.info.main, 0.05)} 100%)`,
+                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar sx={{ bgcolor: 'info.main', width: 56, height: 56 }}>
+                  <PictureAsPdfOutlined />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" fontWeight={700}>
+                    {totalPDFs}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    PDF Resources
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
+
+        {/* Progress Overview */}
+        <Paper
+          elevation={2}
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+          }}
+        >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+            <Box>
+              <Typography variant="h5" fontWeight={700} gutterBottom>
+                Overall Progress
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Track your learning journey
+              </Typography>
+            </Box>
+            <Chip
+              label={`${avgProgress}%`}
+              color="primary"
+              sx={{ fontWeight: 700, fontSize: '1rem', py: 2.5 }}
+            />
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={avgProgress}
             sx={{
-              fontWeight: 900,
-              mb: 2,
-              background: 'linear-gradient(90deg, #22D3EE, #6366F1)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              height: 12,
+              borderRadius: 6,
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 6,
+                background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+              },
             }}
-          >
-            Your Learning Dashboard
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
-            Access your courses and video classes all in one place. Click any class to watch in a larger view and take notes.
-          </Typography>
-        </Box>
+          />
+        </Paper>
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            aria-label="learning content tabs"
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab
-              icon={<MenuBookOutlined />}
-              iconPosition="start"
-              label="Courses & Classes"
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            />
-            <Tab
-              icon={<PictureAsPdfOutlined />}
-              iconPosition="start"
-              label="PDFs"
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            />
-          </Tabs>
-        </Box>
-
-        <TabPanel value={activeTab} index={0}>
-          <Stack spacing={3}>
-            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                  My Courses & Classes
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Click any course or class to watch videos in a larger view and take notes.
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<FilterList />}
-                sx={{ textTransform: 'none', fontWeight: 600 }}
+        {/* Header Section */}
+        <Box>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Box>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 800,
+                  mb: 1,
+                  background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
               >
-                Filter
-              </Button>
-            </Stack>
-            <Grid container spacing={3}>
-              {learningContent.map((content) => (
-                <Grid item xs={12} md={4} key={content.id}>
-                  <LearningContentCard 
-                    content={content} 
-                    onClick={() => handleContentClick(content)}
-                  />
+                Learning Management
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Access your courses, video classes, and PDF resources all in one place
+              </Typography>
+            </Box>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<FilterList />}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
+              Filter
+            </Button>
+          </Stack>
+        </Box>
+
+        {/* Tabs */}
+        <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              aria-label="learning content tabs"
+              variant="fullWidth"
+            >
+              <Tab
+                icon={<MenuBookOutlined />}
+                iconPosition="start"
+                label="Courses & Classes"
+                sx={{ textTransform: 'none', fontWeight: 600, py: 2 }}
+              />
+              <Tab
+                icon={<PictureAsPdfOutlined />}
+                iconPosition="start"
+                label="PDF Resources"
+                sx={{ textTransform: 'none', fontWeight: 600, py: 2 }}
+              />
+            </Tabs>
+          </Box>
+
+          <Box sx={{ p: 3 }}>
+            <TabPanel value={activeTab} index={0}>
+              <Stack spacing={3}>
+                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                      My Courses & Video Classes
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Click any course or class to watch videos and take notes
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Grid container spacing={3}>
+                  {learningContent.map((content) => (
+                    <Grid item xs={12} sm={6} md={4} key={content.id}>
+                      <LearningContentCard 
+                        content={content} 
+                        onClick={() => handleContentClick(content)}
+                      />
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
-          </Stack>
-        </TabPanel>
+              </Stack>
+            </TabPanel>
 
-        <TabPanel value={activeTab} index={1}>
-          <Stack spacing={3}>
-            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                  PDF Resources
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Downloadable guides, references, and study materials to supplement your learning.
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<FilterList />}
-                sx={{ textTransform: 'none', fontWeight: 600 }}
-              >
-                Filter
-              </Button>
-            </Stack>
-            <Stack spacing={2}>
-              {pdfResources.map((pdf) => (
-                <PDFCard key={pdf.id} pdf={pdf} />
-              ))}
-            </Stack>
-          </Stack>
-        </TabPanel>
-
+            <TabPanel value={activeTab} index={1}>
+              <Stack spacing={3}>
+                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                      PDF Resources
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Downloadable guides, references, and study materials
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Stack spacing={2}>
+                  {pdfResources.map((pdf) => (
+                    <PDFCard key={pdf.id} pdf={pdf} />
+                  ))}
+                </Stack>
+              </Stack>
+            </TabPanel>
+          </Box>
+        </Paper>
       </Stack>
 
-      {/* Expanded Video/Class Dialog with Notes */}
+      {/* Expanded Video/Class Dialog with Notes - KEEPING ALL VIDEO FUNCTIONALITY */}
       <Dialog
         open={!!selectedContent}
         onClose={handleCloseDialog}
@@ -521,6 +771,7 @@ export default function LearningPanel() {
           sx: {
             height: '90vh',
             maxHeight: '90vh',
+            borderRadius: 3,
           },
         }}
       >
@@ -543,7 +794,7 @@ export default function LearningPanel() {
             </DialogTitle>
             <DialogContent dividers>
               <Grid container spacing={3} sx={{ height: 'calc(90vh - 120px)' }}>
-                {/* Video Section */}
+                {/* Video Section - KEEPING ALL VIDEO CLASSES */}
                 <Grid item xs={12} md={8}>
                   <Box
                     sx={{
@@ -593,16 +844,24 @@ export default function LearningPanel() {
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                       About This {selectedContent.videoUrl ? 'Class' : 'Course'}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" paragraph>
                       {selectedContent.description}
                     </Typography>
-                    <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                    <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap">
                       <Chip
                         label={selectedContent.level}
                         size="small"
-                        color={selectedContent.level === 'Advanced' ? 'secondary' : selectedContent.level === 'Intermediate' ? 'default' : 'primary'}
+                        color={selectedContent.level === 'Advanced' ? 'error' : selectedContent.level === 'Intermediate' ? 'warning' : 'success'}
                       />
                       <Chip label={selectedContent.category} size="small" variant="outlined" />
+                      {selectedContent.progress !== undefined && (
+                        <Chip
+                          label={`${selectedContent.progress}% Complete`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
                     </Stack>
                   </Box>
                 </Grid>
@@ -615,7 +874,8 @@ export default function LearningPanel() {
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
-                      p: 2,
+                      p: 3,
+                      borderRadius: 2,
                     }}
                   >
                     <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
@@ -654,4 +914,3 @@ export default function LearningPanel() {
     </Box>
   );
 }
-
