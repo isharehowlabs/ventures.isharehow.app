@@ -14,7 +14,6 @@ import {
   Article as ArticleIcon,
   MenuBook as BlogIcon,
   ShoppingBag as ShoppingBagIcon,
-  Science as LabsIcon,
   TrendingUp as RiseIcon,
   Person as PersonIcon,
   Settings as SettingsIcon,
@@ -27,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'labs' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub';
 
 interface NavigationItem {
   key: NavKey;
@@ -84,13 +83,6 @@ const navigationItems: NavigationItem[] = [
     icon: <GamesIcon />,
     authRequired: false, // Public - free tier
     dividerAfter: true,
-  },
-  {
-    key: 'labs',
-    label: 'Co-Work Dashboard',
-    href: '/creative?tab=cowork',
-    icon: <LabsIcon />,
-    authRequired: true, // Now part of Creative Dashboard which requires auth
   },
   {
     key: 'rise',

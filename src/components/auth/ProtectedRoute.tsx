@@ -125,7 +125,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Only block dashboard pages (/rise and /learning-hub) for unpaid members
   // BUT allow access if user is employee, admin, or assigned to a client
-  // Note: /labs now redirects to /creative?tab=cowork which is protected by Creative Dashboard auth
   // All other pages (including profile, cowork, live) are accessible to authenticated users
   const isDashboardPage = typeof window !== 'undefined' && 
     (window.location.pathname === '/rise' || 
