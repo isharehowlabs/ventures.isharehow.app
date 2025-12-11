@@ -19,6 +19,8 @@
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.18.0",
     "@pushprotocol/restapi": "^1.7.32",
+    "@reactflow/controls": "^11.2.14",
+    "@reactflow/minimap": "^11.7.14",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.3.0",
     "ethers": "^6.16.0",
@@ -28,6 +30,7 @@
     "next": "^16.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "reactflow": "^11.11.4",
     "recharts": "^3.5.1",
     "socket.io-client": "^4.7.2"
   },

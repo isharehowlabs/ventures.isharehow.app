@@ -33,6 +33,7 @@ import WellnessDataPage from '../components/wellness/WellnessDataPage';
 import IntervalsSettings from '../components/wellness/IntervalsSettings';
 import SpiritualFestivals from '../components/spiritual/SpiritualFestivals';
 import RiseJourney from '../components/rise/RiseJourney';
+import dynamic from 'next/dynamic';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchAuras,
@@ -64,10 +65,13 @@ function TabPanel({ children, value, index }: TabPanelProps) {
   );
 }
 
+const JourneyBuilderAdmin = dynamic(() => import('../components/rise/JourneyBuilderAdmin'), { ssr: false });
+
 export default function RiseDashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const isAdmin = !!user?.isAdmin || !!user?.isEmployee;
   
   // Tab state
   const [currentTab, setCurrentTab] = useState(0);
@@ -259,6 +263,7 @@ export default function RiseDashboard() {
             <Tab icon={<JournalIcon />} label="Mental Spiritual Journal" />
             <Tab icon={<WellnessIcon />} label="Wellness" />
             <Tab icon={<SpiritualIcon />} label="Festivals" />
+            {isAdmin && <Tab icon={<JourneyIcon />} label="Builder" />}
           </Tabs>
         </Paper>
 
@@ -426,6 +431,14 @@ export default function RiseDashboard() {
         <TabPanel value={currentTab} index={4}>
           <SpiritualFestivals />
         </TabPanel>
+
+        {/* Tab 6 (Admin only): Journey Builder */}
+        {isAdmin && (
+          <TabPanel value={currentTab} index={5}>
+            <JourneyBuilderAdmin />
+          </TabPanel>
+        )}
+
 
         {/* Goal Dialog */}
         <GoalDialog
