@@ -40,6 +40,17 @@ html, body, #root, #__next {
   width: 100%;
 }
 
+/* Ensure body background matches theme */
+html[data-theme="dark"] body {
+  background-color: #0f172a;
+  color: #f7fafc;
+}
+
+html[data-theme="light"] body {
+  background-color: #ffffff;
+  color: #212529;
+}
+
 /* Body styles are handled by MUI CssBaseline based on theme mode */
 /* Removing inherit to prevent conflicts with theme switching */
 

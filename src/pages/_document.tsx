@@ -44,8 +44,14 @@ export default function Document() {
                   const style = document.createElement('style');
                   style.textContent = \`
                     html { color-scheme: \${theme}; }
-                    html[data-theme="dark"] { background-color: #121212; color: #ffffff; }
-                    html[data-theme="light"] { background-color: #ffffff; color: #000000; }
+                    html[data-theme="dark"] { background-color: #0f172a; color: #f7fafc; }
+                    html[data-theme="light"] { background-color: #ffffff; color: #212529; }
+                    body { 
+                      background-color: \${theme === 'dark' ? '#0f172a' : '#ffffff'};
+                      color: \${theme === 'dark' ? '#f7fafc' : '#212529'};
+                      margin: 0;
+                      padding: 0;
+                    }
                   \`;
                   document.head.appendChild(style);
                   

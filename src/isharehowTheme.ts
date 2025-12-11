@@ -127,6 +127,8 @@ const getTheme = (mode: 'light' | 'dark') => {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
+          backgroundColor: mode === 'light' ? '#FFFFFF' : '#0f172a',
+          color: mode === 'light' ? '#212529' : '#f7fafc',
           scrollbarColor: mode === 'light' ? '#bbb #FFFFFF' : '#6b6b6b #1e293b',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
             width: 10,
@@ -147,6 +149,10 @@ const getTheme = (mode: 'light' | 'dark') => {
           '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
             backgroundColor: mode === 'light' ? '#FFFFFF' : '#1e293b',
           },
+        },
+        '#__next': {
+          backgroundColor: mode === 'light' ? '#FFFFFF' : '#0f172a',
+          minHeight: '100vh',
         },
       },
     },
