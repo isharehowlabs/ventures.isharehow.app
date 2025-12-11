@@ -221,12 +221,39 @@ export default function RiseDashboard() {
         </Box>
 
         {/* Tabs */}
-        <Paper sx={{ mb: 3 }}>
+        <Paper 
+          sx={{ 
+            mb: 3,
+            boxShadow: isMobile ? 2 : 1,
+          }}
+        >
           <Tabs
             value={currentTab}
             onChange={handleTabChange}
             variant={isMobile ? 'scrollable' : 'fullWidth'}
             scrollButtons="auto"
+            sx={{
+              '& .MuiTabs-indicator': {
+                height: isMobile ? 4 : 2,
+                backgroundColor: 'primary.main',
+              },
+              '& .MuiTab-root': {
+                minHeight: isMobile ? 72 : 64,
+                fontSize: isMobile ? '0.875rem' : '0.875rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                color: 'text.secondary',
+                padding: isMobile ? '12px 16px' : '12px 16px',
+                '&.Mui-selected': {
+                  color: 'primary.main',
+                  fontWeight: 700,
+                },
+                '& .MuiTab-iconWrapper': {
+                  fontSize: isMobile ? '1.75rem' : '1.5rem',
+                  marginBottom: isMobile ? '8px' : '4px',
+                },
+              },
+            }}
           >
             <Tab icon={<DashboardIcon />} label="Overview" />
             <Tab icon={<JournalIcon />} label="Mental Spiritual Journal" />
