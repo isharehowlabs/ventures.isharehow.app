@@ -238,7 +238,7 @@ function CoWorkTab() {
           {/* Tasks Section Only - Collaboration Board moved to Design & Figma tab */}
           <Box sx={{ width: '100%' }}>
             <Box sx={{ mb: 3 }}>
-              <TasksPanel height={600} />
+              <TasksPanel height={780} />
             </Box>
           </Box>
         </Box>
