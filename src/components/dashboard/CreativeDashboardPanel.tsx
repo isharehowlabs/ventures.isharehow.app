@@ -20,7 +20,6 @@ import {
   BarChart as BarChartIcon,
   SupportAgent as SupportIcon,
   PeopleAlt as PeopleIcon,
-  WorkOutline as WorkIcon,
   Language as BrowserIcon,
   Psychology as AiIcon,
   Palette as DesignIcon,
@@ -33,7 +32,6 @@ import SupportRequests from './creative/SupportRequests';
 import AiAgentPanel from './AiAgentPanel';
 import DesignFigmaPanel from './creative/DesignFigmaPanel';
 import Workspace from './Workspace';
-import TasksPanel from './shared/TasksPanel';
 import FloatingAIChat from './FloatingAIChat';
 import StatCard from './StatCard';
 import ChartCard from './ChartCard';
@@ -75,16 +73,14 @@ export default function CreativeDashboardPanel() {
   const tabMap: Record<string, number> = {
     analytics: 0,
     support: 1,
-    tasks: 2,
-    browser: 3,
-    design: 4,
-    ai: 5,
+    browser: 2,
+    design: 3,
+    ai: 4,
   };
 
   const tabs = [
     { key: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
     { key: 'support', label: 'Support', icon: <SupportIcon /> },
-    { key: 'tasks', label: 'To-Do & Tasks', icon: <WorkIcon /> },
     { key: 'browser', label: 'Browser', icon: <BrowserIcon /> },
     { key: 'design', label: 'Design & Figma', icon: <DesignIcon /> },
     { key: 'ai', label: 'AI Agent', icon: <AiIcon /> },
@@ -185,14 +181,10 @@ export default function CreativeDashboardPanel() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
-          <CoWorkTab />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={3}>
           <BrowserSessionTab />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={3}>
           <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <DesignFigmaPanel />
@@ -200,7 +192,7 @@ export default function CreativeDashboardPanel() {
           </Card>
         </TabPanel>
 
-        <TabPanel value={activeTab} index={5}>
+        <TabPanel value={activeTab} index={4}>
           <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <AiAgentPanel />
@@ -216,36 +208,11 @@ export default function CreativeDashboardPanel() {
       />
 
       {/* Floating AI Chat - Available in Browser tab */}
-      {activeTab === 3 && <FloatingAIChat />}
+      {activeTab === 2 && <FloatingAIChat />}
     </Box>
   );
 }
 
-// To-Do & Tasks Tab Component
-function CoWorkTab() {
-  return (
-    <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
-            To-Do & Tasks
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage your tasks and track your progress
-          </Typography>
-        </Box>
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Tasks Section Only - Collaboration Board moved to Design & Figma tab */}
-          <Box sx={{ width: '100%' }}>
-            <Box sx={{ mb: 3 }}>
-              <TasksPanel height={780} />
-            </Box>
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-}
 
 // Browser Session Tab Component (Modernized)
 function BrowserSessionTab() {

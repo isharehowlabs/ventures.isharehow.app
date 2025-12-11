@@ -71,6 +71,7 @@ import {
   AddCircle as AddCircleIcon,
   AccountBalanceWallet as WalletIcon,
   CloudQueue as CloudIcon,
+  Work as WorkIcon,
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -92,6 +93,7 @@ import { getBackendUrl } from '../utils/backendUrl';
 import EditUserDialog from '../components/dashboard/creative/EditUserDialog';
 import AddClientDialog from '../components/dashboard/creative/AddClientDialog';
 import VenturesPanel from '../components/dashboard/VenturesPanel';
+import TasksPanel from '../components/dashboard/shared/TasksPanel';
 
 interface User {
   id: number;
@@ -668,6 +670,12 @@ export default function CRMDashboard() {
                     icon={<AssignmentIcon />}
                     iconPosition="start"
                     label="Ventures"
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  />
+                  <Tab
+                    icon={<WorkIcon />}
+                    iconPosition="start"
+                    label="To-Do & Tasks"
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                   />
                 </Tabs>
@@ -1384,6 +1392,29 @@ export default function CRMDashboard() {
                 {/* Ventures Tab */}
                 <TabPanel value={activeTab} index={5}>
                   <VenturesPanel />
+                </TabPanel>
+
+                {/* To-Do & Tasks Tab */}
+                <TabPanel value={activeTab} index={6}>
+                  <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
+                    <CardContent sx={{ p: 3 }}>
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="h5" fontWeight={700} gutterBottom>
+                          To-Do & Tasks
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                          Manage your tasks and track your progress
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ width: '100%' }}>
+                          <Box sx={{ mb: 3 }}>
+                            <TasksPanel height={780} />
+                          </Box>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
                 </TabPanel>
               </Box>
             </Paper>
