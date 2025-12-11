@@ -7,10 +7,12 @@ import {
   Paper,
   Card,
   CardContent,
-  Tabs,
-  Tab,
   TextField,
   LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Alert,
   CircularProgress,
   IconButton,
@@ -71,7 +73,6 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [activeTab, setActiveTab] = useState<'lessons' | 'tasks' | 'journal' | 'learning'>('lessons');
   const [journalEntries, setJournalEntries] = useState<{
     physical: string;
     mental: string;
@@ -241,26 +242,6 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
     }
   };
 
-  // If a lesson is selected, show the lesson view
-  if (selectedLesson) {
-    return (
-      <RiseJourneyLesson
-        lessonData={{
-          levelId: parseInt(level.id),
-          levelName: level.title,
-          lessonId: parseInt(selectedLesson.id),
-          lessonTitle: selectedLesson.title,
-          videoUrl: selectedLesson.videoUrl || '',
-          pdfUrl: selectedLesson.pdfUrl || undefined,
-          pdfTitle: selectedLesson.pdfUrl ? selectedLesson.pdfUrl.split('/').pop() : undefined,
-        }}
-        onBack={() => setSelectedLesson(null)}
-        onComplete={handleLessonComplete}
-        backendUrl={backendUrl}
-      />
-    );
-  }
-
   if (loading) {
     return (
       <Box sx={{ p: 3, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -299,7 +280,11 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
   const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
 
   return (
-    <Box sx={{ p: 3, minHeight: '100vh' }}>
+    <Dialog open fullWidth maxWidth="lg" onClose={onBack}>
+      <DialogTitle>
+        {level.title}
+      </DialogTitle>
+      <DialogContent dividers>
       <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
         {/* Header */}
         <Box sx={{ mb: 3 }}>
@@ -334,416 +319,131 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
           </Paper>
         </Box>
 
-        {/* Tab Navigation */}
-        <Paper sx={{ mb: 3 }}>
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue as 'lessons' | 'tasks' | 'journal' | 'learning')}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
-          >
-            <Tab
-              icon={<BookOpen className="h-5 w-5" />}
-              iconPosition="start"
-              label="Lessons"
-              value="lessons"
-              sx={{ textTransform: 'none', minHeight: 64 }}
-            />
-            <Tab
-              icon={<CheckSquare className="h-5 w-5" />}
-              iconPosition="start"
-              label="Tasks"
-              value="tasks"
-              sx={{ textTransform: 'none', minHeight: 64 }}
-            />
-            <Tab
-              icon={<PenTool className="h-5 w-5" />}
-              iconPosition="start"
-              label="Journal"
-              value="journal"
-              sx={{ textTransform: 'none', minHeight: 64 }}
-            />
-            <Tab
-              icon={<GraduationCap className="h-5 w-5" />}
-              iconPosition="start"
-              label="Learning Hub"
-              value="learning"
-              sx={{ textTransform: 'none', minHeight: 64 }}
-            />
-          </Tabs>
-        </Paper>
 
-        {/* Tab Content */}
-        {activeTab === 'learning' ? (
-          <Box>
-            {/* Learning Hub Tab - no white background wrapper */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box
-                sx={{
-                  p: 3,
-                  bgcolor: 'background.paper',
-                  border: 1,
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  boxShadow: 1,
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <GraduationCap className="h-8 w-8" style={{ color: '#5c6bc0' }} />
-                  <Typography variant="h5" fontWeight="bold">
-                    Learning Hub Classes
-                  </Typography>
+        {/* Three-card layout */}
+        <Grid container spacing={3}>
+          {/* Lessons Card */}
+          <Grid item xs={12} md={6}>
+            <Card variant="outlined">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6" fontWeight={700}>Video Lessons</Typography>
+                  <Typography variant="body2" color="text.secondary">{completedLessons} / {totalLessons} done</Typography>
                 </Box>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                  Access comprehensive video classes and courses to deepen your understanding of this journey level.
-                </Typography>
-                
-                {/* Learning Hub Content Cards */}
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                  {/* Video Classes Card */}
-                  <Grid item xs={12} md={6}>
-                    <Card variant="outlined" sx={{ height: '100%' }}>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                          <Play className="h-6 w-6" style={{ color: '#5c6bc0' }} />
-                          <Typography variant="h6" fontWeight="bold">
-                            Video Classes
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          A comprehensive collection of video classes covering various topics and learning paths.
-                        </Typography>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          startIcon={<Play className="h-5 w-5" />}
-                          endIcon={<ExternalLink className="h-4 w-4" />}
-                          onClick={() => {
-                            window.open('https://www.youtube.com/embed/videoseries?list=PLwyVPJ9qE2K-g5CQgIYtOfnrfl7ebWRkp', '_blank');
-                          }}
-                          sx={{
-                            textTransform: 'none',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Watch Video Classes
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  {/* AI Development Course Card */}
-                  <Grid item xs={12} md={6}>
-                    <Card variant="outlined" sx={{ height: '100%' }}>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                          <BookOpen className="h-6 w-6" style={{ color: '#9c27b0' }} />
-                          <Typography variant="h6" fontWeight="bold">
-                            AI Development
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          Learn the fundamentals of AI development including machine learning, neural networks, and data processing.
-                        </Typography>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          startIcon={<Play className="h-5 w-5" />}
-                          endIcon={<ExternalLink className="h-4 w-4" />}
-                          onClick={() => {
-                            window.open('https://www.youtube.com/playlist?list=PLwyVPJ9qE2K8vj0Wfb4rxAmZntkysHPlE', '_blank');
-                          }}
-                          sx={{
-                            textTransform: 'none',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Start Course
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-
-                {/* Additional Resources */}
-                <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-                  <Typography variant="h6" fontWeight="semibold" gutterBottom>
-                    Additional Resources
-                  </Typography>
-                  <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      For more learning resources, visit the full Learning Hub in the Creative Dashboard.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<GraduationCap className="h-5 w-5" />}
-                      endIcon={<ExternalLink className="h-4 w-4" />}
-                      onClick={() => {
-                        window.location.href = '/creative?tab=learning';
-                      }}
-                      sx={{
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        bgcolor: 'grey.800',
-                        '&:hover': { bgcolor: 'grey.900' },
-                      }}
-                    >
-                      Open Full Learning Hub
-                    </Button>
-                  </Paper>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        ) : (
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-            {/* Lessons Tab */}
-            {activeTab === 'lessons' && (
-            <Box>
-              {lessons.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 6 }}>
-                  <BookOpen className="h-16 w-16" style={{ color: '#9e9e9e', margin: '0 auto 16px' }} />
-                  <Typography variant="body1" color="text.secondary">
-                    No lessons available for this level yet.
-                  </Typography>
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {lessons.map((lesson, index) => (
-                    <Card
-                      key={lesson.id}
-                      variant="outlined"
-                      onClick={() => handleLessonClick(lesson)}
-                      sx={{
-                        cursor: 'pointer',
-                        transition: 'box-shadow 0.2s',
-                        '&:hover': {
-                          boxShadow: 4,
-                        },
-                      }}
-                    >
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                {lessons.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography color="text.secondary">No lessons yet.</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {lessons.map((lesson, index) => (
+                      <Paper key={lesson.id} variant="outlined" sx={{ p: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
                           <Box sx={{ flex: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <Typography variant="body2" color="text.secondary" fontWeight="medium">
-                                Lesson {index + 1}
-                              </Typography>
-                              {lesson.progress.completed && (
-                                <Chip
-                                  icon={<CheckCircle className="h-4 w-4" />}
-                                  label="Completed"
-                                  size="small"
-                                  color="success"
-                                  sx={{ fontSize: '0.7rem' }}
-                                />
-                              )}
-                            </Box>
-                            <Typography variant="h6" fontWeight="bold" gutterBottom>
-                              {lesson.title}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                              {lesson.description}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="body2" color="text.secondary">Lesson {index + 1}</Typography>
+                            <Typography variant="subtitle1" fontWeight={700}>{lesson.title}</Typography>
+                            {lesson.description && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{lesson.description}</Typography>
+                            )}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                               {lesson.videoUrl && (
-                                <Chip
-                                  icon={<Play className="h-4 w-4" />}
-                                  label="Video"
-                                  size="small"
-                                  variant="outlined"
-                                />
+                                <Button size="small" variant="outlined" onClick={() => window.open(lesson.videoUrl!, '_blank')}>Watch</Button>
                               )}
                               {lesson.pdfUrl && (
-                                <Chip
-                                  icon={<FileText className="h-4 w-4" />}
-                                  label="PDF"
-                                  size="small"
-                                  variant="outlined"
-                                />
+                                <Button size="small" variant="text" onClick={() => window.open(lesson.pdfUrl!, '_blank')}>Attachment</Button>
                               )}
                             </Box>
                           </Box>
-                          <Box sx={{ ml: 2 }}>
+                          <Box>
                             {lesson.progress.completed ? (
-                              <CheckCircle className="h-8 w-8" style={{ color: '#4caf50' }} />
+                              <Chip color="success" size="small" label="Completed" />
                             ) : (
-                              <Play className="h-8 w-8" style={{ color: '#2196f3' }} />
+                              <Button size="small" variant="contained" onClick={async () => {
+                                await fetch(`${backendUrl}/api/rise-journey/lessons/${lesson.id}/complete`, { method: 'POST', credentials: 'include' });
+                                await loadLevelData();
+                              }}>Mark Done</Button>
                             )}
                           </Box>
                         </Box>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          )}
+                      </Paper>
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
 
-          {/* Tasks Tab */}
-          {activeTab === 'tasks' && (
-            <Box>
-              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-                <TextField
-                  fullWidth
-                  placeholder="Add a new task..."
-                  variant="outlined"
-                  size="small"
-                  value={newTaskText}
-                  onChange={(e) => setNewTaskText(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && newTaskText.trim()) {
-                      addTask(newTaskText);
-                      setNewTaskText('');
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<Plus className="h-5 w-5" />}
-                  onClick={() => {
-                    if (newTaskText.trim()) {
-                      addTask(newTaskText);
-                      setNewTaskText('');
-                    }
-                  }}
-                  sx={{ textTransform: 'none', minWidth: 100 }}
-                >
-                  Add
-                </Button>
-              </Box>
-              {tasks.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 6 }}>
-                  <CheckSquare className="h-16 w-16" style={{ color: '#9e9e9e', margin: '0 auto 16px' }} />
-                  <Typography variant="body1" color="text.secondary">
-                    No tasks yet. Add your first task above!
-                  </Typography>
+          {/* Tasks Card */}
+          <Grid item xs={12} md={6}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Assigned Tasks</Typography>
+                <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    placeholder="Add a new task..."
+                    variant="outlined"
+                    size="small"
+                    value={newTaskText}
+                    onChange={(e) => setNewTaskText(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && newTaskText.trim()) { addTask(newTaskText); setNewTaskText(''); }
+                    }}
+                  />
+                  <Button variant="contained" onClick={() => { if (newTaskText.trim()) { addTask(newTaskText); setNewTaskText(''); } }}>Add</Button>
                 </Box>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {tasks.map(task => (
-                    <Paper
-                      key={task.id}
-                      variant="outlined"
-                      sx={{
-                        p: 1.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        opacity: task.completed ? 0.6 : 1,
-                        bgcolor: task.completed ? 'grey.50' : 'background.paper',
-                      }}
-                    >
-                      <Checkbox
-                        checked={task.completed}
-                        onChange={() => toggleTask(task.id, task.completed)}
-                        color="success"
-                      />
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          flex: 1,
-                          textDecoration: task.completed ? 'line-through' : 'none',
-                          color: task.completed ? 'text.secondary' : 'text.primary',
-                        }}
-                      >
-                        {task.text}
-                      </Typography>
-                      <IconButton
-                        onClick={() => deleteTask(task.id)}
-                        size="small"
-                        color="error"
-                      >
-                        <X className="h-5 w-5" />
-                      </IconButton>
-                    </Paper>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          )}
+                {tasks.length === 0 ? (
+                  <Typography color="text.secondary">No tasks yet.</Typography>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {tasks.map(task => (
+                      <Paper key={task.id} variant="outlined" sx={{ p: 1.25, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox checked={task.completed} onChange={() => toggleTask(task.id, task.completed)} />
+                        <Typography sx={{ flex: 1, textDecoration: task.completed ? 'line-through' : 'none' }}>{task.text}</Typography>
+                        <IconButton size="small" color="error" onClick={() => deleteTask(task.id)}><X className="h-5 w-5" /></IconButton>
+                      </Paper>
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
 
-          {/* Journal Tab */}
-          {activeTab === 'journal' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 1 }}>
-                Reflect on your journey through the 4 pillars:
-              </Typography>
-              <Box>
-                <Typography variant="caption" fontWeight="bold" color="success.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
-                  💪 Physical Body
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={journalEntries.physical}
-                  onChange={(e) => saveJournalEntry('physical', e.target.value)}
-                  placeholder="How does this level apply to your body? Energy levels? Physical sensations?"
-                  variant="outlined"
-                  sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: 'success.main' } } }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="caption" fontWeight="bold" color="primary.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
-                  🧠 Mental State
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={journalEntries.mental}
-                  onChange={(e) => saveJournalEntry('mental', e.target.value)}
-                  placeholder="What mental blocks arose? New insights? Clarity gained?"
-                  variant="outlined"
-                />
-              </Box>
-              <Box>
-                <Typography variant="caption" fontWeight="bold" color="secondary.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
-                  ✨ Spiritual Connection
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={journalEntries.spiritual}
-                  onChange={(e) => saveJournalEntry('spiritual', e.target.value)}
-                  placeholder="How does this align with your spirit? Intuitive feelings?"
-                  variant="outlined"
-                  sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: 'secondary.main' } } }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="caption" fontWeight="bold" color="warning.main" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
-                  🌿 Wellness & Balance
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={journalEntries.wellness}
-                  onChange={(e) => saveJournalEntry('wellness', e.target.value)}
-                  placeholder="Overall wellbeing? Self-care insights? Balance reflections?"
-                  variant="outlined"
-                  sx={{ '& .MuiOutlinedInput-root': { '&:hover fieldset': { borderColor: 'warning.main' } } }}
-                />
-              </Box>
-              <Alert severity="success" sx={{ borderRadius: 2 }}>
-                <Typography variant="body2" fontWeight="semibold">
-                  ✓ Auto-saving enabled
-                </Typography>
-                <Typography variant="caption">
-                  Your reflections are automatically saved as you type.
-                </Typography>
-              </Alert>
-            </Box>
-          )}
-        </Paper>
-        )}
-      </Box>
-    </Box>
+          {/* Journal Card */}
+          <Grid item xs={12}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Journey Journal</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="success.main" sx={{ textTransform: 'uppercase' }}>Physical</Typography>
+                    <TextField fullWidth multiline rows={4} value={journalEntries.physical} onChange={(e) => saveJournalEntry('physical', e.target.value)} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="primary.main" sx={{ textTransform: 'uppercase' }}>Mental</Typography>
+                    <TextField fullWidth multiline rows={4} value={journalEntries.mental} onChange={(e) => saveJournalEntry('mental', e.target.value)} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="secondary.main" sx={{ textTransform: 'uppercase' }}>Spiritual</Typography>
+                    <TextField fullWidth multiline rows={4} value={journalEntries.spiritual} onChange={(e) => saveJournalEntry('spiritual', e.target.value)} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="warning.main" sx={{ textTransform: 'uppercase' }}>Wellness</Typography>
+                    <TextField fullWidth multiline rows={4} value={journalEntries.wellness} onChange={(e) => saveJournalEntry('wellness', e.target.value)} />
+                  </Grid>
+                </Grid>
+                <Alert severity="success" sx={{ mt: 2 }}>Autosaving as you type.</Alert>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+        </Box>
+
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onBack} variant="outlined">Close</Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
