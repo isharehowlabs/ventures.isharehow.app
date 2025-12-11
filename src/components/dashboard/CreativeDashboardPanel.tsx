@@ -107,7 +107,7 @@ export default function CreativeDashboardPanel() {
     <Box sx={{ bgcolor: "background.default", minHeight: '100vh', pb: 4 }}>
       {/* Header */}
       <Box sx={{ 
-        bgcolor: 'white', 
+        bgcolor: 'background.paper', 
         borderBottom: '1px solid',
         borderColor: 'divider',
         mb: 3
@@ -126,7 +126,6 @@ export default function CreativeDashboardPanel() {
         {/* Modern Tab Navigation */}
         <Paper sx={{ 
           mb: 3,
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
         }}>
           <Tabs
             value={activeTab}
@@ -140,12 +139,10 @@ export default function CreativeDashboardPanel() {
                 fontSize: '0.95rem',
                 fontWeight: 500,
                 '&.Mui-selected': {
-                  color: 'primary.main',
                   fontWeight: 600,
                 },
               },
               '& .MuiTabs-indicator': {
-                bgcolor: 'primary.main',
                 height: 3,
               },
             }}
@@ -165,19 +162,11 @@ export default function CreativeDashboardPanel() {
 
         {/* Tab Panels */}
         <TabPanel value={activeTab} index={0}>
-          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <AnalyticsActivity />
-            </CardContent>
-          </Card>
+          <AnalyticsActivity />
         </TabPanel>
 
         <TabPanel value={activeTab} index={1}>
-          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <SupportRequests />
-            </CardContent>
-          </Card>
+          <SupportRequests />
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
@@ -185,19 +174,11 @@ export default function CreativeDashboardPanel() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
-          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <DesignFigmaPanel />
-            </CardContent>
-          </Card>
+          <DesignFigmaPanel />
         </TabPanel>
 
         <TabPanel value={activeTab} index={4}>
-          <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <AiAgentPanel />
-            </CardContent>
-          </Card>
+          <AiAgentPanel />
         </TabPanel>
       </Container>
 
@@ -262,71 +243,68 @@ function BrowserSessionTab() {
   }, []);
 
   return (
-    <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
-            Browser Session
-          </Typography>
-          <Typography variant="body1" color="text.secondary" gutterBottom>
-            Shared browser powered by Hyperbeam
-          </Typography>
+    <Box>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" fontWeight={700} gutterBottom>
+          Browser Session
+        </Typography>
+        <Typography variant="body1" color="text.secondary" gutterBottom>
+          Shared browser powered by Hyperbeam
+        </Typography>
+      </Box>
+
+      {sessionLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
         </Box>
+      )}
 
-        {sessionLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-            <CircularProgress />
-          </Box>
-        )}
+      {iframeError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {iframeError}
+        </Alert>
+      )}
 
-        {iframeError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {iframeError}
-          </Alert>
-        )}
-
-        {!sessionLoading && hyperbeamUrl && (
-          <Box sx={{ 
-            position: 'relative', 
-            width: '100%', 
-            height: '70vh',
-            bgcolor: '#000',
-            borderRadius: 1,
-            overflow: 'hidden'
-          }}>
-            {iframeLoading && (
-              <Box sx={{ 
-                position: 'absolute', 
-                top: 0, 
-                left: 0, 
-                right: 0, 
-                bottom: 0, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                bgcolor: 'rgba(0,0,0,0.5)'
-              }}>
-                <CircularProgress />
-              </Box>
-            )}
-            <iframe
-              src={hyperbeamUrl}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                display: 'block',
-              }}
-              allow="clipboard-read; clipboard-write; microphone; camera; display-capture"
-              onLoad={() => setIframeLoading(false)}
-              onError={() => {
-                setIframeLoading(false);
-                setIframeError('Failed to load Hyperbeam session');
-              }}
-            />
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+      {!sessionLoading && hyperbeamUrl && (
+        <Paper sx={{ 
+          position: 'relative', 
+          width: '100%', 
+          height: '70vh',
+          bgcolor: '#000',
+          overflow: 'hidden'
+        }}>
+          {iframeLoading && (
+            <Box sx={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              bgcolor: 'rgba(0,0,0,0.5)'
+            }}>
+              <CircularProgress />
+            </Box>
+          )}
+          <iframe
+            src={hyperbeamUrl}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              display: 'block',
+            }}
+            allow="clipboard-read; clipboard-write; microphone; camera; display-capture"
+            onLoad={() => setIframeLoading(false)}
+            onError={() => {
+              setIframeLoading(false);
+              setIframeError('Failed to load Hyperbeam session');
+            }}
+          />
+        </Paper>
+      )}
+    </Box>
   );
 }
