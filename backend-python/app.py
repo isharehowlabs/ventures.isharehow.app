@@ -1244,17 +1244,29 @@ CUSTOMERS_QUERY = '''
 '''
 
 @app.route('/api/shopify/customers', methods=['GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def api_shopify_customers():
     """Fetch Shopify customers for CRM dashboard"""
     try:
+        # Check if Shopify is configured
+        if not SHOPIFY_STORE_URL or not SHOPIFY_ACCESS_TOKEN:
+            return jsonify({
+                'error': 'Shopify not configured',
+                'message': 'SHOPIFY_STORE_URL and SHOPIFY_ACCESS_TOKEN must be set',
+                'customers': []
+            }), 200
+        
         first = int(request.args.get('first', 50))
         after = request.args.get('after')
         variables = {'first': first, 'after': after}
         
         data, error = shopify_graphql(CUSTOMERS_QUERY, variables)
         if error:
-            return jsonify(error), 500
+            return jsonify({
+                'error': error.get('error', 'Shopify API error'),
+                'message': error.get('message', 'Failed to fetch from Shopify'),
+                'customers': []
+            }), 200
         
         if not data or 'customers' not in data or 'edges' not in data['customers']:
             return jsonify({'error': 'Invalid response from Shopify API', 'customers': []}), 200

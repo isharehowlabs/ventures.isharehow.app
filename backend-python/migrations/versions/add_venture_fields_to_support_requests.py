@@ -1,7 +1,7 @@
 """Add venture fields to support_requests table
 
 Revision ID: add_venture_fields
-Revises: 32
+Revises: 32_add_creative_dashboard
 Create Date: 2025-12-11
 
 """
@@ -11,7 +11,7 @@ from datetime import datetime
 
 # revision identifiers, used by Alembic.
 revision = 'add_venture_fields'
-down_revision = '32'
+down_revision = '32_add_creative_dashboard'
 branch_labels = None
 depends_on = None
 
