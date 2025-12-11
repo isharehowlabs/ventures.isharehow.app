@@ -630,7 +630,7 @@ const CreativeServicesPage = () => {
                       {[
                         'Explain complex cybersecurity concepts with crystal clarity',
                         'Articulate the principles of decentralized living and self-sovereignty',
-                        'Share the wisdom of bushcraft and nature-based resilience',
+                        'Share the wisdom of nature and nature-based resilience',
                         'Craft compelling narratives that explore consciousness, energy, and aura',
                         'Build your empire with the strategies we use ourselves'
                       ].map((item, idx) => (

@@ -779,7 +779,7 @@ const HomePage = () => {
                                       color: 'white',
                                     },
                                   }}
-                                  onClick={() => router.push('/creative-services')}
+                                  onClick={() => router.push('/fractional-digital-agency')}
                                 >
                                   Explore Service
                                 </Button>

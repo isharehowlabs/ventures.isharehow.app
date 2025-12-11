@@ -47,7 +47,7 @@ export default function StackedShell() {
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
     // Navigate to the sales page
-    const routes = ['/products', '/creative-services', '/website-apps', '/growth-machine', '/enterprise'];
+    const routes = ['/products', '/fractional-digital-agency', '/website-apps', '/growth-machine', '/enterprise'];
     router.push(routes[newValue]);
   };
 
@@ -59,10 +59,10 @@ export default function StackedShell() {
       href: '/products',
     },
     {
-      key: 'creative-services',
-      label: 'Creative Services',
+      key: 'fractional-digital-agency',
+      label: 'Fractional Digital Agency',
       icon: <CreativeIcon />,
-      href: '/creative-services',
+      href: '/fractional-digital-agency',
     },
     {
       key: 'website-apps',
