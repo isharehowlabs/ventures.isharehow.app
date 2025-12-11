@@ -156,6 +156,51 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   const router = useRouter();
   const theme = useTheme();
   const [homeExpanded, setHomeExpanded] = useState(false);
+  
+  // Ensure we have a valid theme mode - check both theme and DOM
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const themeMode = theme.palette.mode === 'dark';
+    const domTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+    return themeMode || domTheme;
+  });
+  
+  // Sync theme detection with DOM changes
+  useEffect(() => {
+    const checkTheme = () => {
+      const themeMode = theme.palette.mode === 'dark';
+      const domTheme = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
+      setIsDarkMode(themeMode || domTheme);
+    };
+    
+    checkTheme();
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(checkTheme);
+    if (typeof window !== 'undefined') {
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme', 'class'],
+      });
+    }
+    
+    // Also listen for theme change events
+    const handleThemeChange = () => checkTheme();
+    if (typeof window !== 'undefined') {
+      document.addEventListener('themechange', handleThemeChange);
+    }
+    
+    return () => {
+      observer.disconnect();
+      if (typeof window !== 'undefined') {
+        document.removeEventListener('themechange', handleThemeChange);
+      }
+    };
+  }, [theme.palette.mode]);
+  
+  // Get text colors that will always be visible
+  const textPrimary = isDarkMode ? '#f7fafc' : '#212529';
+  const textSecondary = isDarkMode ? '#cbd5e0' : '#6c757d';
 
   // Sales pages sub-items for Home
   const salesPages = [
@@ -284,7 +329,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                         justifyContent: 'center',
                         color: (active === item.key || isSalesPageActive)
                           ? theme.palette.primary.main 
-                          : theme.palette.text.secondary,
+                          : textSecondary,
                       }}
                     >
                       {item.icon}
@@ -297,7 +342,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                         sx: {
                           color: (active === item.key || isSalesPageActive)
                             ? theme.palette.primary.main 
-                            : theme.palette.text.primary,
+                            : textPrimary,
                         },
                       }}
                     />
@@ -335,7 +380,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                             justifyContent: 'center',
                             color: active === salesPage.key 
                               ? theme.palette.primary.main 
-                              : theme.palette.text.secondary,
+                              : textSecondary,
                           }}
                         >
                           {salesPage.icon}
@@ -348,7 +393,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                             sx: {
                               color: active === salesPage.key 
                                 ? theme.palette.primary.main 
-                                : theme.palette.text.secondary,
+                                : textSecondary,
                             },
                           }}
                         />
@@ -407,7 +452,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                       justifyContent: 'center',
                       color: active === item.key 
                         ? theme.palette.primary.main 
-                        : theme.palette.text.secondary,
+                        : textSecondary,
                     }}
                   >
                     {item.icon}
@@ -421,7 +466,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                         sx: {
                           color: active === item.key 
                             ? theme.palette.primary.main 
-                            : theme.palette.text.primary,
+                            : textPrimary,
                         },
                       }}
                     />
