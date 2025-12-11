@@ -96,6 +96,13 @@ const navigationItems: NavigationItem[] = [
     dividerAfter: true,
   },
   {
+    key: 'dashboard',
+    label: 'Dashboard',
+    href: '/creative',
+    icon: <CreativeIcon />,
+    authRequired: false,
+  },
+  {
     key: 'rise',
     label: 'RISE Dashboard',
     href: '/rise',
@@ -232,7 +239,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
     if (item.authRequired && !isAuthenticated) {
       return false;
     }
-    // Filter out individual dashboard items since they're now sub-items of Dashboard
+    // Filter out individual dashboard items since they're sub-items of Dashboard
     if (item.key === 'creative' || item.key === 'rise' || item.key === 'learning-hub') {
       return false;
     }
