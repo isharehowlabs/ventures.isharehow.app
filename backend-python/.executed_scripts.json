@@ -1,7 +1,9 @@
 {
   "executed_scripts": [
     "/home/ishaglcy/public_html/ventures.isharehow.app/backend-python/add_trial_start_date_column.py",
+    "/home/ishaglcy/public_html/ventures.isharehow.app/backend-python/ventures_api_endpoints.py",
     "/home/ishaglcy/public_html/ventures.isharehow.app/backend-python/fix_clients_table_schema.py",
-    "/home/ishaglcy/public_html/ventures.isharehow.app/backend-python/ensure_columns_exist.py"
+    "/home/ishaglcy/public_html/ventures.isharehow.app/backend-python/ensure_columns_exist.py",
+    "/home/ishaglcy/public_html/ventures.isharehow.app/backend-python/add_venture_fields_direct.py"
   ]
 }

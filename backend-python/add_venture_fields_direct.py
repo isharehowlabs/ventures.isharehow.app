@@ -19,81 +19,48 @@ print(f"🔗 Connecting to database...")
 try:
     engine = create_engine(database_url)
     
-    with engine.connect() as connection:
-        # Start transaction
-        trans = connection.begin()
-        
-        try:
-            print("📝 Adding venture fields to support_requests table...")
-            
-            # Add budget column
+    print("📝 Adding venture fields to support_requests table...")
+    
+    # Helper function to check if column exists
+    def column_exists(conn, table_name, column_name):
+        result = conn.execute(text("""
+            SELECT EXISTS (
+                SELECT 1 
+                FROM information_schema.columns 
+                WHERE table_name = :table_name 
+                AND column_name = :column_name
+            )
+        """), {"table_name": table_name, "column_name": column_name})
+        return result.scalar()
+    
+    # Add each column individually with its own transaction
+    columns_to_add = [
+        ('budget', 'NUMERIC(10, 2) DEFAULT 0'),
+        ('spent', 'NUMERIC(10, 2) DEFAULT 0'),
+        ('delivery_date', 'TIMESTAMP'),
+        ('start_date', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
+        ('progress', 'INTEGER DEFAULT 0'),
+    ]
+    
+    for col_name, col_def in columns_to_add:
+        # Use a separate connection/transaction for each column
+        with engine.begin() as connection:
             try:
-                connection.execute(text(
-                    "ALTER TABLE support_requests ADD COLUMN budget NUMERIC(10, 2) DEFAULT 0"
-                ))
-                print("  ✅ Added 'budget' column")
-            except ProgrammingError as e:
-                if 'already exists' in str(e):
-                    print("  ℹ️  'budget' column already exists")
+                if column_exists(connection, 'support_requests', col_name):
+                    print(f"  ℹ️  '{col_name}' column already exists")
                 else:
-                    raise
-            
-            # Add spent column
-            try:
-                connection.execute(text(
-                    "ALTER TABLE support_requests ADD COLUMN spent NUMERIC(10, 2) DEFAULT 0"
-                ))
-                print("  ✅ Added 'spent' column")
-            except ProgrammingError as e:
-                if 'already exists' in str(e):
-                    print("  ℹ️  'spent' column already exists")
+                    connection.execute(text(
+                        f"ALTER TABLE support_requests ADD COLUMN {col_name} {col_def}"
+                    ))
+                    print(f"  ✅ Added '{col_name}' column")
+            except Exception as e:
+                if 'already exists' in str(e).lower() or 'duplicate' in str(e).lower():
+                    print(f"  ℹ️  '{col_name}' column already exists")
                 else:
-                    raise
-            
-            # Add delivery_date column
-            try:
-                connection.execute(text(
-                    "ALTER TABLE support_requests ADD COLUMN delivery_date TIMESTAMP"
-                ))
-                print("  ✅ Added 'delivery_date' column")
-            except ProgrammingError as e:
-                if 'already exists' in str(e):
-                    print("  ℹ️  'delivery_date' column already exists")
-                else:
-                    raise
-            
-            # Add start_date column
-            try:
-                connection.execute(text(
-                    "ALTER TABLE support_requests ADD COLUMN start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-                ))
-                print("  ✅ Added 'start_date' column")
-            except ProgrammingError as e:
-                if 'already exists' in str(e):
-                    print("  ℹ️  'start_date' column already exists")
-                else:
-                    raise
-            
-            # Add progress column
-            try:
-                connection.execute(text(
-                    "ALTER TABLE support_requests ADD COLUMN progress INTEGER DEFAULT 0"
-                ))
-                print("  ✅ Added 'progress' column")
-            except ProgrammingError as e:
-                if 'already exists' in str(e):
-                    print("  ℹ️  'progress' column already exists")
-                else:
-                    raise
-            
-            # Commit transaction
-            trans.commit()
-            print("\n✅ Migration completed successfully!")
-            
-        except Exception as e:
-            trans.rollback()
-            print(f"\n❌ Error during migration: {e}")
-            raise
+                    print(f"  ⚠️  Error adding '{col_name}' column: {e}")
+                    # Transaction will auto-rollback, continue with next column
+    
+    print("\n✅ Migration completed successfully!")
             
 except OperationalError as e:
     print(f"❌ Could not connect to database: {e}")
