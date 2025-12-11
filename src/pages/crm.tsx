@@ -91,6 +91,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getBackendUrl } from '../utils/backendUrl';
 import EditUserDialog from '../components/dashboard/creative/EditUserDialog';
 import AddClientDialog from '../components/dashboard/creative/AddClientDialog';
+import VenturesPanel from '../components/dashboard/VenturesPanel';
 
 interface User {
   id: number;
@@ -660,6 +661,12 @@ export default function CRMDashboard() {
                     icon={<BarChartIcon />}
                     iconPosition="start"
                     label="Analytics"
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  />
+                  <Tab
+                    icon={<AssignmentIcon />}
+                    iconPosition="start"
+                    label="Ventures"
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                   />
                 </Tabs>
@@ -1371,6 +1378,11 @@ export default function CRMDashboard() {
                       </Grid>
                     </Grid>
                   </Box>
+                </TabPanel>
+
+                {/* Ventures Tab */}
+                <TabPanel value={activeTab} index={5}>
+                  <VenturesPanel />
                 </TabPanel>
               </Box>
             </Paper>
