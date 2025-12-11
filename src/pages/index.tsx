@@ -56,7 +56,6 @@ import FeatureComparisonTable, { Feature } from '../components/pricing/FeatureCo
 import BeforeAfterMockup from '../components/landing/BeforeAfterMockup';
 import { useStickyState } from '../hooks/useStickyState';
 import styles from '../styles/landing/LandingPage.module.css';
-import StackedShell from '../components/sales/StackedShell';
 
 const pricingTiers: PricingTier[] = [
   {
@@ -1179,21 +1178,6 @@ const HomePage = () => {
                   </Stack>
                 </Box>
               </Fade>
-            </Container>
-          </Box>
-
-          {/* Sales Pages Stacked Shell Section */}
-          <Box id="sales" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.default' }}>
-            <Container maxWidth="xl">
-              <Box sx={{ textAlign: 'center', mb: 6 }}>
-                <Typography variant="h2" sx={{ fontWeight: 700, mb: 2 }}>
-                  Our Services & Products
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-                  Explore our range of services and products designed to transform your business
-                </Typography>
-              </Box>
-              <StackedShell />
             </Container>
           </Box>
 

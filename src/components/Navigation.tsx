@@ -8,6 +8,7 @@ import {
   Box,
   Typography,
   useTheme,
+  Collapse,
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -27,8 +28,12 @@ import {
   Info as InfoIcon,
   Business as BusinessIcon,
   PeopleAlt as CrmIcon,
+  Apps as AppsIcon,
+  ExpandLess,
+  ExpandMore,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
 
 type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine';
 
@@ -150,9 +155,40 @@ interface NavigationProps {
 export default function Navigation({ active, isAuthenticated = false, collapsed = false, onLogin }: NavigationProps) {
   const router = useRouter();
   const theme = useTheme();
+  const [homeExpanded, setHomeExpanded] = useState(false);
+
+  // Sales pages sub-items for Home
+  const salesPages = [
+    { key: 'products' as NavKey, label: 'Products', href: '/products', icon: <ShoppingBagIcon /> },
+    { key: 'creative-services' as NavKey, label: 'Creative Services', href: '/creative-services', icon: <CreativeIcon /> },
+    { key: 'website-apps' as NavKey, label: 'Website Apps', href: '/website-apps', icon: <AppsIcon /> },
+    { key: 'growth-machine' as NavKey, label: 'Growth Machine', href: '/growth-machine', icon: <RiseIcon /> },
+    { key: 'enterprise' as NavKey, label: 'Enterprise', href: '/enterprise', icon: <BusinessIcon /> },
+  ];
+
+  // Check if any sales page is active
+  const isSalesPageActive = salesPages.some(page => active === page.key);
+
+  // Auto-expand Home if a sales page is active
+  useEffect(() => {
+    if (isSalesPageActive && !homeExpanded) {
+      setHomeExpanded(true);
+    }
+  }, [isSalesPageActive, homeExpanded]);
 
   const handleNavigate = (href: string) => {
     router.push(href);
+  };
+
+  const handleHomeClick = () => {
+    if (collapsed) {
+      router.push('/');
+    } else {
+      setHomeExpanded(!homeExpanded);
+      if (!homeExpanded) {
+        router.push('/');
+      }
+    }
   };
 
   const filteredItems = navigationItems.filter(item => {
@@ -213,84 +249,197 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
           color: theme.palette.text.primary,
         }}
       >
-        {filteredItems.map((item) => (
-          <Box key={item.key}>
-            <Tooltip title={collapsed ? item.label : ''} placement="right">
-              <ListItemButton
-                selected={active === item.key}
-                onClick={() => handleNavigate(item.href)}
-                sx={{
-                  minHeight: 48,
-                  justifyContent: collapsed ? 'center' : 'initial',
-                  px: collapsed ? 1.5 : 2.5,
-                  mx: collapsed ? 0.5 : 0,
-                  mb: 0.5,
-                  borderRadius: 1,
-                  backgroundColor: active === item.key 
-                    ? theme.palette.mode === 'dark' 
-                      ? 'rgba(144, 202, 249, 0.16)' 
-                      : 'rgba(25, 118, 210, 0.08)'
-                    : 'transparent',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.08)'
-                      : 'rgba(0, 0, 0, 0.04)',
-                  },
-                  '&.Mui-selected': {
+        {filteredItems.map((item) => {
+          // Special handling for Home item with nested sales pages
+          if (item.key === 'home' && !collapsed) {
+            return (
+              <Box key={item.key}>
+                <Tooltip title={collapsed ? item.label : ''} placement="right">
+                  <ListItemButton
+                    selected={active === item.key || isSalesPageActive}
+                    onClick={handleHomeClick}
+                    sx={{
+                      minHeight: 48,
+                      justifyContent: 'initial',
+                      px: 2.5,
+                      mx: 0,
+                      mb: 0.5,
+                      borderRadius: 1,
+                      backgroundColor: (active === item.key || isSalesPageActive)
+                        ? theme.palette.mode === 'dark' 
+                          ? 'rgba(144, 202, 249, 0.16)' 
+                          : 'rgba(25, 118, 210, 0.08)'
+                        : 'transparent',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(0, 0, 0, 0.04)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 40,
+                        mr: 2,
+                        justifyContent: 'center',
+                        color: (active === item.key || isSalesPageActive)
+                          ? theme.palette.primary.main 
+                          : theme.palette.text.secondary,
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontWeight: (active === item.key || isSalesPageActive) ? 600 : 500,
+                        fontSize: '0.875rem',
+                        sx: {
+                          color: (active === item.key || isSalesPageActive)
+                            ? theme.palette.primary.main 
+                            : theme.palette.text.primary,
+                        },
+                      }}
+                    />
+                    {homeExpanded ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </Tooltip>
+                <Collapse in={homeExpanded} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {salesPages.map((salesPage) => (
+                      <ListItemButton
+                        key={salesPage.key}
+                        selected={active === salesPage.key}
+                        onClick={() => handleNavigate(salesPage.href)}
+                        sx={{
+                          pl: 6,
+                          minHeight: 40,
+                          mb: 0.25,
+                          borderRadius: 1,
+                          backgroundColor: active === salesPage.key 
+                            ? theme.palette.mode === 'dark' 
+                              ? 'rgba(144, 202, 249, 0.16)' 
+                              : 'rgba(25, 118, 210, 0.08)'
+                            : 'transparent',
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.04)',
+                          },
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 32,
+                            mr: 2,
+                            justifyContent: 'center',
+                            color: active === salesPage.key 
+                              ? theme.palette.primary.main 
+                              : theme.palette.text.secondary,
+                          }}
+                        >
+                          {salesPage.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={salesPage.label}
+                          primaryTypographyProps={{
+                            fontWeight: active === salesPage.key ? 600 : 400,
+                            fontSize: '0.8125rem',
+                            sx: {
+                              color: active === salesPage.key 
+                                ? theme.palette.primary.main 
+                                : theme.palette.text.secondary,
+                            },
+                          }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Collapse>
+              </Box>
+            );
+          }
+
+          // Regular items
+          return (
+            <Box key={item.key}>
+              <Tooltip title={collapsed ? item.label : ''} placement="right">
+                <ListItemButton
+                  selected={active === item.key}
+                  onClick={() => handleNavigate(item.href)}
+                  sx={{
+                    minHeight: 48,
+                    justifyContent: collapsed ? 'center' : 'initial',
+                    px: collapsed ? 1.5 : 2.5,
+                    mx: collapsed ? 0.5 : 0,
+                    mb: 0.5,
+                    borderRadius: 1,
                     backgroundColor: active === item.key 
                       ? theme.palette.mode === 'dark' 
                         ? 'rgba(144, 202, 249, 0.16)' 
                         : 'rgba(25, 118, 210, 0.08)'
                       : 'transparent',
                     '&:hover': {
-                      backgroundColor: active === item.key
-                        ? theme.palette.mode === 'dark' 
-                          ? 'rgba(144, 202, 249, 0.24)' 
-                          : 'rgba(25, 118, 210, 0.12)'
-                        : theme.palette.action.hover,
+                      backgroundColor: theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.04)',
                     },
-                  },
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: collapsed ? 40 : 40,
-                    mr: collapsed ? 0 : 2,
-                    justifyContent: 'center',
-                    color: active === item.key 
-                      ? theme.palette.primary.main 
-                      : theme.palette.text.secondary,
+                    '&.Mui-selected': {
+                      backgroundColor: active === item.key 
+                        ? theme.palette.mode === 'dark' 
+                          ? 'rgba(144, 202, 249, 0.16)' 
+                          : 'rgba(25, 118, 210, 0.08)'
+                        : 'transparent',
+                      '&:hover': {
+                        backgroundColor: active === item.key
+                          ? theme.palette.mode === 'dark' 
+                            ? 'rgba(144, 202, 249, 0.24)' 
+                            : 'rgba(25, 118, 210, 0.12)'
+                          : theme.palette.action.hover,
+                      },
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                {!collapsed && (
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{
-                      fontWeight: active === item.key ? 600 : 500,
-                      fontSize: '0.875rem',
-                      sx: {
-                        color: active === item.key 
-                          ? theme.palette.primary.main 
-                          : theme.palette.text.primary,
-                      },
+                  <ListItemIcon
+                    sx={{
+                      minWidth: collapsed ? 40 : 40,
+                      mr: collapsed ? 0 : 2,
+                      justifyContent: 'center',
+                      color: active === item.key 
+                        ? theme.palette.primary.main 
+                        : theme.palette.text.secondary,
                     }}
-                  />
-                )}
-              </ListItemButton>
-            </Tooltip>
-            {item.dividerAfter && (
-              <Divider 
-                sx={{ 
-                  my: 1.5,
-                  mx: collapsed ? 1 : 2,
-                  borderColor: theme.palette.divider,
-                }} 
-              />
-            )}
-          </Box>
-        ))}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {!collapsed && (
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontWeight: active === item.key ? 600 : 500,
+                        fontSize: '0.875rem',
+                        sx: {
+                          color: active === item.key 
+                            ? theme.palette.primary.main 
+                            : theme.palette.text.primary,
+                        },
+                      }}
+                    />
+                  )}
+                </ListItemButton>
+              </Tooltip>
+              {item.dividerAfter && (
+                <Divider 
+                  sx={{ 
+                    my: 1.5,
+                    mx: collapsed ? 1 : 2,
+                    borderColor: theme.palette.divider,
+                  }} 
+                />
+              )}
+            </Box>
+          );
+        })}
         
         {/* Sign In button for unauthenticated users */}
         {!isAuthenticated && onLogin && (
