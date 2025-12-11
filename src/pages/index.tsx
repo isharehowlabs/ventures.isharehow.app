@@ -397,9 +397,9 @@ const HomePage = () => {
               "description": "Integrated Managed Services, Creative-as-a-Service, and Strategic Intelligence",
               "offers": {
                 "@type": "AggregateOffer",
-                "offerCount": "3",
-                "lowPrice": "399",
-                "highPrice": "9000",
+                "offerCount": "5",
+                "lowPrice": "299",
+                "highPrice": "12000",
                 "priceCurrency": "USD"
               }
             }),
