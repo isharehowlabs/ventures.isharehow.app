@@ -18,6 +18,7 @@ import {
 import {
   Dashboard as DashboardIcon,
   MenuBook as JournalIcon,
+  EmojiEvents as SkillsIcon,
   FitnessCenter as WellnessIcon,
   Spa as SpiritualIcon,
   SelfImprovement as JourneyIcon,
@@ -219,7 +220,7 @@ export default function RiseDashboard() {
           </Typography>
         </Box>
 
-        {/* Tabs - Reordered with Rise Journey after Overview */}
+        {/* Tabs */}
         <Paper 
           sx={{ 
             mb: 3,
@@ -255,14 +256,15 @@ export default function RiseDashboard() {
             }}
           >
             <Tab icon={<DashboardIcon />} label="Overview" />
-            <Tab icon={<JourneyIcon />} label="Rise Journey" />
             <Tab icon={<JournalIcon />} label="Mental Spiritual Journal" />
+            <Tab icon={<SkillsIcon />} label="Goals & Achievements" />
             <Tab icon={<WellnessIcon />} label="Wellness" />
             <Tab icon={<SpiritualIcon />} label="Festivals" />
+            <Tab icon={<JourneyIcon />} label="Rise Journey" />
           </Tabs>
         </Paper>
 
-        {/* Tab 1: Overview - Now includes Goals & Achievements */}
+        {/* Tab 1: Overview */}
         <TabPanel value={currentTab} index={0}>
           <Grid container spacing={3}>
             {/* Quick Stats */}
@@ -313,7 +315,31 @@ export default function RiseDashboard() {
               </Paper>
             </Grid>
 
-            {/* Goals Section - Moved from separate tab */}
+            {/* Recent Activities */}
+            <Grid item xs={12}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h5" gutterBottom>Recent Activities</Typography>
+                {activities.length === 0 ? (
+                  <Typography color="text.secondary">No activities yet. Start tracking your progress!</Typography>
+                ) : (
+                  activities.slice(0, 5).map((activity) => (
+                    <ActivityCard key={activity.id} activity={activity} />
+                  ))
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* Tab 2: Mental Spiritual Journal */}
+        <TabPanel value={currentTab} index={1}>
+          <MentalSpiritualJournal />
+        </TabPanel>
+
+        {/* Tab 3: Goals & Achievements */}
+        <TabPanel value={currentTab} index={2}>
+          <Grid container spacing={3}>
+            {/* Goals Section */}
             <Grid item xs={12} lg={7}>
               <Paper sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -357,7 +383,7 @@ export default function RiseDashboard() {
               </Paper>
             </Grid>
 
-            {/* Achievements Section - Moved from separate tab */}
+            {/* Achievements Section */}
             <Grid item xs={12} lg={5}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h5" gutterBottom>
@@ -383,32 +409,9 @@ export default function RiseDashboard() {
                 )}
               </Paper>
             </Grid>
-
-            {/* Recent Activities */}
-            <Grid item xs={12}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom>Recent Activities</Typography>
-                {activities.length === 0 ? (
-                  <Typography color="text.secondary">No activities yet. Start tracking your progress!</Typography>
-                ) : (
-                  activities.slice(0, 5).map((activity) => (
-                    <ActivityCard key={activity.id} activity={activity} />
-                  ))
-                )}
-              </Paper>
-            </Grid>
           </Grid>
         </TabPanel>
 
-        {/* Tab 2: Rise Journey - Moved from position 6 */}
-        <TabPanel value={currentTab} index={1}>
-          <RiseJourney />
-        </TabPanel>
-
-        {/* Tab 3: Mental Spiritual Journal */}
-        <TabPanel value={currentTab} index={2}>
-          <MentalSpiritualJournal />
-        </TabPanel>
 
         {/* Tab 4: Wellness & Cycling */}
         <TabPanel value={currentTab} index={3}>
@@ -425,6 +428,11 @@ export default function RiseDashboard() {
         {/* Tab 5: Spiritual Festivals */}
         <TabPanel value={currentTab} index={4}>
           <SpiritualFestivals />
+        </TabPanel>
+
+        {/* Tab 6: Rise Journey */}
+        <TabPanel value={currentTab} index={5}>
+          <RiseJourney />
         </TabPanel>
 
         {/* Goal Dialog */}
