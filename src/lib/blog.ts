@@ -30,6 +30,70 @@ function truncate(text: string, maxLength: number): string {
   return text.substring(0, maxLength).trim() + '...';
 }
 
+
+/**
+ * Converts YouTube URLs in blog content to embedded video players
+ * Handles various YouTube URL formats including:
+ * - https://www.youtube.com/watch?v=VIDEO_ID
+ * - https://youtu.be/VIDEO_ID
+ * - https://youtube.com/embed/VIDEO_ID
+ * - Bare YouTube links in <a> tags or plain text
+ */
+export function embedYouTubeVideos(content: string): string {
+  if (!content) return content;
+
+  // Regular expression to match YouTube URLs and extract video IDs
+  const youtubePatterns = [
+    // Match youtube.com/watch?v=VIDEO_ID
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/g,
+    // Match youtu.be/VIDEO_ID
+    /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})/g,
+    // Match youtube.com/embed/VIDEO_ID
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/g,
+  ];
+
+  let processedContent = content;
+
+  // Process each pattern
+  youtubePatterns.forEach(pattern => {
+    processedContent = processedContent.replace(pattern, (match, videoId) => {
+      // Create responsive iframe embed
+      return `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
+          <iframe 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+            src="https://www.youtube.com/embed/${videoId}" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen
+            loading="lazy"
+          ></iframe>
+        </div>
+      `.trim();
+    });
+  });
+
+  // Also handle YouTube links wrapped in anchor tags
+  processedContent = processedContent.replace(
+    /<a[^>]*href=["'](?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})[^"']*["'][^>]*>.*?<\/a>/gi,
+    (match, videoId) => {
+      return `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
+          <iframe 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+            src="https://www.youtube.com/embed/${videoId}" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen
+            loading="lazy"
+          ></iframe>
+        </div>
+      `.trim();
+    }
+  );
+
+  return processedContent;
+}
 // Transform WordPress post to our BlogPost format
 function transformWordPressPost(wpPost: any): BlogPost {
   // Extract featured image
@@ -97,7 +161,7 @@ function transformWordPressPost(wpPost: any): BlogPost {
     date: wpPost.date || wpPost.modified,
     tags: tags,
     authors: authors.length > 0 ? authors : ['isharehow'],
-    content: wpPost.content?.rendered || wpPost.content,
+    content: embedYouTubeVideos(wpPost.content?.rendered || wpPost.content || ''),
   };
   
   // Only include image if it exists (null is serializable, undefined is not)
