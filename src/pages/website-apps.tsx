@@ -588,9 +588,7 @@ export default function WebsiteAppsPage() {
                   <Button
                     variant="outlined"
                     size="large"
-                    onClick={() => {
-                      document.getElementById('ai-builder')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={handleShopifyCheckout}
                     endIcon={<BuildIcon />}
                     sx={{
                       minWidth: { xs: '100%', sm: 200 },
