@@ -39,9 +39,10 @@ import AppShell from '../components/AppShell';
 import { useRouter } from 'next/router';
 import { useDarkMode } from '../hooks/useDarkMode';
 
-const STORE_DOMAIN = 'isharehow.myshopify.com';
-const PRODUCT_HANDLE = 'website-apps'; // Update with actual Shopify product handle
+const STORE_DOMAIN = 'shop.isharehow.app';
+const PRODUCT_HANDLE = 'custom-webapp-built-by-ishare';
 const PRODUCT_PRICE = 699;
+const PRODUCT_URL = `https://${STORE_DOMAIN}/products/${PRODUCT_HANDLE}?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web`;
 
 const features = [
   { icon: <SpeedIcon />, title: 'Lightning Fast', description: 'Optimized for performance and speed' },
@@ -108,7 +109,7 @@ export default function WebsiteAppsPage() {
   };
 
   const handleShopifyCheckout = () => {
-    window.open(`https://${STORE_DOMAIN}/products/${PRODUCT_HANDLE}`, '_blank');
+    window.open(PRODUCT_URL, '_blank');
   };
 
   const handleAiFormSubmit = async (e: React.FormEvent) => {

@@ -1113,6 +1113,83 @@ def api_products():
                 'pageInfo': data['products']['pageInfo']
         })
 
+PRODUCT_BY_HANDLE_QUERY = '''
+    query getProductByHandle($handle: String!) {
+        product(handle: $handle) {
+            id
+            title
+            handle
+            description
+            descriptionHtml
+            media(first: 10) {
+                edges {
+                    node {
+                        ... on MediaImage {
+                            image {
+                                url
+                                altText
+                            }
+                        }
+                    }
+                }
+            }
+            variants(first: 1) {
+                edges {
+                    node {
+                        price
+                        compareAtPrice
+                    }
+                }
+            }
+            priceRange {
+                minVariantPrice {
+                    amount
+                    currencyCode
+                }
+                maxVariantPrice {
+                    amount
+                    currencyCode
+                }
+            }
+        }
+    }
+'''
+
+@app.route('/api/products/<handle>', methods=['GET'])
+def api_product_by_handle(handle):
+        """Get a specific product by its handle"""
+        variables = {'handle': handle}
+        data, error = shopify_graphql(PRODUCT_BY_HANDLE_QUERY, variables)
+        if error:
+                return jsonify(error), 500
+        if not data or 'product' not in data or not data['product']:
+                return jsonify({'error': 'Product not found'}), 404
+        
+        product = data['product']
+        media_images = []
+        if product.get('media') and product['media'].get('edges'):
+                for edge in product['media']['edges']:
+                        if edge['node'].get('image'):
+                                media_images.append({
+                                        'url': edge['node']['image']['url'],
+                                        'altText': edge['node']['image'].get('altText')
+                                })
+        
+        price = '0.00'
+        if product.get('variants') and product['variants'].get('edges'):
+                price = product['variants']['edges'][0]['node']['price']
+        
+        return jsonify({
+                'id': product['id'],
+                'title': product['title'],
+                'handle': product['handle'],
+                'description': product.get('description', ''),
+                'descriptionHtml': product.get('descriptionHtml', ''),
+                'images': media_images,
+                'price': price,
+                'priceRange': product.get('priceRange', {})
+        })
+
 @app.route('/api/best-sellers', methods=['GET'])
 def api_best_sellers():
         days = int(request.args.get('days', 30))

@@ -45,7 +45,7 @@ export default function GrowthMachinePage() {
   const isDark = useDarkMode();
 
   const joinCoOperation = () => {
-    window.location.href = '/demo?tier=builder';
+    window.open('https://shop.isharehow.app/products/ebook3?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web', '_blank');
   };
 
   const journeySteps = [
