@@ -27,11 +27,10 @@ import {
   Info as InfoIcon,
   Business as BusinessIcon,
   PeopleAlt as CrmIcon,
-  Apps as AppsIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
-type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine';
 
 interface NavigationItem {
   key: NavKey;
@@ -73,24 +72,6 @@ const navigationItems: NavigationItem[] = [
     label: 'About',
     href: '/about',
     icon: <InfoIcon />,
-  },
-  {
-    key: 'products',
-    label: 'Products',
-    href: '/products',
-    icon: <ShoppingBagIcon />,
-  },
-  {
-    key: 'website-apps',
-    label: 'Website Apps',
-    href: '/website-apps',
-    icon: <AppsIcon />,
-  },
-  {
-    key: 'enterprise',
-    label: 'Enterprise',
-    href: '/enterprise',
-    icon: <BusinessIcon />,
   },
   {
     key: 'live',
