@@ -37,9 +37,11 @@ export const getStaticProps = async () => {
 
 const PAGE_SIZE = 7;
 
+import { useDarkMode } from '../hooks/useDarkMode';
+
 function PostPreview(props: BlogPost) {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const isDark = useDarkMode();
 
   return (
     <React.Fragment>
@@ -179,7 +181,7 @@ function PostPreview(props: BlogPost) {
 export default function Blog(props: InferGetStaticPropsType<typeof getStaticProps>) {
   const router = useRouter();
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const isDark = useDarkMode();
   const postListRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const [selectedTags, setSelectedTags] = useState<Record<string, boolean>>({});

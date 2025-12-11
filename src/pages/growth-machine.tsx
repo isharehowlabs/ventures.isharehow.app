@@ -38,9 +38,11 @@ import {
   Favorite as FavoriteIcon,
 } from '@mui/icons-material';
 
+import { useDarkMode } from '../hooks/useDarkMode';
+
 export default function GrowthMachinePage() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const isDark = useDarkMode();
 
   const joinCoOperation = () => {
     window.location.href = '/demo?tier=builder';

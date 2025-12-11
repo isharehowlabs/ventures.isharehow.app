@@ -24,6 +24,7 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
+import { useDarkMode } from '../../../hooks/useDarkMode';
 import {
   TrendingUp,
   TrendingDown,
@@ -88,6 +89,7 @@ const COLORS = ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'
 
 export default function AnalyticsActivity() {
   const theme = useTheme();
+  const isDark = useDarkMode();
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
@@ -234,7 +236,7 @@ export default function AnalyticsActivity() {
         sx={{ 
           p: 3, 
           mb: 3,
-          background: theme.palette.mode === 'dark' 
+          background: isDark 
             ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
             : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
           border: `1px solid ${theme.palette.divider}`,

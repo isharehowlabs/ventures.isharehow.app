@@ -173,7 +173,14 @@ export const ThemeProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
 
   const theme = useMemo(() => {
     console.log('[ThemeContext] Creating theme for:', resolvedMode);
-    return getTheme(resolvedMode);
+    const muiTheme = getTheme(resolvedMode);
+    
+    // Ensure MUI theme mode matches resolved mode
+    if (muiTheme.palette.mode !== resolvedMode) {
+      console.warn('[ThemeContext] MUI theme mode mismatch! Expected:', resolvedMode, 'Got:', muiTheme.palette.mode);
+    }
+    
+    return muiTheme;
   }, [resolvedMode]);
 
   return (

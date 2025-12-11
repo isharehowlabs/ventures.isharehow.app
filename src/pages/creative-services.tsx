@@ -27,9 +27,11 @@ import {
 } from '@mui/icons-material';
 import { getBackendUrl } from '../utils/backendUrl';
 
+import { useDarkMode } from '../hooks/useDarkMode';
+
 const CreativeServicesPage = () => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const isDark = useDarkMode();
   
   // Client Prospect Form State
   const [formData, setFormData] = useState({

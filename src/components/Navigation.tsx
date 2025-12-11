@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine';
 
@@ -156,47 +157,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   const router = useRouter();
   const theme = useTheme();
   const [homeExpanded, setHomeExpanded] = useState(false);
-  
-  // Ensure we have a valid theme mode - check both theme and DOM
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const themeMode = theme.palette.mode === 'dark';
-    const domTheme = document.documentElement.getAttribute('data-theme') === 'dark';
-    return themeMode || domTheme;
-  });
-  
-  // Sync theme detection with DOM changes
-  useEffect(() => {
-    const checkTheme = () => {
-      const themeMode = theme.palette.mode === 'dark';
-      const domTheme = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
-      setIsDarkMode(themeMode || domTheme);
-    };
-    
-    checkTheme();
-    
-    // Listen for theme changes
-    const observer = new MutationObserver(checkTheme);
-    if (typeof window !== 'undefined') {
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme', 'class'],
-      });
-    }
-    
-    // Also listen for theme change events
-    const handleThemeChange = () => checkTheme();
-    if (typeof window !== 'undefined') {
-      document.addEventListener('themechange', handleThemeChange);
-    }
-    
-    return () => {
-      observer.disconnect();
-      if (typeof window !== 'undefined') {
-        document.removeEventListener('themechange', handleThemeChange);
-      }
-    };
-  }, [theme.palette.mode]);
+  const isDarkMode = useDarkMode();
   
   // Get text colors that will always be visible
   const textPrimary = isDarkMode ? '#f7fafc' : '#212529';
@@ -311,12 +272,12 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                       mb: 0.5,
                       borderRadius: 1,
                       backgroundColor: (active === item.key || isSalesPageActive)
-                        ? theme.palette.mode === 'dark' 
+                        ? isDarkMode 
                           ? 'rgba(144, 202, 249, 0.16)' 
                           : 'rgba(25, 118, 210, 0.08)'
                         : 'transparent',
                       '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark'
+                        backgroundColor: isDarkMode
                           ? 'rgba(255, 255, 255, 0.08)'
                           : 'rgba(0, 0, 0, 0.04)',
                       },
@@ -362,12 +323,12 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                           mb: 0.25,
                           borderRadius: 1,
                           backgroundColor: active === salesPage.key 
-                            ? theme.palette.mode === 'dark' 
+                            ? isDarkMode 
                               ? 'rgba(144, 202, 249, 0.16)' 
                               : 'rgba(25, 118, 210, 0.08)'
                             : 'transparent',
                           '&:hover': {
-                            backgroundColor: theme.palette.mode === 'dark'
+                            backgroundColor: isDarkMode
                               ? 'rgba(255, 255, 255, 0.08)'
                               : 'rgba(0, 0, 0, 0.04)',
                           },
@@ -420,24 +381,24 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                     mb: 0.5,
                     borderRadius: 1,
                     backgroundColor: active === item.key 
-                      ? theme.palette.mode === 'dark' 
+                      ? isDarkMode 
                         ? 'rgba(144, 202, 249, 0.16)' 
                         : 'rgba(25, 118, 210, 0.08)'
                       : 'transparent',
                     '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark'
+                      backgroundColor: isDarkMode
                         ? 'rgba(255, 255, 255, 0.08)'
                         : 'rgba(0, 0, 0, 0.04)',
                     },
                     '&.Mui-selected': {
                       backgroundColor: active === item.key 
-                        ? theme.palette.mode === 'dark' 
+                        ? isDarkMode 
                           ? 'rgba(144, 202, 249, 0.16)' 
                           : 'rgba(25, 118, 210, 0.08)'
                         : 'transparent',
                       '&:hover': {
                         backgroundColor: active === item.key
-                          ? theme.palette.mode === 'dark' 
+                          ? isDarkMode 
                             ? 'rgba(144, 202, 249, 0.24)' 
                             : 'rgba(25, 118, 210, 0.12)'
                           : theme.palette.action.hover,
@@ -507,7 +468,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                   mb: 0.5,
                   borderRadius: 1,
                   '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark'
+                    backgroundColor: isDarkMode
                       ? 'rgba(255, 255, 255, 0.08)'
                       : 'rgba(0, 0, 0, 0.04)',
                   },

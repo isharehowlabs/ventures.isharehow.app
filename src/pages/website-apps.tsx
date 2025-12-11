@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import { useRouter } from 'next/router';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 const STORE_DOMAIN = 'isharehow.myshopify.com';
 const PRODUCT_HANDLE = 'website-apps'; // Update with actual Shopify product handle
@@ -84,6 +85,7 @@ const faqs = [
 export default function WebsiteAppsPage() {
   const theme = useTheme();
   const router = useRouter();
+  const isDark = useDarkMode();
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [aiFormData, setAiFormData] = useState({
     businessName: '',
@@ -142,7 +144,7 @@ export default function WebsiteAppsPage() {
             sx={{
               pt: { xs: 8, md: 12 },
               pb: { xs: 8, md: 12 },
-              background: theme.palette.mode === 'dark'
+              background: isDark
                 ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`
                 : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
               position: 'relative',
@@ -158,7 +160,7 @@ export default function WebsiteAppsPage() {
                       fontSize: { xs: '2.5rem', md: '4rem' },
                       fontWeight: 800,
                       mb: 3,
-                      background: theme.palette.mode === 'dark'
+                      background: isDark
                         ? `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`
                         : `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
                       backgroundClip: 'text',
@@ -545,7 +547,7 @@ export default function WebsiteAppsPage() {
             sx={{
               py: { xs: 8, md: 12 },
               bgcolor: 'background.paper',
-              background: theme.palette.mode === 'dark'
+              background: isDark
                 ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`
                 : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
             }}

@@ -33,6 +33,7 @@ import {
   GitHub as GitHubIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 interface TeamMember {
   name: string;
@@ -96,6 +97,7 @@ const stats = [
 
 export default function AboutPage() {
   const theme = useTheme();
+  const isDark = useDarkMode();
 
   return (
     <>
@@ -118,7 +120,7 @@ export default function AboutPage() {
               position: 'relative',
               pt: { xs: 8, md: 12 },
               pb: { xs: 6, md: 10 },
-              background: theme.palette.mode === 'dark'
+              background: isDark
                 ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`
                 : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
               overflow: 'hidden',
@@ -500,7 +502,7 @@ export default function AboutPage() {
           <Box
             sx={{
               py: 10,
-              background: theme.palette.mode === 'dark'
+              background: isDark
                 ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.15)} 100%)`
                 : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 100%)`,
             }}

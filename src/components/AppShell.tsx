@@ -31,6 +31,7 @@ import FocusTimer from './shared/FocusTimer';
 import Navigation, { type NavKey } from './Navigation';
 import { getBackendUrl } from '../utils/backendUrl';
 import { useAuth } from '../hooks/useAuth';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 const DRAWER_WIDTH = 240;
 const DRAWER_WIDTH_COLLAPSED = 64;
@@ -49,6 +50,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const router = useRouter();
+  const isDark = useDarkMode();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -106,7 +108,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
               bgcolor: 'transparent',
               color: theme.palette.text.secondary,
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' 
+                bgcolor: isDark 
                   ? 'rgba(255, 255, 255, 0.08)' 
                   : 'rgba(0, 0, 0, 0.04)',
                 color: theme.palette.text.primary,
@@ -138,7 +140,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
         position="fixed"
         sx={{
           zIndex: 1201,
-          backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.background.paper,
+          backgroundColor: theme.palette.background.paper,
           color: theme.palette.text.primary,
           borderBottom: `1px solid ${theme.palette.divider}`,
         }}

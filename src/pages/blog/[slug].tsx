@@ -66,9 +66,11 @@ interface BlogPostPageProps {
   };
 }
 
+import { useDarkMode } from '../../hooks/useDarkMode';
+
 export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const isDark = useDarkMode();
   const [post, setPost] = React.useState(staticPost);
 
   // Check localStorage for cached post on mount

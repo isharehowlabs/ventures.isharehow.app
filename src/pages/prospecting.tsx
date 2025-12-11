@@ -36,9 +36,11 @@ import {
 import BeforeAfterMockup from '../components/landing/BeforeAfterMockup';
 import { Fade, Grow, Zoom } from '@mui/material';
 
+import { useDarkMode } from '../hooks/useDarkMode';
+
 export default function ProspectingPage() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const isDark = useDarkMode();
   const [timeLeft, setTimeLeft] = useState({ hours: 48, minutes: 0, seconds: 0 });
 
   useEffect(() => {
