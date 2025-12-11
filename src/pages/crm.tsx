@@ -1409,7 +1409,7 @@ export default function CRMDashboard() {
                       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                         <Box sx={{ width: '100%' }}>
                           <Box sx={{ mb: 3 }}>
-                            <TasksPanel height={780} />
+                            <TasksPanel height={1131} />
                           </Box>
                         </Box>
                       </Box>
