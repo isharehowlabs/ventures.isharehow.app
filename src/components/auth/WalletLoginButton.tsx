@@ -177,7 +177,7 @@ export function WalletLoginButton() {
           .wallet-address {
             font-family: monospace;
             font-size: 14px;
-            color: #666;
+            color: #8a8f9e;
             margin-bottom: 20px;
             padding: 8px 12px;
             background: #f5f5f5;
@@ -218,7 +218,7 @@ export function WalletLoginButton() {
             display: block;
             margin-top: 4px;
             font-size: 12px;
-            color: #666;
+            color: #8a8f9e;
           }
           
           .error-message {
@@ -360,7 +360,7 @@ export function WalletLoginButton() {
           margin-top: 8px;
           text-align: center;
           font-size: 13px;
-          color: #666;
+          color: #8a8f9e;
         }
         
         .wallet-login-success {

@@ -63,7 +63,7 @@ const getTheme = (mode: 'light' | 'dark') => {
     // Default MUI text colors
     text: {
       primary: mode === 'light' ? '#212529' : '#f7fafc',
-      secondary: mode === 'light' ? '#6c757d' : '#cbd5e0',
+      secondary: mode === 'light' ? '#8b95a8' : '#cbd5e0',
       disabled: mode === 'light' ? 'rgba(33, 37, 41, 0.38)' : 'rgba(247, 250, 252, 0.5)',
     },
     divider: mode === 'light' ? '#dee2e6' : '#334155',
@@ -141,7 +141,7 @@ const getTheme = (mode: 'light' | 'dark') => {
         body: {
           backgroundColor: mode === 'light' ? '#f5f5f5' : '#0f172a',
           color: mode === 'light' ? '#212529' : '#f7fafc',
-          scrollbarColor: mode === 'light' ? '#bbb #f5f5f5' : '#6b6b6b #1e293b',
+          scrollbarColor: mode === 'light' ? '#bbb #f5f5f5' : '#8a94a6 #1e293b',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
             width: 10,
             height: 10,

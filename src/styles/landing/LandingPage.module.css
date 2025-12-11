@@ -176,7 +176,7 @@
 }
 
 :global([data-theme="light"]) .statLabel {
-  color: #6c757d !important;
+  color: #8b95a8 !important;
 }
 
 :global([data-theme="dark"]) .statLabel {
@@ -210,7 +210,7 @@
 }
 
 :global([data-theme="light"]) .sectionSubtitle {
-  color: #6c757d !important;
+  color: #8b95a8 !important;
 }
 
 :global([data-theme="dark"]) .sectionSubtitle {

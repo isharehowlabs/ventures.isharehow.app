@@ -51,7 +51,7 @@ export default function GameTypeSelection({ roomCode, onSelectGame }: GameTypeSe
       description: 'Draw and guess in real-time',
       duration: '90 seconds per round',
       players: '2-16 players',
-      color: '#6c757d',
+      color: '#8b95a8',
     },
     {
       type: 'puzzle' as GameType,

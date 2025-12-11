@@ -184,7 +184,7 @@ const AuraBar: React.FC<AuraBarProps> = ({
         <Typography 
           variant="caption" 
           sx={{ 
-            color: '#666',
+            color: '#8a8f9e',
             display: 'block',
             textAlign: 'right',
             mt: 0.5,

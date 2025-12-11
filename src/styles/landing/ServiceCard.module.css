@@ -72,7 +72,7 @@
 }
 
 .serviceCard p {
-  color: var(--text-secondary, #6c757d);
+  color: var(--text-secondary, #8b95a8);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -95,7 +95,7 @@
 
 .serviceFeatures li {
   font-size: 13px;
-  color: var(--text-secondary, #6c757d);
+  color: var(--text-secondary, #8b95a8);
   margin-bottom: 8px;
   padding-left: 20px;
   position: relative;

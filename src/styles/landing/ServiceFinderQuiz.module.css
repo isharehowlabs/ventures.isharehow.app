@@ -24,7 +24,7 @@
 
 .subtitle {
   font-size: 18px;
-  color: #6c757d;
+  color: #8b95a8;
   max-width: 600px;
   margin: 0 auto;
   line-height: 1.6;
@@ -103,7 +103,7 @@
 
 .questionSubtitle {
   font-size: 16px;
-  color: #6c757d;
+  color: #8b95a8;
   margin: 0;
 }
 
@@ -207,7 +207,7 @@
 
 .optionDescription {
   font-size: 14px;
-  color: #6c757d;
+  color: #8b95a8;
   line-height: 1.5;
 }
 
@@ -387,7 +387,7 @@
 
 .priorityBadge {
   background: #f8f9fa;
-  color: #6c757d;
+  color: #8b95a8;
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 12px;
@@ -402,7 +402,7 @@
 
 .resultDescription {
   font-size: 16px;
-  color: #6c757d;
+  color: #8b95a8;
   line-height: 1.6;
   margin: 0;
 }
@@ -413,7 +413,7 @@
 
 .resultDescriptionSmall {
   font-size: 15px;
-  color: #6c757d;
+  color: #8b95a8;
   line-height: 1.5;
   margin: 0;
 }
@@ -466,7 +466,7 @@
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: #6c757d;
+  color: #8b95a8;
 }
 
 :global([data-theme="dark"]) .featureCompact {

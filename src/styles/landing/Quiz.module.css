@@ -68,7 +68,7 @@
 }
 
 .quizQuestionSubtitle {
-  color: #6c757d;
+  color: #8b95a8;
   font-size: 14px;
   margin-bottom: 24px;
 }
@@ -170,7 +170,7 @@
 
 .quizOptionDesc {
   font-size: 13px;
-  color: #6c757d;
+  color: #8b95a8;
 }
 
 :global([data-theme="dark"]) .quizOptionDesc {

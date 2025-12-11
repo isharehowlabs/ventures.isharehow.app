@@ -1,0 +1,11 @@
+__turbopack_load_page_chunks__("/prospecting", [
+  "static/chunks/833fc6609aa38ef1.js",
+  "static/chunks/55db2730b9138f95.js",
+  "static/chunks/b29a5c5327f7cad2.js",
+  "static/chunks/b2f8b29b09b022ec.js",
+  "static/chunks/500474a7811f5f89.js",
+  "static/chunks/74b7d85100fbc8d6.js",
+  "static/chunks/5f2895e4173b81aa.js",
+  "static/chunks/1d589727c3a3643f.css",
+  "static/chunks/turbopack-409092d2cd625b38.js"
+])
