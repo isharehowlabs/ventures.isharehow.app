@@ -134,15 +134,21 @@ const AppShell = ({ active, children }: AppShellProps) => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* AppBar - Fixed dark color */}
+      {/* AppBar - Fixed dark color - positioned after drawer */}
       <AppBar
         position="fixed"
         className="app-shell-header"
         sx={{
-          zIndex: 1201,
+          zIndex: 1200,
           backgroundColor: SHELL_COLORS.header,
           color: SHELL_COLORS.textPrimary,
           borderBottom: `1px solid ${SHELL_COLORS.border}`,
+          left: { xs: 0, md: sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH },
+          width: { xs: '100%', md: `calc(100% - ${sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH}px)` },
+          transition: theme.transitions.create(['left', 'width'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
         }}
         elevation={0}
       >
@@ -343,10 +349,13 @@ const AppShell = ({ active, children }: AppShellProps) => {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH,
-              zIndex: 1200,
+              zIndex: 1300,
               backgroundColor: SHELL_COLORS.sidebar,
               color: SHELL_COLORS.textPrimary,
               borderRight: `1px solid ${SHELL_COLORS.border}`,
+              top: 0,
+              height: '100vh',
+              position: 'fixed',
               transition: theme.transitions.create('width', {
                 easing: theme.transitions.easing.sharp,
                 duration: theme.transitions.duration.enteringScreen,

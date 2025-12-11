@@ -37,7 +37,7 @@ import { useState, useEffect } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { SHELL_COLORS } from '../isharehowTheme';
 
-type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine' | 'dashboard';
 
 interface NavigationItem {
   key: NavKey;
@@ -158,6 +158,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   const router = useRouter();
   const theme = useTheme();
   const [homeExpanded, setHomeExpanded] = useState(false);
+  const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const isDarkMode = useDarkMode();
   
   // Get text colors - use fixed shell colors
@@ -177,12 +178,29 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   // Check if any sales page is active
   const isSalesPageActive = salesPages.some(page => active === page.key);
 
+  // Dashboard sub-items
+  const dashboardPages = [
+    { key: 'creative' as NavKey, label: 'Creative Dashboard', href: '/creative', icon: <CreativeIcon /> },
+    { key: 'rise' as NavKey, label: 'RISE Dashboard', href: '/rise', icon: <RiseIcon /> },
+    { key: 'learning-hub' as NavKey, label: 'Learning Dashboard', href: '/learning-hub', icon: <LearningHubIcon /> },
+  ];
+
+  // Check if any dashboard page is active
+  const isDashboardPageActive = dashboardPages.some(page => active === page.key);
+
   // Auto-expand Home if a sales page is active
   useEffect(() => {
     if (isSalesPageActive && !homeExpanded) {
       setHomeExpanded(true);
     }
   }, [isSalesPageActive, homeExpanded]);
+
+  // Auto-expand Dashboard if a dashboard page is active
+  useEffect(() => {
+    if (isDashboardPageActive && !dashboardExpanded) {
+      setDashboardExpanded(true);
+    }
+  }, [isDashboardPageActive, dashboardExpanded]);
 
   const handleNavigate = (href: string) => {
     router.push(href);
@@ -199,8 +217,23 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
     }
   };
 
+  const handleDashboardClick = () => {
+    if (collapsed) {
+      router.push('/creative');
+    } else {
+      setDashboardExpanded(!dashboardExpanded);
+      if (!dashboardExpanded) {
+        router.push('/creative');
+      }
+    }
+  };
+
   const filteredItems = navigationItems.filter(item => {
     if (item.authRequired && !isAuthenticated) {
+      return false;
+    }
+    // Filter out individual dashboard items since they're now sub-items of Dashboard
+    if (item.key === 'creative' || item.key === 'rise' || item.key === 'learning-hub') {
       return false;
     }
     return true;
@@ -258,6 +291,127 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
         }}
       >
         {filteredItems.map((item) => {
+          // Special handling for Dashboard item with nested dashboard pages
+          if (item.key === 'dashboard' && !collapsed) {
+            return (
+              <Box key={item.key}>
+                <Tooltip title={collapsed ? item.label : ''} placement="right">
+                  <ListItemButton
+                    selected={active === item.key || isDashboardPageActive}
+                    onClick={handleDashboardClick}
+                    sx={{
+                      minHeight: 48,
+                      justifyContent: 'initial',
+                      px: 2.5,
+                      mx: 0,
+                      mb: 0.5,
+                      borderRadius: 1,
+                      backgroundColor: (active === item.key || isDashboardPageActive)
+                        ? isDarkMode 
+                          ? 'rgba(144, 202, 249, 0.16)' 
+                          : 'rgba(25, 118, 210, 0.08)'
+                        : 'transparent',
+                      '&:hover': {
+                        backgroundColor: isDarkMode
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(0, 0, 0, 0.04)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 40,
+                        mr: 2,
+                        justifyContent: 'center',
+                        color: (active === item.key || isDashboardPageActive)
+                          ? theme.palette.primary.main 
+                          : textSecondary,
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontWeight: (active === item.key || isDashboardPageActive) ? 600 : 500,
+                        fontSize: '0.875rem',
+                        sx: {
+                          color: (active === item.key || isDashboardPageActive)
+                            ? theme.palette.primary.main 
+                            : textPrimary,
+                        },
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        ml: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: (active === item.key || isDashboardPageActive)
+                          ? theme.palette.primary.main 
+                          : textSecondary,
+                      }}
+                    >
+                      {dashboardExpanded ? <ExpandLess /> : <ExpandMore />}
+                    </Box>
+                  </ListItemButton>
+                </Tooltip>
+                <Collapse in={dashboardExpanded} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {dashboardPages.map((dashboardPage) => (
+                      <ListItemButton
+                        key={dashboardPage.key}
+                        selected={active === dashboardPage.key}
+                        onClick={() => handleNavigate(dashboardPage.href)}
+                        sx={{
+                          pl: 6,
+                          minHeight: 40,
+                          mb: 0.25,
+                          borderRadius: 1,
+                          backgroundColor: active === dashboardPage.key 
+                            ? isDarkMode 
+                              ? 'rgba(144, 202, 249, 0.16)' 
+                              : 'rgba(25, 118, 210, 0.08)'
+                            : 'transparent',
+                          '&:hover': {
+                            backgroundColor: isDarkMode
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.04)',
+                          },
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 32,
+                            mr: 2,
+                            justifyContent: 'center',
+                            color: active === dashboardPage.key 
+                              ? theme.palette.primary.main 
+                              : textSecondary,
+                          }}
+                        >
+                          {dashboardPage.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={dashboardPage.label}
+                          primaryTypographyProps={{
+                            fontWeight: active === dashboardPage.key ? 600 : 400,
+                            fontSize: '0.8125rem',
+                            sx: {
+                              color: active === dashboardPage.key 
+                                ? theme.palette.primary.main 
+                                : textSecondary,
+                            },
+                          }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Collapse>
+              </Box>
+            );
+          }
+
           // Special handling for Home item with nested sales pages
           if (item.key === 'home' && !collapsed) {
             return (
@@ -309,7 +463,18 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                         },
                       }}
                     />
-                    {homeExpanded ? <ExpandLess /> : <ExpandMore />}
+                    <Box
+                      sx={{
+                        ml: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: (active === item.key || isSalesPageActive)
+                          ? theme.palette.primary.main 
+                          : textSecondary,
+                      }}
+                    >
+                      {homeExpanded ? <ExpandLess /> : <ExpandMore />}
+                    </Box>
                   </ListItemButton>
                 </Tooltip>
                 <Collapse in={homeExpanded} timeout="auto" unmountOnExit>
