@@ -1,7 +1,13 @@
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
-// MUI X Default Colors - Standard Material-UI Palette
-// Reference: https://mui.com/material-ui/customization/palette/
+// Shell colors - fixed for consistency across all pages
+const SHELL_COLORS = {
+  header: '#0a0e1a',
+  sidebar: '#151b2e',
+  border: '#1e293b',
+  textPrimary: '#f7fafc',
+  textSecondary: '#cbd5e0',
+};
 
 const getTheme = (mode: 'light' | 'dark') => {
   const baseTheme = createTheme({
@@ -49,18 +55,24 @@ const getTheme = (mode: 'light' | 'dark') => {
       dark: '#1b5e20',
       contrastText: '#fff',
     },
-    // Default MUI backgrounds - matching CSS variables from index.css
+    // Backgrounds - content area (not shell)
     background: {
-      default: mode === 'light' ? '#FFFFFF' : '#0f172a',
+      default: mode === 'light' ? '#f5f5f5' : '#0f172a',
       paper: mode === 'light' ? '#FFFFFF' : '#1e293b',
     },
-    // Default MUI text colors - matching CSS variables from index.css
+    // Default MUI text colors
     text: {
       primary: mode === 'light' ? '#212529' : '#f7fafc',
       secondary: mode === 'light' ? '#6c757d' : '#cbd5e0',
       disabled: mode === 'light' ? 'rgba(33, 37, 41, 0.38)' : 'rgba(247, 250, 252, 0.5)',
     },
     divider: mode === 'light' ? '#dee2e6' : '#334155',
+    // Custom colors for shell
+    ...(mode === 'dark' && {
+      custom: {
+        shell: SHELL_COLORS,
+      },
+    }),
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
@@ -127,9 +139,9 @@ const getTheme = (mode: 'light' | 'dark') => {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: mode === 'light' ? '#FFFFFF' : '#0f172a',
+          backgroundColor: mode === 'light' ? '#f5f5f5' : '#0f172a',
           color: mode === 'light' ? '#212529' : '#f7fafc',
-          scrollbarColor: mode === 'light' ? '#bbb #FFFFFF' : '#6b6b6b #1e293b',
+          scrollbarColor: mode === 'light' ? '#bbb #f5f5f5' : '#6b6b6b #1e293b',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
             width: 10,
             height: 10,
@@ -147,11 +159,11 @@ const getTheme = (mode: 'light' | 'dark') => {
             },
           },
           '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
-            backgroundColor: mode === 'light' ? '#FFFFFF' : '#1e293b',
+            backgroundColor: mode === 'light' ? '#f5f5f5' : '#1e293b',
           },
         },
         '#__next': {
-          backgroundColor: mode === 'light' ? '#FFFFFF' : '#0f172a',
+          backgroundColor: mode === 'light' ? '#f5f5f5' : '#0f172a',
           minHeight: '100vh',
         },
       },
@@ -164,6 +176,7 @@ const getTheme = (mode: 'light' | 'dark') => {
 
 export const lightTheme = getTheme('light');
 export const darkTheme = getTheme('dark');
+export { SHELL_COLORS };
 
 // Default export for backward compatibility
 export default getTheme;

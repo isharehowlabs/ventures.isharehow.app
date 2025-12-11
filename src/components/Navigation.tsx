@@ -35,6 +35,7 @@ import {
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { SHELL_COLORS } from '../isharehowTheme';
 
 type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine';
 
@@ -159,9 +160,10 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   const [homeExpanded, setHomeExpanded] = useState(false);
   const isDarkMode = useDarkMode();
   
-  // Get text colors that will always be visible
-  const textPrimary = isDarkMode ? '#f7fafc' : '#212529';
-  const textSecondary = isDarkMode ? '#cbd5e0' : '#6c757d';
+  // Get text colors - use fixed shell colors
+  const textPrimary = SHELL_COLORS.textPrimary;
+  const textSecondary = SHELL_COLORS.textSecondary;
+  // Legacy dark mode check (keeping for compatibility)
 
   // Sales pages sub-items for Home
   const salesPages = [
@@ -211,7 +213,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
         height: '100%', 
         display: 'flex', 
         flexDirection: 'column',
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: SHELL_COLORS.sidebar,
         color: theme.palette.text.primary,
       }}
     >
@@ -223,7 +225,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            borderBottom: `1px solid ${theme.palette.divider}`,
+            borderBottom: `1px solid ${SHELL_COLORS.border}`,
             minHeight: 64,
           }}
         >
@@ -251,7 +253,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
           px: collapsed ? 0.5 : 1, 
           py: 1,
           flexGrow: 1,
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: SHELL_COLORS.sidebar,
           color: theme.palette.text.primary,
         }}
       >
@@ -439,7 +441,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                   sx={{ 
                     my: 1.5,
                     mx: collapsed ? 1 : 2,
-                    borderColor: theme.palette.divider,
+                    borderColor: SHELL_COLORS.border,
                   }} 
                 />
               )}
@@ -454,7 +456,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
               sx={{ 
                 my: 1.5,
                 mx: collapsed ? 1 : 2,
-                borderColor: theme.palette.divider,
+                borderColor: SHELL_COLORS.border,
               }} 
             />
             <Tooltip title={collapsed ? 'Sign In' : ''} placement="right">

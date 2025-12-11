@@ -8,6 +8,7 @@ import { initAnalytics, trackPageView } from '../utils/analytics';
 import ErrorBoundary from '../components/ErrorBoundary';
 import '../index.css';
 import '../styles/dashboard.css';
+import '../styles/shell.css';
 
 function AppContent({ Component, pageProps }: AppProps) {
   const router = useRouter();

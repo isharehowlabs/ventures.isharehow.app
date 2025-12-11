@@ -16,12 +16,14 @@ class VentureService {
   async getVentures(): Promise<Venture[]> {
     const response = await fetch(API_BASE, {
       headers: getAuthHeaders(),
+      credentials: 'include', // Include cookies for session-based auth
     });
     
     if (!response.ok) {
       if (response.status === 401) {
-        window.location.href = '/';
-        throw new Error('Unauthorized');
+        // Don't redirect - let the component handle the error
+        // The ProtectedRoute component will handle authentication
+        throw new Error('Unauthorized - Please log in');
       }
       throw new Error('Failed to fetch ventures');
     }

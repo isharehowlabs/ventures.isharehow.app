@@ -624,6 +624,7 @@ export default function CRMDashboard() {
                 <Tabs
                   value={activeTab}
                   onChange={(e, newValue) => {
+                    e.preventDefault();
                     setActiveTab(newValue);
                     setPage(0);
                     setSearchQuery('');

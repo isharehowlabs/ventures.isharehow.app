@@ -1,0 +1,76 @@
+/* Fixed Dark Vertical Shell Styles - Prevents Color Flipping */
+
+/* These colors are fixed and won't change based on theme or page context */
+:root {
+  --shell-bg-dark: #0a0e1a;
+  --shell-sidebar-dark: #151b2e;
+  --shell-header-height: 56px;
+  --shell-text-primary: #f7fafc;
+  --shell-text-secondary: #cbd5e0;
+  --shell-border: #1e293b;
+  --shell-hover: rgba(255, 255, 255, 0.08);
+  --shell-active: rgba(144, 202, 249, 0.16);
+}
+
+/* Force shell components to use fixed dark colors */
+.app-shell-header {
+  background-color: var(--shell-bg-dark) !important;
+  border-bottom: 1px solid var(--shell-border) !important;
+  color: var(--shell-text-primary) !important;
+}
+
+.app-shell-sidebar {
+  background-color: var(--shell-sidebar-dark) !important;
+  border-right: 1px solid var(--shell-border) !important;
+  color: var(--shell-text-primary) !important;
+}
+
+/* Navigation items in sidebar */
+.app-shell-sidebar .MuiListItemIcon-root {
+  color: var(--shell-text-secondary);
+}
+
+.app-shell-sidebar .MuiListItemText-primary {
+  color: var(--shell-text-primary);
+}
+
+/* Dropdown menus from header */
+.app-shell-menu {
+  background-color: var(--shell-sidebar-dark) !important;
+  border: 1px solid var(--shell-border) !important;
+}
+
+.app-shell-menu .MuiMenuItem-root {
+  color: var(--shell-text-primary) !important;
+}
+
+.app-shell-menu .MuiMenuItem-root:hover {
+  background-color: var(--shell-hover) !important;
+}
+
+.app-shell-menu .MuiDivider-root {
+  border-color: var(--shell-border) !important;
+}
+
+.app-shell-menu .MuiListItemIcon-root {
+  color: var(--shell-text-primary) !important;
+}
+
+/* Ensure toolbar items are visible */
+.app-shell-header .MuiToolbar-root {
+  min-height: var(--shell-header-height) !important;
+}
+
+.app-shell-header .MuiIconButton-root {
+  color: var(--shell-text-primary);
+}
+
+.app-shell-header .MuiIconButton-root:hover {
+  background-color: var(--shell-hover);
+}
+
+/* Collapsed sidebar logo area */
+.app-shell-sidebar-logo {
+  background-color: var(--shell-sidebar-dark) !important;
+  border-bottom: 1px solid var(--shell-border) !important;
+}

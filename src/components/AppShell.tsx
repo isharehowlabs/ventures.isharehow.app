@@ -32,10 +32,11 @@ import Navigation, { type NavKey } from './Navigation';
 import { getBackendUrl } from '../utils/backendUrl';
 import { useAuth } from '../hooks/useAuth';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { SHELL_COLORS } from '../isharehowTheme';
 
 const DRAWER_WIDTH = 240;
 const DRAWER_WIDTH_COLLAPSED = 64;
-const APPBAR_HEIGHT = 64;
+const APPBAR_HEIGHT = 56; // Reduced from 64 for "short header" design
 
 interface AppShellProps {
   active: NavKey;
@@ -81,8 +82,6 @@ const AppShell = ({ active, children }: AppShellProps) => {
   };
 
   const handleLogin = () => {
-    // Redirect to login page (or current page if it shows login form)
-    // The ProtectedRoute component will show the login form
     router.push('/creative?tab=cowork');
   };
 
@@ -95,23 +94,23 @@ const AppShell = ({ active, children }: AppShellProps) => {
       {/* Collapse Toggle Button - Top */}
       {!isMobile && (
         <Box
+          className="app-shell-sidebar-logo"
           sx={{
             display: 'flex',
             justifyContent: sidebarCollapsed ? 'center' : 'flex-end',
             p: 1,
-            borderBottom: `1px solid ${theme.palette.divider}`,
+            bgcolor: SHELL_COLORS.sidebar,
+            borderBottom: `1px solid ${SHELL_COLORS.border}`,
           }}
         >
           <IconButton
             onClick={handleSidebarToggle}
             sx={{
               bgcolor: 'transparent',
-              color: theme.palette.text.secondary,
+              color: SHELL_COLORS.textSecondary,
               '&:hover': {
-                bgcolor: isDark 
-                  ? 'rgba(255, 255, 255, 0.08)' 
-                  : 'rgba(0, 0, 0, 0.04)',
-                color: theme.palette.text.primary,
+                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                color: SHELL_COLORS.textPrimary,
               },
               width: 32,
               height: 32,
@@ -135,25 +134,30 @@ const AppShell = ({ active, children }: AppShellProps) => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* AppBar */}
+      {/* AppBar - Fixed dark color */}
       <AppBar
         position="fixed"
+        className="app-shell-header"
         sx={{
           zIndex: 1201,
-          backgroundColor: theme.palette.background.paper,
-          color: theme.palette.text.primary,
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          backgroundColor: SHELL_COLORS.header,
+          color: SHELL_COLORS.textPrimary,
+          borderBottom: `1px solid ${SHELL_COLORS.border}`,
         }}
-        elevation={1}
+        elevation={0}
       >
-        <Toolbar sx={{ minHeight: APPBAR_HEIGHT }}>
+        <Toolbar sx={{ minHeight: `${APPBAR_HEIGHT}px !important`, height: APPBAR_HEIGHT }}>
           {/* Mobile menu button */}
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ 
+              mr: 2, 
+              display: { md: 'none' },
+              color: SHELL_COLORS.textPrimary,
+            }}
           >
             <MenuIcon />
           </IconButton>
@@ -189,7 +193,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
               <>
                 <IconButton
                   onClick={handleUserMenuOpen}
-                  sx={{ ml: 1 }}
+                  sx={{ ml: 1, color: SHELL_COLORS.textPrimary }}
                   aria-label="user menu"
                 >
                   <Avatar
@@ -202,6 +206,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
                 </IconButton>
 
                 <Menu
+                  className="app-shell-menu"
                   anchorEl={userMenuAnchor}
                   open={Boolean(userMenuAnchor)}
                   onClose={handleUserMenuClose}
@@ -211,60 +216,63 @@ const AppShell = ({ active, children }: AppShellProps) => {
                     sx: { 
                       minWidth: 200, 
                       mt: 1,
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      border: `1px solid ${theme.palette.divider}`,
+                      backgroundColor: SHELL_COLORS.sidebar,
+                      color: SHELL_COLORS.textPrimary,
+                      border: `1px solid ${SHELL_COLORS.border}`,
                     },
                   }}
                 >
                   <Box sx={{ px: 2, py: 1.5 }}>
-                    <Typography variant="subtitle1" fontWeight={600}>
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ color: SHELL_COLORS.textPrimary }}>
                       {user?.name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: SHELL_COLORS.textSecondary }}>
                       {user?.email}
                     </Typography>
                   </Box>
-                  <Divider sx={{ borderColor: theme.palette.divider }} />
+                  <Divider sx={{ borderColor: SHELL_COLORS.border }} />
                   <MenuItem 
                     onClick={handleProfileClick}
                     sx={{
+                      color: SHELL_COLORS.textPrimary,
                       '&:hover': {
-                        backgroundColor: theme.palette.action.hover,
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
                       },
                     }}
                   >
                     <ListItemIcon>
-                      <PersonIcon fontSize="small" sx={{ color: theme.palette.text.primary }} />
+                      <PersonIcon fontSize="small" sx={{ color: SHELL_COLORS.textPrimary }} />
                     </ListItemIcon>
-                    <Typography sx={{ color: theme.palette.text.primary }}>Profile</Typography>
+                    <Typography>Profile</Typography>
                   </MenuItem>
                   <MenuItem 
                     onClick={handleSettingsClick}
                     sx={{
+                      color: SHELL_COLORS.textPrimary,
                       '&:hover': {
-                        backgroundColor: theme.palette.action.hover,
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
                       },
                     }}
                   >
                     <ListItemIcon>
-                      <SettingsIcon fontSize="small" sx={{ color: theme.palette.text.primary }} />
+                      <SettingsIcon fontSize="small" sx={{ color: SHELL_COLORS.textPrimary }} />
                     </ListItemIcon>
-                    <Typography sx={{ color: theme.palette.text.primary }}>Settings</Typography>
+                    <Typography>Settings</Typography>
                   </MenuItem>
-                  <Divider sx={{ borderColor: theme.palette.divider }} />
+                  <Divider sx={{ borderColor: SHELL_COLORS.border }} />
                   <MenuItem 
                     onClick={handleLogout}
                     sx={{
+                      color: SHELL_COLORS.textPrimary,
                       '&:hover': {
-                        backgroundColor: theme.palette.action.hover,
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
                       },
                     }}
                   >
                     <ListItemIcon>
-                      <LogoutIcon fontSize="small" sx={{ color: theme.palette.text.primary }} />
+                      <LogoutIcon fontSize="small" sx={{ color: SHELL_COLORS.textPrimary }} />
                     </ListItemIcon>
-                    <Typography sx={{ color: theme.palette.text.primary }}>Logout</Typography>
+                    <Typography>Logout</Typography>
                   </MenuItem>
                 </Menu>
               </>
@@ -302,7 +310,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better mobile performance
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', md: 'none' },
@@ -310,17 +318,17 @@ const AppShell = ({ active, children }: AppShellProps) => {
               boxSizing: 'border-box',
               width: DRAWER_WIDTH,
               zIndex: 1200,
-              backgroundColor: theme.palette.background.paper,
-              color: theme.palette.text.primary,
-              borderRight: `1px solid ${theme.palette.divider}`,
+              backgroundColor: SHELL_COLORS.sidebar,
+              color: SHELL_COLORS.textPrimary,
+              borderRight: `1px solid ${SHELL_COLORS.border}`,
             },
           }}
         >
           <Toolbar 
             sx={{ 
               minHeight: APPBAR_HEIGHT,
-              backgroundColor: theme.palette.background.paper,
-              color: theme.palette.text.primary,
+              backgroundColor: SHELL_COLORS.sidebar,
+              color: SHELL_COLORS.textPrimary,
             }} 
           />
           {drawerContent}
@@ -328,6 +336,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
 
         {/* Desktop drawer */}
         <Drawer
+          className="app-shell-sidebar"
           variant="permanent"
           sx={{
             display: { xs: 'none', md: 'block' },
@@ -335,9 +344,9 @@ const AppShell = ({ active, children }: AppShellProps) => {
               boxSizing: 'border-box',
               width: sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH,
               zIndex: 1200,
-              backgroundColor: theme.palette.background.paper,
-              color: theme.palette.text.primary,
-              borderRight: `1px solid ${theme.palette.divider}`,
+              backgroundColor: SHELL_COLORS.sidebar,
+              color: SHELL_COLORS.textPrimary,
+              borderRight: `1px solid ${SHELL_COLORS.border}`,
               transition: theme.transitions.create('width', {
                 easing: theme.transitions.easing.sharp,
                 duration: theme.transitions.duration.enteringScreen,
@@ -350,8 +359,8 @@ const AppShell = ({ active, children }: AppShellProps) => {
           <Toolbar 
             sx={{ 
               minHeight: APPBAR_HEIGHT,
-              backgroundColor: theme.palette.background.paper,
-              color: theme.palette.text.primary,
+              backgroundColor: SHELL_COLORS.sidebar,
+              color: SHELL_COLORS.textPrimary,
             }} 
           />
           {drawerContent}

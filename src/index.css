@@ -1,23 +1,28 @@
 /* Minimal CSS - Material UI handles everything else */
 
-/* NO default variables in :root - rely ONLY on data-theme attribute */
+/* Shell colors - fixed and consistent */
 :root {
   color-scheme: light dark;
+  --shell-bg-dark: #0a0e1a;
+  --shell-sidebar-dark: #151b2e;
+  --shell-border: #1e293b;
+  --shell-text-primary: #f7fafc;
+  --shell-text-secondary: #cbd5e0;
 }
 
-/* Light mode - explicit data-theme attribute required */
+/* Light mode - content area */
 html[data-theme="light"] {
-  --bg-default: #FFFFFF;
+  --bg-default: #f5f5f5;
   --bg-paper: #FFFFFF;
   --text-primary: #212529;
   --text-secondary: #6c757d;
   --border-color: #dee2e6;
-  background-color: #FFFFFF;
+  background-color: #f5f5f5;
   color: #212529;
   color-scheme: light;
 }
 
-/* Dark mode - explicit data-theme attribute required */
+/* Dark mode - content area (not shell) */
 html[data-theme="dark"] {
   --bg-default: #0f172a;
   --bg-paper: #1e293b;
@@ -40,19 +45,16 @@ html, body, #root, #__next {
   width: 100%;
 }
 
-/* Ensure body background matches theme */
+/* Ensure body background matches content area theme */
 html[data-theme="dark"] body {
   background-color: #0f172a;
   color: #f7fafc;
 }
 
 html[data-theme="light"] body {
-  background-color: #ffffff;
+  background-color: #f5f5f5;
   color: #212529;
 }
-
-/* Body styles are handled by MUI CssBaseline based on theme mode */
-/* Removing inherit to prevent conflicts with theme switching */
 
 /* Prevent CSS transitions during theme changes to avoid flashing */
 .theme-transitioning,
