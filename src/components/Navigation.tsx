@@ -185,38 +185,41 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
         color: theme.palette.text.primary,
       }}
     >
-      {!collapsed && (
+      {/* Logo/Icon when collapsed */}
+      {collapsed && (
         <Box 
           sx={{ 
             p: 2, 
-            textAlign: 'center',
-            backgroundColor: theme.palette.background.paper,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
             borderBottom: `1px solid ${theme.palette.divider}`,
+            minHeight: 64,
           }}
         >
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              color: theme.palette.primary.main,
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              borderRadius: 1,
+              bgcolor: 'primary.main',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
               fontWeight: 'bold',
+              fontSize: '0.875rem',
             }}
           >
-            iShareHow
-          </Typography>
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: theme.palette.text.secondary,
-            }}
-          >
-            Ventures
-          </Typography>
+            IH
+          </Box>
         </Box>
       )}
       
       <List 
         sx={{ 
-          px: 1, 
+          px: collapsed ? 0.5 : 1, 
+          py: 1,
           flexGrow: 1,
           backgroundColor: theme.palette.background.paper,
           color: theme.palette.text.primary,
@@ -231,29 +234,44 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                 sx={{
                   minHeight: 48,
                   justifyContent: collapsed ? 'center' : 'initial',
-                  px: 2.5,
+                  px: collapsed ? 1.5 : 2.5,
+                  mx: collapsed ? 0.5 : 0,
+                  mb: 0.5,
+                  borderRadius: 1,
                   backgroundColor: active === item.key 
-                    ? theme.palette.action.selected 
+                    ? theme.palette.mode === 'dark' 
+                      ? 'rgba(144, 202, 249, 0.16)' 
+                      : 'rgba(25, 118, 210, 0.08)'
                     : 'transparent',
                   '&:hover': {
-                    backgroundColor: theme.palette.action.hover,
+                    backgroundColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.04)',
                   },
                   '&.Mui-selected': {
-                    backgroundColor: theme.palette.action.selected,
+                    backgroundColor: active === item.key 
+                      ? theme.palette.mode === 'dark' 
+                        ? 'rgba(144, 202, 249, 0.16)' 
+                        : 'rgba(25, 118, 210, 0.08)'
+                      : 'transparent',
                     '&:hover': {
-                      backgroundColor: theme.palette.action.selected,
+                      backgroundColor: active === item.key
+                        ? theme.palette.mode === 'dark' 
+                          ? 'rgba(144, 202, 249, 0.24)' 
+                          : 'rgba(25, 118, 210, 0.12)'
+                        : theme.palette.action.hover,
                     },
                   },
                 }}
               >
                 <ListItemIcon
                   sx={{
-                    minWidth: 0,
-                    mr: collapsed ? 0 : 3,
+                    minWidth: collapsed ? 40 : 40,
+                    mr: collapsed ? 0 : 2,
                     justifyContent: 'center',
                     color: active === item.key 
                       ? theme.palette.primary.main 
-                      : theme.palette.text.primary,
+                      : theme.palette.text.secondary,
                   }}
                 >
                   {item.icon}
@@ -262,7 +280,8 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                   <ListItemText
                     primary={item.label}
                     primaryTypographyProps={{
-                      fontWeight: active === item.key ? 600 : 400,
+                      fontWeight: active === item.key ? 600 : 500,
+                      fontSize: '0.875rem',
                       sx: {
                         color: active === item.key 
                           ? theme.palette.primary.main 
@@ -276,7 +295,8 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
             {item.dividerAfter && (
               <Divider 
                 sx={{ 
-                  my: 1,
+                  my: 1.5,
+                  mx: collapsed ? 1 : 2,
                   borderColor: theme.palette.divider,
                 }} 
               />
@@ -289,7 +309,8 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
           <>
             <Divider 
               sx={{ 
-                my: 1,
+                my: 1.5,
+                mx: collapsed ? 1 : 2,
                 borderColor: theme.palette.divider,
               }} 
             />
@@ -299,16 +320,21 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                 sx={{
                   minHeight: 48,
                   justifyContent: collapsed ? 'center' : 'initial',
-                  px: 2.5,
+                  px: collapsed ? 1.5 : 2.5,
+                  mx: collapsed ? 0.5 : 0,
+                  mb: 0.5,
+                  borderRadius: 1,
                   '&:hover': {
-                    backgroundColor: theme.palette.action.hover,
+                    backgroundColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.04)',
                   },
                 }}
               >
                 <ListItemIcon
                   sx={{
-                    minWidth: 0,
-                    mr: collapsed ? 0 : 3,
+                    minWidth: collapsed ? 40 : 40,
+                    mr: collapsed ? 0 : 2,
                     justifyContent: 'center',
                     color: theme.palette.primary.main,
                   }}
@@ -320,6 +346,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
                     primary="Sign In"
                     primaryTypographyProps={{
                       fontWeight: 600,
+                      fontSize: '0.875rem',
                       sx: {
                         color: theme.palette.primary.main,
                       },

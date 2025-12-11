@@ -20,6 +20,8 @@ import {
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   Login as LoginIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import ThemeToggle from './ThemeToggle';
@@ -31,6 +33,7 @@ import { getBackendUrl } from '../utils/backendUrl';
 import { useAuth } from '../hooks/useAuth';
 
 const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH_COLLAPSED = 64;
 const APPBAR_HEIGHT = 64;
 
 interface AppShellProps {
@@ -40,6 +43,7 @@ interface AppShellProps {
 
 const AppShell = ({ active, children }: AppShellProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
   const theme = useTheme();
@@ -80,13 +84,51 @@ const AppShell = ({ active, children }: AppShellProps) => {
     router.push('/creative?tab=cowork');
   };
 
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   const drawerContent = (
-    <Navigation 
-      active={active} 
-      isAuthenticated={isAuthenticated}
-      collapsed={false}
-      onLogin={handleLogin}
-    />
+    <Box sx={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Collapse Toggle Button - Top */}
+      {!isMobile && (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: sidebarCollapsed ? 'center' : 'flex-end',
+            p: 1,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <IconButton
+            onClick={handleSidebarToggle}
+            sx={{
+              bgcolor: 'transparent',
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.08)' 
+                  : 'rgba(0, 0, 0, 0.04)',
+                color: theme.palette.text.primary,
+              },
+              width: 32,
+              height: 32,
+            }}
+            size="small"
+          >
+            {sidebarCollapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+      )}
+      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+        <Navigation 
+          active={active} 
+          isAuthenticated={isAuthenticated}
+          collapsed={sidebarCollapsed}
+          onLogin={handleLogin}
+        />
+      </Box>
+    </Box>
   );
 
   return (
@@ -241,7 +283,16 @@ const AppShell = ({ active, children }: AppShellProps) => {
       {/* Drawer */}
       <Box
         component="nav"
-        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
+        sx={{ 
+          width: { 
+            md: sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH 
+          }, 
+          flexShrink: { md: 0 },
+          transition: theme.transitions.create('width', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+        }}
       >
         {/* Mobile drawer */}
         <Drawer
@@ -280,11 +331,16 @@ const AppShell = ({ active, children }: AppShellProps) => {
             display: { xs: 'none', md: 'block' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
+              width: sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH,
               zIndex: 1200,
               backgroundColor: theme.palette.background.paper,
               color: theme.palette.text.primary,
               borderRight: `1px solid ${theme.palette.divider}`,
+              transition: theme.transitions.create('width', {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.enteringScreen,
+              }),
+              overflowX: 'hidden',
             },
           }}
           open
@@ -305,11 +361,18 @@ const AppShell = ({ active, children }: AppShellProps) => {
         component="main"
         sx={{
           flexGrow: 1,
-          width: { xs: '100%', md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          width: { 
+            xs: '100%', 
+            md: `calc(100% - ${sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH}px)` 
+          },
           minHeight: '100vh',
           mt: `${APPBAR_HEIGHT}px`,
           backgroundColor: theme.palette.background.default,
           color: theme.palette.text.primary,
+          transition: theme.transitions.create(['width', 'margin'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
         }}
       >
         {children}
