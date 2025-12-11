@@ -184,8 +184,8 @@ export default function AiAgentPanel() {
       <Grid container spacing={3}>
         {/* Tasks Section - Large Card */}
         <Grid item xs={12}>
-          <Paper elevation={2} sx={{ p: 3, minHeight: 600 }}>
-            <TasksPanel height={600} />
+          <Paper elevation={2} sx={{ p: 3, minHeight: 900 }}>
+            <TasksPanel height={900} />
           </Paper>
         </Grid>
 
