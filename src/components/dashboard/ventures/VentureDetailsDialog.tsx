@@ -30,6 +30,9 @@ import {
   CalendarToday as CalendarIcon,
   AttachMoney as MoneyIcon,
   Person as PersonIcon,
+  Timeline as TimelineIcon,
+  SupportAgent as SupportIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { Venture, VentureStatus } from '../../../types/venture';
 
@@ -137,6 +140,8 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
           <Tab label="Overview" />
           <Tab label={`Tasks (${venture.tasks.length})`} />
           <Tab label={`Team (${venture.team.length})`} />
+          <Tab label="Timeline & Analytics" />
+          {venture.supportRequest && <Tab label="Support Request" />}
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
@@ -319,6 +324,195 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
             ))}
           </List>
         </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          {/* Timeline & Analytics */}
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TimelineIcon /> Progress Timeline
+                  </Typography>
+                  <Box sx={{ mt: 2, mb: 2 }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={venture.progress}
+                      sx={{
+                        height: 12,
+                        borderRadius: 6,
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                      }}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                      {venture.progress}% Complete
+                    </Typography>
+                  </Box>
+                  
+                  {/* Timeline visualization */}
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Project Timeline
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Start Date
+                        </Typography>
+                        <Typography variant="body2" fontWeight={500}>
+                          {new Date(venture.startDate).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, textAlign: 'center' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Current
+                        </Typography>
+                        <Typography variant="body2" fontWeight={500}>
+                          {new Date().toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, textAlign: 'right' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Deadline
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          fontWeight={500}
+                          color={daysUntilDeadline < 7 ? 'error' : daysUntilDeadline < 30 ? 'warning.main' : 'success.main'}
+                        >
+                          {new Date(venture.deadline).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Task Completion
+                  </Typography>
+                  <Typography variant="h4" fontWeight={700}>
+                    {venture.tasks.filter(t => t.status === 'completed').length} / {venture.tasks.length}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Tasks completed
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Budget Usage
+                  </Typography>
+                  <Typography variant="h4" fontWeight={700}>
+                    {budgetUsage.toFixed(1)}%
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    ${venture.spent.toLocaleString()} / ${venture.budget.toLocaleString()}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Team Activity
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {venture.team.length} team member{venture.team.length !== 1 ? 's' : ''} assigned
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    {venture.team.map((member) => (
+                      <Chip
+                        key={member.id}
+                        label={member.name}
+                        size="small"
+                        avatar={<Avatar>{member.name.charAt(0)}</Avatar>}
+                      />
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {venture.supportRequest && (
+          <TabPanel value={tabValue} index={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SupportIcon /> Support Request Details
+                </Typography>
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Subject
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {venture.supportRequest.subject}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Description
+                    </Typography>
+                    <Typography variant="body2">
+                      {venture.supportRequest.description}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Status
+                    </Typography>
+                    <Chip
+                      label={venture.supportRequest.status}
+                      size="small"
+                      color={venture.supportRequest.status === 'resolved' ? 'success' : 'primary'}
+                      sx={{ textTransform: 'capitalize' }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Priority
+                    </Typography>
+                    <Chip
+                      label={venture.supportRequest.priority}
+                      size="small"
+                      color={venture.supportRequest.priority === 'high' ? 'error' : venture.supportRequest.priority === 'medium' ? 'warning' : 'default'}
+                      sx={{ textTransform: 'capitalize' }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Created
+                    </Typography>
+                    <Typography variant="body2">
+                      {new Date(venture.supportRequest.createdAt).toLocaleDateString()}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Last Updated
+                    </Typography>
+                    <Typography variant="body2">
+                      {new Date(venture.supportRequest.updatedAt).toLocaleDateString()}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </TabPanel>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

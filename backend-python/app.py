@@ -13518,6 +13518,17 @@ def get_ventures():
                 except:
                     pass
                 
+                # Include support request info
+                support_request_info = {
+                    'id': sr.id,
+                    'subject': sr.subject or 'Untitled Venture',
+                    'description': sr.description or '',
+                    'status': sr.status,
+                    'priority': sr.priority or 'medium',
+                    'createdAt': sr.created_at.isoformat() if sr.created_at else None,
+                    'updatedAt': sr.updated_at.isoformat() if sr.updated_at else None
+                }
+                
                 venture = {
                     'id': sr.id,
                     'name': sr.subject or 'Untitled Venture',
@@ -13534,7 +13545,8 @@ def get_ventures():
                     'clientId': sr.client_id,
                     'clientName': client_name,
                     'createdAt': sr.created_at.isoformat() if sr.created_at else None,
-                    'updatedAt': sr.updated_at.isoformat() if sr.updated_at else None
+                    'updatedAt': sr.updated_at.isoformat() if sr.updated_at else None,
+                    'supportRequest': support_request_info
                 }
                 ventures.append(venture)
             except Exception as e:

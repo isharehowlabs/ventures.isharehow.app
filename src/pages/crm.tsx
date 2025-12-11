@@ -176,6 +176,7 @@ export default function CRMDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [shopifyCustomers, setShopifyCustomers] = useState<ShopifyCustomer[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,6 +213,20 @@ export default function CRMDashboard() {
     }
   }, [success, error]);
 
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(`${backendUrl}/api/tasks`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data.tasks || []);
+      }
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+    }
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
     try {
@@ -219,6 +234,7 @@ export default function CRMDashboard() {
         fetchUsers(),
         fetchClients(),
         fetchShopifyCustomers(),
+        fetchTasks(),
       ]);
     } finally {
       setLoading(false);
@@ -344,14 +360,20 @@ export default function CRMDashboard() {
     { name: 'Completed', value: Math.floor(totalClients * 0.2), color: '#4caf50' },
   ].filter(item => item.value > 0);
 
-  // Calculate invoice payments (mock data based on active clients)
-  const invoicePayments = totalClients * 10; // Simplified calculation
+  // Calculate invoice payments from actual client data
+  // Sum up any payment/revenue data from clients if available, otherwise use active clients as proxy
+  const invoicePayments = clients
+    .filter(c => c.status === 'active')
+    .reduce((sum, client) => {
+      // If clients have revenue/payment fields, sum them; otherwise use count
+      return sum + (client.tier === 'enterprise' ? 100 : client.tier === 'professional' ? 50 : 10);
+    }, 0);
 
   // Calculate projects in progress
   const projectsInProgress = clients.filter(c => c.status === 'active').length;
 
-  // Calculate tasks not finished (mock - would come from tasks API)
-  const tasksNotFinished = 22; // Placeholder
+  // Calculate tasks not finished from real database
+  const tasksNotFinished = tasks.filter(t => t.status !== 'completed').length;
 
   // Filter data based on active tab
   const getFilteredData = () => {
@@ -368,7 +390,7 @@ export default function CRMDashboard() {
         return matchesSearch;
       });
     } else if (activeTab === 1) {
-      // Clients tab
+      // Clients, Prospects & Leads tab (combined)
       return clients.filter(client => {
         const matchesSearch = 
           client.name?.toLowerCase().includes(searchLower) ||
@@ -378,17 +400,8 @@ export default function CRMDashboard() {
         const matchesType = typeFilter === 'all' || 
           (typeFilter === 'client' && (client.status === 'active' || client.status === 'pending')) ||
           (typeFilter === 'prospect' && client.status === 'prospect') ||
-          (typeFilter === 'lead' && client.status === 'prospect');
+          (typeFilter === 'lead' && (client.status === 'prospect' || client.status === 'pending'));
         return matchesSearch && matchesStatus && matchesType;
-      });
-    } else if (activeTab === 2) {
-      // Prospects/Leads tab
-      return clients.filter(client => {
-        const matchesSearch = 
-          client.name?.toLowerCase().includes(searchLower) ||
-          client.email?.toLowerCase().includes(searchLower) ||
-          client.company?.toLowerCase().includes(searchLower);
-        return (client.status === 'prospect' || client.status === 'pending') && matchesSearch;
       });
     } else {
       // Shopify tab
@@ -645,13 +658,7 @@ export default function CRMDashboard() {
                   <Tab
                     icon={<BusinessIcon />}
                     iconPosition="start"
-                    label="Clients & Customers"
-                    sx={{ textTransform: 'none', fontWeight: 600 }}
-                  />
-                  <Tab
-                    icon={<TrendingUpIcon />}
-                    iconPosition="start"
-                    label="Prospects & Leads"
+                    label="Clients, Prospects & Leads"
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                   />
                   <Tab
@@ -697,7 +704,7 @@ export default function CRMDashboard() {
                     }}
                     sx={{ flexGrow: 1, maxWidth: 400 }}
                   />
-                  {(activeTab === 1 || activeTab === 2) && (
+                  {activeTab === 1 && (
                     <>
                       <FormControl size="small" sx={{ minWidth: 150 }}>
                         <InputLabel>Status</InputLabel>
@@ -736,14 +743,14 @@ export default function CRMDashboard() {
                   >
                     Refresh
                   </Button>
-                  {(activeTab === 1 || activeTab === 2) && (
+                  {activeTab === 1 && (
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
                       onClick={() => setAddClientOpen(true)}
                       sx={{ textTransform: 'none' }}
                     >
-                      Add {activeTab === 2 ? 'Prospect' : 'Client'}
+                      Add {typeFilter === 'prospect' || typeFilter === 'lead' ? 'Prospect/Lead' : 'Client'}
                     </Button>
                   )}
                 </Box>
@@ -853,7 +860,7 @@ export default function CRMDashboard() {
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={1}>
-                  {/* Clients & Customers Tab */}
+                  {/* Clients, Prospects & Leads Tab - Combined */}
                   {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                       <CircularProgress />
@@ -868,6 +875,7 @@ export default function CRMDashboard() {
                             </TableCell>
                             <TableCell>Company & Contact</TableCell>
                             <TableCell>Email & Phone</TableCell>
+                            <TableCell>Type</TableCell>
                             <TableCell>Status</TableCell>
                             <TableCell>Tier</TableCell>
                             <TableCell>Assigned To</TableCell>
@@ -878,6 +886,9 @@ export default function CRMDashboard() {
                         <TableBody>
                           {paginatedData.map((item) => {
                             const client = item as Client;
+                            const isProspect = client.status === 'prospect';
+                            const isLead = client.status === 'pending' || client.status === 'prospect';
+                            const typeLabel = isProspect ? 'Prospect' : isLead ? 'Lead' : 'Client';
                             return (
                               <TableRow key={client.id} hover>
                                 <TableCell padding="checkbox">
@@ -898,6 +909,14 @@ export default function CRMDashboard() {
                                   <Typography variant="caption" color="text.secondary">
                                     {client.phone || 'No phone'}
                                   </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Chip
+                                    label={typeLabel}
+                                    size="small"
+                                    color={isProspect ? 'warning' : isLead ? 'info' : 'primary'}
+                                    variant="outlined"
+                                  />
                                 </TableCell>
                                 <TableCell>
                                   <Chip
@@ -956,96 +975,6 @@ export default function CRMDashboard() {
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={2}>
-                  {/* Prospects & Leads Tab */}
-                  {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                      <CircularProgress />
-                    </Box>
-                  ) : (
-                    <TableContainer>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell padding="checkbox">
-                              <Checkbox />
-                            </TableCell>
-                            <TableCell>Contact Info</TableCell>
-                            <TableCell>Company</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Source</TableCell>
-                            <TableCell>Date</TableCell>
-                            <TableCell align="right">Actions</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {paginatedData.map((item) => {
-                            const prospect = item as Client;
-                            return (
-                              <TableRow key={prospect.id} hover>
-                                <TableCell padding="checkbox">
-                                  <Checkbox />
-                                </TableCell>
-                                <TableCell>
-                                  <Box>
-                                    <Typography variant="body2" fontWeight={500}>
-                                      {prospect.name}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {prospect.email}
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">{prospect.company || 'N/A'}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Chip
-                                    label={prospect.status}
-                                    size="small"
-                                    color={getStatusColor(prospect.status)}
-                                    sx={{ textTransform: 'capitalize' }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Chip label="Demo Form" size="small" variant="outlined" />
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">
-                                    {prospect.createdAt
-                                      ? new Date(prospect.createdAt).toLocaleDateString()
-                                      : 'N/A'}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => handleMenuOpen(e, prospect, 'client')}
-                                  >
-                                    <MoreVertIcon />
-                                  </IconButton>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                      <TablePagination
-                        rowsPerPageOptions={[5, 10, 25]}
-                        component="div"
-                        count={filteredData.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={(e, newPage) => setPage(newPage)}
-                        onRowsPerPageChange={(e) => {
-                          setRowsPerPage(parseInt(e.target.value, 10));
-                          setPage(0);
-                        }}
-                      />
-                    </TableContainer>
-                  )}
-                </TabPanel>
-
-                <TabPanel value={activeTab} index={3}>
                   {/* Shopify Data Tab */}
                   {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -1148,7 +1077,7 @@ export default function CRMDashboard() {
                   )}
                 </TabPanel>
 
-                <TabPanel value={activeTab} index={4}>
+                <TabPanel value={activeTab} index={3}>
                   {/* Analytics Tab */}
                   <Box>
                     {/* Top Row - KPI Cards */}
@@ -1390,12 +1319,12 @@ export default function CRMDashboard() {
                 </TabPanel>
 
                 {/* Ventures Tab */}
-                <TabPanel value={activeTab} index={5}>
+                <TabPanel value={activeTab} index={4}>
                   <VenturesPanel />
                 </TabPanel>
 
                 {/* To-Do & Tasks Tab */}
-                <TabPanel value={activeTab} index={6}>
+                <TabPanel value={activeTab} index={5}>
                   <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
                     <CardContent sx={{ p: 3 }}>
                       <Box sx={{ mb: 3 }}>

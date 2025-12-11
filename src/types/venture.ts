@@ -24,6 +24,16 @@ export interface VentureTask {
   priority: 'low' | 'medium' | 'high';
 }
 
+export interface SupportRequestInfo {
+  id: number;
+  subject: string;
+  description: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Venture {
   id: number;
   name: string;
@@ -41,6 +51,7 @@ export interface Venture {
   clientName?: string;
   createdAt: string;
   updatedAt: string;
+  supportRequest?: SupportRequestInfo;
 }
 
 export interface VentureMetrics {
