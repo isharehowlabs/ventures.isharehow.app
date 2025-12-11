@@ -13431,10 +13431,13 @@ def resume_subscription():
 # ============================================================================
 
 @app.route('/api/ventures', methods=['GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def get_ventures():
     """Get all support requests as ventures"""
     try:
+        if not DB_AVAILABLE:
+            return jsonify({'ventures': []}), 200
+        
         current_user_id = get_jwt_identity()
         
         # Get all support requests
@@ -13442,89 +13445,112 @@ def get_ventures():
         
         ventures = []
         for sr in support_requests:
-            # Calculate progress from tasks
-            tasks = Task.query.filter_by(support_request_id=sr.id).all()
-            total_tasks = len(tasks)
-            completed_tasks = len([t for t in tasks if t.status == 'completed'])
-            calculated_progress = int((completed_tasks / total_tasks * 100)) if total_tasks > 0 else 0
-            
-            # Update progress in database if different
-            if sr.progress != calculated_progress:
-                sr.progress = calculated_progress
-                db.session.commit()
-            
-            # Get team members from client assignments
-            team = []
-            if sr.client_id:
-                assignments = ClientEmployeeAssignment.query.filter_by(client_id=sr.client_id).all()
-                for assignment in assignments:
-                    user = User.query.filter_by(username=assignment.employee_username).first()
-                    if user:
-                        team.append({
-                            'id': user.id,
-                            'name': f"{user.first_name or ''} {user.last_name or ''}".strip() or user.username,
-                            'email': user.email or '',
-                            'role': assignment.employee_name or 'Team Member',
-                            'avatar': None
-                        })
-            
-            # Format tasks
-            formatted_tasks = []
-            for task in tasks:
-                formatted_tasks.append({
-                    'id': task.id,
-                    'title': task.title,
-                    'description': task.description or '',
-                    'status': task.status,
-                    'assignedTo': task.assigned_to,
-                    'priority': 'medium',
-                })
-            
-            # Map status
-            status_map = {
-                'open': 'planning',
-                'in_progress': 'active',
-                'in-progress': 'active',
-                'resolved': 'completed',
-                'closed': 'completed',
-                'on_hold': 'on_hold',
-                'on-hold': 'on_hold'
-            }
-            venture_status = status_map.get(sr.status, 'active')
-            
-            # Get tags from client
-            tags = []
-            if sr.client and sr.client.tags:
+            try:
+                # Calculate progress from tasks
+                tasks = Task.query.filter_by(support_request_id=sr.id).all()
+                total_tasks = len(tasks)
+                completed_tasks = len([t for t in tasks if t.status == 'completed'])
+                calculated_progress = int((completed_tasks / total_tasks * 100)) if total_tasks > 0 else 0
+                
+                # Update progress in database if different (only if we have a valid session)
                 try:
-                    tags = json.loads(sr.client.tags) if isinstance(sr.client.tags, str) else sr.client.tags
+                    if sr.progress != calculated_progress:
+                        sr.progress = calculated_progress
+                        db.session.commit()
                 except:
-                    tags = []
-            
-            venture = {
-                'id': sr.id,
-                'name': sr.subject,
-                'description': sr.description,
-                'status': venture_status,
-                'progress': sr.progress or calculated_progress,
-                'budget': float(sr.budget) if sr.budget else 0,
-                'spent': float(sr.spent) if sr.spent else 0,
-                'startDate': sr.start_date.isoformat() if sr.start_date else sr.created_at.isoformat(),
-                'deadline': sr.delivery_date.isoformat() if sr.delivery_date else None,
-                'team': team,
-                'tasks': formatted_tasks,
-                'tags': tags,
-                'clientId': sr.client_id,
-                'clientName': sr.client.name if sr.client else None,
-                'createdAt': sr.created_at.isoformat(),
-                'updatedAt': sr.updated_at.isoformat()
-            }
-            ventures.append(venture)
+                    db.session.rollback()
+                
+                # Get team members from client assignments
+                team = []
+                if sr.client_id:
+                    try:
+                        assignments = ClientEmployeeAssignment.query.filter_by(client_id=sr.client_id).all()
+                        for assignment in assignments:
+                            user = User.query.filter_by(username=assignment.employee_username).first()
+                            if user:
+                                team.append({
+                                    'id': user.id,
+                                    'name': f"{user.first_name or ''} {user.last_name or ''}".strip() or user.username,
+                                    'email': user.email or '',
+                                    'role': assignment.employee_name or 'Team Member',
+                                    'avatar': None
+                                })
+                    except Exception as e:
+                        print(f"Error fetching team for venture {sr.id}: {e}")
+                
+                # Format tasks
+                formatted_tasks = []
+                for task in tasks:
+                    formatted_tasks.append({
+                        'id': task.id,
+                        'title': task.title,
+                        'description': task.description or '',
+                        'status': task.status,
+                        'assignedTo': task.assigned_to,
+                        'priority': 'medium',
+                    })
+                
+                # Map status
+                status_map = {
+                    'open': 'planning',
+                    'in_progress': 'active',
+                    'in-progress': 'active',
+                    'resolved': 'completed',
+                    'closed': 'completed',
+                    'on_hold': 'on_hold',
+                    'on-hold': 'on_hold'
+                }
+                venture_status = status_map.get(sr.status, 'active')
+                
+                # Get tags from client
+                tags = []
+                if sr.client and sr.client.tags:
+                    try:
+                        tags = json.loads(sr.client.tags) if isinstance(sr.client.tags, str) else sr.client.tags
+                    except:
+                        tags = []
+                
+                # Safely get client name
+                client_name = None
+                try:
+                    if sr.client:
+                        client_name = sr.client.name
+                except:
+                    pass
+                
+                venture = {
+                    'id': sr.id,
+                    'name': sr.subject or 'Untitled Venture',
+                    'description': sr.description or '',
+                    'status': venture_status,
+                    'progress': sr.progress if sr.progress is not None else calculated_progress,
+                    'budget': float(sr.budget) if sr.budget else 0,
+                    'spent': float(sr.spent) if sr.spent else 0,
+                    'startDate': sr.start_date.isoformat() if sr.start_date else (sr.created_at.isoformat() if sr.created_at else None),
+                    'deadline': sr.delivery_date.isoformat() if sr.delivery_date else None,
+                    'team': team,
+                    'tasks': formatted_tasks,
+                    'tags': tags,
+                    'clientId': sr.client_id,
+                    'clientName': client_name,
+                    'createdAt': sr.created_at.isoformat() if sr.created_at else None,
+                    'updatedAt': sr.updated_at.isoformat() if sr.updated_at else None
+                }
+                ventures.append(venture)
+            except Exception as e:
+                print(f"Error processing venture {sr.id if sr else 'unknown'}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
         
         return jsonify(ventures), 200
     
     except Exception as e:
+        db.session.rollback()
         print(f"Error fetching ventures: {e}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch ventures', 'message': str(e), 'ventures': []}), 200
 
 
 @app.route('/api/ventures/<venture_id>', methods=['GET'])
@@ -13716,10 +13742,19 @@ def delete_venture(venture_id):
 
 
 @app.route('/api/ventures/metrics', methods=['GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def get_ventures_metrics():
     """Get venture metrics"""
     try:
+        if not DB_AVAILABLE:
+            return jsonify({
+                'total': 0,
+                'active': 0,
+                'completed': 0,
+                'totalRevenue': 0,
+                'totalBudget': 0
+            }), 200
+        
         total = SupportRequest.query.count()
         active = SupportRequest.query.filter(SupportRequest.status.in_(['open', 'in_progress', 'in-progress'])).count()
         completed = SupportRequest.query.filter(SupportRequest.status.in_(['resolved', 'closed'])).count()
@@ -13728,19 +13763,34 @@ def get_ventures_metrics():
         completed_ventures = SupportRequest.query.filter(SupportRequest.status.in_(['resolved', 'closed'])).all()
         total_revenue = sum([float(v.budget) if v.budget else 0 for v in completed_ventures])
         
+        # Calculate total budget safely
+        all_ventures = SupportRequest.query.all()
+        total_budget = sum([float(v.budget) if v.budget else 0 for v in all_ventures])
+        
         metrics = {
             'total': total,
             'active': active,
             'completed': completed,
             'totalRevenue': total_revenue,
-            'totalBudget': sum([float(v.budget) if v.budget else 0 for v in SupportRequest.query.all()])
+            'totalBudget': total_budget
         }
         
         return jsonify(metrics), 200
     
     except Exception as e:
+        db.session.rollback()
         print(f"Error fetching metrics: {e}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to fetch metrics',
+            'message': str(e),
+            'total': 0,
+            'active': 0,
+            'completed': 0,
+            'totalRevenue': 0,
+            'totalBudget': 0
+        }), 200
 
 
 @app.route('/api/ventures/search', methods=['GET'])
