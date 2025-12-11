@@ -178,7 +178,7 @@ export default function PushChat({
                 key={`${message.timestamp}-${index}`}
                 sx={{
                   mb: 1,
-                  bgcolor: 'background.paper',
+                  bgcolor: 'rgba(0, 0, 0, 0.02)',
                   borderRadius: 1,
                   border: 1,
                   borderColor: 'divider',

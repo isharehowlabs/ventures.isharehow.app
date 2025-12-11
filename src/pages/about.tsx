@@ -256,7 +256,7 @@ export default function AboutPage() {
           </Container>
 
           {/* Our Story Section */}
-          <Box sx={{ py: 8, bgcolor: 'background.paper' }}>
+          <Box sx={{ py: 8, bgcolor: 'transparent' }}>
             <Container maxWidth="lg">
               <Paper
                 elevation={3}
@@ -394,7 +394,7 @@ export default function AboutPage() {
           </Container>
 
           {/* Team Section */}
-          <Box sx={{ py: 8, bgcolor: 'background.paper' }}>
+          <Box sx={{ py: 8, bgcolor: 'transparent' }}>
             <Container maxWidth="lg">
               <Box sx={{ textAlign: 'center', mb: 6 }}>
                 <Typography variant="h3" fontWeight={700} gutterBottom>

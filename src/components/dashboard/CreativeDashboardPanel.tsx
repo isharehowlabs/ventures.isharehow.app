@@ -107,16 +107,24 @@ export default function CreativeDashboardPanel() {
     <Box sx={{ bgcolor: "background.default", minHeight: '100vh', pb: 4 }}>
       {/* Header */}
       <Box sx={{ 
-        bgcolor: 'background.paper', 
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        mb: 3
+        mb: 4,
+        pt: 2
       }}>
-        <Container maxWidth="xl" sx={{ py: 3 }}>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Container maxWidth="xl">
+          <Typography 
+            variant="h4" 
+            fontWeight={700} 
+            gutterBottom
+            sx={(theme) => ({
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            })}
+          >
             Creative Dashboard
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: '60ch' }}>
             Your central hub for managing clients across all dashboards and systems
           </Typography>
         </Container>

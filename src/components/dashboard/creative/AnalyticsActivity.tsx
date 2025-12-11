@@ -306,7 +306,7 @@ export default function AnalyticsActivity() {
                 onClick={handleRefresh} 
                 disabled={loading || !gaPropertyId}
                 sx={{ 
-                  bgcolor: 'background.paper',
+                  bgcolor: 'transparent',
                   border: '1px solid',
                   borderColor: 'divider',
                   '&:hover': { bgcolor: 'action.hover' }
@@ -530,7 +530,8 @@ export default function AnalyticsActivity() {
                 />
                 <RechartsTooltip 
                   contentStyle={{ 
-                    backgroundColor: theme.palette.background.paper,
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '8px',
                     color: theme.palette.text.primary,
@@ -582,7 +583,8 @@ export default function AnalyticsActivity() {
                 />
                 <RechartsTooltip 
                   contentStyle={{ 
-                    backgroundColor: theme.palette.background.paper,
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '8px',
                     color: theme.palette.text.primary,
@@ -638,7 +640,8 @@ export default function AnalyticsActivity() {
                 />
                 <RechartsTooltip 
                   contentStyle={{ 
-                    backgroundColor: theme.palette.background.paper,
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '8px',
                     color: theme.palette.text.primary,

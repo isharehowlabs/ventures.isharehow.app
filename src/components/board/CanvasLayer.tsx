@@ -266,7 +266,7 @@ export default function CanvasLayer({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        bgcolor: 'background.paper',
+        bgcolor: 'background.default',
         overflow: 'hidden',
       }}
     >

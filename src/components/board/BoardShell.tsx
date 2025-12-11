@@ -57,7 +57,7 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
       }}
     >
       {/* Header */}
-      <AppBar position="static" elevation={1} sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
+      <AppBar position="static" elevation={1} sx={{ bgcolor: 'transparent', color: 'text.primary', backdropFilter: 'blur(10px)' }}>
         <MuiToolbar>
           <Typography variant="h6" sx={{ flexGrow: 1, color: 'text.primary', fontWeight: 600 }}>
             Collaboration Board {boardId && `- ${boardId}`}
@@ -132,7 +132,7 @@ function BoardShellContent({ onClose }: BoardShellContentProps) {
           <Box 
             sx={{ 
               p: 2, 
-              bgcolor: 'background.paper', 
+              bgcolor: 'transparent', 
               borderRight: 1, 
               borderColor: 'divider',
               display: 'flex',

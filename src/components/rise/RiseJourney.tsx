@@ -503,7 +503,7 @@ const RiseJourney: React.FC = () => {
             elevation={4}
             sx={{ 
               p: 4, 
-              bgcolor: 'background.paper',
+              bgcolor: 'transparent',
               border: 1,
               borderColor: 'divider'
             }}

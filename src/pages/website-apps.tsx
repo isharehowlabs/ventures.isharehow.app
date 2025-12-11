@@ -222,7 +222,7 @@ export default function WebsiteAppsPage() {
           </Box>
 
           {/* Features Section */}
-          <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.paper' }}>
+          <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'transparent' }}>
             <Container maxWidth="lg">
               <Box sx={{ textAlign: 'center', mb: 6 }}>
                 <Typography
@@ -406,7 +406,7 @@ export default function WebsiteAppsPage() {
           </Box>
 
           {/* Pricing Section */}
-          <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.paper' }}>
+          <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'transparent' }}>
             <Container maxWidth="lg">
               <Box sx={{ textAlign: 'center', mb: 6 }}>
                 <Typography
@@ -547,7 +547,7 @@ export default function WebsiteAppsPage() {
           <Box
             sx={{
               py: { xs: 8, md: 12 },
-              bgcolor: 'background.paper',
+              bgcolor: 'transparent',
               background: isDark
                 ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`
                 : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,

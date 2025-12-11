@@ -106,7 +106,7 @@ export default function AIHelpPage() {
           position="sticky"
           elevation={0}
           sx={{
-            bgcolor: 'background.paper',
+            bgcolor: 'transparent',
             borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
@@ -311,7 +311,7 @@ export default function AIHelpPage() {
         </Box>
 
         {/* Companies Section */}
-        <Box sx={{ py: 4, bgcolor: 'background.paper' }}>
+        <Box sx={{ py: 4, bgcolor: 'transparent' }}>
           <Container maxWidth="lg">
             <Typography
               variant="h6"
@@ -490,7 +490,7 @@ export default function AIHelpPage() {
         </Box>
 
         {/* Footer */}
-        <Box sx={{ bgcolor: 'background.paper', borderTop: `1px solid ${theme.palette.divider}` }}>
+        <Box sx={{ bgcolor: 'transparent', borderTop: `1px solid ${theme.palette.divider}` }}>
           <Container maxWidth="lg" sx={{ py: 8 }}>
             {/* Newsletter Section */}
             <Box

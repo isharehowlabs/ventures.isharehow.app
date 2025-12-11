@@ -671,7 +671,7 @@ function ProfilePage() {
                             <OpenInNew fontSize="small" />
                           </Link>
                         </Stack>
-                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', bgcolor: 'background.paper', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', bgcolor: 'transparent', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
                           {user.cryptoAddress}
                         </Typography>
                       </Box>
@@ -699,7 +699,7 @@ function ProfilePage() {
                             </Link>
                           )}
                         </Stack>
-                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', bgcolor: 'background.paper', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', bgcolor: 'transparent', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
                           {user.contentHash}
                         </Typography>
                       </Box>

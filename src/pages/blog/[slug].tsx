@@ -268,7 +268,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
               variant="outlined"
               sx={{
                 p: { xs: 3, md: 6 },
-                bgcolor: 'background.paper',
+                bgcolor: 'transparent',
                 border: `1px solid ${theme.palette.divider}`,
               }}
             >

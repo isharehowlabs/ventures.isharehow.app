@@ -132,7 +132,7 @@ export default function PWAInstallButton() {
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          bgcolor: 'background.paper',
+          bgcolor: 'transparent',
           borderRadius: 2,
           p: 1.5,
           boxShadow: 3,

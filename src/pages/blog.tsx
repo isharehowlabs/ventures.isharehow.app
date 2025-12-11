@@ -100,7 +100,7 @@ function PostPreview(props: BlogPost) {
               border: `1px solid ${theme.palette.divider}`,
               outline: '3px solid',
               outlineColor: isDark ? theme.palette.background.default : '#FFF',
-              backgroundColor: isDark ? theme.palette.background.paper : theme.palette.grey[100],
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(0, 0, 0, 0.02)',
             },
           }}
         >
@@ -435,7 +435,7 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                     p: 3,
                     display: 'flex',
                     flexDirection: 'column',
-                    bgcolor: 'background.paper',
+                    bgcolor: 'transparent',
                     border: `1px solid ${theme.palette.divider}`,
                     boxShadow: isDark
                       ? '0 4px 12px rgba(0, 0, 0, 0.4)'
@@ -548,7 +548,7 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                 }}
               >
                 {/* Tag Filter */}
-                <Paper variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Paper variant="outlined" sx={{ p: 3, bgcolor: 'transparent' }}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                     <ArticleIcon sx={{ color: 'primary.main' }} />
                     <Typography
@@ -590,7 +590,7 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
                 </Paper>
 
                 {/* About Section */}
-                <Paper variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Paper variant="outlined" sx={{ p: 3, bgcolor: 'transparent' }}>
                   <Typography
                     component="h3"
                     variant="h5"
@@ -632,7 +632,7 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
               sx={{
                 p: { xs: 2, md: 2.5 },
                 borderRadius: 2,
-                bgcolor: 'background.paper',
+                bgcolor: 'transparent',
                 border: `1px solid ${theme.palette.divider}`,
                 textAlign: 'center',
                 background: isDark

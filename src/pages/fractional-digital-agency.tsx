@@ -313,7 +313,7 @@ const FractionalDigitalAgencyPage = () => {
 
                 <Grid container spacing={3} sx={{ mt: 4, maxWidth: 900, mx: 'auto' }}>
                   <Grid item xs={12} md={4}>
-                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'background.paper' }}>
+                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'transparent' }}>
                       <CardContent>
                         <SpeedIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
                         <Typography variant="h6" gutterBottom>
@@ -326,7 +326,7 @@ const FractionalDigitalAgencyPage = () => {
                     </Card>
                   </Grid>
                   <Grid item xs={12} md={4}>
-                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'background.paper' }}>
+                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'transparent' }}>
                       <CardContent>
                         <AutoAwesomeIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
                         <Typography variant="h6" gutterBottom>
@@ -339,7 +339,7 @@ const FractionalDigitalAgencyPage = () => {
                     </Card>
                   </Grid>
                   <Grid item xs={12} md={4}>
-                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'background.paper' }}>
+                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'transparent' }}>
                       <CardContent>
                         <SecurityIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
                         <Typography variant="h6" gutterBottom>
@@ -358,7 +358,7 @@ const FractionalDigitalAgencyPage = () => {
         </Box>
 
         {/* Packages Section */}
-        <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'background.paper' }}>
+        <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'transparent' }}>
           <Container maxWidth="lg">
             <Typography
               variant="h4"
@@ -493,7 +493,7 @@ const FractionalDigitalAgencyPage = () => {
         </Box>
 
         {/* FAQs Section */}
-        <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'background.paper' }}>
+        <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'transparent' }}>
           <Container maxWidth="md">
             <Typography
               variant="h4"
@@ -531,7 +531,7 @@ const FractionalDigitalAgencyPage = () => {
             >
               Get Started Today
             </Typography>
-            <Card elevation={3} sx={{ bgcolor: 'background.paper' }}>
+            <Card elevation={3} sx={{ bgcolor: 'transparent' }}>
               <CardContent sx={{ p: 4 }}>
                 {formSuccess ? (
                   <Alert severity="success" sx={{ mb: 3 }}>

@@ -326,7 +326,7 @@ export default function ProspectingPage() {
                           elevation={1}
                           sx={{
                             p: 2,
-                            bgcolor: 'background.paper',
+                            bgcolor: 'transparent',
                             border: `1px solid ${theme.palette.error.main}30`,
                             '&:hover': {
                               transform: 'translateX(8px)',
@@ -400,7 +400,7 @@ export default function ProspectingPage() {
           <Divider sx={{ my: 6 }} />
 
           {/* Solution & Value Stack */}
-          <Card elevation={2} sx={{ mb: 6, bgcolor: 'background.paper' }}>
+          <Card elevation={2} sx={{ mb: 6, bgcolor: 'transparent' }}>
             <CardContent sx={{ p: { xs: 4, md: 6 } }}>
               <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
                 What&apos;s Inside the 10X SEO Prospecting Workshop
@@ -421,7 +421,7 @@ export default function ProspectingPage() {
                       elevation={1}
                       sx={{
                         p: 2,
-                        bgcolor: 'background.paper',
+                        bgcolor: 'transparent',
                         border: `1px solid ${theme.palette.divider}`,
                         '&:hover': {
                           transform: 'translateY(-4px)',
@@ -520,7 +520,7 @@ export default function ProspectingPage() {
                           elevation={2}
                           sx={{
                             height: '100%',
-                            bgcolor: 'background.paper',
+                            bgcolor: 'transparent',
                             border: `2px solid ${theme.palette[feature.color.split('.')[0] as 'primary' | 'secondary' | 'success' | 'warning'].main}30`,
                             position: 'relative',
                             overflow: 'hidden',
@@ -653,7 +653,7 @@ export default function ProspectingPage() {
                       elevation={3}
                       sx={{
                         height: '100%',
-                        bgcolor: 'background.paper',
+                        bgcolor: 'transparent',
                         border: `2px solid ${theme.palette.primary.main}30`,
                         position: 'relative',
                         overflow: 'hidden',
@@ -744,7 +744,7 @@ export default function ProspectingPage() {
                   a: '30-Day Money-Back. If you don\'t land your first qualified prospect, full refund—no questions.',
                 },
               ].map((faq, index) => (
-                <Card key={index} elevation={1} sx={{ bgcolor: 'background.paper' }}>
+                <Card key={index} elevation={1} sx={{ bgcolor: 'transparent' }}>
                   <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" fontWeight={700} gutterBottom sx={{ color: 'primary.main', mb: 1 }}>
                       Q: {faq.q}

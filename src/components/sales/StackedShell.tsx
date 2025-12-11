@@ -90,7 +90,7 @@ export default function StackedShell() {
         elevation={2}
         sx={{
           mb: 3,
-          bgcolor: 'background.paper',
+          bgcolor: 'transparent',
         }}
       >
         <Tabs

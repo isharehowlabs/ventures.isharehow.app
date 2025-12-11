@@ -297,7 +297,7 @@ export default function FloatingAIChat() {
                   sx={{
                     p: 1.5,
                     maxWidth: '80%',
-                    bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
+                    bgcolor: msg.role === 'user' ? 'primary.main' : 'rgba(0, 0, 0, 0.02)',
                     color: msg.role === 'user' ? 'white' : 'text.primary',
                     borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                   }}
@@ -315,7 +315,7 @@ export default function FloatingAIChat() {
                   elevation={1}
                   sx={{
                     p: 1.5,
-                    bgcolor: 'background.paper',
+                    bgcolor: 'rgba(0, 0, 0, 0.02)',
                     borderRadius: '18px 18px 18px 4px',
                   }}
                 >
@@ -333,7 +333,7 @@ export default function FloatingAIChat() {
               p: 2,
               borderTop: 1,
               borderColor: 'divider',
-              bgcolor: 'background.paper',
+              bgcolor: 'transparent',
             }}
           >
             <form onSubmit={handleSendMessage}>

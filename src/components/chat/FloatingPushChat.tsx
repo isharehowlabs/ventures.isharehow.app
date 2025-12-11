@@ -78,7 +78,7 @@ export default function FloatingPushChat({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              bgcolor: 'background.paper',
+              bgcolor: 'transparent',
             }}
           >
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>

@@ -675,7 +675,7 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
                         flexDirection: 'column',
                         borderRadius: 2,
                         border: `2px solid ${isDraggedOver ? column.color : 'transparent'}`,
-                        bgcolor: isDraggedOver ? alpha(column.color, 0.05) : 'background.paper',
+                        bgcolor: isDraggedOver ? alpha(column.color, 0.05) : 'transparent',
                         transition: 'all 0.2s',
                       }}
                       onDragOver={(e) => handleDragOver(e, column.id)}

@@ -58,7 +58,7 @@ const getTheme = (mode: 'light' | 'dark') => {
     // Backgrounds - content area (not shell)
     background: {
       default: mode === 'light' ? '#f5f5f5' : '#0f172a',
-      paper: mode === 'light' ? '#FFFFFF' : '#1e293b',
+      paper: mode === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(15, 23, 42, 0.6)', // Subtle transparent backgrounds for premium look
     },
     // Default MUI text colors
     text: {
@@ -141,7 +141,7 @@ const getTheme = (mode: 'light' | 'dark') => {
         body: {
           backgroundColor: mode === 'light' ? '#f5f5f5' : '#0f172a',
           color: mode === 'light' ? '#212529' : '#f7fafc',
-          scrollbarColor: mode === 'light' ? '#bbb #f5f5f5' : '#8a94a6 #1e293b',
+          scrollbarColor: mode === 'light' ? '#bbb #f5f5f5' : '#8a94a6 #0f172a',
           '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
             width: 10,
             height: 10,
@@ -159,7 +159,7 @@ const getTheme = (mode: 'light' | 'dark') => {
             },
           },
           '&::-webkit-scrollbar-track, & *::-webkit-scrollbar-track': {
-            backgroundColor: mode === 'light' ? '#f5f5f5' : '#1e293b',
+            backgroundColor: mode === 'light' ? '#f5f5f5' : '#0f172a',
           },
         },
         '#__next': {

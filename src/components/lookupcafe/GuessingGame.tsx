@@ -680,7 +680,7 @@ export default function GuessingGame() {
                         variant="outlined" 
                         sx={{ 
                           opacity: canVote ? 1 : 0.6,
-                          bgcolor: canVote ? 'background.paper' : 'action.disabledBackground',
+                          bgcolor: canVote ? 'transparent' : 'action.disabledBackground',
                           '&:hover': canVote ? { bgcolor: 'action.hover' } : {}
                         }}
                       >

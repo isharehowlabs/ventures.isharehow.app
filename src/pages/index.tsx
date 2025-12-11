@@ -799,7 +799,7 @@ const HomePage = () => {
                   sx={{
                     p: 4,
                     borderRadius: 3,
-                    bgcolor: 'background.paper',
+                    bgcolor: 'transparent',
                     border: '1px solid',
                     borderColor: 'divider',
                     position: 'relative',
@@ -987,7 +987,7 @@ const HomePage = () => {
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <Stack spacing={3}>
-                    <Card sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                    <Card sx={{ p: 3, bgcolor: 'transparent', border: '1px solid', borderColor: 'divider' }}>
                       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
                         <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
                           <RocketLaunchIcon />
@@ -1002,7 +1002,7 @@ const HomePage = () => {
                         </Box>
                       </Stack>
                     </Card>
-                    <Card sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                    <Card sx={{ p: 3, bgcolor: 'transparent', border: '1px solid', borderColor: 'divider' }}>
                       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
                         <Avatar sx={{ bgcolor: 'secondary.main', width: 48, height: 48 }}>
                           <TrendingUpIcon />
@@ -1017,7 +1017,7 @@ const HomePage = () => {
                         </Box>
                       </Stack>
                     </Card>
-                    <Card sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                    <Card sx={{ p: 3, bgcolor: 'transparent', border: '1px solid', borderColor: 'divider' }}>
                       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
                         <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}>
                           <StarIcon />

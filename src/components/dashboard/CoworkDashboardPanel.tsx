@@ -25,7 +25,7 @@ function DesignCodePanel() {
           border: "1px solid #e0e0e0",
           borderRadius: 2,
           overflow: "hidden",
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
         }}
       >
         {/* Figma embed gives editing/copy code buttons */}
