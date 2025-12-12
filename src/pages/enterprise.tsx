@@ -36,6 +36,10 @@ import {
   AutoAwesome as AutoAwesomeIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
+import PricingTierCard, { PricingTier } from '../components/pricing/PricingTierCard';
+import PricingToggle from '../components/pricing/PricingToggle';
+import FeatureComparisonTable, { Feature } from '../components/pricing/FeatureComparisonTable';
+import { useRouter } from 'next/router';
 
 const enterpriseFeatures = [
   {
@@ -83,11 +87,177 @@ const benefits = [
   'Training and onboarding for your team',
 ];
 
+const pricingTiers: PricingTier[] = [
+  {
+    id: 'essential',
+    name: 'Essential',
+    price: 2500,
+    priceAnnual: 24000, // ~20% discount
+    description: 'Early-stage teams needing steady output',
+    color: '#22D3EE',
+    features: [
+      '1 active workstream',
+      'Avg. 2-3 biz-day turnarounds',
+      '2 revision rounds per deliverable',
+      'Brand & UX/UI production (landing pages, components, UX copy)',
+      'Content creation (2-4 assets/mo)',
+      'Front-end tweaks (up to 10 hrs/mo)',
+      'Light SEO (2 focus pages/mo)',
+    ],
+    ctaText: 'Get Started',
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    price: 5000,
+    priceAnnual: 48000, // ~20% discount
+    description: 'Scaling teams; multi-channel execution',
+    color: '#8b5cf6',
+    popular: true,
+    features: [
+      '2 concurrent workstreams',
+      '48-72 hr turns',
+      '2-3 revisions',
+      'Everything in Essential plus:',
+      'UX audits quarterly',
+      'CRO experiments',
+      'Component libraries/design systems',
+      'Front-end implementation (up to 25 hrs/mo)',
+      'SEO plan + content briefs (4-6 pages/mo)',
+    ],
+    ctaText: 'Get Started',
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    price: 8000,
+    priceAnnual: 76800, // ~20% discount
+    description: 'High-velocity product & brand teams',
+    color: '#f59e0b',
+    features: [
+      '3 concurrent workstreams',
+      'Priority queuing',
+      '24-48 hr turns',
+      'Unlimited minor revisions',
+      'Everything in Growth plus:',
+      'Product UX strategy hours (8-12 hrs/mo)',
+      'Advanced UX research (lightweight)',
+      'Accessibility reviews (WCAG spot checks)',
+      'Front-end sprints (up to 40 hrs/mo)',
+      'Technical SEO (schema, CWV fixes)',
+    ],
+    ctaText: 'Get Started',
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 12000,
+    priceAnnual: 115200, // ~20% discount
+    description: 'Multi-brand portfolios & complex pipelines',
+    color: '#ef4444',
+    features: [
+      'Dedicated pod',
+      'Weekly standups',
+      'Custom SLAs',
+      'Everything in Premium plus:',
+      'Dedicated design lead',
+      'Quarterly roadmap',
+      'Full accessibility audits',
+      'Design system stewardship',
+      'SEO content Ops at scale',
+      'Analytics dashboards',
+    ],
+    ctaText: 'Contact Sales',
+  },
+];
+
+const comparisonFeatures: Feature[] = [
+  {
+    name: 'Pricing Model',
+    essential: 'Monthly Subscription',
+    growth: 'Monthly Subscription',
+    premium: 'Monthly Subscription',
+    enterprise: 'Monthly Subscription',
+  },
+  {
+    name: 'Active Workstreams',
+    essential: '1',
+    growth: '2 concurrent',
+    premium: '3 concurrent',
+    enterprise: 'Dedicated pod',
+  },
+  {
+    name: 'Turnaround Time',
+    essential: 'Avg. 2-3 biz-day',
+    growth: '48-72 hr',
+    premium: '24-48 hr',
+    enterprise: 'Custom SLAs',
+  },
+  {
+    name: 'Revisions',
+    essential: '2 rounds',
+    growth: '2-3 rounds',
+    premium: 'Unlimited minor',
+    enterprise: 'Unlimited',
+  },
+  {
+    name: 'Brand & UX/UI Production',
+    essential: true,
+    growth: true,
+    premium: true,
+    enterprise: true,
+  },
+  {
+    name: 'Content Creation',
+    essential: '2-4 assets/mo',
+    growth: '4-6 assets/mo',
+    premium: 'Unlimited',
+    enterprise: 'Unlimited',
+  },
+  {
+    name: 'Front-End Coding',
+    essential: 'Up to 10 hrs/mo',
+    growth: 'Up to 25 hrs/mo',
+    premium: 'Up to 40 hrs/mo',
+    enterprise: 'Custom',
+  },
+  {
+    name: 'SEO Services',
+    essential: 'Light (2 pages/mo)',
+    growth: 'Plan + briefs (4-6 pages/mo)',
+    premium: 'Technical SEO',
+    enterprise: 'Content Ops at scale',
+  },
+  {
+    name: 'UX Audits',
+    essential: false,
+    growth: 'Quarterly',
+    premium: 'Advanced research',
+    enterprise: 'Full accessibility audits',
+  },
+  {
+    name: 'Design Systems',
+    essential: false,
+    growth: true,
+    premium: true,
+    enterprise: 'Stewardship',
+  },
+  {
+    name: 'Analytics',
+    essential: false,
+    growth: false,
+    premium: false,
+    enterprise: true,
+  },
+];
+
 export default function EnterprisePage() {
   const theme = useTheme();
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [isAnnual, setIsAnnual] = useState(false);
 
   useEffect(() => {
     // Auto-play video on mount
@@ -114,6 +284,10 @@ export default function EnterprisePage() {
       videoRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
+  };
+
+  const handleSelectTier = (tierId: string) => {
+    router.push(`/demo?tier=${tierId}&annual=${isAnnual}`);
   };
 
   return (
@@ -463,6 +637,80 @@ export default function EnterprisePage() {
                   </Grid>
                 ))}
               </Grid>
+            </Box>
+
+            {/* Pricing Section */}
+            <Box sx={{ mb: 10 }}>
+              <Box sx={{ textAlign: 'center', mb: 6 }}>
+                <Typography variant="h3" fontWeight={700} gutterBottom sx={{ mb: 2 }}>
+                  Pricing That Scales With Your Business
+                </Typography>
+                <Typography variant="h6" color="text.secondary" sx={{ mb: 4, maxWidth: 700, mx: 'auto' }}>
+                  Choose the plan that works best for your creative goals
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    mb: 2,
+                    textAlign: 'center',
+                    fontSize: { xs: '0.95rem', md: '1rem' },
+                    color: 'text.secondary',
+                    maxWidth: 900,
+                    mx: 'auto',
+                    lineHeight: 1.7,
+                  }}
+                >
+                  <strong>Scope guardrails:</strong> Complex back-end features, enterprise CMS re-platforms, or net-new mobile apps are projects, not subscription tasks (we include "front-end coding" within defined hours and tech stacks).
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    fontSize: { xs: '1rem', md: '1.25rem' },
+                    color: 'text.secondary',
+                  }}
+                >
+                  NO HIDDEN FEES. NO SURPRISES.
+                </Typography>
+              </Box>
+
+              {/* Pricing Toggle */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                <PricingToggle isAnnual={isAnnual} onChange={setIsAnnual} />
+              </Box>
+
+              {/* Pricing Tiers */}
+              <Grid container spacing={4} sx={{ mb: 8 }}>
+                {pricingTiers.map((tier) => (
+                  <Grid item xs={12} md={6} lg={3} key={tier.id}>
+                    <PricingTierCard
+                      tier={tier}
+                      isAnnual={isAnnual}
+                      onSelect={handleSelectTier}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Feature Comparison Table */}
+              <Box sx={{ mb: 8 }}>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    mb: 4,
+                    textAlign: 'center',
+                    fontSize: { xs: '1.5rem', md: '2rem' },
+                  }}
+                >
+                  Compare Plans
+                </Typography>
+                <FeatureComparisonTable
+                  features={comparisonFeatures}
+                  tiers={pricingTiers}
+                />
+              </Box>
             </Box>
 
             {/* CTA Section */}
