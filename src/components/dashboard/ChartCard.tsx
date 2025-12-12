@@ -18,7 +18,7 @@ export default function ChartCard({ title, subtitle, children, action }: ChartCa
       },
       transition: 'box-shadow 0.2s'
     }}>
-      <CardContent sx={{ width: '100%' }}>
+      <CardContent sx={{ width: '100%', maxWidth: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
           <Box>
             <Typography variant="h6" fontWeight={600} gutterBottom>

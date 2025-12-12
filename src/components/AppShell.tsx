@@ -223,6 +223,9 @@ const AppShell = ({ active, children }: AppShellProps) => {
                   }}
                   transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                   anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  sx={{
+                    zIndex: 1400,
+                  }}
                   PaperProps={{
                     sx: { 
                       minWidth: 200, 
@@ -230,6 +233,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
                       backgroundColor: SHELL_COLORS.sidebar,
                       color: SHELL_COLORS.textPrimary,
                       border: `1px solid ${SHELL_COLORS.border}`,
+                      zIndex: 1400,
                     },
                   }}
                 >
@@ -246,6 +250,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
                     onClick={handleProfileClick}
                     sx={{
                       color: SHELL_COLORS.textPrimary,
+                      minHeight: 48,
                       '&:hover': {
                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
                       },
@@ -260,6 +265,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
                     onClick={handleSettingsClick}
                     sx={{
                       color: SHELL_COLORS.textPrimary,
+                      minHeight: 48,
                       '&:hover': {
                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
                       },
@@ -275,6 +281,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
                     onClick={handleLogout}
                     sx={{
                       color: SHELL_COLORS.textPrimary,
+                      minHeight: 48,
                       '&:hover': {
                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
                       },
@@ -325,6 +332,7 @@ const AppShell = ({ active, children }: AppShellProps) => {
           }}
           sx={{
             display: { xs: 'block', md: 'none' },
+            zIndex: 1200,
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: DRAWER_WIDTH,
@@ -332,6 +340,9 @@ const AppShell = ({ active, children }: AppShellProps) => {
               backgroundColor: SHELL_COLORS.sidebar,
               color: SHELL_COLORS.textPrimary,
               borderRight: `1px solid ${SHELL_COLORS.border}`,
+            },
+            '& .MuiBackdrop-root': {
+              zIndex: 1199,
             },
           }}
         >

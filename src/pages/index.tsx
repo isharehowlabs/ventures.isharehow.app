@@ -51,6 +51,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import AppShell from '../components/AppShell';
 import BeforeAfterMockup from '../components/landing/BeforeAfterMockup';
+import { trackCTA, trackFunnelStage } from '../utils/analytics';
 import styles from '../styles/landing/LandingPage.module.css';
 
 // Pricing tiers and comparison features moved to enterprise.tsx
@@ -339,7 +340,11 @@ const HomePage = () => {
                 <Button
                   className={styles.ctaButton}
                   size="large"
-                  onClick={() => router.push('/demo')}
+                  onClick={() => {
+                    trackCTA('Get Started - Hero', 'hero_section', '/demo');
+                    trackFunnelStage('interest', 'cta_click_hero');
+                    router.push('/demo');
+                  }}
                   endIcon={<ArrowForwardIcon />}
                   sx={{
                     '& .MuiButton-endIcon': {
@@ -582,7 +587,11 @@ const HomePage = () => {
                                       color: 'white',
                                     },
                                   }}
-                                  onClick={() => router.push('/fractional-digital-agency')}
+                                  onClick={() => {
+                                    trackCTA('Learn More - Fractional Agency', 'features_section', '/fractional-digital-agency');
+                                    trackFunnelStage('awareness', 'feature_click');
+                                    router.push('/fractional-digital-agency');
+                                  }}
                                 >
                                   Explore Service
                                 </Button>
@@ -698,7 +707,11 @@ const HomePage = () => {
                     variant="contained"
                     size="large"
                     endIcon={<ArrowForwardIcon />}
-                    onClick={() => router.push('/demo')}
+                    onClick={() => {
+                      trackCTA('Get Started - Features', 'features_section', '/demo');
+                      trackFunnelStage('interest', 'cta_click_features');
+                      router.push('/demo');
+                    }}
                     sx={{
                       bgcolor: 'primary.main',
                       px: 4,
@@ -876,7 +889,11 @@ const HomePage = () => {
                     <Button
                       className={styles.ctaButton}
                       size="large"
-                      onClick={() => router.push('/demo')}
+                      onClick={() => {
+                        trackCTA('Get Started - Final CTA', 'final_cta_section', '/demo');
+                        trackFunnelStage('consideration', 'final_cta_click');
+                        router.push('/demo');
+                      }}
                       endIcon={<ArrowForwardIcon />}
                       sx={{
                         minWidth: { xs: '100%', sm: 'auto' },
@@ -893,7 +910,11 @@ const HomePage = () => {
                     <Button
                       className={styles.ctaButtonSecondary}
                       size="large"
-                      onClick={() => router.push('/demo?tier=enterprise')}
+                      onClick={() => {
+                        trackCTA('Enterprise Demo', 'pricing_section', '/demo?tier=enterprise');
+                        trackFunnelStage('consideration', 'enterprise_cta_click');
+                        router.push('/demo?tier=enterprise');
+                      }}
                       startIcon={<ContactSupportIcon />}
                       sx={{
                         minWidth: { xs: '100%', sm: 'auto' },
@@ -946,7 +967,11 @@ const HomePage = () => {
                         boxShadow: 12,
                       },
                     }}
-                    onClick={() => router.push('/enterprise')}
+                    onClick={() => {
+                      trackCTA('View Enterprise Plans', 'pricing_section', '/enterprise');
+                      trackFunnelStage('consideration', 'enterprise_plans_click');
+                      router.push('/enterprise');
+                    }}
                   >
                     <Box
                       sx={{
@@ -1011,6 +1036,11 @@ const HomePage = () => {
                         size="large"
                         fullWidth
                         endIcon={<ArrowForwardIcon />}
+                        onClick={() => {
+                          trackCTA('Explore Enterprise Solutions', 'solution_path_section', '/enterprise');
+                          trackFunnelStage('consideration', 'enterprise_solution_click');
+                          router.push('/enterprise');
+                        }}
                         sx={{
                           py: 1.5,
                           fontWeight: 700,
@@ -1037,7 +1067,11 @@ const HomePage = () => {
                         boxShadow: 12,
                       },
                     }}
-                    onClick={() => router.push('/fractional-digital-agency')}
+                    onClick={() => {
+                      trackCTA('Explore Fractional Agency', 'solution_path_section', '/fractional-digital-agency');
+                      trackFunnelStage('awareness', 'fractional_agency_click');
+                      router.push('/fractional-digital-agency');
+                    }}
                   >
                     <Box
                       sx={{

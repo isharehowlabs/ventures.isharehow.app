@@ -164,11 +164,15 @@ export default function NotificationMenu() {
           invisible: true,
           style: { display: 'none', pointerEvents: 'none' },
         }}
+        sx={{
+          zIndex: 1400,
+        }}
         PaperProps={{
           sx: {
             width: 360,
             maxWidth: '100%',
             maxHeight: 500,
+            zIndex: 1400,
           },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}

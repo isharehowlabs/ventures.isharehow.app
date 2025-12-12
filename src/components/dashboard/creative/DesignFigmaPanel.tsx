@@ -33,30 +33,52 @@ import {
 import BoardShell from '../../board/BoardShell';
 import { useAuth } from '../../../hooks/useAuth';
 
-// Optional imports for Figma/MCP features - memoized to prevent re-imports
-let useFigmaHook: any = null;
-let useMCPHook: any = null;
-let hooksLoaded = false;
-
-const loadHooks = () => {
-  if (hooksLoaded) return;
-  
+// Safe wrapper hooks that can be called unconditionally
+function useSafeFigma() {
   try {
     const figmaModule = require('../../../hooks/useFigma');
-    useFigmaHook = figmaModule.useFigma || figmaModule.default?.useFigma;
+    const useFigma = figmaModule.useFigma || figmaModule.default?.useFigma;
+    if (useFigma) {
+      return useFigma();
+    }
   } catch (err) {
-    console.warn('Figma hook not available:', err);
+    // Hook not available or failed - return safe defaults
   }
-  
+  // Return safe defaults when hook is not available
+  return {
+    files: [],
+    components: [],
+    tokens: [],
+    componentStatuses: {},
+    isLoading: false,
+    error: null,
+    fetchFiles: () => Promise.resolve(),
+    fetchComponents: () => Promise.resolve(),
+    likeComponent: () => Promise.resolve(),
+    saveComponent: () => Promise.resolve(),
+  };
+}
+
+function useSafeMCP() {
   try {
     const mcpModule = require('../../../hooks/useMCP');
-    useMCPHook = mcpModule.useMCP || mcpModule.default?.useMCP;
+    const useMCP = mcpModule.useMCP || mcpModule.default?.useMCP;
+    if (useMCP) {
+      return useMCP();
+    }
   } catch (err) {
-    console.warn('MCP hook not available:', err);
+    // Hook not available or failed - return safe defaults
   }
-  
-  hooksLoaded = true;
-};
+  // Return safe defaults when hook is not available
+  return {
+    links: [],
+    tokens: [],
+    isLoading: false,
+    error: null,
+    fetchCodeLinks: () => Promise.resolve(),
+    linkComponentToCode: () => Promise.resolve(),
+  };
+}
 
 export default function DesignFigmaPanel() {
   const { user } = useAuth();
@@ -65,36 +87,9 @@ export default function DesignFigmaPanel() {
   // Generate a default board ID for the design space - memoized
   const defaultBoardId = useMemo(() => `design_${user?.id || 'shared'}`, [user?.id]);
   
-  // Load hooks once on mount
-  useEffect(() => {
-    loadHooks();
-  }, []);
-  
-  // Figma hooks - only call if available, using refs to prevent re-renders
-  const figmaHookRef = useRef<any>(null);
-  const mcpHookRef = useRef<any>(null);
-  
-  // Initialize hooks only once
-  useEffect(() => {
-    if (useFigmaHook && !figmaHookRef.current) {
-      try {
-        figmaHookRef.current = useFigmaHook();
-      } catch (err) {
-        console.warn('Figma hook initialization failed:', err);
-      }
-    }
-    
-    if (useMCPHook && !mcpHookRef.current) {
-      try {
-        mcpHookRef.current = useMCPHook();
-      } catch (err) {
-        console.warn('MCP hook initialization failed:', err);
-      }
-    }
-  }, []);
-  
-  const figmaHook = figmaHookRef.current;
-  const mcpHook = mcpHookRef.current;
+  // Always call hooks at top level - they return safe defaults if not available
+  const figmaHook = useSafeFigma();
+  const mcpHook = useSafeMCP();
   
   // Memoize hook values to prevent unnecessary re-renders
   const files = useMemo(() => figmaHook?.files || [], [figmaHook?.files]);
@@ -139,7 +134,9 @@ export default function DesignFigmaPanel() {
 
   // Load Figma data (only if hooks are available) - with proper cleanup
   useEffect(() => {
-    if (!useFigmaHook || !useMCPHook || isInitialized) return;
+    // Check if hooks are available by checking if they have the expected methods
+    const hooksAvailable = figmaHook?.fetchFiles && mcpHook?.fetchCodeLinks;
+    if (!hooksAvailable || isInitialized) return;
     
     let isMounted = true;
     const loadFigmaData = async () => {
@@ -167,7 +164,7 @@ export default function DesignFigmaPanel() {
 
   // Load components when file is selected - with proper cleanup
   useEffect(() => {
-    if (!selectedFile || !useFigmaHook || !figmaHook) return;
+    if (!selectedFile || !figmaHook?.fetchComponents) return;
     
     let isMounted = true;
     setLoadingComponents(true);
@@ -309,7 +306,7 @@ export default function DesignFigmaPanel() {
               </Box>
             </Box>
             
-            {!useFigmaHook || !useMCPHook ? (
+            {!figmaHook?.fetchFiles || !mcpHook?.fetchCodeLinks ? (
               <Alert severity="info">
                 Figma integration not available. Check your configuration.
               </Alert>

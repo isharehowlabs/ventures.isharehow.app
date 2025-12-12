@@ -162,14 +162,16 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
       });
       cleanupFunctions.push(() => unsubPresence());
 
-      // Notifications listener
+      // Notifications listener - filter out join/leave notifications
       const notifRef = ref(database, `boards/${boardId}/notifications`);
       const unsubNotif = onValue(notifRef, (snapshot) => {
         if (!isMounted) return;
         const data = snapshot.val();
         if (data) {
           const notifArray = Object.values(data) as BoardNotification[];
-          setNotifications(notifArray.slice(-20)); // Keep last 20
+          // Filter out join/leave notifications
+          const filtered = notifArray.filter(n => n.type !== 'join' && n.type !== 'leave');
+          setNotifications(filtered.slice(-20)); // Keep last 20
         }
       });
       cleanupFunctions.push(() => unsubNotif());
@@ -322,6 +324,11 @@ export function BoardProvider({ children, userId, userName }: BoardProviderProps
 
   const broadcastNotification = useCallback((notif: Omit<BoardNotification, 'id' | 'timestamp'>) => {
     if (!boardId) return;
+    
+    // Don't create or store join/leave notifications
+    if (notif.type === 'join' || notif.type === 'leave') {
+      return;
+    }
 
     const newNotif: BoardNotification = {
       ...notif,
