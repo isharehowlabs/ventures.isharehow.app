@@ -210,7 +210,6 @@ function BoardShellWrapper({ boardId, userId, userName, onClose }: { boardId: st
   const { actions, presence } = useBoardContext();
   const hasJoinedRef = React.useRef(false);
   const boardIdRef = React.useRef<string | null>(null);
-  const joinNotificationSentRef = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
     // Only set boardId if it changed
@@ -222,16 +221,10 @@ function BoardShellWrapper({ boardId, userId, userName, onClose }: { boardId: st
   }, [boardId, actions]);
 
   useEffect(() => {
-    // Only send join notification once per board session
+    // Only update presence, no join/leave notifications
     if (!boardId || hasJoinedRef.current) return;
 
-    // Check if we've already sent a join notification for this board
-    if (joinNotificationSentRef.current.has(boardId)) {
-      hasJoinedRef.current = true;
-      return;
-    }
-
-    // Check if user is already in presence (avoid duplicate notifications on re-renders)
+    // Check if user is already in presence (avoid duplicate updates on re-renders)
     const isAlreadyPresent = presence.has(userId);
     if (isAlreadyPresent) {
       hasJoinedRef.current = true;
@@ -240,34 +233,15 @@ function BoardShellWrapper({ boardId, userId, userName, onClose }: { boardId: st
 
     // Mark that we're joining
     hasJoinedRef.current = true;
-    joinNotificationSentRef.current.add(boardId);
 
-    // Update presence first
+    // Update presence only, no notifications
     actions.updatePresence('active');
-    
-    // Send notification after a delay to avoid spam on rapid re-renders
-    const joinTimer = setTimeout(() => {
-      actions.broadcastNotification({
-        type: 'join',
-        message: 'joined the board',
-        severity: 'info',
-        actor: { userId, name: userName },
-      });
-    }, 1000);
 
-    // Cleanup on unmount
+    // Cleanup on unmount - update presence only, no notifications
     return () => {
-      clearTimeout(joinTimer);
       if (hasJoinedRef.current) {
-        actions.broadcastNotification({
-          type: 'leave',
-          message: 'left the board',
-          severity: 'info',
-          actor: { userId, name: userName },
-        });
         actions.updatePresence('offline');
         hasJoinedRef.current = false;
-        joinNotificationSentRef.current.delete(boardId);
       }
     };
   }, [boardId, userId, userName, presence, actions]);

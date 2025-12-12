@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -22,6 +22,7 @@ import {
   CardContent,
   useTheme,
   alpha,
+  CircularProgress,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -35,6 +36,7 @@ import {
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { Venture, VentureStatus } from '../../../types/venture';
+import { getBackendUrl } from '../../../utils/backendUrl';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -63,9 +65,174 @@ interface VentureDetailsDialogProps {
   onClose: () => void;
 }
 
+interface DatabaseTask {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'pending' | 'in-progress' | 'completed';
+  assignedTo?: string;
+  assignedToName?: string;
+  priority?: 'low' | 'medium' | 'high';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ClientEmployee {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  assignedAt?: string;
+}
+
 const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, venture, onClose }) => {
   const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
+  const [clientTasks, setClientTasks] = useState<DatabaseTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [clientEmployees, setClientEmployees] = useState<ClientEmployee[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [clientData, setClientData] = useState<{ budget?: number; deadline?: string } | null>(null);
+  const backendUrl = getBackendUrl();
+
+  // Fetch tasks, employees, and client data when dialog opens
+  useEffect(() => {
+    if (open && venture?.clientId) {
+      fetchClientTasks();
+      fetchClientEmployees();
+      fetchClientData();
+    } else {
+      setClientTasks([]);
+      setClientEmployees([]);
+      setClientData(null);
+    }
+  }, [open, venture?.clientId]);
+
+  const fetchClientTasks = async () => {
+    if (!venture?.clientId) return;
+    
+    setTasksLoading(true);
+    try {
+      // Convert clientId to string (it may be number or string)
+      const clientIdStr = String(venture.clientId);
+      const response = await fetch(`${backendUrl}/api/tasks?client_id=${clientIdStr}`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClientTasks(data.tasks || []);
+      } else {
+        setClientTasks([]);
+      }
+    } catch (err) {
+      console.error('Error fetching client tasks:', err);
+      setClientTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
+  const fetchClientEmployees = async () => {
+    if (!venture?.clientId) return;
+    
+    setEmployeesLoading(true);
+    try {
+      // Convert clientId to string (it may be number or string)
+      const clientIdStr = String(venture.clientId);
+      const response = await fetch(`${backendUrl}/api/creative/clients/${clientIdStr}/employees`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClientEmployees(data.employees || []);
+      } else {
+        setClientEmployees([]);
+      }
+    } catch (err) {
+      console.error('Error fetching client employees:', err);
+      setClientEmployees([]);
+    } finally {
+      setEmployeesLoading(false);
+    }
+  };
+
+  const fetchClientData = async () => {
+    if (!venture?.clientId) return;
+    
+    try {
+      // Convert clientId to string (it may be number or string)
+      const clientIdStr = String(venture.clientId);
+      const response = await fetch(`${backendUrl}/api/creative/clients/${clientIdStr}`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClientData({
+          budget: data.budget || 0,
+          deadline: data.deadline || null,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching client data:', err);
+    }
+  };
+
+  // Convert database task status to VentureTask status
+  const convertTaskStatus = (status: string): 'todo' | 'in_progress' | 'completed' => {
+    if (status === 'completed') return 'completed';
+    if (status === 'in-progress') return 'in_progress';
+    return 'todo';
+  };
+
+  // Convert database task priority to VentureTask priority
+  const convertTaskPriority = (priority?: string): 'low' | 'medium' | 'high' => {
+    if (priority === 'high') return 'high';
+    if (priority === 'medium') return 'medium';
+    return 'low';
+  };
+
+  // Merge venture.tasks (static) with clientTasks (from database)
+  // Use a Map to avoid duplicates based on task ID
+  const taskMap = new Map<string, any>();
+  
+  // First add database tasks (these are the source of truth for client tasks)
+  clientTasks.forEach(task => {
+    const taskId = task.id;
+    // Try to parse as number for compatibility, but keep string if it fails
+    const numericId = parseInt(task.id) || task.id;
+    taskMap.set(taskId, {
+      id: numericId,
+      title: task.title,
+      description: task.description,
+      status: convertTaskStatus(task.status),
+      assignedTo: task.assignedTo ? parseInt(task.assignedTo) : undefined,
+      priority: convertTaskPriority(task.priority),
+      dueDate: task.updatedAt,
+    });
+  });
+  
+  // Then add venture.tasks that aren't already in the map (by comparing IDs)
+  venture.tasks.forEach(task => {
+    const taskId = String(task.id);
+    // Check if we already have this task from database
+    const exists = Array.from(taskMap.keys()).some(key => 
+      String(key) === taskId || String(task.id) === taskId
+    );
+    if (!exists) {
+      taskMap.set(taskId, {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        assignedTo: task.assignedTo,
+        priority: task.priority,
+        dueDate: task.dueDate,
+      });
+    }
+  });
+  
+  const allTasks = Array.from(taskMap.values());
 
   if (!venture) return null;
 
@@ -108,10 +275,15 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
     }
   };
 
-  const budgetUsage = (venture.spent / venture.budget) * 100;
-  const daysUntilDeadline = Math.ceil(
-    (new Date(venture.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-  );
+  // Use client budget and deadline if available, otherwise use venture data
+  const effectiveBudget = clientData?.budget || venture.budget;
+  const effectiveDeadline = clientData?.deadline || venture.deadline;
+  const budgetUsage = effectiveBudget > 0 ? (venture.spent / effectiveBudget) * 100 : 0;
+  const daysUntilDeadline = effectiveDeadline 
+    ? Math.ceil((new Date(effectiveDeadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : venture.deadline 
+      ? Math.ceil((new Date(venture.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -138,8 +310,8 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
           sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
         >
           <Tab label="Overview" />
-          <Tab label={`Tasks (${venture.tasks.length})`} />
-          <Tab label={`Team (${venture.team.length})`} />
+          <Tab label={`Tasks (${allTasks.length})`} />
+          <Tab label={`Team (${clientEmployees.length > 0 ? clientEmployees.length : venture.team.length})`} />
           <Tab label="Timeline & Analytics" />
           {venture.supportRequest && <Tab label="Support Request" />}
         </Tabs>
@@ -178,15 +350,17 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
                     Start: {new Date(venture.startDate).toLocaleDateString()}
                   </Typography>
                   <Typography variant="body2">
-                    Deadline: {new Date(venture.deadline).toLocaleDateString()}
+                    Deadline: {effectiveDeadline ? new Date(effectiveDeadline).toLocaleDateString() : venture.deadline ? new Date(venture.deadline).toLocaleDateString() : 'Not set'}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    color={daysUntilDeadline < 7 ? 'error' : daysUntilDeadline < 30 ? 'warning.main' : 'success.main'}
-                    sx={{ mt: 1, fontWeight: 600 }}
-                  >
-                    {daysUntilDeadline > 0 ? `${daysUntilDeadline} days remaining` : 'Overdue'}
-                  </Typography>
+                  {effectiveDeadline && (
+                    <Typography
+                      variant="body2"
+                      color={daysUntilDeadline < 7 ? 'error' : daysUntilDeadline < 30 ? 'warning.main' : 'success.main'}
+                      sx={{ mt: 1, fontWeight: 600 }}
+                    >
+                      {daysUntilDeadline > 0 ? `${daysUntilDeadline} days remaining` : 'Overdue'}
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
@@ -201,7 +375,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
                     </Typography>
                   </Box>
                   <Typography variant="h6">
-                    ${venture.budget.toLocaleString()}
+                    ${effectiveBudget.toLocaleString()}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Spent: ${venture.spent.toLocaleString()} ({budgetUsage.toFixed(1)}%)
@@ -255,74 +429,123 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          {venture.tasks.length === 0 ? (
+          {tasksLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : allTasks.length === 0 ? (
             <Typography color="text.secondary" align="center">
               No tasks yet
             </Typography>
           ) : (
             <List>
-              {venture.tasks.map((task, index) => (
-                <React.Fragment key={task.id}>
-                  {index > 0 && <Divider />}
-                  <ListItem alignItems="flex-start">
-                    <ListItemAvatar>{getTaskIcon(task.status)}</ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body1">{task.title}</Typography>
-                          <Chip label={task.priority} size="small" color={getPriorityColor(task.priority)} />
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          {task.description && (
-                            <Typography variant="body2" color="text.secondary">
-                              {task.description}
-                            </Typography>
-                          )}
-                          {task.assignedTo && (
-                            <Typography variant="caption" color="text.secondary">
-                              Assigned to: {venture.team.find(m => m.id === task.assignedTo)?.name || 'Unknown'}
-                            </Typography>
-                          )}
-                        </>
-                      }
-                    />
-                  </ListItem>
-                </React.Fragment>
-              ))}
+              {allTasks.map((task, index) => {
+                const assignedTeamMember = task.assignedTo 
+                  ? venture.team.find(m => m.id === task.assignedTo)
+                  : null;
+                // Find the database task to get assignedToName
+                const dbTask = clientTasks.find(t => 
+                  String(t.id) === String(task.id) || t.id === task.id
+                );
+                const assignedName = assignedTeamMember?.name || 
+                  dbTask?.assignedToName || 
+                  'Unassigned';
+                
+                return (
+                  <React.Fragment key={task.id}>
+                    {index > 0 && <Divider />}
+                    <ListItem alignItems="flex-start">
+                      <ListItemAvatar>{getTaskIcon(task.status)}</ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Typography variant="body1">{task.title}</Typography>
+                            <Chip label={task.priority} size="small" color={getPriorityColor(task.priority)} />
+                            <Chip 
+                              label={task.status === 'completed' ? 'Completed' : task.status === 'in_progress' ? 'In Progress' : 'To Do'} 
+                              size="small" 
+                              variant="outlined"
+                            />
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            {task.description && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                {task.description}
+                              </Typography>
+                            )}
+                            <Box sx={{ mt: 0.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Assigned to: {assignedName}
+                              </Typography>
+                              {task.dueDate && (
+                                <Typography variant="caption" color="text.secondary">
+                                  • Updated: {new Date(task.dueDate).toLocaleDateString()}
+                                </Typography>
+                              )}
+                            </Box>
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  </React.Fragment>
+                );
+              })}
             </List>
           )}
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <List>
-            {venture.team.map((member, index) => (
-              <React.Fragment key={member.id}>
-                {index > 0 && <Divider />}
-                <ListItem>
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-                      {member.avatar ? <img src={member.avatar} alt={member.name} /> : member.name.charAt(0)}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={member.name}
-                    secondary={
-                      <>
-                        <Typography variant="body2" color="text.secondary">
-                          {member.role}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {member.email}
-                        </Typography>
-                      </>
-                    }
-                  />
-                </ListItem>
-              </React.Fragment>
-            ))}
-          </List>
+          {employeesLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <List>
+              {(clientEmployees.length > 0 ? clientEmployees : venture.team).map((member, index) => {
+                // Type guard to check if member has assignedAt (ClientEmployee)
+                const hasAssignedAt = 'assignedAt' in member && member.assignedAt;
+                return (
+                  <React.Fragment key={member.id || index}>
+                    {index > 0 && <Divider />}
+                    <ListItem>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                          {member.avatar ? <img src={member.avatar} alt={member.name} /> : member.name.charAt(0)}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={member.name}
+                        secondary={
+                          <>
+                            <Typography variant="body2" color="text.secondary">
+                              {member.role}
+                            </Typography>
+                            {member.email && (
+                              <Typography variant="caption" color="text.secondary">
+                                {member.email}
+                              </Typography>
+                            )}
+                            {hasAssignedAt && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                Assigned: {new Date((member as ClientEmployee).assignedAt!).toLocaleDateString()}
+                              </Typography>
+                            )}
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  </React.Fragment>
+                );
+              })}
+              {clientEmployees.length === 0 && venture.team.length === 0 && (
+                <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+                  No team members assigned
+                </Typography>
+              )}
+            </List>
+          )}
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>
@@ -380,7 +603,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
                           fontWeight={500}
                           color={daysUntilDeadline < 7 ? 'error' : daysUntilDeadline < 30 ? 'warning.main' : 'success.main'}
                         >
-                          {new Date(venture.deadline).toLocaleDateString()}
+                          {effectiveDeadline ? new Date(effectiveDeadline).toLocaleDateString() : venture.deadline ? new Date(venture.deadline).toLocaleDateString() : 'Not set'}
                         </Typography>
                       </Box>
                     </Box>
@@ -396,7 +619,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
                     Task Completion
                   </Typography>
                   <Typography variant="h4" fontWeight={700}>
-                    {venture.tasks.filter(t => t.status === 'completed').length} / {venture.tasks.length}
+                    {allTasks.filter(t => t.status === 'completed').length} / {allTasks.length}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Tasks completed
@@ -415,7 +638,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
                     {budgetUsage.toFixed(1)}%
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    ${venture.spent.toLocaleString()} / ${venture.budget.toLocaleString()}
+                    ${venture.spent.toLocaleString()} / ${effectiveBudget.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>

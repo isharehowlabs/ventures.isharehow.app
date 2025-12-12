@@ -331,8 +331,20 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
                   <Typography variant="body2" color="text.secondary">{completedLessons} / {totalLessons} done</Typography>
                 </Box>
                 {lessons.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography color="text.secondary">No lessons yet.</Typography>
+                  <Box sx={{ width: '100%', mb: 2 }}>
+                    <iframe
+                      width="100%"
+                      height="400"
+                      src="https://www.youtube.com/embed/videoseries?list=PLwz42x-QsWjN-hysPLdFdNRBwbqzs_2Bg"
+                      title="Wellness Playlist"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      style={{
+                        borderRadius: '8px',
+                        maxWidth: '100%',
+                      }}
+                    />
                   </Box>
                 ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>

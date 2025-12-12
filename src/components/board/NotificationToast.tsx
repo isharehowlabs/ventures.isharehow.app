@@ -24,11 +24,14 @@ export default function NotificationToast() {
         previousNotificationsRef.current.add(latest.id);
         setCurrentNotif(latest);
 
-        // Add to unified notification system
+        // Add to unified notification system (skip join/leave notifications)
+        if (latest.type === 'join' || latest.type === 'leave') {
+          // Skip join/leave notifications
+          return;
+        }
+
         const getNotificationTitle = (type: string) => {
           switch (type) {
-            case 'join': return 'User Joined';
-            case 'leave': return 'User Left';
             case 'update': return 'Board Updated';
             case 'milestone': return 'Milestone Reached';
             default: return 'Board Notification';
@@ -75,10 +78,6 @@ export default function NotificationToast() {
 
   const getNotificationTitle = (type: string) => {
     switch (type) {
-      case 'join':
-        return 'User Joined';
-      case 'leave':
-        return 'User Left';
       case 'update':
         return 'Board Updated';
       case 'milestone':
@@ -88,16 +87,19 @@ export default function NotificationToast() {
     }
   };
 
+  // Don't show join/leave notifications
+  const shouldShowNotification = currentNotif && currentNotif.type !== 'join' && currentNotif.type !== 'leave';
+
   return (
     <>
-      {/* Toast Notification - Keep for immediate feedback */}
+      {/* Toast Notification - Keep for immediate feedback (excluding join/leave) */}
       <Snackbar
-        open={!!currentNotif}
+        open={!!shouldShowNotification}
         autoHideDuration={5000}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        {currentNotif && (
+        {shouldShowNotification && currentNotif && (
           <Alert
             onClose={handleClose}
             severity={getSeverityColor(currentNotif.severity)}

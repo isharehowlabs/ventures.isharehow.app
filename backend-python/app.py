@@ -5372,10 +5372,28 @@ def get_tasks():
         return jsonify({'tasks': [], 'error': 'Database not configured'}), 503
     
     try:
-        # Get all tasks, ordered by most recent first (no filtering by user)
-        tasks = Task.query.order_by(Task.created_at.desc()).all()
+        # Get optional client_id filter from query parameters
+        client_id = request.args.get('client_id')
+        
+        # Build query
+        query = Task.query
+        
+        # Filter by client_id if provided (through support requests)
+        if client_id:
+            try:
+                # Join with support_requests to filter by client_id
+                query = query.join(SupportRequest, Task.support_request_id == SupportRequest.id).filter(
+                    SupportRequest.client_id == client_id
+                )
+            except Exception as join_error:
+                # If join fails (e.g., column doesn't exist), fall back to all tasks
+                print(f"Warning: Could not filter by client_id: {join_error}")
+                query = Task.query
+        
+        # Get all tasks, ordered by most recent first
+        tasks = query.order_by(Task.created_at.desc()).all()
         total_count = len(tasks)
-        print(f"Fetched {total_count} tasks from database")
+        print(f"Fetched {total_count} tasks from database" + (f" for client_id: {client_id}" if client_id else ""))
         
         # Log task status breakdown for debugging
         if total_count > 0:
@@ -5389,6 +5407,8 @@ def get_tasks():
             print("  1. Tasks were deleted")
             print("  2. Database was reset")
             print("  3. Tasks table is empty")
+            if client_id:
+                print(f"  4. No tasks found for client_id: {client_id}")
         
         return jsonify({
             'tasks': [task.to_dict() for task in tasks],
@@ -7255,6 +7275,50 @@ def delete_client(client_id):
         db.session.rollback()
         print(f"Error deleting client: {e}")
         return jsonify({'error': 'Failed to delete client'}), 500
+
+@app.route('/api/creative/clients/<client_id>/employees', methods=['GET'])
+@jwt_required(optional=True)
+def get_client_employees(client_id):
+    """Get all employees assigned to a client"""
+    if not DB_AVAILABLE:
+        return jsonify({'employees': [], 'error': 'Database not available'}), 503
+    
+    try:
+        # Get all employee assignments for this client
+        assignments = ClientEmployeeAssignment.query.filter_by(client_id=client_id).all()
+        
+        employees = []
+        for assignment in assignments:
+            employee_data = {
+                'id': assignment.employee_id,
+                'name': assignment.employee_name or 'Unknown',
+                'email': '',
+                'role': assignment.employee_name or 'Team Member',
+                'avatar': None,
+                'assignedAt': assignment.assigned_at.isoformat() if assignment.assigned_at else None
+            }
+            
+            # Try to get user details if employee_id exists
+            if assignment.employee_id:
+                try:
+                    user = User.query.get(assignment.employee_id)
+                    if user:
+                        employee_data['id'] = user.id
+                        employee_data['name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.username or assignment.employee_name or 'Unknown'
+                        employee_data['email'] = user.email or ''
+                        employee_data['role'] = assignment.employee_name or 'Team Member'
+                except Exception as e:
+                    print(f"Error fetching user details for employee_id {assignment.employee_id}: {e}")
+            
+            employees.append(employee_data)
+        
+        return jsonify({'employees': employees}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error fetching client employees: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'employees': [], 'error': 'Failed to fetch employees'}), 500
 
 @app.route('/api/creative/clients/<client_id>/assign-employee', methods=['POST'])
 def assign_employee(client_id):
@@ -9719,6 +9783,8 @@ if DB_AVAILABLE:
         tags = db.Column(db.Text, nullable=True)  # JSON array of tags
         marketing_budget = db.Column(db.String(500), nullable=True)  # Marketing budget information
         google_analytics_property_key = db.Column(db.String(100), nullable=True)  # Google Analytics Property ID (G-XXXXXXXXXX)
+        budget = db.Column(db.Numeric(10, 2), default=0, nullable=True)  # Project budget for ventures
+        deadline = db.Column(db.DateTime, nullable=True)  # Project deadline for timeline calculations and alerts
         user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Link to User account
         created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -9741,6 +9807,8 @@ if DB_AVAILABLE:
                 'tags': json.loads(self.tags) if self.tags else [],
                 'marketingBudget': self.marketing_budget,
                 'googleAnalyticsPropertyKey': self.google_analytics_property_key,
+                'budget': float(self.budget) if self.budget else 0,
+                'deadline': self.deadline.isoformat() if self.deadline else None,
                 'userId': self.user_id,
                 'hasAccount': self.user_id is not None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
