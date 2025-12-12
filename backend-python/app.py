@@ -591,9 +591,51 @@ if DB_AVAILABLE:
 
         def to_dict(self):
             # Safely access new columns that might not exist yet
-            category = getattr(self, 'category', None) or 'work' if hasattr(self, 'category') else 'work'
-            linked_entity_type = getattr(self, 'linked_entity_type', None) if hasattr(self, 'linked_entity_type') else None
-            linked_entity_id = getattr(self, 'linked_entity_id', None) if hasattr(self, 'linked_entity_id') else None
+            # Use SQLAlchemy instance state to check if attributes are loaded
+            # without triggering lazy loads for missing columns
+            from sqlalchemy import inspect as sa_inspect
+            from sqlalchemy.exc import ProgrammingError
+            
+            instance_state = sa_inspect(self, raiseerr=False)
+            if instance_state is None:
+                # Fallback if inspection fails
+                category = 'work'
+                linked_entity_type = None
+                linked_entity_id = None
+            else:
+                # Check if attributes are in the unloaded set (means they exist but weren't loaded)
+                # or if they're not in attrs at all (means they don't exist in the model/DB)
+                unloaded = getattr(instance_state, 'unloaded', set())
+                attrs = getattr(instance_state, 'attrs', {})
+                
+                # For category
+                if 'category' in unloaded or 'category' not in attrs:
+                    # Column either wasn't loaded or doesn't exist - use default
+                    category = 'work'
+                else:
+                    # Column is available, try to access it
+                    try:
+                        category = self.category or 'work'
+                    except (ProgrammingError, AttributeError, Exception):
+                        category = 'work'
+                
+                # For linked_entity_type
+                if 'linked_entity_type' in unloaded or 'linked_entity_type' not in attrs:
+                    linked_entity_type = None
+                else:
+                    try:
+                        linked_entity_type = self.linked_entity_type
+                    except (ProgrammingError, AttributeError, Exception):
+                        linked_entity_type = None
+                
+                # For linked_entity_id
+                if 'linked_entity_id' in unloaded or 'linked_entity_id' not in attrs:
+                    linked_entity_id = None
+                else:
+                    try:
+                        linked_entity_id = self.linked_entity_id
+                    except (ProgrammingError, AttributeError, Exception):
+                        linked_entity_id = None
             
             # If new polymorphic fields are not set but support_request_id is, use that for backward compatibility
             if not linked_entity_type and not linked_entity_id and self.support_request_id:
@@ -5508,9 +5550,11 @@ def get_tasks():
         
         # Get all tasks, ordered by most recent first
         # Use load_only to exclude missing columns if they don't exist
+        # Also use defer() to prevent lazy loading of missing columns
+        from sqlalchemy.orm import load_only, defer
+        
         if not has_category_column or not has_linked_entity_columns:
             # Exclude missing columns from the query
-            from sqlalchemy.orm import load_only
             columns_to_load = [
                 Task.id, Task.title, Task.description, Task.hyperlinks, 
                 Task.status, Task.support_request_id,
@@ -5521,8 +5565,15 @@ def get_tasks():
             # Only add new columns if they exist
             if has_category_column:
                 columns_to_load.append(Task.category)
+            else:
+                # Explicitly defer the column to prevent lazy loading
+                query = query.options(defer(Task.category))
+            
             if has_linked_entity_columns:
                 columns_to_load.extend([Task.linked_entity_type, Task.linked_entity_id])
+            else:
+                # Explicitly defer these columns to prevent lazy loading
+                query = query.options(defer(Task.linked_entity_type), defer(Task.linked_entity_id))
             
             query = query.options(load_only(*columns_to_load))
         

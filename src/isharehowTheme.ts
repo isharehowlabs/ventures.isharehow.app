@@ -221,6 +221,7 @@ const getTheme = (mode: 'light' | 'dark') => {
           maxHeight: 'calc(100% - 64px)',
           display: 'flex',
           flexDirection: 'column',
+          pointerEvents: 'auto',
         },
         paperScrollPaper: {
           maxHeight: 'calc(100% - 64px)',
@@ -269,6 +270,48 @@ const getTheme = (mode: 'light' | 'dark') => {
           borderTop: `1px solid ${mode === 'light' ? '#e2e8f0' : '#334155'}`,
           padding: '8px 24px',
           pointerEvents: 'auto',
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        root: {
+          zIndex: 1300,
+        },
+        paper: {
+          backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
+          pointerEvents: 'auto',
+        },
+        list: {
+          pointerEvents: 'auto',
+        },
+      },
+    },
+    MuiPopover: {
+      styleOverrides: {
+        root: {
+          zIndex: 1300,
+        },
+        paper: {
+          backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
+          pointerEvents: 'auto',
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        select: {
+          pointerEvents: 'auto',
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          pointerEvents: 'auto',
+          '&:hover': {
+            pointerEvents: 'auto',
+          },
         },
       },
     },
