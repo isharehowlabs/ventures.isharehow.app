@@ -440,8 +440,15 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     try {
       await deleteTask(id);
       handleTaskMenuClose();
-    } catch (err) {
+      // Show success message if needed
+      setToastMessage('Task deleted successfully');
+      setToastOpen(true);
+    } catch (err: any) {
       console.error('Error deleting task:', err);
+      // Show error message to user
+      setToastMessage(err?.message || 'Failed to delete task. Please try again.');
+      setToastOpen(true);
+      // Don't close menu on error so user can retry
     }
   };
 

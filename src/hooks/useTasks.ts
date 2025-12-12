@@ -35,6 +35,7 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const lastUpdatedRef = useRef<Date | null>(null);
+  const deletingTasksRef = useRef<Set<string>>(new Set()); // Track tasks being deleted to prevent duplicates
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -186,28 +187,80 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
   };
 
   const deleteTask = async (id: string) => {
+    // Prevent duplicate deletion attempts
+    if (deletingTasksRef.current.has(id)) {
+      console.warn(`Task ${id} is already being deleted, ignoring duplicate request`);
+      return;
+    }
+
+    // Store the task being deleted for potential rollback
+    let deletedTask: Task | undefined;
+    setTasks(prev => {
+      deletedTask = prev.find(t => t.id === id);
+      return prev.filter(t => t.id !== id);
+    });
+
+    // Mark as deleting
+    deletingTasksRef.current.add(id);
+
     try {
       setIsLoading(true);
       setError(null);
       setAuthRequired(false);
       const backendUrl = getTasksBackendUrl();
-      const response = await fetchWithErrorHandling(`${backendUrl}/api/tasks/${id}`, {
+      
+      // Use direct fetch to have better control over error handling
+      const response = await fetch(`${backendUrl}/api/tasks/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.status === 401) {
         setAuthRequired(true);
         throw new Error('Authentication required');
       }
+
+      if (!response.ok) {
+        let errorMessage = `Failed to delete task: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          // If JSON parsing fails, use the status text
+          const errorText = await response.text().catch(() => '');
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Success - task already removed optimistically, socket will confirm
       // Real-time update will be handled by socket
     } catch (err: any) {
+      console.error('Error deleting task:', err);
+      
+      // Revert optimistic update on error
+      if (deletedTask) {
+        setTasks(prev => {
+          const exists = prev.some(t => t.id === deletedTask!.id);
+          if (!exists) {
+            return [...prev, deletedTask!];
+          }
+          return prev;
+        });
+      }
+
       if (err?.status === 401 || err?.message?.includes('Authentication required')) {
         setAuthRequired(true);
       }
-      setError(err.message);
-      throw err;
+      const errorMessage = err?.message || 'Failed to delete task. Please try again.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
+      deletingTasksRef.current.delete(id);
     }
   };
 
