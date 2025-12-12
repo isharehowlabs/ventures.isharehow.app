@@ -206,6 +206,10 @@ const getTheme = (mode: 'light' | 'dark') => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          pointerEvents: 'none',
+          '& > *': {
+            pointerEvents: 'auto',
+          },
         },
         paper: {
           backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
@@ -244,6 +248,7 @@ const getTheme = (mode: 'light' | 'dark') => {
           backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
           borderBottom: `1px solid ${mode === 'light' ? '#e2e8f0' : '#334155'}`,
           padding: '16px 24px',
+          pointerEvents: 'auto',
         },
       },
     },
@@ -252,6 +257,8 @@ const getTheme = (mode: 'light' | 'dark') => {
         root: {
           backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
           padding: '20px 24px',
+          pointerEvents: 'auto',
+          overflow: 'auto',
         },
       },
     },
@@ -261,6 +268,7 @@ const getTheme = (mode: 'light' | 'dark') => {
           backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
           borderTop: `1px solid ${mode === 'light' ? '#e2e8f0' : '#334155'}`,
           padding: '8px 24px',
+          pointerEvents: 'auto',
         },
       },
     },
