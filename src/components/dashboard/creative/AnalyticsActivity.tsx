@@ -397,6 +397,9 @@ export default function AnalyticsActivity() {
                   <li>Download the JSON key file</li>
                   <li>Set GOOGLE_APPLICATION_CREDENTIALS environment variable to the JSON file path</li>
                 </ol>
+                <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                  See <a href="https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport" target="_blank" rel="noopener noreferrer">Google Analytics API documentation</a> for detailed setup instructions.
+                </Typography>
               </Typography>
             </Box>
           )}

@@ -13389,7 +13389,7 @@ def get_analytics_data():
                     print(f"Error loading Google Analytics credentials: {cred_error}")
                     return jsonify({
                         'error': f'Service account info was not in the expected format, missing fields client_email, token_uri. Error: {str(cred_error)}',
-                        'message': 'Please ensure your service account JSON file contains all required fields: client_email, token_uri, private_key, etc.',
+                        'message': 'Please ensure your service account JSON file contains all required fields: client_email, token_uri, private_key, etc. See Google Analytics API documentation for proper service account setup.',
                         'isMockData': True,
                         'totalRevenue': 0,
                         'totalUsers': 0,
