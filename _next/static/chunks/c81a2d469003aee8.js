@@ -1,0 +1,19 @@
+__turbopack_load_page_chunks__("/lookupcafe", [
+  "static/chunks/6aa44bf1cfdab706.js",
+  "static/chunks/083b252767956768.js",
+  "static/chunks/bf2ecff3d94c0105.js",
+  "static/chunks/c6538cda1ad188c4.js",
+  "static/chunks/500474a7811f5f89.js",
+  "static/chunks/00df7c076124e700.js",
+  "static/chunks/f358664b5eab5491.js",
+  "static/chunks/1a5fab5cd2e28c76.js",
+  "static/chunks/74b7d85100fbc8d6.js",
+  "static/chunks/3d08a4150fe18766.js",
+  "static/chunks/232706ab8edf3348.js",
+  "static/chunks/875b9dc354ec4b20.js",
+  "static/chunks/55db2730b9138f95.js",
+  "static/chunks/3da60ac96573fbf2.js",
+  "static/chunks/a4ebf98d8617b3bc.js",
+  "static/chunks/d6b55f5d0349ec5b.js",
+  "static/chunks/turbopack-1ec631b56f9e0d75.js"
+])

@@ -32,6 +32,74 @@ function truncate(text: string, maxLength: number): string {
 
 
 /**
+ * Cleans up malformed HTML where HTML tags are nested inside attributes
+ * This fixes issues where WordPress content has corrupted HTML structure
+ */
+function cleanMalformedHtml(content: string): string {
+  if (!content) return content;
+  
+  let cleaned = content;
+  
+  // Fix malformed anchor tags where HTML is inside href attribute
+  // Pattern: <a href="<div>...<iframe...">...</a>
+  // Use [\s\S] instead of . with s flag for ES2017 compatibility
+  cleaned = cleaned.replace(
+    /<a[^>]*href=["']<div[^>]*>[\s\S]*?<\/div>["'][^>]*>[\s\S]*?<\/a>/gi,
+    (match) => {
+      // Extract YouTube video ID from nested iframe if present
+      const videoIdMatch = match.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+      if (videoIdMatch) {
+        const videoId = videoIdMatch[1];
+        return `
+          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
+            <iframe 
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+              src="https://www.youtube.com/embed/${videoId}" 
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen
+              loading="lazy"
+            ></iframe>
+          </div>
+        `.trim();
+      }
+      // If no video ID found, just remove the malformed anchor tag
+      return '';
+    }
+  );
+  
+  // Fix malformed iframe tags where HTML is inside src attribute
+  // Pattern: <iframe src="<div>...<iframe...">...</iframe>
+  // Use [\s\S] instead of . with s flag for ES2017 compatibility
+  cleaned = cleaned.replace(
+    /<iframe[^>]*src=["']<div[^>]*>[\s\S]*?<\/div>["'][^>]*>[\s\S]*?<\/iframe>/gi,
+    (match) => {
+      // Extract YouTube video ID from nested iframe if present
+      const videoIdMatch = match.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+      if (videoIdMatch) {
+        const videoId = videoIdMatch[1];
+        return `
+          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
+            <iframe 
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+              src="https://www.youtube.com/embed/${videoId}" 
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen
+              loading="lazy"
+            ></iframe>
+          </div>
+        `.trim();
+      }
+      // If no video ID found, just remove the malformed iframe
+      return '';
+    }
+  );
+  
+  return cleaned;
+}
+
+/**
  * Converts YouTube URLs in blog content to embedded video players
  * Handles various YouTube URL formats including:
  * - https://www.youtube.com/watch?v=VIDEO_ID
@@ -41,6 +109,9 @@ function truncate(text: string, maxLength: number): string {
  */
 export function embedYouTubeVideos(content: string): string {
   if (!content) return content;
+
+  // First, clean up any malformed HTML
+  let processedContent = cleanMalformedHtml(content);
 
   // Regular expression to match YouTube URLs and extract video IDs
   const youtubePatterns = [
@@ -52,11 +123,13 @@ export function embedYouTubeVideos(content: string): string {
     /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/g,
   ];
 
-  let processedContent = content;
-
   // Process each pattern
   youtubePatterns.forEach(pattern => {
     processedContent = processedContent.replace(pattern, (match, videoId) => {
+      // Skip if this is already inside an iframe embed
+      if (match.includes('youtube.com/embed/')) {
+        return match;
+      }
       // Create responsive iframe embed
       return `
         <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
@@ -73,10 +146,14 @@ export function embedYouTubeVideos(content: string): string {
     });
   });
 
-  // Also handle YouTube links wrapped in anchor tags
+  // Also handle YouTube links wrapped in anchor tags (but not already processed)
   processedContent = processedContent.replace(
     /<a[^>]*href=["'](?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})[^"']*["'][^>]*>.*?<\/a>/gi,
     (match, videoId) => {
+      // Skip if already converted to embed
+      if (match.includes('youtube.com/embed/')) {
+        return match;
+      }
       return `
         <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
           <iframe 

@@ -1,710 +1,665 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import Head from 'next/head';
+import { Box, Container, Typography, Grid, Button, Stack, Chip, Card, CardContent, Divider, List, ListItem, ListItemIcon, ListItemText, Avatar, TextField, Alert, useTheme, Theme } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import SecurityIcon from '@mui/icons-material/Security';
+import SpeedIcon from '@mui/icons-material/Speed';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import InsightsIcon from '@mui/icons-material/Insights';
+import PhoneIcon from '@mui/icons-material/Phone';
+import EmailIcon from '@mui/icons-material/Email';
+import BusinessIcon from '@mui/icons-material/Business';
 import { motion } from 'framer-motion';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Button, 
-  Card, 
-  CardContent, 
-  Grid, 
-  Chip, 
-  Stack, 
-  useTheme,
-  TextField,
-  Alert,
-  CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Divider,
-} from '@mui/material';
-import {
-  Person as PersonIcon,
-  Email as EmailIcon,
-  Business as BusinessIcon,
-  Phone as PhoneIcon,
-  Send as SendIcon,
-  CheckCircle as CheckCircleIcon,
-  ExpandMore as ExpandMoreIcon,
-  AutoAwesome as AutoAwesomeIcon,
-  Speed as SpeedIcon,
-  Security as SecurityIcon,
-} from '@mui/icons-material';
 import { getBackendUrl } from '../utils/backendUrl';
-import { useDarkMode } from '../hooks/useDarkMode';
+
+const Section = ({ children, background = 'transparent', py = { xs: 10, md: 14 } }: { children: React.ReactNode; background?: string | ((theme: Theme) => string); py?: any }) => {
+  const theme = useTheme();
+  const bgcolor = typeof background === 'function' ? background(theme) : background;
+  return <Box sx={{ py, bgcolor }}>{children}</Box>;
+};
+
+const Feature = ({ overline, title, body, bullets, image, reverse = false }: { overline: string; title: string; body: string; bullets: string[]; image: string; reverse?: boolean }) => (
+  <Section>
+    <Container maxWidth="lg">
+      <Grid container spacing={{ xs: 6, md: 10 }} alignItems="center" direction={reverse ? 'row-reverse' : 'row'}>
+        <Grid item xs={12} md={6}>
+          <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2, fontSize: '0.875rem', fontWeight: 600 }}>
+            {overline}
+          </Typography>
+          <Typography variant="h3" component="h3" sx={{ fontWeight: 800, mt: 2, mb: 3, fontSize: { xs: '2rem', md: '2.5rem' }, lineHeight: 1.2 }}>
+            {title}
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontSize: '1.125rem', lineHeight: 1.7 }}>
+            {body}
+          </Typography>
+          <List sx={{ '& .MuiListItem-root': { py: 1.5 } }}>
+            {bullets.map((b, i) => (
+              <ListItem key={i} disableGutters>
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <CheckCircleIcon color="primary" sx={{ fontSize: 28 }} />
+                </ListItemIcon>
+                <ListItemText
+                  primaryTypographyProps={{
+                    variant: 'body1',
+                    sx: { fontSize: '1.0625rem', fontWeight: 500 }
+                  }}
+                  primary={b}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Box
+            component="img"
+            src={image}
+            alt={title}
+            sx={{
+              width: '100%',
+              height: { xs: 300, md: 500 },
+              objectFit: 'cover',
+              borderRadius: 4,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 30px 80px rgba(0,0,0,0.25)',
+              }
+            }}
+          />
+        </Grid>
+      </Grid>
+    </Container>
+  </Section>
+);
+
+const packages = [
+  {
+    name: 'Audit & Fix',
+    price: '$150–$300',
+    blurb: 'One-time. Perfect to test the waters and unlock quick wins.',
+    cta: 'Buy now',
+    href: 'https://shop.isharehow.app/products/untitled-dec11_10-41?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web',
+    features: [
+      '1 pro creative asset OR 1 UX/UI video audit',
+      'Actionable CRO improvements',
+      'Delivery in 3 days, 2 revisions',
+    ],
+  },
+  {
+    name: 'Essential Core',
+    price: '$950–$2,500',
+    blurb: 'Landing page (up to 5 sections) OR Brand sprint with guidelines.',
+    popular: true,
+    cta: 'Start project',
+    href: 'https://shop.isharehow.app/products/custom-webapp-built-by-ishare?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web',
+    features: [
+      'Responsive build + basic SEO',
+      'Design system: color, type, components',
+      '10–14 day delivery, 3 revisions',
+    ],
+  },
+  {
+    name: 'AI & Enterprise',
+    price: 'Custom',
+    blurb: 'Workflows, automation, design systems, and enablement for teams.',
+    cta: 'Request proposal',
+    href: '#contact-form',
+    features: [
+      'AI-assisted ops & content',
+      'Design system + tokens',
+      'Team onboarding and docs',
+    ],
+  },
+];
+
+const faqs = [
+  { q: 'What if I need revisions?', a: 'Every package includes revisions. We iterate fast and keep scope tight for speed and quality.' },
+  { q: 'Do you sign NDAs?', a: 'Yes. We can work with your standard NDA or provide ours.' },
+  { q: 'What tools do you use?', a: 'Figma, Next.js, MUI, and modern analytics/CRO tooling. We plug into your stack as needed.' },
+  { q: 'How do we start?', a: 'Pick a package or send a request. We will reply with a short plan and timeline the same day.' },
+];
 
 const FractionalDigitalAgencyPage = () => {
-  const theme = useTheme();
-  const isDark = useDarkMode();
-  
-  // Client Prospect Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    company: '',
-    phone: '',
-    message: '',
-    package: '',
-  });
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = useState(false);
+  const [formData, setFormData] = React.useState({ name: '', email: '', company: '', phone: '', message: '', package: '' });
+  const [formLoading, setFormLoading] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = React.useState(false);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (formError) setFormError(null);
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const validateForm = (): boolean => {
-    if (!formData.name.trim()) {
-      setFormError('Name is required');
-      return false;
-    }
-    if (!formData.email.trim()) {
-      setFormError('Email is required');
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setFormError('Please enter a valid email address');
-      return false;
-    }
-    if (!formData.phone.trim()) {
-      setFormError('Phone number is required');
-      return false;
-    }
-    return true;
+  const validate = () => {
+    if (!formData.name) return 'Name is required';
+    if (!formData.email) return 'Email is required';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Please enter a valid email address';
+    if (!formData.phone) return 'Phone number is required';
+    return null;
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setFormLoading(true);
-    setFormError(null);
-
+    const v = validate();
+    if (v) { setFormError(v); return; }
+    setFormLoading(true); setFormError(null); setFormSuccess(false);
     try {
-      const backendUrl = getBackendUrl();
-      
-      const response = await fetch(`${backendUrl}/api/creative/clients`, {
+      const resp = await fetch(`${getBackendUrl()}/api/creative/clients`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          company: formData.company.trim() || undefined,
-          phone: formData.phone.trim(),
-          message: formData.message.trim() || undefined,
-          marketingBudget: formData.package.trim() || undefined,
+          name: formData.name,
+          email: formData.email,
+          company: formData.company || undefined,
+          phone: formData.phone,
+          message: formData.message || undefined,
+          marketingBudget: formData.package || undefined,
           source: 'fractional_digital_agency',
           status: 'prospect',
         }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to submit prospect form' }));
-        throw new Error(errorData.error || 'Failed to submit form. Please try again.');
+      if (!resp.ok) {
+        let msg = 'Failed to submit form. Please try again.';
+        try { const e = await resp.json(); if (e?.error) msg = e.error; } catch {}
+        throw new Error(msg);
       }
-
       setFormSuccess(true);
-      setFormData({
-        name: '',
-        email: '',
-        company: '',
-        phone: '',
-        message: '',
-        package: '',
-      });
+      setFormData({ name: '', email: '', company: '', phone: '', message: '', package: '' });
     } catch (err: any) {
-      setFormError(err.message || 'Failed to submit form. Please try again.');
+      setFormError(err?.message || 'Something went wrong.');
     } finally {
       setFormLoading(false);
     }
   };
 
-  const packages = [
-    {
-      name: 'Audit & Fix',
-      subtitle: 'The Essential',
-      price: '$150 - $300',
-      priceNote: 'One-time',
-      description: 'Perfect for testing the waters. I will provide a comprehensive audit or one high-quality creative asset to improve your immediate conversion.',
-      features: [
-        '1 Creative Asset: High-fidelity social ad, banner, or email graphic',
-        'OR 1 UX/UI Audit: A video review of one landing page with actionable improvements for CRO',
-        'Deliverable: Source files (Figma/Adobe), PNG/JPG, or PDF Report',
-        'Delivery Time: 3 Days',
-        'Revisions: 2',
-      ],
-      target: 'Freelancers or solopreneurs needing quick, affordable fixes',
-      guarantee: '7-day satisfaction guarantee',
-      color: 'primary',
-    },
-    {
-      name: 'Essential Core',
-      subtitle: 'Landing Page or Brand Sprint',
-      price: '$950 - $2,500',
-      priceNote: 'or custom quote',
-      description: 'A complete creative sprint for your business. We will design and develop a high-converting landing page or a brand identity kit.',
-      features: [
-        'Design & Dev: One responsive Landing Page (up to 5 sections) OR',
-        'Branding Kit: Logo, Color Palette, Typography, and Brand Guidelines',
-        'Bonus: Basic SEO Setup (Meta tags, speed optimization) & Front-end implementation',
-        'Deliverable: Live website link or Full Brand Kit',
-        'Delivery Time: 10-14 Days',
-        'Revisions: 3',
-      ],
-      target: 'Small businesses seeking integrated growth',
-      guarantee: '7-day trial period + 98% satisfaction promise',
-      color: 'secondary',
-      popular: true,
-    },
-    {
-      name: 'AI & Enterprise',
-      subtitle: 'Custom Offers',
-      price: 'Custom Quote',
-      priceNote: 'Contact for pricing',
-      description: 'Your AI Help and Enterprise services are complex. For larger organizations, we offer fully tailored solutions. Message me for a custom quote.',
-      features: [
-        'Fully custom integrations and white-label options',
-        'GDPR-compliant security and dedicated resources',
-        'Advanced features like full accessibility audits',
-        'Design system stewardship',
-        'Scalable solutions for enterprise needs',
-        'Dedicated support team',
-      ],
-      target: 'Enterprises or high-growth clients wanting comprehensive, scalable solutions',
-      guarantee: 'No-risk trial + cancel anytime; full money-back if not satisfied',
-      color: 'success',
-    },
-  ];
-
-  const comparisonData = [
-    {
-      feature: 'Customization & Extras',
-      essential: 'Limited to off-the-shelf solutions; no custom integrations',
-      core: 'Moderate customization (e.g., tailored AI prompts or basic API management); includes ethical AI guidance',
-      enterprise: 'Fully custom (e.g., white-label options, GDPR-compliant security, dedicated resources); includes advanced features like full accessibility audits and design system stewardship',
-    },
-    {
-      feature: 'Target Client',
-      essential: 'Freelancers or solopreneurs needing quick, affordable fixes',
-      core: 'Small businesses seeking integrated growth (e.g., combining creative and AI for efficiency gains)',
-      enterprise: 'Enterprises or high-growth clients wanting comprehensive, scalable solutions',
-    },
-    {
-      feature: 'Trial/Guarantee',
-      essential: '7-day satisfaction guarantee',
-      core: '7-day trial period + 98% satisfaction promise',
-      enterprise: 'No-risk trial + cancel anytime; full money-back if not satisfied',
-    },
-  ];
-
-  const faqs = [
-    {
-      question: 'What if I need revisions?',
-      answer: 'All packages include a set number of revisions (see details above). Additional revisions are available at $50/hour.',
-    },
-    {
-      question: 'How does AI power these services?',
-      answer: 'AI enhances efficiency in design, audits, and content creation – e.g., generating tailored prompts for 30% faster iterations.',
-    },
-    {
-      question: 'What if my needs are more complex?',
-      answer: 'For custom enterprise solutions, message me for a tailored quote.',
-    },
-    {
-      question: 'Do you offer niches like affiliate marketing?',
-      answer: 'Yes! Highlighted for targeted clients – e.g., AI-driven content for affiliate empires.',
-    },
-    {
-      question: 'Delivery format?',
-      answer: 'All deliverables include source files and are optimized for quick implementation.',
-    },
-  ];
-
   return (
     <>
       <Head>
-        <title>Fractional Digital Agency - AI-Powered Creative Services | iShareHow</title>
-        <meta name="description" content="Your AI-Powered Creative Partner. Project-based managed creative, UI/UX design, and growth services. 24/7 availability, no long-term contracts." />
+        <title>Fractional Digital Agency – Modern, AI‑Powered Creative</title>
+        <meta name="description" content="Project-based creative, UI/UX, and growth. Fast iterations, real results, no long-term contracts." />
       </Head>
 
-      <Box sx={{ bgcolor: 'background.default', color: 'text.primary', minHeight: '100vh', position: 'relative' }}>
-        {/* Hero Section */}
+      {/* HERO */}
+      <Box sx={{ position: 'relative', bgcolor: 'background.default', overflow: 'hidden' }}>
         <Box
           sx={{
-            pt: { xs: 8, md: 12 },
-            pb: { xs: 6, md: 8 },
             position: 'relative',
-            overflow: 'hidden',
+            py: { xs: 16, md: 24 },
+            color: 'common.white',
+            backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.75)), url(https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80)`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
           }}
         >
           <Container maxWidth="lg">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <Typography
-                variant="h3"
-                component="h1"
-                align="center"
-                sx={{
-                  fontWeight: 800,
-                  mb: 2,
-                  fontSize: { xs: '2rem', md: '3rem' },
-                }}
-              >
-                Fractional Digital Agency
-              </Typography>
-              <Typography
-                variant="h6"
-                align="center"
-                color="text.secondary"
-                sx={{ mb: 4, fontStyle: 'italic' }}
-              >
-                Gig: Business Transformation and Creative Services Powered by AI
-              </Typography>
-
-              <Box sx={{ textAlign: 'center', mb: 6 }}>
-                <Typography
-                  variant="h4"
-                  component="h2"
+            <Grid container spacing={6} alignItems="center">
+              <Grid item xs={12} md={7}>
+                <Typography variant="overline" sx={{ opacity: 0.9, letterSpacing: 2, fontSize: '0.875rem' }}>AI‑Powered Creative Services</Typography>
+                <Typography variant="h1" component="h1" sx={{ fontWeight: 900, lineHeight: 1.2, mt: 2, mb: 3, fontSize: { xs: '2.5rem', md: '3.75rem' } }}>
+                  Fractional Digital Agency for modern brands
+                </Typography>
+                <Typography variant="h5" sx={{ mt: 2, mb: 4, opacity: 0.95, fontWeight: 400, lineHeight: 1.6 }}>
+                  Design, development, and growth—delivered fast, without the retainer bloat.
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
+                  <Button variant="contained" size="large" color="primary" href="#contact-form" endIcon={<ArrowForwardIcon/>} sx={{ px: 4, py: 1.5, fontSize: '1rem', fontWeight: 600 }}>
+                    Get a proposal
+                  </Button>
+                  <Button variant="outlined" size="large" color="inherit" href="#packages" sx={{ px: 4, py: 1.5, fontSize: '1rem', fontWeight: 600, borderWidth: 2, '&:hover': { borderWidth: 2 } }}>
+                    View packages
+                  </Button>
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 5 }}>
+                  <Chip icon={<SpeedIcon/>} label="Fast sprints" sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 500, py: 2.5, '& .MuiChip-icon': { color: 'white' } }}/>
+                  <Chip icon={<InsightsIcon/>} label="CRO‑driven" sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 500, py: 2.5, '& .MuiChip-icon': { color: 'white' } }}/>
+                  <Chip icon={<SecurityIcon/>} label="No long contracts" sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 500, py: 2.5, '& .MuiChip-icon': { color: 'white' } }}/>
+                </Stack>
+              </Grid>
+              <Grid item xs={12} md={5}>
+                <Box
+                  component="img"
+                  src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                  alt="Modern workspace"
                   sx={{
-                    fontWeight: 700,
-                    mb: 3,
-                    fontSize: { xs: '1.5rem', md: '2rem' },
+                    width: '100%',
+                    height: { xs: 300, md: 500 },
+                    objectFit: 'cover',
+                    borderRadius: 4,
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                   }}
-                >
-                  Your AI-Powered Creative Partner
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{ mb: 3, maxWidth: 800, mx: 'auto' }}
-                >
-                  I will provide <strong>Project-Based managed creative, UI/UX design, and growth services</strong>.
-                </Typography>
-                <Typography
-                  variant="body1"
-                  color="text.secondary"
-                  sx={{ mb: 4, maxWidth: 800, mx: 'auto' }}
-                >
-                  Positioned as a <strong>one-stop solution for solopreneurs, small businesses, or enterprises needing tailored support</strong>.
-                </Typography>
-                <Box sx={{ maxWidth: 1100, mx: 'auto', mt: 2 }}>
-                  <Grid container spacing={3} alignItems="center">
-                    <Grid item xs={12} md={7}>
-                      <Box component="img" src="/images/hero-office.jpg" alt="Modern creative team at work" sx={{ width: '100%', height: { xs: 220, md: 420 }, objectFit: 'cover', borderRadius: 2, boxShadow: 6 }} />
-                    </Grid>
-                    <Grid item xs={12} md={5}>
-                      <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Box component="img" src="/images/creative-team.jpg" alt="Creative team" sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 2, boxShadow: 4 }} />
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Box component="img" src="/images/ui-wireframe.jpg" alt="UI wireframes" sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 2, boxShadow: 4 }} />
-                        </Grid>
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                </Box>
-                <Box sx={{ mt: 4 }}>
-                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} alignItems="center" justifyContent="center" sx={{ opacity: 0.8 }}>
-      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.default' }}>
-        <Container>
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography variant="h4" component="h3" sx={{ fontWeight: 700, mb: 2 }}>
-                Results you can see
-              </Typography>
+                />
+              </Grid>
+            </Grid>
+          </Container>
+        </Box>
+      </Box>
+
+      {/* FEATURES */}
+      <Feature
+        overline="Creative"
+        title="Brand, web, and campaign assets that convert"
+        body="We ship clean systems—typography, color, components—then apply them across landing pages and campaigns so everything feels deliberate and drives action."
+        bullets={["Design system + tokens","Responsive landing pages","Ads, email, and social creative"]}
+        image="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80"
+      />
+      <Feature
+        overline="Product"
+        title="Ship UX/UI improvements weekly"
+        body="Low-friction iterations on flows that matter—pricing, onboarding, dashboards—measured against real KPIs."
+        bullets={["User‑tested flows","Faster path to value","Deep analytics & heatmaps"]}
+        image="https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2015&q=80"
+        reverse
+      />
+
+      {/* RESULTS */}
+      <Section background="background.default">
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={5}>
+              <Typography variant="overline" color="text.secondary">Results</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 800, mt: 1, mb: 2 }}>Before → After</Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Real transformations from recent engagements. Swipe-worthy before/after outcomes backed by data.
+                Recent engagements showing visual polish and measurable lift.
               </Typography>
-              <Stack direction="row" spacing={2}>
-                <Chip label="CRO" />
-                <Chip label="Brand Refresh" />
-                <Chip label="UX Upgrade" />
+              <Stack direction="row" spacing={1}>
+                <Chip label="CRO"/>
+                <Chip label="UX Upgrade"/>
+                <Chip label="Brand Refresh"/>
               </Stack>
             </Grid>
-            <Grid item xs={12} md={6}>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Box component="img" src="/images/before.jpg" alt="Before" sx={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 2, boxShadow: 3 }} />
+            <Grid item xs={12} md={7}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <Box
+                    component="img"
+                    src="https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2069&q=80"
+                    alt="Before"
+                    sx={{
+                      width: '100%',
+                      height: { xs: 200, sm: 280, md: 320 },
+                      objectFit: 'cover',
+                      borderRadius: 3,
+                      boxShadow: 8,
+                      transition: 'transform 0.3s ease',
+                      '&:hover': { transform: 'scale(1.02)' }
+                    }}
+                  />
                 </Grid>
-                <Grid item xs={6}>
-                  <Box component="img" src="/images/after.jpg" alt="After" sx={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 2, boxShadow: 6 }} />
+                <Grid item xs={12} sm={6}>
+                  <Box
+                    component="img"
+                    src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                    alt="After"
+                    sx={{
+                      width: '100%',
+                      height: { xs: 200, sm: 280, md: 320 },
+                      objectFit: 'cover',
+                      borderRadius: 3,
+                      boxShadow: 12,
+                      transition: 'transform 0.3s ease',
+                      '&:hover': { transform: 'scale(1.02)' }
+                    }}
+                  />
                 </Grid>
               </Grid>
             </Grid>
           </Grid>
         </Container>
-      </Box>
-                    <Typography variant="overline" color="text.secondary">Trusted by</Typography>
-                    <Typography variant="body2">Startups</Typography>
-                    <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
-                    <Typography variant="body2">Agencies</Typography>
-                    <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
-                    <Typography variant="body2">SMBs</Typography>
-                  </Stack>
-                </Box>
+      </Section>
 
-                <Grid container spacing={3} sx={{ mt: 4, maxWidth: 900, mx: 'auto' }}>
-                  <Grid item xs={12} md={4}>
-                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'transparent' }}>
-                      <CardContent>
-                        <SpeedIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-                        <Typography variant="h6" gutterBottom>
-                          Efficiency Gains
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          30% improvements in conversions and operations
-                        </Typography>
-                      </CardContent>
-                    </Card>
+      {/* PACKAGES */}
+      <Section background={(theme: any) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)'}>
+        <Container maxWidth="lg" id="packages">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2, fontSize: '0.875rem', fontWeight: 600 }}>
+              Pricing
+            </Typography>
+            <Typography variant="h3" align="center" sx={{ fontWeight: 800, mt: 1, mb: 2, fontSize: { xs: '2rem', md: '2.75rem' } }}>
+              Choose Your Package
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', fontSize: '1.125rem' }}>
+              Select the plan that best fits your needs. You can change it anytime.
+            </Typography>
+          </Box>
+          <Grid container spacing={4}>
+            {packages.map((p) => (
+              <Grid key={p.name} item xs={12} md={4}>
+                <Card
+                  elevation={p.popular ? 12 : 4}
+                  sx={{
+                    height: '100%',
+                    position: 'relative',
+                    border: p.popular ? (theme) => `2px solid ${theme.palette.primary.main}` : '1px solid',
+                    borderColor: p.popular ? 'primary.main' : 'divider',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: p.popular ? 16 : 8,
+                    }
+                  }}
+                >
+                  {p.popular && (
+                    <Chip
+                      color="primary"
+                      label="Most Popular"
+                      sx={{
+                        position: 'absolute',
+                        top: 20,
+                        right: 20,
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        height: 28,
+                      }}
+                    />
+                  )}
+                  <CardContent sx={{ p: 4 }}>
+                    <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.5, fontSize: '0.75rem', fontWeight: 600 }}>
+                      {p.name}
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 800, mt: 1, mb: 2, color: 'primary.main' }}>
+                      {p.price}
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3, lineHeight: 1.6 }}>
+                      {p.blurb}
+                    </Typography>
+                    <Divider sx={{ my: 3 }}/>
+                    <List sx={{ mb: 3, '& .MuiListItem-root': { py: 1 } }}>
+                      {p.features.map((f: string) => (
+                        <ListItem key={f} disableGutters>
+                          <ListItemIcon sx={{ minWidth: 36 }}>
+                            <CheckCircleIcon color="success" sx={{ fontSize: 24 }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={f}
+                            primaryTypographyProps={{
+                              variant: 'body1',
+                              sx: { fontSize: '0.9375rem', fontWeight: 500 }
+                            }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                    <Button
+                      fullWidth
+                      variant={p.popular ? 'contained' : 'outlined'}
+                      color={p.popular ? 'primary' : 'inherit'}
+                      href={p.href}
+                      size="large"
+                      sx={{
+                        mt: 2,
+                        py: 1.5,
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        ...(p.popular ? {} : { borderWidth: 2, '&:hover': { borderWidth: 2 } })
+                      }}
+                      endIcon={p.popular ? <ArrowForwardIcon /> : undefined}
+                    >
+                      {p.cta}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Section>
+
+      {/* TESTIMONIAL */}
+      <Section background={(theme: any) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={5}>
+              <Box
+                component="img"
+                src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                alt="Happy client"
+                sx={{
+                  width: '100%',
+                  height: { xs: 300, md: 400 },
+                  objectFit: 'cover',
+                  borderRadius: 4,
+                  boxShadow: 8,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={7}>
+              <Card elevation={0} sx={{ p: { xs: 3, md: 5 }, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems="flex-start">
+                  <Avatar
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+                    sx={{ width: 80, height: 80, border: '3px solid', borderColor: 'primary.main' }}
+                  />
+                  <Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>“Polished, conversion‑focused, and fast.”</Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7 }}>
+                      We asked for a modern landing and clear value props. Delivered ahead of schedule with measurable lift in signups.
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Sarah Chen</Typography>
+                    <Typography variant="caption" color="text.secondary">CEO, TechStart Inc.</Typography>
+                  </Box>
+                </Stack>
+              </Card>
+            </Grid>
+          </Grid>
+        </Container>
+      </Section>
+
+      {/* FAQ */}
+      <Section>
+        <Container maxWidth="md">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2, fontSize: '0.875rem', fontWeight: 600 }}>
+              Support
+            </Typography>
+            <Typography variant="h3" align="center" sx={{ fontWeight: 800, mt: 1, mb: 2, fontSize: { xs: '2rem', md: '2.75rem' } }}>
+              Frequently Asked Questions
+            </Typography>
+          </Box>
+          <Stack spacing={3}>
+            {faqs.map((f) => (
+              <Card
+                key={f.q}
+                elevation={0}
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    boxShadow: 4,
+                    transform: 'translateX(4px)',
+                  }
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
+                    {f.q}
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                    {f.a}
+                  </Typography>
+                </CardContent>
+              </Card>
+            ))}
+          </Stack>
+        </Container>
+      </Section>
+
+      {/* CTA BAND */}
+      <Box
+        sx={{
+          position: 'relative',
+          py: { xs: 12, md: 16 },
+          color: 'common.white',
+          backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)), url(https://images.unsplash.com/photo-1521737604893-d14cc237f11d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2084&q=80)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Typography variant="h3" sx={{ fontWeight: 900, mb: 2, fontSize: { xs: '2rem', md: '2.75rem' } }}>
+                Ready to move fast?
+              </Typography>
+              <Typography variant="h6" sx={{ opacity: 0.95, fontWeight: 400, lineHeight: 1.6 }}>
+                Send a brief and get a same‑day plan and timeline.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+                <Button
+                  size="large"
+                  variant="contained"
+                  color="primary"
+                  href="#contact-form"
+                  sx={{ px: 4, py: 1.5, fontSize: '1rem', fontWeight: 600 }}
+                  endIcon={<ArrowForwardIcon/>}
+                >
+                  Get a proposal
+                </Button>
+                <Button
+                  size="large"
+                  variant="outlined"
+                  color="inherit"
+                  href="#packages"
+                  sx={{ px: 4, py: 1.5, fontSize: '1rem', fontWeight: 600, borderWidth: 2, '&:hover': { borderWidth: 2, bgcolor: 'rgba(255,255,255,0.1)' } }}
+                >
+                  Explore packages
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* CONTACT */}
+      <Section background="transparent">
+        <Container maxWidth="md" id="contact-form">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2, fontSize: '0.875rem', fontWeight: 600 }}>
+              Get Started
+            </Typography>
+            <Typography variant="h3" align="center" sx={{ fontWeight: 800, mt: 1, mb: 2, fontSize: { xs: '2rem', md: '2.75rem' } }}>
+              Tell us about your project
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', fontSize: '1.125rem' }}>
+              Fill out the form below and we'll get back to you within 24 hours with a custom proposal.
+            </Typography>
+          </Box>
+          {formSuccess ? (
+            <Card elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'success.main', bgcolor: 'success.light', textAlign: 'center' }}>
+              <Alert severity="success" sx={{ fontSize: '1.125rem' }}>
+                Thank you! We've received your request and will contact you within 24 hours.
+              </Alert>
+            </Card>
+          ) : (
+            <Card elevation={4} sx={{ p: { xs: 3, md: 5 }, border: '1px solid', borderColor: 'divider' }}>
+              <Box component="form" onSubmit={handleSubmit}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleFormChange}
+                      required
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
                   </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'transparent' }}>
-                      <CardContent>
-                        <AutoAwesomeIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-                        <Typography variant="h6" gutterBottom>
-                          24/7 Availability
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Powered by AI for round-the-clock support
-                        </Typography>
-                      </CardContent>
-                    </Card>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleFormChange}
+                      required
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
                   </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Card elevation={3} sx={{ height: '100%', bgcolor: 'transparent' }}>
-                      <CardContent>
-                        <SecurityIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-                        <Typography variant="h6" gutterBottom>
-                          No Long-Term Contracts
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Flexible, project-based delivery
-                        </Typography>
-                      </CardContent>
-                    </Card>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Company"
+                      name="company"
+                      value={formData.company}
+                      onChange={handleFormChange}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleFormChange}
+                      required
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Package Interest (optional)"
+                      name="package"
+                      value={formData.package}
+                      onChange={handleFormChange}
+                      placeholder="e.g., Audit & Fix, Essential Core, AI & Enterprise"
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Message"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleFormChange}
+                      multiline
+                      rows={5}
+                      placeholder="What are you trying to achieve? Tell us about your project goals..."
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
+                  </Grid>
+                  {formError && (
+                    <Grid item xs={12}>
+                      <Alert severity="error" sx={{ borderRadius: 2 }}>{formError}</Alert>
+                    </Grid>
+                  )}
+                  <Grid item xs={12}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      fullWidth
+                      disabled={formLoading}
+                      endIcon={<ArrowForwardIcon />}
+                      sx={{
+                        py: 1.75,
+                        fontSize: '1.0625rem',
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                      }}
+                    >
+                      {formLoading ? 'Submitting…' : 'Submit request'}
+                    </Button>
                   </Grid>
                 </Grid>
               </Box>
-            </motion.div>
-          </Container>
-        </Box>
-
-        {/* Packages Section */}
-        <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'transparent' }}>
-          <Container maxWidth="lg">
-            <Typography
-              variant="h4"
-              align="center"
-              sx={{ fontWeight: 700, mb: 6 }}
-            >
-              Choose Your Package
-            </Typography>
-
-            <Grid container spacing={4}>
-              {packages.map((pkg, index) => (
-                <Grid item xs={12} md={4} key={index}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.2 }}
-                  >
-                    <Card
-                      elevation={pkg.popular ? 8 : 3}
-                      sx={{
-                        height: '100%',
-                        position: 'relative',
-                        border: pkg.popular ? `2px solid ${theme.palette.primary.main}` : 'none',
-                        bgcolor: 'background.default',
-                      }}
-                    >
-                      {pkg.popular && (
-                        <Chip
-                          label="Most Popular"
-                          color="primary"
-                          sx={{
-                            position: 'absolute',
-                            top: 16,
-                            right: 16,
-                            fontWeight: 600,
-                          }}
-                        />
-                      )}
-                      <CardContent sx={{ p: 4 }}>
-                        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                          {pkg.name}
-                        </Typography>
-                        <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 2 }}>
-                          {pkg.subtitle}
-                        </Typography>
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="h4" sx={{ fontWeight: 800, color: `${pkg.color}.main` }}>
-                            {pkg.price}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {pkg.priceNote}
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          {pkg.description}
-                        </Typography>
-                        <Divider sx={{ my: 3 }} />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-                          Includes:
-                        </Typography>
-                        <Stack spacing={1.5} sx={{ mb: 3 }}>
-                          {pkg.features.map((feature, idx) => (
-                            <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                              <CheckCircleIcon
-                                sx={{ fontSize: 20, color: `${pkg.color}.main`, mr: 1, mt: 0.25 }}
-                              />
-                              <Typography variant="body2">{feature}</Typography>
-                            </Box>
-                          ))}
-                        </Stack>
-                        <Divider sx={{ my: 3 }} />
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>Target:</strong> {pkg.target}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Guarantee:</strong> {pkg.guarantee}
-                        </Typography>
-                        <Button
-                          variant={pkg.popular ? 'contained' : 'outlined'}
-                          color={pkg.color as any}
-                          fullWidth
-                          sx={{ mt: 3 }}
-                          onClick={() => {
-                            if (pkg.name === 'Essential Core') {
-                              // Link to Shopify product for Essential Core
-                              window.open('https://shop.isharehow.app/products/custom-webapp-built-by-ishare?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web', '_blank', 'noopener,noreferrer');
-                            } else if (pkg.name === 'Audit & Fix') {
-                              // Link to Shopify product for Audit & Fix
-                              window.open('https://shop.isharehow.app/products/untitled-dec11_10-41?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web', '_blank', 'noopener,noreferrer');
-                            } else {
-                              setFormData(prev => ({ ...prev, package: pkg.name }));
-                              document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' });
-                            }
-                          }}
-                        >
-                          Get Started
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
-        </Box>
-
-        {/* Comparison Table */}
-        <Box sx={{ py: { xs: 6, md: 8 } }}>
-          <Container maxWidth="lg">
-            <Typography
-              variant="h4"
-              align="center"
-              sx={{ fontWeight: 700, mb: 6 }}
-            >
-              Package Comparison
-            </Typography>
-            <TableContainer component={Paper} elevation={3}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Feature</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Audit & Fix (The Essential)</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Essential Core</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>AI & Enterprise (Custom)</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {comparisonData.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell sx={{ fontWeight: 600 }}>{row.feature}</TableCell>
-                      <TableCell>{row.essential}</TableCell>
-                      <TableCell>{row.core}</TableCell>
-                      <TableCell>{row.enterprise}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Container>
-        </Box>
-
-        {/* FAQs Section */}
-        <Box sx={{ py: { xs: 6, md: 8 }, bgcolor: 'transparent' }}>
-          <Container maxWidth="md">
-            <Typography
-              variant="h4"
-              align="center"
-              sx={{ fontWeight: 700, mb: 6 }}
-            >
-              Frequently Asked Questions
-            </Typography>
-            <Stack spacing={2}>
-              {faqs.map((faq, index) => (
-                <Accordion key={index} elevation={2}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {faq.question}
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography variant="body1" color="text.secondary">
-                      {faq.answer}
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
-              ))}
-            </Stack>
-          </Container>
-        </Box>
-
-        {/* Contact Form */}
-        <Box id="contact-form" sx={{ py: { xs: 6, md: 8 } }}>
-          <Container maxWidth="md">
-            <Typography
-              variant="h4"
-              align="center"
-              sx={{ fontWeight: 700, mb: 6 }}
-            >
-              Get Started Today
-            </Typography>
-            <Card elevation={3} sx={{ bgcolor: 'transparent' }}>
-              <CardContent sx={{ p: 4 }}>
-                {formSuccess ? (
-                  <Alert severity="success" sx={{ mb: 3 }}>
-                    Thank you! We've received your request and will contact you soon.
-                  </Alert>
-                ) : (
-                  <form onSubmit={handleFormSubmit}>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Name *"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleFormChange}
-                          required
-                          InputProps={{
-                            startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Email *"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleFormChange}
-                          required
-                          InputProps={{
-                            startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Company"
-                          name="company"
-                          value={formData.company}
-                          onChange={handleFormChange}
-                          InputProps={{
-                            startAdornment: <BusinessIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Phone *"
-                          name="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={handleFormChange}
-                          required
-                          InputProps={{
-                            startAdornment: <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Package Interest"
-                          name="package"
-                          value={formData.package}
-                          onChange={handleFormChange}
-                          placeholder="e.g., Audit & Fix, Essential Core, AI & Enterprise"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Message"
-                          name="message"
-                          value={formData.message}
-                          onChange={handleFormChange}
-                          multiline
-                          rows={4}
-                          placeholder="Tell us about your project..."
-                        />
-                      </Grid>
-                      {formError && (
-                        <Grid item xs={12}>
-                          <Alert severity="error">{formError}</Alert>
-                        </Grid>
-                      )}
-                      <Grid item xs={12}>
-                        <Button
-                          type="submit"
-                          variant="contained"
-                          size="large"
-                          fullWidth
-                          disabled={formLoading}
-                          startIcon={formLoading ? <CircularProgress size={20} /> : <SendIcon />}
-                          sx={{ py: 1.5 }}
-                        >
-                          {formLoading ? 'Submitting...' : 'Submit Request'}
-                        </Button>
-                      </Grid>
-                    </Grid>
-                  </form>
-                )}
-              </CardContent>
             </Card>
-          </Container>
-        </Box>
-      </Box>
+          )}
+        </Container>
+      </Section>
     </>
   );
 };
