@@ -429,7 +429,7 @@ const FractionalDigitalAgencyPage = () => {
               <Card elevation={0} sx={{ p: { xs: 3, md: 5 }, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems="flex-start">
                   <Avatar
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+                    src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
                     sx={{ width: 80, height: 80, border: '3px solid', borderColor: 'primary.main' }}
                   />
                   <Box>
@@ -437,7 +437,7 @@ const FractionalDigitalAgencyPage = () => {
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7 }}>
                       We asked for a modern landing and clear value props. Delivered ahead of schedule with measurable lift in signups.
                     </Typography>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Sarah Chen</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Janice Mora</Typography>
                     <Typography variant="caption" color="text.secondary">CEO, TechStart Inc.</Typography>
                   </Box>
                 </Stack>
