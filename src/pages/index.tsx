@@ -909,7 +909,7 @@ const HomePage = () => {
           </Box>
 
           {/* Solution Path Selection */}
-          <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.default' }}>
+          <Box className="MuiBox-pricing" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.default' }}>
             <Container maxWidth="lg">
               <Box sx={{ textAlign: 'center', mb: 6 }}>
                 <Typography
