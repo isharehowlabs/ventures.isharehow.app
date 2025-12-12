@@ -590,9 +590,10 @@ if DB_AVAILABLE:
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
         def to_dict(self):
-            # Determine linked entity info - support backward compatibility
-            linked_entity_type = self.linked_entity_type
-            linked_entity_id = self.linked_entity_id
+            # Safely access new columns that might not exist yet
+            category = getattr(self, 'category', None) or 'work' if hasattr(self, 'category') else 'work'
+            linked_entity_type = getattr(self, 'linked_entity_type', None) if hasattr(self, 'linked_entity_type') else None
+            linked_entity_id = getattr(self, 'linked_entity_id', None) if hasattr(self, 'linked_entity_id') else None
             
             # If new polymorphic fields are not set but support_request_id is, use that for backward compatibility
             if not linked_entity_type and not linked_entity_id and self.support_request_id:
@@ -605,7 +606,7 @@ if DB_AVAILABLE:
                 'description': self.description,
                 'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
                 'status': self.status,
-                'category': self.category or 'work',
+                'category': category,
                 'supportRequestId': self.support_request_id,  # Keep for backward compatibility
                 'linkedEntityType': linked_entity_type,
                 'linkedEntityId': linked_entity_id,
@@ -614,8 +615,8 @@ if DB_AVAILABLE:
                 'assignedTo': self.assigned_to,
                 'assignedToName': self.assigned_to_name,
                 'notes': self.notes or '',
-                'createdAt': self.created_at.isoformat(),
-                'updatedAt': self.updated_at.isoformat()
+                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                'updatedAt': self.updated_at.isoformat() if self.updated_at else None
             }
 
     # Authentication User Model
@@ -5425,12 +5426,18 @@ def get_tasks():
         # Check if new columns exist before using them
         from sqlalchemy import inspect
         inspector = inspect(db.engine)
+        has_category_column = False
         has_linked_entity_columns = False
         try:
-            if 'tasks' in inspector.get_table_names():
-                columns = [col['name'] for col in inspector.get_columns('tasks')]
+            # Table name is 'task' not 'tasks'
+            table_name = 'task'
+            table_names = [t.lower() if isinstance(t, str) else t for t in inspector.get_table_names()]
+            if table_name in table_names or table_name in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns(table_name)]
+                has_category_column = 'category' in columns
                 has_linked_entity_columns = 'linked_entity_type' in columns and 'linked_entity_id' in columns
-        except Exception:
+        except Exception as inspect_error:
+            print(f"Warning: Could not inspect task table columns: {inspect_error}")
             pass
         
         # Filter by polymorphic entity linking (new method) - only if columns exist
@@ -5480,6 +5487,25 @@ def get_tasks():
                     query = Task.query
         
         # Get all tasks, ordered by most recent first
+        # Use load_only to exclude missing columns if they don't exist
+        if not has_category_column or not has_linked_entity_columns:
+            # Exclude missing columns from the query
+            from sqlalchemy.orm import load_only
+            columns_to_load = [
+                Task.id, Task.title, Task.description, Task.hyperlinks, 
+                Task.status, Task.support_request_id,
+                Task.created_by, Task.created_by_name, 
+                Task.assigned_to, Task.assigned_to_name, Task.notes,
+                Task.created_at, Task.updated_at
+            ]
+            # Only add new columns if they exist
+            if has_category_column:
+                columns_to_load.append(Task.category)
+            if has_linked_entity_columns:
+                columns_to_load.extend([Task.linked_entity_type, Task.linked_entity_id])
+            
+            query = query.options(load_only(*columns_to_load))
+        
         tasks = query.order_by(Task.created_at.desc()).all()
         total_count = len(tasks)
         print(f"Fetched {total_count} tasks from database" + (f" for client_id: {client_id}" if client_id else ""))
