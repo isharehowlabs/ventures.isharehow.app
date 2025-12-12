@@ -83,6 +83,21 @@ interface AnalyticsData {
   revenueData: Array<{ name: string; value: number; previous: number }>;
   visitorData: Array<{ name: string; visitors: number; pageViews: number }>;
   conversionData: Array<{ name: string; rate: number }>;
+  // New fields for source medium and platform
+  trafficBySourceMedium?: Array<{ 
+    sourceMedium: string; 
+    users: number; 
+    sessions: number; 
+    pageViews: number;
+    bounceRate?: number;
+  }>;
+  userAcquisitionByPlatform?: Array<{ 
+    platform: string; 
+    newUsers: number; 
+    returningUsers: number; 
+    totalUsers: number;
+    conversionRate?: number;
+  }>;
 }
 
 const COLORS = ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
@@ -171,6 +186,8 @@ export default function AnalyticsActivity() {
           revenueData: data.revenueData || [],
           visitorData: data.visitorData || [],
           conversionData: data.conversionData || [],
+          trafficBySourceMedium: data.trafficBySourceMedium || [],
+          userAcquisitionByPlatform: data.userAcquisitionByPlatform || [],
         });
       } else if (data.error) {
         setError(data.error);
@@ -609,7 +626,7 @@ export default function AnalyticsActivity() {
       </Grid>
 
       {/* Visitor Activity Chart */}
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12}>
           <ChartCard
             title="Visitor Activity"
@@ -663,6 +680,252 @@ export default function AnalyticsActivity() {
                   name="Page Views"
                 />
               </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+      </Grid>
+
+      {/* Traffic by Source Medium Charts */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} lg={8}>
+          <ChartCard
+            title="Traffic by Source Medium"
+            subtitle={`${formatTimeRange(timeRange)} - Users, Sessions, and Page Views breakdown`}
+            action={
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#6366f1', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Users</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#10b981', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Sessions</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#f59e0b', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Page Views</Typography>
+                </Box>
+              </Stack>
+            }
+          >
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={analyticsData?.trafficBySourceMedium || []}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="sourceMedium" 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={11}
+                  tick={{ fill: theme.palette.text.secondary }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
+                  }} 
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="square"
+                />
+                <Bar 
+                  dataKey="users" 
+                  fill="#6366f1" 
+                  radius={[4, 4, 0, 0]}
+                  name="Users"
+                />
+                <Bar 
+                  dataKey="sessions" 
+                  fill="#10b981" 
+                  radius={[4, 4, 0, 0]}
+                  name="Sessions"
+                />
+                <Bar 
+                  dataKey="pageViews" 
+                  fill="#f59e0b" 
+                  radius={[4, 4, 0, 0]}
+                  name="Page Views"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+
+        <Grid item xs={12} lg={4}>
+          <ChartCard
+            title="Source Medium Distribution"
+            subtitle="Traffic share by source medium"
+          >
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={analyticsData?.trafficBySourceMedium || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry: any) => {
+                    const data = entry as { sourceMedium?: string; percent?: number };
+                    return `${data.sourceMedium || 'Unknown'}: ${((data.percent || 0) * 100).toFixed(0)}%`;
+                  }}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="users"
+                  nameKey="sourceMedium"
+                >
+                  {(analyticsData?.trafficBySourceMedium || []).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
+                  }}
+                  formatter={(value: number, name: string) => [
+                    value.toLocaleString(),
+                    name === 'users' ? 'Users' : name
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+      </Grid>
+
+      {/* User Acquisition by Platform Charts */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={8}>
+          <ChartCard
+            title="User Acquisition by Source Platform"
+            subtitle={`${formatTimeRange(timeRange)} - New vs Returning users by platform`}
+            action={
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#6366f1', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">New Users</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#8b5cf6', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Returning Users</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#10b981', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Total Users</Typography>
+                </Box>
+              </Stack>
+            }
+          >
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={analyticsData?.userAcquisitionByPlatform || []}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="platform" 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={11}
+                  tick={{ fill: theme.palette.text.secondary }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
+                  }} 
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="square"
+                />
+                <Bar 
+                  dataKey="newUsers" 
+                  fill="#6366f1" 
+                  radius={[4, 4, 0, 0]}
+                  name="New Users"
+                />
+                <Bar 
+                  dataKey="returningUsers" 
+                  fill="#8b5cf6" 
+                  radius={[4, 4, 0, 0]}
+                  name="Returning Users"
+                />
+                <Bar 
+                  dataKey="totalUsers" 
+                  fill="#10b981" 
+                  radius={[4, 4, 0, 0]}
+                  name="Total Users"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+
+        <Grid item xs={12} lg={4}>
+          <ChartCard
+            title="Platform Distribution"
+            subtitle="User acquisition share by platform"
+          >
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={analyticsData?.userAcquisitionByPlatform || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry: any) => {
+                    const data = entry as { platform?: string; percent?: number };
+                    return `${data.platform || 'Unknown'}: ${((data.percent || 0) * 100).toFixed(0)}%`;
+                  }}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="totalUsers"
+                  nameKey="platform"
+                >
+                  {(analyticsData?.userAcquisitionByPlatform || []).map((entry, index) => (
+                    <Cell key={`cell-platform-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
+                  }}
+                  formatter={(value: number, name: string) => [
+                    value.toLocaleString(),
+                    name === 'totalUsers' ? 'Total Users' : name
+                  ]}
+                />
+              </PieChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>

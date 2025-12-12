@@ -13864,6 +13864,8 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
+                        'trafficBySourceMedium': [],
+                        'userAcquisitionByPlatform': [],
                     }), 200
             else:
                 # Try to use default credentials (for local development or GCP)
@@ -13887,6 +13889,8 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
+                        'trafficBySourceMedium': [],
+                        'userAcquisitionByPlatform': [],
                     }), 200
             
             # Normalize property ID (handle both G-XXXXXXXXXX and numeric IDs)
@@ -13922,6 +13926,8 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
+                        'trafficBySourceMedium': [],
+                        'userAcquisitionByPlatform': [],
                     }), 200
             elif property_id_clean_check.upper().startswith('UA-') or property_id_clean_check.upper().startswith('A-') or property_id_clean_check.upper().startswith('A'):
                 # Try to extract numeric part if it's in format like A504418073 or A-504418073
@@ -13958,6 +13964,8 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
+                        'trafficBySourceMedium': [],
+                        'userAcquisitionByPlatform': [],
                     }), 200
                 property_id_clean = f"properties/{property_id_clean}"
             
@@ -14111,6 +14119,76 @@ def get_analytics_data():
                         'rate': round(week_rate, 2)
                     })
             
+            # Fetch traffic by source medium
+            traffic_by_source_medium = []
+            try:
+                source_medium_request = RunReportRequest(
+                    property=property_id_clean,
+                    date_ranges=[DateRange(start_date=start_date_str, end_date=end_date_str)],
+                    metrics=[
+                        Metric(name="activeUsers"),
+                        Metric(name="sessions"),
+                        Metric(name="screenPageViews"),
+                        Metric(name="bounceRate"),
+                    ],
+                    dimensions=[Dimension(name="sessionSourceMedium")],
+                    limit=10,  # Top 10 source mediums
+                )
+                source_medium_response = client.run_report(request=source_medium_request)
+                
+                for row in source_medium_response.rows:
+                    source_medium = row.dimension_values[0].value if row.dimension_values else 'Unknown'
+                    users = int(row.metric_values[0].value) if row.metric_values[0].value else 0
+                    sessions = int(row.metric_values[1].value) if row.metric_values[1].value else 0
+                    page_views = int(row.metric_values[2].value) if row.metric_values[2].value else 0
+                    bounce_rate = float(row.metric_values[3].value) if row.metric_values[3].value else 0
+                    
+                    traffic_by_source_medium.append({
+                        'sourceMedium': source_medium,
+                        'users': users,
+                        'sessions': sessions,
+                        'pageViews': page_views,
+                        'bounceRate': round(bounce_rate, 2),
+                    })
+            except Exception as e:
+                print(f"Error fetching traffic by source medium: {e}")
+                # Continue without this data
+            
+            # Fetch user acquisition by platform
+            user_acquisition_by_platform = []
+            try:
+                platform_request = RunReportRequest(
+                    property=property_id_clean,
+                    date_ranges=[DateRange(start_date=start_date_str, end_date=end_date_str)],
+                    metrics=[
+                        Metric(name="newUsers"),
+                        Metric(name="activeUsers"),
+                        Metric(name="conversions"),
+                    ],
+                    dimensions=[Dimension(name="platform")],
+                    limit=10,  # Top 10 platforms
+                )
+                platform_response = client.run_report(request=platform_request)
+                
+                for row in platform_response.rows:
+                    platform = row.dimension_values[0].value if row.dimension_values else 'Unknown'
+                    new_users = int(row.metric_values[0].value) if row.metric_values[0].value else 0
+                    total_users = int(row.metric_values[1].value) if row.metric_values[1].value else 0
+                    returning_users = total_users - new_users
+                    conversions = float(row.metric_values[2].value) if row.metric_values[2].value else 0
+                    conversion_rate = (conversions / total_users * 100) if total_users > 0 else 0
+                    
+                    user_acquisition_by_platform.append({
+                        'platform': platform,
+                        'newUsers': new_users,
+                        'returningUsers': returning_users,
+                        'totalUsers': total_users,
+                        'conversionRate': round(conversion_rate, 2),
+                    })
+            except Exception as e:
+                print(f"Error fetching user acquisition by platform: {e}")
+                # Continue without this data
+            
             return jsonify({
                 'totalRevenue': round(current_revenue, 2),
                 'totalUsers': current_total_users,
@@ -14123,6 +14201,8 @@ def get_analytics_data():
                 'revenueData': revenue_data,
                 'visitorData': visitor_data,
                 'conversionData': conversion_data,
+                'trafficBySourceMedium': traffic_by_source_medium,
+                'userAcquisitionByPlatform': user_acquisition_by_platform,
                 'isMockData': False,
             }), 200
             
@@ -14142,6 +14222,8 @@ def get_analytics_data():
                 'revenueData': [],
                 'visitorData': [],
                 'conversionData': [],
+                'trafficBySourceMedium': [],
+                'userAcquisitionByPlatform': [],
             }), 200
         except Exception as ga_error:
             print(f"Error fetching Google Analytics data: {str(ga_error)}")
@@ -14162,6 +14244,8 @@ def get_analytics_data():
                 'revenueData': [],
                 'visitorData': [],
                 'conversionData': [],
+                'trafficBySourceMedium': [],
+                'userAcquisitionByPlatform': [],
             }), 200
         
     except Exception as e:
