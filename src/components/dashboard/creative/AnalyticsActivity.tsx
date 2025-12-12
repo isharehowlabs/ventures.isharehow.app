@@ -361,6 +361,16 @@ export default function AnalyticsActivity() {
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const [filterMenuAnchor, setFilterMenuAnchor] = useState<null | HTMLElement>(null);
 
+  // Load saved GA Property ID from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedGaPropertyId = localStorage.getItem('ga_property_id');
+      if (savedGaPropertyId) {
+        setGaPropertyId(savedGaPropertyId);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const fetchClients = async () => {
       try {
@@ -371,9 +381,12 @@ export default function AnalyticsActivity() {
         if (response.ok) {
           const data = await response.json();
           setClients(data.clients || []);
-          // Auto-select first client's GA property if available
-          if (data.clients && data.clients.length > 0 && data.clients[0].googleAnalyticsPropertyKey) {
-            setGaPropertyId(data.clients[0].googleAnalyticsPropertyKey);
+          // Auto-select first client's GA property if available and no saved ID
+          if (typeof window !== 'undefined') {
+            const savedGaPropertyId = localStorage.getItem('ga_property_id');
+            if (!savedGaPropertyId && data.clients && data.clients.length > 0 && data.clients[0].googleAnalyticsPropertyKey) {
+              setGaPropertyId(data.clients[0].googleAnalyticsPropertyKey);
+            }
           }
         }
       } catch (err) {
@@ -455,6 +468,15 @@ export default function AnalyticsActivity() {
   const handleRefresh = async () => {
     if (gaPropertyId) {
       await fetchAnalyticsData(gaPropertyId, timeRange);
+    }
+  };
+
+  const handleSave = async () => {
+    if (gaPropertyId && typeof window !== 'undefined') {
+      // Save to localStorage
+      localStorage.setItem('ga_property_id', gaPropertyId);
+      // Refresh data
+      await handleRefresh();
     }
   };
 
@@ -583,7 +605,7 @@ export default function AnalyticsActivity() {
             <Button
               variant="contained"
               startIcon={<SaveIcon />}
-              onClick={handleRefresh}
+              onClick={handleSave}
               disabled={loading || !gaPropertyId}
               sx={{ 
                 bgcolor: 'primary.main',
