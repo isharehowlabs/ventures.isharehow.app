@@ -13718,6 +13718,9 @@ def get_analytics_data():
         property_id = data.get('propertyId', '').strip()
         time_range = data.get('timeRange', '7d')
         
+        # Debug: Log the property_id to help diagnose issues
+        print(f"DEBUG: Received property_id: '{property_id}' (type: {type(property_id)}, length: {len(property_id) if property_id else 0})")
+        
         if not property_id:
             return jsonify({'error': 'Google Analytics Property ID is required'}), 400
         
@@ -13818,34 +13821,74 @@ def get_analytics_data():
             # Normalize property ID (handle both G-XXXXXXXXXX and numeric IDs)
             # The Google Analytics Data API requires numeric Property IDs, not Measurement IDs (G-XXXXXXXXXX)
             # G-XXXXXXXXXX is a Measurement ID used for tracking, not for the Reporting API
-            if property_id.startswith('G-'):
-                # Return helpful error explaining the difference
-                return jsonify({
-                    'error': 'Property ID format error: G-XXXXXXXXXX is a Measurement ID, not a Property ID',
-                    'message': f'The value "{property_id}" is a Measurement ID (G-XXXXXXXXXX format), but the Google Analytics Data API requires a numeric Property ID. Please use the numeric Property ID instead.',
-                    'details': 'To find your numeric Property ID: 1) Go to Google Analytics (analytics.google.com), 2) Click Admin (gear icon), 3) Select your GA4 property, 4) Click Property Settings, 5) Find the numeric Property ID (e.g., 123456789). Use this numeric ID instead of the G-XXXXXXXXXX Measurement ID.',
-                    'helpUrl': 'https://developers.google.com/analytics/devguides/reporting/data/v1/property-id',
-                    'isMockData': True,
-                    'totalRevenue': 0,
-                    'totalUsers': 0,
-                    'pageViews': 0,
-                    'conversionRate': 0,
-                    'revenueTrend': 0,
-                    'usersTrend': 0,
-                    'pageViewsTrend': 0,
-                    'conversionTrend': 0,
-                    'revenueData': [],
-                    'visitorData': [],
-                    'conversionData': [],
-                }), 200
-            elif property_id.startswith('UA-'):
-                return jsonify({
-                    'error': 'Universal Analytics (UA) properties are no longer supported. Please use a GA4 property with numeric Property ID.',
-                    'isMockData': True,
-                }), 400
+            # Remove any whitespace and check the actual value
+            property_id_clean_check = property_id.strip()
+            
+            # Check for Measurement ID formats (G-XXXXXXXXXX, GXXXXXXXXXX, etc.)
+            if property_id_clean_check.upper().startswith('G-') or property_id_clean_check.upper().startswith('G'):
+                # Try to extract numeric part if it's in format like G504418073
+                numeric_part = property_id_clean_check.upper().lstrip('G-').lstrip('G').strip()
+                if numeric_part.isdigit():
+                    # User provided G-prefixed ID, extract the numeric part
+                    print(f"INFO: Extracted numeric Property ID '{numeric_part}' from '{property_id_clean_check}'")
+                    property_id_clean = f"properties/{numeric_part}"
+                else:
+                    # Return helpful error explaining the difference
+                    return jsonify({
+                        'error': 'Property ID format error: G-XXXXXXXXXX is a Measurement ID, not a Property ID',
+                        'message': f'The value "{property_id_clean_check}" appears to be a Measurement ID (G-XXXXXXXXXX format), but the Google Analytics Data API requires a numeric Property ID. Please use the numeric Property ID instead.',
+                        'details': 'To find your numeric Property ID: 1) Go to Google Analytics (analytics.google.com), 2) Click Admin (gear icon), 3) Select your GA4 property, 4) Click Property Settings, 5) Find the numeric Property ID (e.g., 123456789). Use this numeric ID instead of the G-XXXXXXXXXX Measurement ID.',
+                        'helpUrl': 'https://developers.google.com/analytics/devguides/reporting/data/v1/property-id',
+                        'isMockData': True,
+                        'totalRevenue': 0,
+                        'totalUsers': 0,
+                        'pageViews': 0,
+                        'conversionRate': 0,
+                        'revenueTrend': 0,
+                        'usersTrend': 0,
+                        'pageViewsTrend': 0,
+                        'conversionTrend': 0,
+                        'revenueData': [],
+                        'visitorData': [],
+                        'conversionData': [],
+                    }), 200
+            elif property_id_clean_check.upper().startswith('UA-') or property_id_clean_check.upper().startswith('A-') or property_id_clean_check.upper().startswith('A'):
+                # Try to extract numeric part if it's in format like A504418073 or A-504418073
+                numeric_part = property_id_clean_check.upper().lstrip('A-').lstrip('A').strip()
+                if numeric_part.isdigit():
+                    # User provided A-prefixed ID, extract the numeric part
+                    print(f"INFO: Extracted numeric Property ID '{numeric_part}' from '{property_id_clean_check}'")
+                    property_id_clean = f"properties/{numeric_part}"
+                else:
+                    return jsonify({
+                        'error': 'Universal Analytics (UA) properties are no longer supported. Please use a GA4 property with numeric Property ID.',
+                        'isMockData': True,
+                    }), 400
             else:
                 # Assume it's a numeric property ID, format as properties/XXXXXXX
-                property_id_clean = f"properties/{property_id}"
+                # Remove any whitespace and ensure it's numeric
+                property_id_clean = property_id_clean_check
+                # Validate it's numeric (allows digits only)
+                if not property_id_clean.isdigit():
+                    return jsonify({
+                        'error': 'Invalid Property ID format',
+                        'message': f'The Property ID "{property_id_clean}" must be numeric only. Please provide a valid numeric Property ID (e.g., 123456789).',
+                        'details': 'To find your numeric Property ID: 1) Go to Google Analytics (analytics.google.com), 2) Click Admin (gear icon), 3) Select your GA4 property, 4) Click Property Settings, 5) Find the numeric Property ID.',
+                        'helpUrl': 'https://developers.google.com/analytics/devguides/reporting/data/v1/property-id',
+                        'isMockData': True,
+                        'totalRevenue': 0,
+                        'totalUsers': 0,
+                        'pageViews': 0,
+                        'conversionRate': 0,
+                        'revenueTrend': 0,
+                        'usersTrend': 0,
+                        'pageViewsTrend': 0,
+                        'conversionTrend': 0,
+                        'revenueData': [],
+                        'visitorData': [],
+                        'conversionData': [],
+                    }), 200
+                property_id_clean = f"properties/{property_id_clean}"
             
             # Fetch current period data
             current_request = RunReportRequest(
