@@ -319,7 +319,7 @@ export default function AIHelpPage() {
               textAlign="center"
               sx={{ mb: 3 }}
             >
-              4,000+ companies already growing
+              Join the thousands of companies already growing with Ai Agents
             </Typography>
             <Box
               sx={{
@@ -331,16 +331,7 @@ export default function AIHelpPage() {
                 opacity: 0.6,
               }}
             >
-              {['Company 1', 'Company 2', 'Company 3', 'Company 4', 'Company 5'].map((company, index) => (
-                <Typography
-                  key={index}
-                  variant="body2"
-                  fontWeight={600}
-                  color="text.secondary"
-                >
-                  {company}
-                </Typography>
-              ))}
+              
             </Box>
           </Container>
         </Box>
