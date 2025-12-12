@@ -201,10 +201,12 @@ export default function CRMDashboard() {
 
   const backendUrl = getBackendUrl();
 
-  const fetchShopifyAnalytics = useCallback(async () => {
+  const fetchShopifyAnalytics = useCallback(async (timePeriod?: 'week' | 'month' | 'year') => {
     setShopifyAnalyticsLoading(true);
     try {
-      const response = await fetch(`${backendUrl}/api/shopify/analytics?days=${timePeriodFilter === 'week' ? 7 : timePeriodFilter === 'month' ? 30 : 365}`, {
+      // Use provided timePeriod parameter, or fall back to state value
+      const period = timePeriod || timePeriodFilter;
+      const response = await fetch(`${backendUrl}/api/shopify/analytics?days=${period === 'week' ? 7 : period === 'month' ? 30 : 365}`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -1100,8 +1102,10 @@ export default function CRMDashboard() {
                                 <Select 
                                   value={timePeriodFilter} 
                                   onChange={(e) => {
-                                    setTimePeriodFilter(e.target.value as 'week' | 'month' | 'year');
-                                    fetchShopifyAnalytics();
+                                    const newPeriod = e.target.value as 'week' | 'month' | 'year';
+                                    setTimePeriodFilter(newPeriod);
+                                    // Pass the new value directly to avoid stale closure issue
+                                    fetchShopifyAnalytics(newPeriod);
                                   }}
                                   sx={{ textTransform: 'none' }}
                                 >
