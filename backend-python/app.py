@@ -13864,7 +13864,9 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
-                        'trafficBySourceMedium': [],
+                        'activeUsersByFirstUserSourceMedium': [],
+                        'sessionsBySessionSourceMedium': [],
+                        'trafficAcquisitionUrls': [],
                         'userAcquisitionByPlatform': [],
                     }), 200
             else:
@@ -13889,7 +13891,9 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
-                        'trafficBySourceMedium': [],
+                        'activeUsersByFirstUserSourceMedium': [],
+                        'sessionsBySessionSourceMedium': [],
+                        'trafficAcquisitionUrls': [],
                         'userAcquisitionByPlatform': [],
                     }), 200
             
@@ -13926,7 +13930,9 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
-                        'trafficBySourceMedium': [],
+                        'activeUsersByFirstUserSourceMedium': [],
+                        'sessionsBySessionSourceMedium': [],
+                        'trafficAcquisitionUrls': [],
                         'userAcquisitionByPlatform': [],
                     }), 200
             elif property_id_clean_check.upper().startswith('UA-') or property_id_clean_check.upper().startswith('A-') or property_id_clean_check.upper().startswith('A'):
@@ -13964,7 +13970,9 @@ def get_analytics_data():
                         'revenueData': [],
                         'visitorData': [],
                         'conversionData': [],
-                        'trafficBySourceMedium': [],
+                        'activeUsersByFirstUserSourceMedium': [],
+                        'sessionsBySessionSourceMedium': [],
+                        'trafficAcquisitionUrls': [],
                         'userAcquisitionByPlatform': [],
                     }), 200
                 property_id_clean = f"properties/{property_id_clean}"
@@ -14119,14 +14127,39 @@ def get_analytics_data():
                         'rate': round(week_rate, 2)
                     })
             
-            # Fetch traffic by source medium
-            traffic_by_source_medium = []
+            # Fetch active users by first user source/medium
+            active_users_by_first_user_source_medium = []
             try:
-                source_medium_request = RunReportRequest(
+                first_user_source_medium_request = RunReportRequest(
                     property=property_id_clean,
                     date_ranges=[DateRange(start_date=start_date_str, end_date=end_date_str)],
                     metrics=[
                         Metric(name="activeUsers"),
+                    ],
+                    dimensions=[Dimension(name="firstUserSourceMedium")],
+                    limit=10,  # Top 10 source mediums
+                )
+                first_user_response = client.run_report(request=first_user_source_medium_request)
+                
+                for row in first_user_response.rows:
+                    first_user_source_medium = row.dimension_values[0].value if row.dimension_values else 'Unknown'
+                    active_users = int(row.metric_values[0].value) if row.metric_values[0].value else 0
+                    
+                    active_users_by_first_user_source_medium.append({
+                        'firstUserSourceMedium': first_user_source_medium,
+                        'activeUsers': active_users,
+                    })
+            except Exception as e:
+                print(f"Error fetching active users by first user source/medium: {e}")
+                # Continue without this data
+            
+            # Fetch sessions by session source/medium
+            sessions_by_session_source_medium = []
+            try:
+                session_source_medium_request = RunReportRequest(
+                    property=property_id_clean,
+                    date_ranges=[DateRange(start_date=start_date_str, end_date=end_date_str)],
+                    metrics=[
                         Metric(name="sessions"),
                         Metric(name="screenPageViews"),
                         Metric(name="bounceRate"),
@@ -14134,24 +14167,55 @@ def get_analytics_data():
                     dimensions=[Dimension(name="sessionSourceMedium")],
                     limit=10,  # Top 10 source mediums
                 )
-                source_medium_response = client.run_report(request=source_medium_request)
+                session_source_medium_response = client.run_report(request=session_source_medium_request)
                 
-                for row in source_medium_response.rows:
-                    source_medium = row.dimension_values[0].value if row.dimension_values else 'Unknown'
-                    users = int(row.metric_values[0].value) if row.metric_values[0].value else 0
-                    sessions = int(row.metric_values[1].value) if row.metric_values[1].value else 0
-                    page_views = int(row.metric_values[2].value) if row.metric_values[2].value else 0
-                    bounce_rate = float(row.metric_values[3].value) if row.metric_values[3].value else 0
+                for row in session_source_medium_response.rows:
+                    session_source_medium = row.dimension_values[0].value if row.dimension_values else 'Unknown'
+                    sessions = int(row.metric_values[0].value) if row.metric_values[0].value else 0
+                    page_views = int(row.metric_values[1].value) if row.metric_values[1].value else 0
+                    bounce_rate = float(row.metric_values[2].value) if row.metric_values[2].value else 0
                     
-                    traffic_by_source_medium.append({
-                        'sourceMedium': source_medium,
-                        'users': users,
+                    sessions_by_session_source_medium.append({
+                        'sessionSourceMedium': session_source_medium,
                         'sessions': sessions,
                         'pageViews': page_views,
                         'bounceRate': round(bounce_rate, 2),
                     })
             except Exception as e:
-                print(f"Error fetching traffic by source medium: {e}")
+                print(f"Error fetching sessions by session source/medium: {e}")
+                # Continue without this data
+            
+            # Fetch traffic acquisition URLs
+            traffic_acquisition_urls = []
+            try:
+                # Use fullPageUrl to get the complete URL
+                traffic_urls_request = RunReportRequest(
+                    property=property_id_clean,
+                    date_ranges=[DateRange(start_date=start_date_str, end_date=end_date_str)],
+                    metrics=[
+                        Metric(name="activeUsers"),
+                        Metric(name="sessions"),
+                        Metric(name="screenPageViews"),
+                    ],
+                    dimensions=[Dimension(name="fullPageUrl")],
+                    limit=15,  # Top 15 URLs
+                )
+                traffic_urls_response = client.run_report(request=traffic_urls_request)
+                
+                for row in traffic_urls_response.rows:
+                    url = row.dimension_values[0].value if row.dimension_values else 'Unknown'
+                    active_users = int(row.metric_values[0].value) if row.metric_values[0].value else 0
+                    sessions = int(row.metric_values[1].value) if row.metric_values[1].value else 0
+                    page_views = int(row.metric_values[2].value) if row.metric_values[2].value else 0
+                    
+                    traffic_acquisition_urls.append({
+                        'url': url,
+                        'activeUsers': active_users,
+                        'sessions': sessions,
+                        'pageViews': page_views,
+                    })
+            except Exception as e:
+                print(f"Error fetching traffic acquisition URLs: {e}")
                 # Continue without this data
             
             # Fetch user acquisition by platform
@@ -14201,7 +14265,9 @@ def get_analytics_data():
                 'revenueData': revenue_data,
                 'visitorData': visitor_data,
                 'conversionData': conversion_data,
-                'trafficBySourceMedium': traffic_by_source_medium,
+                'activeUsersByFirstUserSourceMedium': active_users_by_first_user_source_medium,
+                'sessionsBySessionSourceMedium': sessions_by_session_source_medium,
+                'trafficAcquisitionUrls': traffic_acquisition_urls,
                 'userAcquisitionByPlatform': user_acquisition_by_platform,
                 'isMockData': False,
             }), 200
@@ -14222,7 +14288,9 @@ def get_analytics_data():
                 'revenueData': [],
                 'visitorData': [],
                 'conversionData': [],
-                'trafficBySourceMedium': [],
+                'activeUsersByFirstUserSourceMedium': [],
+                'sessionsBySessionSourceMedium': [],
+                'trafficAcquisitionUrls': [],
                 'userAcquisitionByPlatform': [],
             }), 200
         except Exception as ga_error:
@@ -14244,7 +14312,9 @@ def get_analytics_data():
                 'revenueData': [],
                 'visitorData': [],
                 'conversionData': [],
-                'trafficBySourceMedium': [],
+                'activeUsersByFirstUserSourceMedium': [],
+                'sessionsBySessionSourceMedium': [],
+                'trafficAcquisitionUrls': [],
                 'userAcquisitionByPlatform': [],
             }), 200
         

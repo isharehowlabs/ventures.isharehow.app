@@ -83,13 +83,24 @@ interface AnalyticsData {
   revenueData: Array<{ name: string; value: number; previous: number }>;
   visitorData: Array<{ name: string; visitors: number; pageViews: number }>;
   conversionData: Array<{ name: string; rate: number }>;
-  // New fields for source medium and platform
-  trafficBySourceMedium?: Array<{ 
-    sourceMedium: string; 
-    users: number; 
+  // Traffic by First User Source/Medium (for Active Users)
+  activeUsersByFirstUserSourceMedium?: Array<{ 
+    firstUserSourceMedium: string; 
+    activeUsers: number; 
+  }>;
+  // Sessions by Session Source/Medium
+  sessionsBySessionSourceMedium?: Array<{ 
+    sessionSourceMedium: string; 
     sessions: number; 
     pageViews: number;
     bounceRate?: number;
+  }>;
+  // Traffic Acquisition URLs
+  trafficAcquisitionUrls?: Array<{ 
+    url: string; 
+    activeUsers: number; 
+    sessions: number; 
+    pageViews: number;
   }>;
   userAcquisitionByPlatform?: Array<{ 
     platform: string; 
@@ -186,7 +197,9 @@ export default function AnalyticsActivity() {
           revenueData: data.revenueData || [],
           visitorData: data.visitorData || [],
           conversionData: data.conversionData || [],
-          trafficBySourceMedium: data.trafficBySourceMedium || [],
+          activeUsersByFirstUserSourceMedium: data.activeUsersByFirstUserSourceMedium || [],
+          sessionsBySessionSourceMedium: data.sessionsBySessionSourceMedium || [],
+          trafficAcquisitionUrls: data.trafficAcquisitionUrls || [],
           userAcquisitionByPlatform: data.userAcquisitionByPlatform || [],
         });
       } else if (data.error) {
@@ -685,37 +698,27 @@ export default function AnalyticsActivity() {
         </Grid>
       </Grid>
 
-      {/* Traffic by Source Medium Charts */}
+      {/* Active Users by First User Source/Medium */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} lg={8}>
           <ChartCard
-            title="Traffic by Source Medium"
-            subtitle={`${formatTimeRange(timeRange)} - Users, Sessions, and Page Views breakdown`}
+            title="Active Users by First User Source/Medium"
+            subtitle={`${formatTimeRange(timeRange)} - Active users breakdown by first user source/medium`}
             action={
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: '#6366f1', borderRadius: '2px' }} />
-                  <Typography variant="caption" color="text.secondary">Users</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: '#10b981', borderRadius: '2px' }} />
-                  <Typography variant="caption" color="text.secondary">Sessions</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: '#f59e0b', borderRadius: '2px' }} />
-                  <Typography variant="caption" color="text.secondary">Page Views</Typography>
-                </Box>
-              </Stack>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 12, height: 12, bgcolor: '#6366f1', borderRadius: '2px' }} />
+                <Typography variant="caption" color="text.secondary">Active Users</Typography>
+              </Box>
             }
           >
             <ResponsiveContainer width="100%" height={400}>
               <BarChart 
-                data={analyticsData?.trafficBySourceMedium || []}
+                data={analyticsData?.activeUsersByFirstUserSourceMedium || []}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                 <XAxis 
-                  dataKey="sourceMedium" 
+                  dataKey="firstUserSourceMedium" 
                   stroke={theme.palette.text.secondary} 
                   fontSize={11}
                   tick={{ fill: theme.palette.text.secondary }}
@@ -742,10 +745,111 @@ export default function AnalyticsActivity() {
                   iconType="square"
                 />
                 <Bar 
-                  dataKey="users" 
+                  dataKey="activeUsers" 
                   fill="#6366f1" 
                   radius={[4, 4, 0, 0]}
-                  name="Users"
+                  name="Active Users"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+
+        <Grid item xs={12} lg={4}>
+          <ChartCard
+            title="First User Source/Medium Distribution"
+            subtitle="Active users share by first user source/medium"
+          >
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={analyticsData?.activeUsersByFirstUserSourceMedium || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry: any) => {
+                    const data = entry as { firstUserSourceMedium?: string; percent?: number };
+                    return `${data.firstUserSourceMedium || 'Unknown'}: ${((data.percent || 0) * 100).toFixed(0)}%`;
+                  }}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="activeUsers"
+                  nameKey="firstUserSourceMedium"
+                >
+                  {(analyticsData?.activeUsersByFirstUserSourceMedium || []).map((entry, index) => (
+                    <Cell key={`cell-first-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
+                  }}
+                  formatter={(value: number, name: string) => [
+                    value.toLocaleString(),
+                    name === 'activeUsers' ? 'Active Users' : name
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+      </Grid>
+
+      {/* Sessions by Session Source/Medium */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} lg={8}>
+          <ChartCard
+            title="Sessions by Session Source/Medium"
+            subtitle={`${formatTimeRange(timeRange)} - Sessions and page views breakdown by session source/medium`}
+            action={
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#10b981', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Sessions</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#f59e0b', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Page Views</Typography>
+                </Box>
+              </Stack>
+            }
+          >
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={analyticsData?.sessionsBySessionSourceMedium || []}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="sessionSourceMedium" 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={11}
+                  tick={{ fill: theme.palette.text.secondary }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
+                  }} 
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="square"
                 />
                 <Bar 
                   dataKey="sessions" 
@@ -766,27 +870,27 @@ export default function AnalyticsActivity() {
 
         <Grid item xs={12} lg={4}>
           <ChartCard
-            title="Source Medium Distribution"
-            subtitle="Traffic share by source medium"
+            title="Session Source/Medium Distribution"
+            subtitle="Sessions share by session source/medium"
           >
             <ResponsiveContainer width="100%" height={400}>
               <PieChart>
                 <Pie
-                  data={analyticsData?.trafficBySourceMedium || []}
+                  data={analyticsData?.sessionsBySessionSourceMedium || []}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
                   label={(entry: any) => {
-                    const data = entry as { sourceMedium?: string; percent?: number };
-                    return `${data.sourceMedium || 'Unknown'}: ${((data.percent || 0) * 100).toFixed(0)}%`;
+                    const data = entry as { sessionSourceMedium?: string; percent?: number };
+                    return `${data.sessionSourceMedium || 'Unknown'}: ${((data.percent || 0) * 100).toFixed(0)}%`;
                   }}
                   outerRadius={100}
                   fill="#8884d8"
-                  dataKey="users"
-                  nameKey="sourceMedium"
+                  dataKey="sessions"
+                  nameKey="sessionSourceMedium"
                 >
-                  {(analyticsData?.trafficBySourceMedium || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {(analyticsData?.sessionsBySessionSourceMedium || []).map((entry, index) => (
+                    <Cell key={`cell-session-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <RechartsTooltip 
@@ -799,10 +903,90 @@ export default function AnalyticsActivity() {
                   }}
                   formatter={(value: number, name: string) => [
                     value.toLocaleString(),
-                    name === 'users' ? 'Users' : name
+                    name === 'sessions' ? 'Sessions' : name
                   ]}
                 />
               </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+      </Grid>
+
+      {/* Traffic Acquisition URLs */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12}>
+          <ChartCard
+            title="Traffic Acquisition URLs"
+            subtitle={`${formatTimeRange(timeRange)} - Top URLs driving traffic`}
+            action={
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#6366f1', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Active Users</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#10b981', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Sessions</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: '#f59e0b', borderRadius: '2px' }} />
+                  <Typography variant="caption" color="text.secondary">Page Views</Typography>
+                </Box>
+              </Stack>
+            }
+          >
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={analyticsData?.trafficAcquisitionUrls || []}
+                margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="url" 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={10}
+                  tick={{ fill: theme.palette.text.secondary }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={120}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary} 
+                  fontSize={12}
+                  tick={{ fill: theme.palette.text.secondary }}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                    color: theme.palette.text.primary,
+                  }} 
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="square"
+                />
+                <Bar 
+                  dataKey="activeUsers" 
+                  fill="#6366f1" 
+                  radius={[4, 4, 0, 0]}
+                  name="Active Users"
+                />
+                <Bar 
+                  dataKey="sessions" 
+                  fill="#10b981" 
+                  radius={[4, 4, 0, 0]}
+                  name="Sessions"
+                />
+                <Bar 
+                  dataKey="pageViews" 
+                  fill="#f59e0b" 
+                  radius={[4, 4, 0, 0]}
+                  name="Page Views"
+                />
+              </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
