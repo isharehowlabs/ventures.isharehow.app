@@ -29,7 +29,6 @@ except ImportError:
     try:
         from werkzeug import HTTPException, MethodNotAllowed
     except ImportError:
-        db.session.rollback()  # Rollback failed transaction
         HTTPException = None
         MethodNotAllowed = None
 
