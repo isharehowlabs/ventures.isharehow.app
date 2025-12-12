@@ -445,6 +445,9 @@ const FractionalDigitalAgencyPage = () => {
                             if (pkg.name === 'Essential Core') {
                               // Link to Shopify product for Essential Core
                               window.open('https://shop.isharehow.app/products/custom-webapp-built-by-ishare?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web', '_blank', 'noopener,noreferrer');
+                            } else if (pkg.name === 'Audit & Fix') {
+                              // Link to Shopify product for Audit & Fix
+                              window.open('https://shop.isharehow.app/products/untitled-dec11_10-41?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web', '_blank', 'noopener,noreferrer');
                             } else {
                               setFormData(prev => ({ ...prev, package: pkg.name }));
                               document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' });
