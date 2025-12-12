@@ -192,6 +192,8 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
     return 'low';
   };
 
+  if (!venture) return null;
+
   // Merge venture.tasks (static) with clientTasks (from database)
   // Use a Map to avoid duplicates based on task ID
   const taskMap = new Map<string, any>();
@@ -213,7 +215,8 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
   });
   
   // Then add venture.tasks that aren't already in the map (by comparing IDs)
-  venture.tasks.forEach(task => {
+  // Safely access venture.tasks with optional chaining and default to empty array
+  (venture.tasks || []).forEach(task => {
     const taskId = String(task.id);
     // Check if we already have this task from database
     const exists = Array.from(taskMap.keys()).some(key => 
@@ -233,8 +236,6 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
   });
   
   const allTasks = Array.from(taskMap.values());
-
-  if (!venture) return null;
 
   const getStatusColor = (status: VentureStatus): string => {
     switch (status) {
@@ -311,7 +312,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
         >
           <Tab label="Overview" />
           <Tab label={`Tasks (${allTasks.length})`} />
-          <Tab label={`Team (${clientEmployees.length > 0 ? clientEmployees.length : venture.team.length})`} />
+          <Tab label={`Team (${clientEmployees.length > 0 ? clientEmployees.length : (venture?.team?.length || 0)})`} />
           <Tab label="Timeline & Analytics" />
           {venture.supportRequest && <Tab label="Support Request" />}
         </Tabs>
@@ -441,7 +442,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
             <List>
               {allTasks.map((task, index) => {
                 const assignedTeamMember = task.assignedTo 
-                  ? venture.team.find(m => m.id === task.assignedTo)
+                  ? (venture?.team || []).find(m => m.id === task.assignedTo)
                   : null;
                 // Find the database task to get assignedToName
                 const dbTask = clientTasks.find(t => 
@@ -503,7 +504,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
             </Box>
           ) : (
             <List>
-              {(clientEmployees.length > 0 ? clientEmployees : venture.team).map((member, index) => {
+              {(clientEmployees.length > 0 ? clientEmployees : (venture?.team || [])).map((member, index) => {
                 // Type guard to check if member has assignedAt (ClientEmployee)
                 const hasAssignedAt = 'assignedAt' in member && member.assignedAt;
                 return (
@@ -539,7 +540,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
                   </React.Fragment>
                 );
               })}
-              {clientEmployees.length === 0 && venture.team.length === 0 && (
+              {clientEmployees.length === 0 && (!venture?.team || venture.team.length === 0) && (
                 <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
                   No team members assigned
                 </Typography>
@@ -651,10 +652,10 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
                     Team Activity
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {venture.team.length} team member{venture.team.length !== 1 ? 's' : ''} assigned
+                    {(venture?.team?.length || 0)} team member{(venture?.team?.length || 0) !== 1 ? 's' : ''} assigned
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                    {venture.team.map((member) => (
+                    {(venture?.team || []).map((member) => (
                       <Chip
                         key={member.id}
                         label={member.name}
