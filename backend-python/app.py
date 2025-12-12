@@ -1038,10 +1038,15 @@ def shopify_graphql(query, variables=None):
                 # Ensure SHOPIFY_STORE_URL includes the GraphQL endpoint
                 graphql_url = SHOPIFY_STORE_URL
                 if not graphql_url.endswith('/graphql.json'):
-                        # If it's just the store domain, add the GraphQL path
-                        if 'myshopify.com' in graphql_url:
+                        # Check if /admin/api/ is already in the URL to avoid duplication
+                        if '/admin/api/' in graphql_url:
+                                # URL already contains /admin/api/, just append /graphql.json
+                                graphql_url = f"{graphql_url.rstrip('/')}/graphql.json"
+                        elif 'myshopify.com' in graphql_url:
+                                # Clean domain and add full path
                                 graphql_url = f"https://{graphql_url.replace('https://', '').replace('http://', '')}/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
                         else:
+                                # Add full admin API path
                                 graphql_url = f"{graphql_url.rstrip('/')}/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
                 
                 resp = requests.post(
