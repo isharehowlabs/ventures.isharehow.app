@@ -5422,30 +5422,52 @@ def get_tasks():
         # Build query
         query = Task.query
         
-        # Filter by polymorphic entity linking (new method)
-        if linked_entity_type and linked_entity_id:
-            query = query.filter(
-                Task.linked_entity_type == linked_entity_type,
-                Task.linked_entity_id == linked_entity_id
-            )
+        # Check if new columns exist before using them
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        has_linked_entity_columns = False
+        try:
+            if 'tasks' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('tasks')]
+                has_linked_entity_columns = 'linked_entity_type' in columns and 'linked_entity_id' in columns
+        except Exception:
+            pass
+        
+        # Filter by polymorphic entity linking (new method) - only if columns exist
+        if linked_entity_type and linked_entity_id and has_linked_entity_columns:
+            try:
+                query = query.filter(
+                    Task.linked_entity_type == linked_entity_type,
+                    Task.linked_entity_id == linked_entity_id
+                )
+            except Exception:
+                # If filter fails (columns might not exist), fall back
+                query = Task.query
         # Filter by client_id if provided (through support requests - backward compatibility)
         elif client_id:
             try:
-                # Try new polymorphic method first
-                query = query.filter(
-                    Task.linked_entity_type == 'client',
-                    Task.linked_entity_id == client_id
-                )
+                # Try new polymorphic method first (only if columns exist)
+                if has_linked_entity_columns:
+                    try:
+                        query = query.filter(
+                            Task.linked_entity_type == 'client',
+                            Task.linked_entity_id == client_id
+                        )
+                    except Exception:
+                        query = Task.query
                 # Also check old method through support requests
                 try:
                     old_query = Task.query.join(SupportRequest, Task.support_request_id == SupportRequest.id).filter(
                         SupportRequest.client_id == client_id
                     )
-                    # Combine both queries using union
-                    from sqlalchemy import or_
-                    query = query.union(old_query)
+                    # Combine both queries using union if new method worked
+                    if has_linked_entity_columns and query != Task.query:
+                        from sqlalchemy import or_
+                        query = query.union(old_query)
+                    else:
+                        query = old_query
                 except Exception:
-                    pass  # If join fails, just use the new method
+                    pass  # If join fails, just use what we have
             except Exception as filter_error:
                 # If new method fails, try old method
                 try:
@@ -5540,29 +5562,134 @@ def create_task():
             linked_entity_type = None
             linked_entity_id = None
         
-        # Create task
-        task = Task(
-            id=str(uuid.uuid4()),
-            title=task_title,
-            description=data.get('description', '') or '',
-            hyperlinks=json.dumps(data.get('hyperlinks', [])),
-            status=data.get('status', 'pending'),
-            category=category,
-            support_request_id=support_request_id,  # Keep for backward compatibility
-            linked_entity_type=linked_entity_type,
-            linked_entity_id=linked_entity_id,
-            # User assignment fields
-            created_by=data.get('createdBy'),
-            created_by_name=data.get('createdByName'),
-            assigned_to=data.get('assignedTo'),
-            assigned_to_name=data.get('assignedToName'),
-            notes=data.get('notes', '') or ''
-        )
-        
+        # Check if new columns exist before using them
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        has_category_column = False
+        has_linked_entity_columns = False
         try:
-            db.session.add(task)
-            db.session.commit()
-            print(f"✓ Task created successfully: {task.id}")
+            if 'tasks' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('tasks')]
+                has_category_column = 'category' in columns
+                has_linked_entity_columns = 'linked_entity_type' in columns and 'linked_entity_id' in columns
+        except Exception:
+            pass
+        
+        # Create task - use raw SQL if columns don't exist to avoid ORM trying to insert missing columns
+        task_id = str(uuid.uuid4())
+        created_at = datetime.utcnow()
+        updated_at = datetime.utcnow()
+        
+        if not has_category_column and not has_linked_entity_columns:
+            # All new columns missing - use raw SQL to insert only existing columns
+            from sqlalchemy import text
+            try:
+                db.session.execute(
+                    text("""
+                        INSERT INTO task (id, title, description, hyperlinks, status, support_request_id, 
+                                        created_by, created_by_name, assigned_to, assigned_to_name, notes, 
+                                        created_at, updated_at)
+                        VALUES (:id, :title, :description, :hyperlinks, :status, :support_request_id,
+                                :created_by, :created_by_name, :assigned_to, :assigned_to_name, :notes,
+                                :created_at, :updated_at)
+                    """),
+                    {
+                        'id': task_id,
+                        'title': task_title,
+                        'description': data.get('description', '') or '',
+                        'hyperlinks': json.dumps(data.get('hyperlinks', [])),
+                        'status': data.get('status', 'pending'),
+                        'support_request_id': support_request_id,
+                        'created_by': data.get('createdBy'),
+                        'created_by_name': data.get('createdByName'),
+                        'assigned_to': data.get('assignedTo'),
+                        'assigned_to_name': data.get('assignedToName'),
+                        'notes': data.get('notes', '') or '',
+                        'created_at': created_at,
+                        'updated_at': updated_at
+                    }
+                )
+                db.session.commit()
+                # Fetch the created task using raw SQL to avoid loading missing columns
+                from sqlalchemy import text
+                result = db.session.execute(
+                    text("SELECT * FROM task WHERE id = :task_id"),
+                    {'task_id': task_id}
+                ).fetchone()
+                
+                # Create a task-like object for the response
+                if result:
+                    task_dict = dict(result._mapping)
+                    # Create a simple object that mimics Task.to_dict()
+                    class SimpleTask:
+                        def __init__(self, data):
+                            self.id = data.get('id')
+                            self.title = data.get('title')
+                            self.description = data.get('description')
+                            self.hyperlinks = data.get('hyperlinks', '[]')
+                            self.status = data.get('status', 'pending')
+                            self.support_request_id = data.get('support_request_id')
+                            self.created_by = data.get('created_by')
+                            self.created_by_name = data.get('created_by_name')
+                            self.assigned_to = data.get('assigned_to')
+                            self.assigned_to_name = data.get('assigned_to_name')
+                            self.notes = data.get('notes', '')
+                            self.created_at = data.get('created_at')
+                            self.updated_at = data.get('updated_at')
+                        
+                        def to_dict(self):
+                            return {
+                                'id': self.id,
+                                'title': self.title,
+                                'description': self.description,
+                                'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
+                                'status': self.status,
+                                'category': 'work',  # Default since column doesn't exist
+                                'supportRequestId': self.support_request_id,
+                                'linkedEntityType': None,  # Column doesn't exist
+                                'linkedEntityId': None,  # Column doesn't exist
+                                'createdBy': self.created_by,
+                                'createdByName': self.created_by_name,
+                                'assignedTo': self.assigned_to,
+                                'assignedToName': self.assigned_to_name,
+                                'notes': self.notes or '',
+                                'createdAt': self.created_at.isoformat() if self.created_at else None,
+                                'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+                            }
+                    task = SimpleTask(task_dict)
+                else:
+                    # Fallback: create minimal task object
+                    task = Task.query.get(task_id)
+                print(f"✓ Task created successfully (raw SQL): {task_id}")
+            except Exception as raw_sql_error:
+                db.session.rollback()
+                raise raw_sql_error
+        else:
+            # Some or all new columns exist - use ORM
+            task = Task(
+                id=task_id,
+                title=task_title,
+                description=data.get('description', '') or '',
+                hyperlinks=json.dumps(data.get('hyperlinks', [])),
+                status=data.get('status', 'pending'),
+                support_request_id=support_request_id,
+                created_by=data.get('createdBy'),
+                created_by_name=data.get('createdByName'),
+                assigned_to=data.get('assignedTo'),
+                assigned_to_name=data.get('assignedToName'),
+                notes=data.get('notes', '') or ''
+            )
+            # Only set if columns exist
+            if has_category_column:
+                task.category = category
+            if has_linked_entity_columns:
+                task.linked_entity_type = linked_entity_type
+                task.linked_entity_id = linked_entity_id
+            
+            try:
+                db.session.add(task)
+                db.session.commit()
+                print(f"✓ Task created successfully: {task.id}")
         except Exception as db_error:
             if db and hasattr(db, 'session'):
                 try:
@@ -5632,8 +5759,21 @@ def update_task(task_id):
         task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
         task.status = data.get('status', task.status)
         
-        # Update category if provided
-        if 'category' in data:
+        # Check if category column exists before updating
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        has_category_column = False
+        has_linked_entity_columns = False
+        try:
+            if 'tasks' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('tasks')]
+                has_category_column = 'category' in columns
+                has_linked_entity_columns = 'linked_entity_type' in columns and 'linked_entity_id' in columns
+        except Exception:
+            pass
+        
+        # Update category if provided and column exists
+        if 'category' in data and has_category_column:
             category = data.get('category', 'work')
             valid_categories = ['work', 'creative', 'wellness', 'rise']
             if category in valid_categories:
@@ -5648,7 +5788,8 @@ def update_task(task_id):
             task.notes = data.get('notes') or ''
         
         # Update entity linking - support both new polymorphic fields and backward compatibility
-        if 'linkedEntityType' in data or 'linked_entity_type' in data:
+        # Only update if columns exist
+        if has_linked_entity_columns and ('linkedEntityType' in data or 'linked_entity_type' in data):
             linked_entity_type = data.get('linkedEntityType') or data.get('linked_entity_type')
             linked_entity_id = data.get('linkedEntityId') or data.get('linked_entity_id')
             
