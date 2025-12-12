@@ -1334,6 +1334,32 @@ def api_shopify_customers():
         traceback.print_exc()
         return jsonify({'error': 'Failed to fetch customers', 'message': str(e), 'customers': []}), 200
 
+@app.route('/api/shopify/store-url', methods=['GET'])
+@jwt_required(optional=True)
+def get_shopify_store_url():
+    """Get Shopify store URL for customer portal"""
+    try:
+        if not SHOPIFY_STORE_URL:
+            return jsonify({'error': 'Shopify store URL not configured'}), 503
+        
+        # Extract base store URL (remove /admin/api/... if present)
+        store_url = SHOPIFY_STORE_URL
+        if '/admin/api/' in store_url:
+            store_url = store_url.split('/admin/api/')[0]
+        
+        # Ensure it's a full URL
+        if not store_url.startswith('http'):
+            # If it's just a domain, add https://
+            if 'myshopify.com' in store_url:
+                store_url = f"https://{store_url.replace('https://', '').replace('http://', '')}"
+            else:
+                store_url = f"https://{store_url}"
+        
+        return jsonify({'storeUrl': store_url}), 200
+    except Exception as e:
+        print(f"Error getting Shopify store URL: {e}")
+        return jsonify({'error': 'Failed to get store URL'}), 500
+
 @app.route('/api/shopify/analytics', methods=['GET'])
 @jwt_required(optional=True)
 def api_shopify_analytics():

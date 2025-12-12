@@ -57,8 +57,6 @@ import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
 import { getBackendUrl } from '../utils/backendUrl';
-import PricingTierCard, { PricingTier } from '../components/pricing/PricingTierCard';
-import PricingToggle from '../components/pricing/PricingToggle';
 
 interface Subscription {
   id: string;
@@ -93,66 +91,6 @@ interface Invoice {
   invoicePdf?: string;
 }
 
-const pricingTiers: PricingTier[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: 399,
-    priceAnnual: 3830,
-    description: 'Perfect for small businesses, startups, and individual creators',
-    color: '#22D3EE',
-    features: [
-      '10-20 requests per month',
-      'Standard turnaround (48-72 hours)',
-      'Email support',
-      'Basic design services',
-      'Access to Co-Work Dashboard',
-      'Access to Rise Dashboard',
-      'Basic CaaS features',
-    ],
-    ctaText: 'Select Plan',
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    price: 1499,
-    priceAnnual: 14390,
-    description: 'Ideal for growing businesses, agencies, and projects',
-    color: '#8b5cf6',
-    popular: true,
-    features: [
-      'Unlimited requests',
-      'Priority turnaround (24-48 hours)',
-      'Dedicated project manager',
-      'Advanced design services',
-      'Full CaaS access',
-      'API integrations',
-      'Analytics dashboard',
-      'Priority support',
-    ],
-    ctaText: 'Select Plan',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 9000,
-    priceAnnual: 86400,
-    description: 'For large enterprises and agencies with high volume needs',
-    color: '#f59e0b',
-    features: [
-      'Unlimited requests and revisions',
-      'Same-day turnaround',
-      'Dedicated team',
-      'Custom integrations',
-      'White-label options',
-      'Advanced security features',
-      'SLA guarantees',
-      'Custom contract terms',
-      'Platform/service fee included',
-    ],
-    ctaText: 'Select Plan',
-  },
-];
 
 function BillingPage() {
   const { user } = useAuth();
@@ -162,8 +100,9 @@ function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [addPaymentDialogOpen, setAddPaymentDialogOpen] = useState(false);
-  const [isAnnual, setIsAnnual] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [shopifyCustomerId, setShopifyCustomerId] = useState<string | null>(null);
+  const [shopifyStoreUrl, setShopifyStoreUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBillingData();
@@ -175,6 +114,26 @@ function BillingPage() {
     try {
       const backendUrl = getBackendUrl();
       
+      // Fetch user profile to get Shopify customer ID and store URL
+      const profileResponse = await fetch(`${backendUrl}/api/profile`, {
+        credentials: 'include',
+      });
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        setShopifyCustomerId(profileData.shopifyCustomerId || null);
+      }
+
+      // Fetch Shopify store URL
+      const shopifyResponse = await fetch(`${backendUrl}/api/shopify/store-url`, {
+        credentials: 'include',
+      });
+      
+      if (shopifyResponse.ok) {
+        const shopifyData = await shopifyResponse.json();
+        setShopifyStoreUrl(shopifyData.storeUrl || null);
+      }
+
       // Fetch subscription
       const subResponse = await fetch(`${backendUrl}/api/subscriptions/current`, {
         credentials: 'include',
@@ -212,30 +171,6 @@ function BillingPage() {
     }
   };
 
-  const handleSelectPlan = async (tierId: string) => {
-    try {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/subscriptions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          tier: tierId,
-          billingCycle: isAnnual ? 'annual' : 'monthly',
-        }),
-      });
-
-      if (response.ok) {
-        await fetchBillingData();
-        setActiveTab(0); // Switch to subscription tab
-      } else {
-        const error = await response.json();
-        setError(error.error || 'Failed to subscribe');
-      }
-    } catch (err: any) {
-      setError('Failed to subscribe');
-    }
-  };
 
   const handleCancelSubscription = async () => {
     if (!subscription || !confirm('Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.')) {
@@ -342,7 +277,6 @@ function BillingPage() {
             <Paper sx={{ mb: 3 }}>
               <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
                 <Tab label="Subscription" />
-                <Tab label="Pricing Plans" />
                 <Tab label="Payment Methods" />
                 <Tab label="Billing History" />
               </Tabs>
@@ -354,138 +288,41 @@ function BillingPage() {
               </Box>
             ) : (
               <>
-                {/* Subscription Tab */}
+                {/* Subscription Tab - Shopify Embed */}
                 {activeTab === 0 && (
                   <Card>
                     <CardContent>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-                        <Box>
-                          <Typography variant="h5" fontWeight={600} gutterBottom>
-                            Current Plan
-                          </Typography>
-                          {subscription ? (
-                            <Stack spacing={1} sx={{ mt: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Typography variant="h4" fontWeight={700}>
-                                  {subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)}
-                                </Typography>
-                                <Chip
-                                  label={subscription.status}
-                                  color={getStatusColor(subscription.status) as any}
-                                  size="small"
-                                />
-                              </Box>
-                              <Typography variant="body2" color="text.secondary">
-                                {formatCurrency(subscription.amount, subscription.currency)} per {subscription.billingCycle}
-                              </Typography>
-                              {subscription.expiresAt && (
-                                <Typography variant="body2" color="text.secondary">
-                                  {subscription.cancelledAt
-                                    ? `Cancelled on ${formatDate(subscription.cancelledAt)}`
-                                    : `Expires on ${formatDate(subscription.expiresAt)}`}
-                                </Typography>
-                              )}
-                              {subscription.startedAt && (
-                                <Typography variant="body2" color="text.secondary">
-                                  Started on {formatDate(subscription.startedAt)}
-                                </Typography>
-                              )}
-                            </Stack>
-                          ) : (
-                            <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                              No active subscription. Select a plan below to get started.
-                            </Typography>
-                          )}
+                      <Typography variant="h5" fontWeight={600} gutterBottom sx={{ mb: 3 }}>
+                        Manage Your Subscription
+                      </Typography>
+                      {shopifyStoreUrl ? (
+                        <Box sx={{ width: '100%', height: '800px', borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                          <iframe
+                            src={`${shopifyStoreUrl}/account`}
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            style={{
+                              border: 'none',
+                              borderRadius: '8px',
+                            }}
+                            title="Shopify Customer Portal"
+                            allow="payment"
+                          />
                         </Box>
-                        <Stack direction="row" spacing={2}>
-                          {subscription && subscription.status === 'active' && !subscription.cancelledAt && (
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              onClick={handleCancelSubscription}
-                            >
-                              Cancel Subscription
-                            </Button>
-                          )}
-                          {subscription && subscription.cancelledAt && (
-                            <Button
-                              variant="outlined"
-                              color="success"
-                              onClick={handleResumeSubscription}
-                            >
-                              Resume Subscription
-                            </Button>
-                          )}
-                        </Stack>
-                      </Box>
+                      ) : (
+                        <Alert severity="info">
+                          <Typography variant="body2">
+                            Loading Shopify customer portal...
+                          </Typography>
+                        </Alert>
+                      )}
                     </CardContent>
                   </Card>
                 )}
 
-                {/* Pricing Plans Tab */}
-                {activeTab === 1 && (
-                  <Box>
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                      <Typography variant="h4" fontWeight={700} gutterBottom>
-                        Choose Your Plan
-                      </Typography>
-                      <Typography variant="body1" color="text.secondary">
-                        Select the plan that best fits your needs. You can change it anytime.
-                      </Typography>
-                    </Box>
-
-                    {/* Pricing Toggle */}
-                    <PricingToggle isAnnual={isAnnual} onChange={setIsAnnual} />
-
-                    {/* Pricing Tiers */}
-                    <Grid container spacing={4} sx={{ mb: 4 }}>
-                      {pricingTiers.map((tier) => {
-                        const isCurrentPlan = subscription?.tier === tier.id;
-                        return (
-                          <Grid item xs={12} md={4} key={tier.id}>
-                            <Box
-                              sx={{
-                                position: 'relative',
-                                border: isCurrentPlan ? `3px solid ${tier.color}` : 'none',
-                                borderRadius: 2,
-                                p: isCurrentPlan ? 0.5 : 0,
-                                transition: 'all 0.3s',
-                              }}
-                            >
-                              {isCurrentPlan && (
-                                <Chip
-                                  label="Current Plan"
-                                  color="primary"
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 8,
-                                    right: 8,
-                                    zIndex: 1,
-                                    fontWeight: 700,
-                                  }}
-                                />
-                              )}
-                              <PricingTierCard
-                                tier={tier}
-                                isAnnual={isAnnual}
-                                onSelect={handleSelectPlan}
-                              />
-                            </Box>
-                          </Grid>
-                        );
-                      })}
-                    </Grid>
-
-                    <Alert severity="info" sx={{ mb: 3 }}>
-                      <Typography variant="body2">
-                        <strong>No hidden fees. No surprises.</strong> All plans include full access to our platform and support.
-                      </Typography>
-                    </Alert>
-                  </Box>
-                )}
-
                 {/* Payment Methods Tab */}
-                {activeTab === 2 && (
+                {activeTab === 1 && (
                   <Card>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -564,7 +401,7 @@ function BillingPage() {
                 )}
 
                 {/* Billing History Tab */}
-                {activeTab === 3 && (
+                {activeTab === 2 && (
                   <Card>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
