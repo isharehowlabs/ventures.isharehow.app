@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -96,20 +96,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
   const [clientData, setClientData] = useState<{ budget?: number; deadline?: string } | null>(null);
   const backendUrl = getBackendUrl();
 
-  // Fetch tasks, employees, and client data when dialog opens
-  useEffect(() => {
-    if (open && venture?.clientId) {
-      fetchClientTasks();
-      fetchClientEmployees();
-      fetchClientData();
-    } else {
-      setClientTasks([]);
-      setClientEmployees([]);
-      setClientData(null);
-    }
-  }, [open, venture?.clientId]);
-
-  const fetchClientTasks = async () => {
+  const fetchClientTasks = useCallback(async () => {
     if (!venture?.clientId) return;
     
     setTasksLoading(true);
@@ -131,9 +118,9 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
     } finally {
       setTasksLoading(false);
     }
-  };
+  }, [venture?.clientId, backendUrl]);
 
-  const fetchClientEmployees = async () => {
+  const fetchClientEmployees = useCallback(async () => {
     if (!venture?.clientId) return;
     
     setEmployeesLoading(true);
@@ -155,9 +142,9 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
     } finally {
       setEmployeesLoading(false);
     }
-  };
+  }, [venture?.clientId, backendUrl]);
 
-  const fetchClientData = async () => {
+  const fetchClientData = useCallback(async () => {
     if (!venture?.clientId) return;
     
     try {
@@ -176,7 +163,20 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
     } catch (err) {
       console.error('Error fetching client data:', err);
     }
-  };
+  }, [venture?.clientId, backendUrl]);
+
+  // Fetch tasks, employees, and client data when dialog opens
+  useEffect(() => {
+    if (open && venture?.clientId) {
+      fetchClientTasks();
+      fetchClientEmployees();
+      fetchClientData();
+    } else {
+      setClientTasks([]);
+      setClientEmployees([]);
+      setClientData(null);
+    }
+  }, [open, venture?.clientId, fetchClientTasks, fetchClientEmployees, fetchClientData]);
 
   // Convert database task status to VentureTask status
   const convertTaskStatus = (status: string): 'todo' | 'in_progress' | 'completed' => {

@@ -9839,8 +9839,8 @@ if DB_AVAILABLE:
                 'hasAccount': self.user_id is not None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,
                 'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
-                'assignedEmployee': self.employee_assignments[0].employee_name if self.employee_assignments else None,
-                'systemsConnected': [conn.dashboard_type for conn in self.dashboard_connections if conn.enabled]
+                'assignedEmployee': self.employee_assignments[0].employee_name if (self.employee_assignments and len(self.employee_assignments) > 0) else None,
+                'systemsConnected': [conn.dashboard_type for conn in (self.dashboard_connections or []) if conn.enabled]
             }
     
     class ClientEmployeeAssignment(db.Model):
@@ -13332,11 +13332,33 @@ def get_analytics_data():
             
             if ga_credentials_path and os.path.exists(ga_credentials_path):
                 # Use service account credentials
-                credentials = service_account.Credentials.from_service_account_file(
-                    ga_credentials_path,
-                    scopes=['https://www.googleapis.com/auth/analytics.readonly']
-                )
-                client = BetaAnalyticsDataClient(credentials=credentials)
+                try:
+                    credentials = service_account.Credentials.from_service_account_file(
+                        ga_credentials_path,
+                        scopes=['https://www.googleapis.com/auth/analytics.readonly']
+                    )
+                    # Validate credentials have required fields
+                    if not hasattr(credentials, 'service_account_email') or not credentials.service_account_email:
+                        raise ValueError("Service account credentials missing client_email field")
+                    client = BetaAnalyticsDataClient(credentials=credentials)
+                except (ValueError, KeyError, FileNotFoundError, json.JSONDecodeError) as cred_error:
+                    print(f"Error loading Google Analytics credentials: {cred_error}")
+                    return jsonify({
+                        'error': f'Service account info was not in the expected format, missing fields client_email, token_uri. Error: {str(cred_error)}',
+                        'message': 'Please ensure your service account JSON file contains all required fields: client_email, token_uri, private_key, etc.',
+                        'isMockData': True,
+                        'totalRevenue': 0,
+                        'totalUsers': 0,
+                        'pageViews': 0,
+                        'conversionRate': 0,
+                        'revenueTrend': 0,
+                        'usersTrend': 0,
+                        'pageViewsTrend': 0,
+                        'conversionTrend': 0,
+                        'revenueData': [],
+                        'visitorData': [],
+                        'conversionData': [],
+                    }), 200
             else:
                 # Try to use default credentials (for local development or GCP)
                 try:

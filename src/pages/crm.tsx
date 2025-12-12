@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import {
   Box,
@@ -201,26 +201,25 @@ export default function CRMDashboard() {
 
   const backendUrl = getBackendUrl();
 
-  // Fetch all data
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 2 && !shopifyAnalyticsLoading) {
-      fetchShopifyAnalytics();
+  const fetchShopifyAnalytics = useCallback(async () => {
+    setShopifyAnalyticsLoading(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/shopify/analytics?days=${timePeriodFilter === 'week' ? 7 : timePeriodFilter === 'month' ? 30 : 365}`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setShopifyAnalytics(data.analytics || null);
+      } else {
+        setShopifyAnalytics(null);
+      }
+    } catch (err) {
+      console.error('Error fetching Shopify analytics:', err);
+      setShopifyAnalytics(null);
+    } finally {
+      setShopifyAnalyticsLoading(false);
     }
-  }, [activeTab, timePeriodFilter]);
-
-  useEffect(() => {
-    if (success || error) {
-      const timer = setTimeout(() => {
-        setSuccess(null);
-        setError(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success, error]);
+  }, [backendUrl, timePeriodFilter]);
 
   const fetchTasks = async () => {
     try {
@@ -233,21 +232,6 @@ export default function CRMDashboard() {
       }
     } catch (err) {
       console.error('Error fetching tasks:', err);
-    }
-  };
-
-  const fetchAllData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchUsers(),
-        fetchClients(),
-        fetchShopifyCustomers(),
-        fetchShopifyAnalytics(),
-        fetchTasks(),
-      ]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -297,25 +281,41 @@ export default function CRMDashboard() {
     }
   };
 
-  const fetchShopifyAnalytics = async () => {
-    setShopifyAnalyticsLoading(true);
+  const fetchAllData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`${backendUrl}/api/shopify/analytics?days=${timePeriodFilter === 'week' ? 7 : timePeriodFilter === 'month' ? 30 : 365}`, {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setShopifyAnalytics(data.analytics || null);
-      } else {
-        setShopifyAnalytics(null);
-      }
-    } catch (err) {
-      console.error('Error fetching Shopify analytics:', err);
-      setShopifyAnalytics(null);
+      await Promise.all([
+        fetchUsers(),
+        fetchClients(),
+        fetchShopifyCustomers(),
+        fetchShopifyAnalytics(),
+        fetchTasks(),
+      ]);
     } finally {
-      setShopifyAnalyticsLoading(false);
+      setLoading(false);
     }
   };
+
+  // Fetch all data
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 2 && !shopifyAnalyticsLoading) {
+      fetchShopifyAnalytics();
+    }
+  }, [activeTab, shopifyAnalyticsLoading, fetchShopifyAnalytics]);
+
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
 
   // Calculate stats
   const totalUsers = users.length;

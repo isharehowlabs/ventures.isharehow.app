@@ -19,16 +19,15 @@ export default function NotificationToast() {
     if (notifications.length > 0) {
       const latest = notifications[notifications.length - 1];
       
+      // Skip join/leave notifications entirely - don't process or display them
+      if (latest.type === 'join' || latest.type === 'leave') {
+        return;
+      }
+      
       // Only process if we haven't seen this notification before
       if (!previousNotificationsRef.current.has(latest.id)) {
         previousNotificationsRef.current.add(latest.id);
         setCurrentNotif(latest);
-
-        // Add to unified notification system (skip join/leave notifications)
-        if (latest.type === 'join' || latest.type === 'leave') {
-          // Skip join/leave notifications
-          return;
-        }
 
         const getNotificationTitle = (type: string) => {
           switch (type) {
