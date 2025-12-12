@@ -436,19 +436,33 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
     }
   };
 
+  const deletingTaskIdRef = useRef<string | null>(null);
+  
   const handleDeleteTask = async (id: string) => {
+    // Prevent duplicate calls
+    if (deletingTaskIdRef.current === id) {
+      console.warn(`Task ${id} deletion already in progress, ignoring duplicate call`);
+      return;
+    }
+
+    // Close menu immediately to prevent multiple clicks
+    handleTaskMenuClose();
+    
+    deletingTaskIdRef.current = id;
+    
     try {
       await deleteTask(id);
-      handleTaskMenuClose();
-      // Show success message if needed
+      // Show success message
       setToastMessage('Task deleted successfully');
       setToastOpen(true);
     } catch (err: any) {
       console.error('Error deleting task:', err);
-      // Show error message to user
-      setToastMessage(err?.message || 'Failed to delete task. Please try again.');
+      // Show error message to user with more details
+      const errorMsg = err?.message || 'Failed to delete task. Please try again.';
+      setToastMessage(errorMsg);
       setToastOpen(true);
-      // Don't close menu on error so user can retry
+    } finally {
+      deletingTaskIdRef.current = null;
     }
   };
 

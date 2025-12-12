@@ -224,16 +224,28 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
       }
 
       if (!response.ok) {
-        let errorMessage = `Failed to delete task: ${response.status} ${response.statusText}`;
+        let errorMessage = `Failed to delete task: Server returned ${response.status} ${response.statusText}`;
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
+          // Read response as text first (can only read once)
+          const responseText = await response.text();
+          
+          if (responseText && responseText.trim()) {
+            // Try to parse as JSON
+            try {
+              const errorData = JSON.parse(responseText);
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch {
+              // Not JSON, use the text as error message
+              errorMessage = responseText;
+            }
+          }
         } catch (e) {
-          // If JSON parsing fails, use the status text
-          const errorText = await response.text().catch(() => '');
-          if (errorText) errorMessage = errorText;
+          // If reading fails, use the default message with status
+          console.warn('Could not read error response:', e);
         }
-        throw new Error(errorMessage);
+        const error = new Error(errorMessage);
+        (error as any).status = response.status;
+        throw error;
       }
 
       // Success - task already removed optimistically, socket will confirm
