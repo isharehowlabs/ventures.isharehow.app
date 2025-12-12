@@ -216,6 +216,11 @@ const AppShell = ({ active, children }: AppShellProps) => {
                   anchorEl={userMenuAnchor}
                   open={Boolean(userMenuAnchor)}
                   onClose={handleUserMenuClose}
+                  hideBackdrop={true}
+                  BackdropProps={{
+                    invisible: true,
+                    style: { display: 'none', pointerEvents: 'none' },
+                  }}
                   transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                   anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                   PaperProps={{

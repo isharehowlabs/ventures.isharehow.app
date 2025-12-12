@@ -159,6 +159,11 @@ export default function NotificationMenu() {
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
+        hideBackdrop={true}
+        BackdropProps={{
+          invisible: true,
+          style: { display: 'none', pointerEvents: 'none' },
+        }}
         PaperProps={{
           sx: {
             width: 360,

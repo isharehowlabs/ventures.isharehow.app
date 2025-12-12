@@ -274,6 +274,13 @@ const getTheme = (mode: 'light' | 'dark') => {
       },
     },
     MuiMenu: {
+      defaultProps: {
+        hideBackdrop: true,
+        BackdropProps: {
+          invisible: true,
+          style: { display: 'none', pointerEvents: 'none' },
+        },
+      },
       styleOverrides: {
         root: {
           zIndex: 1300,

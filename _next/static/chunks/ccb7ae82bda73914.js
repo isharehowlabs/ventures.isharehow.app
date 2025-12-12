@@ -1,0 +1,19 @@
+__turbopack_load_page_chunks__("/learning-hub", [
+  "static/chunks/17ba26542cd5a21d.js",
+  "static/chunks/83c87eab2121d939.js",
+  "static/chunks/083b252767956768.js",
+  "static/chunks/55db2730b9138f95.js",
+  "static/chunks/04a604889eaf53f6.js",
+  "static/chunks/7700322d3de5a96d.js",
+  "static/chunks/bf2ecff3d94c0105.js",
+  "static/chunks/723a6463366f021f.js",
+  "static/chunks/71ce1ad4f98d5596.js",
+  "static/chunks/1a5fab5cd2e28c76.js",
+  "static/chunks/3d08a4150fe18766.js",
+  "static/chunks/74b7d85100fbc8d6.js",
+  "static/chunks/3da60ac96573fbf2.js",
+  "static/chunks/62637984c42d9275.js",
+  "static/chunks/500474a7811f5f89.js",
+  "static/chunks/d6b55f5d0349ec5b.js",
+  "static/chunks/turbopack-bac6f3cb0219e48d.js"
+])
