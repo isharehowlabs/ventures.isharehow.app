@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import {
   Box,
   Container,
@@ -168,7 +169,27 @@ function TabPanel(props: TabPanelProps) {
 export default function CRMDashboard() {
   const theme = useTheme();
   const { user } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
+  
+  // Tab configuration map
+  const tabMap: Record<string, number> = {
+    users: 0,
+    clients: 1,
+    shopify: 2,
+    analytics: 3,
+    ventures: 4,
+    tasks: 5,
+  };
+
+  // Initialize tab from URL
+  useEffect(() => {
+    const tabParam = router.query.tab as string;
+    if (tabParam && tabMap[tabParam] !== undefined) {
+      setActiveTab(tabMap[tabParam]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.tab]);
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -688,6 +709,13 @@ export default function CRMDashboard() {
                     setSearchQuery('');
                     setStatusFilter('all');
                     setTypeFilter('all');
+                    
+                    // Update URL with tab parameter
+                    const tabNames = Object.keys(tabMap);
+                    const tabName = tabNames.find(key => tabMap[key] === newValue);
+                    if (tabName) {
+                      router.push(`/crm?tab=${tabName}`, undefined, { shallow: true });
+                    }
                   }}
                   variant="scrollable"
                   scrollButtons="auto"

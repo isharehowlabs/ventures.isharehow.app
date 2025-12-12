@@ -125,3 +125,8 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Recharts sector fill color */
+path.recharts-sector {
+  fill: rgba(255, 255, 255, 1);
+}

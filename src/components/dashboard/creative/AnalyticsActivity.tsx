@@ -113,6 +113,238 @@ interface AnalyticsData {
 
 const COLORS = ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
 
+// Venn Diagram Component
+interface VennDiagramProps {
+  data: Array<{ 
+    platform: string; 
+    newUsers: number; 
+    returningUsers: number; 
+    totalUsers: number;
+    conversionRate?: number;
+  }>;
+  theme: any;
+  isDark: boolean;
+}
+
+function VennDiagram({ data, theme, isDark }: VennDiagramProps) {
+  if (!data || data.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <Typography variant="body2" color="text.secondary">
+          No platform data available
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Calculate total sessions (using totalUsers as proxy for sessions)
+  const totalSessions = data.reduce((sum, item) => sum + item.totalUsers, 0);
+  
+  // Sort platforms by totalUsers and take top 3 for Venn diagram
+  const topPlatforms = [...data]
+    .sort((a, b) => b.totalUsers - a.totalUsers)
+    .slice(0, 3);
+
+  // Calculate circle sizes based on totalUsers (sessions)
+  const maxSessions = Math.max(...topPlatforms.map(p => p.totalUsers), 1);
+  const minRadius = 80;
+  const maxRadius = 150;
+  
+  const getRadius = (sessions: number) => {
+    const ratio = sessions / maxSessions;
+    return minRadius + (maxRadius - minRadius) * ratio;
+  };
+
+  // Calculate positions for 2-3 circles in a Venn diagram layout
+  const getCirclePositions = (count: number) => {
+    const centerX = 300;
+    const centerY = 300;
+    const baseDistance = 120;
+    
+    if (count === 1) {
+      return [{ cx: centerX, cy: centerY }];
+    } else if (count === 2) {
+      return [
+        { cx: centerX - baseDistance / 2, cy: centerY },
+        { cx: centerX + baseDistance / 2, cy: centerY }
+      ];
+    } else {
+      // Equilateral triangle layout for 3 circles
+      return [
+        { cx: centerX, cy: centerY - baseDistance * 0.6 },
+        { cx: centerX - baseDistance * 0.866, cy: centerY + baseDistance * 0.3 },
+        { cx: centerX + baseDistance * 0.866, cy: centerY + baseDistance * 0.3 }
+      ];
+    }
+  };
+
+  const positions = getCirclePositions(topPlatforms.length);
+  const svgWidth = 600;
+  const svgHeight = 600;
+
+  // Calculate overlap areas (simplified - using intersection of circles)
+  const getOverlapPath = (circle1: { cx: number; cy: number; r: number }, circle2: { cx: number; cy: number; r: number }) => {
+    const d = Math.sqrt(Math.pow(circle2.cx - circle1.cx, 2) + Math.pow(circle2.cy - circle1.cy, 2));
+    if (d >= circle1.r + circle2.r) return null; // No overlap
+    
+    const r1 = circle1.r;
+    const r2 = circle2.r;
+    const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+    const h = Math.sqrt(r1 * r1 - a * a);
+    const x0 = circle1.cx + a * (circle2.cx - circle1.cx) / d;
+    const y0 = circle1.cy + a * (circle2.cy - circle1.cy) / d;
+    const rx = circle2.cx - x0;
+    const ry = circle2.cy - y0;
+    
+    const x1 = x0 + h * ry / d;
+    const y1 = y0 - h * rx / d;
+    const x2 = x0 - h * ry / d;
+    const y2 = y0 + h * rx / d;
+    
+    return `M ${x1} ${y1} A ${r1} ${r1} 0 0 1 ${x2} ${y2} A ${r2} ${r2} 0 0 1 ${x1} ${y1} Z`;
+  };
+
+  return (
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+        <svg width={svgWidth} height={svgHeight} style={{ overflow: 'visible' }}>
+          <defs>
+            {topPlatforms.map((platform, index) => (
+              <linearGradient key={`gradient-${index}`} id={`vennGradient-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.6} />
+                <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.3} />
+              </linearGradient>
+            ))}
+          </defs>
+          
+          {/* Draw overlap areas first (so they appear behind) */}
+          {topPlatforms.length >= 2 && (
+            <>
+              {getOverlapPath(
+                { cx: positions[0].cx, cy: positions[0].cy, r: getRadius(topPlatforms[0].totalUsers) },
+                { cx: positions[1].cx, cy: positions[1].cy, r: getRadius(topPlatforms[1].totalUsers) }
+              ) && (
+                <path
+                  d={getOverlapPath(
+                    { cx: positions[0].cx, cy: positions[0].cy, r: getRadius(topPlatforms[0].totalUsers) },
+                    { cx: positions[1].cx, cy: positions[1].cy, r: getRadius(topPlatforms[1].totalUsers) }
+                  )!}
+                  fill={isDark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.3)'}
+                  stroke={theme.palette.divider}
+                  strokeWidth={2}
+                />
+              )}
+              {topPlatforms.length === 3 && (
+                <>
+                  {getOverlapPath(
+                    { cx: positions[0].cx, cy: positions[0].cy, r: getRadius(topPlatforms[0].totalUsers) },
+                    { cx: positions[2].cx, cy: positions[2].cy, r: getRadius(topPlatforms[2].totalUsers) }
+                  ) && (
+                    <path
+                      d={getOverlapPath(
+                        { cx: positions[0].cx, cy: positions[0].cy, r: getRadius(topPlatforms[0].totalUsers) },
+                        { cx: positions[2].cx, cy: positions[2].cy, r: getRadius(topPlatforms[2].totalUsers) }
+                      )!}
+                      fill={isDark ? 'rgba(139, 92, 246, 0.4)' : 'rgba(139, 92, 246, 0.3)'}
+                      stroke={theme.palette.divider}
+                      strokeWidth={2}
+                    />
+                  )}
+                  {getOverlapPath(
+                    { cx: positions[1].cx, cy: positions[1].cy, r: getRadius(topPlatforms[1].totalUsers) },
+                    { cx: positions[2].cx, cy: positions[2].cy, r: getRadius(topPlatforms[2].totalUsers) }
+                  ) && (
+                    <path
+                      d={getOverlapPath(
+                        { cx: positions[1].cx, cy: positions[1].cy, r: getRadius(topPlatforms[1].totalUsers) },
+                        { cx: positions[2].cx, cy: positions[2].cy, r: getRadius(topPlatforms[2].totalUsers) }
+                      )!}
+                      fill={isDark ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.3)'}
+                      stroke={theme.palette.divider}
+                      strokeWidth={2}
+                    />
+                  )}
+                </>
+              )}
+            </>
+          )}
+          
+          {/* Draw circles */}
+          {topPlatforms.map((platform, index) => {
+            const radius = getRadius(platform.totalUsers);
+            const pos = positions[index];
+            const sessions = platform.totalUsers;
+            const percentage = totalSessions > 0 ? (sessions / totalSessions * 100).toFixed(1) : '0';
+            
+            return (
+              <g key={platform.platform}>
+                <circle
+                  cx={pos.cx}
+                  cy={pos.cy}
+                  r={radius}
+                  fill={`url(#vennGradient-${index})`}
+                  stroke={COLORS[index % COLORS.length]}
+                  strokeWidth={3}
+                  opacity={0.7}
+                />
+                <text
+                  x={pos.cx}
+                  y={pos.cy - radius - 20}
+                  textAnchor="middle"
+                  fill={theme.palette.text.primary}
+                  fontSize={16}
+                  fontWeight={700}
+                >
+                  {platform.platform}
+                </text>
+                <text
+                  x={pos.cx}
+                  y={pos.cy}
+                  textAnchor="middle"
+                  fill={theme.palette.text.primary}
+                  fontSize={24}
+                  fontWeight={700}
+                >
+                  {sessions.toLocaleString()}
+                </text>
+                <text
+                  x={pos.cx}
+                  y={pos.cy + 20}
+                  textAnchor="middle"
+                  fill={theme.palette.text.secondary}
+                  fontSize={14}
+                >
+                  {percentage}%
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </Box>
+      
+      {/* Legend */}
+      <Box sx={{ mt: 2, display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {topPlatforms.map((platform, index) => (
+          <Box key={platform.platform} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box 
+              sx={{ 
+                width: 16, 
+                height: 16, 
+                bgcolor: COLORS[index % COLORS.length], 
+                borderRadius: '50%',
+                opacity: 0.7
+              }} 
+            />
+            <Typography variant="body2" color="text.secondary">
+              {platform.platform}: {platform.totalUsers.toLocaleString()} sessions
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
 export default function AnalyticsActivity() {
   const theme = useTheme();
   const isDark = useDarkMode();
@@ -524,180 +756,6 @@ export default function AnalyticsActivity() {
         </Grid>
       </Grid>
 
-      {/* Main Charts Row */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Revenue Overview Chart */}
-        <Grid item xs={12} lg={8}>
-          <ChartCard
-            title="Revenue Overview"
-            subtitle={`${formatTimeRange(timeRange)} - Current vs Previous Period`}
-            action={
-              <Button size="small" variant="outlined" startIcon={<Timeline />}>
-                View Details
-              </Button>
-            }
-          >
-            <ResponsiveContainer width="100%" height={350}>
-              <AreaChart data={analyticsData?.revenueData || []}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorPrevious" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#cbd5e1" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#cbd5e1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis 
-                  dataKey="name" 
-                  stroke={theme.palette.text.secondary} 
-                  fontSize={12}
-                  tick={{ fill: theme.palette.text.secondary }}
-                />
-                <YAxis 
-                  stroke={theme.palette.text.secondary} 
-                  fontSize={12}
-                  tick={{ fill: theme.palette.text.secondary }}
-                />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '8px',
-                    color: theme.palette.text.primary,
-                  }} 
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#6366f1" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorRevenue)" 
-                  name="Current Period"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="previous" 
-                  stroke="#94a3b8" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  fill="url(#colorPrevious)"
-                  fillOpacity={0.3}
-                  name="Previous Period"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </Grid>
-
-        {/* Conversion Rate Chart */}
-        <Grid item xs={12} lg={4}>
-          <ChartCard
-            title="Conversion Rate"
-            subtitle="Weekly trend analysis"
-          >
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={analyticsData?.conversionData || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis 
-                  dataKey="name" 
-                  stroke={theme.palette.text.secondary} 
-                  fontSize={12}
-                  tick={{ fill: theme.palette.text.secondary }}
-                />
-                <YAxis 
-                  stroke={theme.palette.text.secondary} 
-                  fontSize={12}
-                  tick={{ fill: theme.palette.text.secondary }}
-                />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '8px',
-                    color: theme.palette.text.primary,
-                  }} 
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="rate" 
-                  stroke="#10b981" 
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', r: 5 }}
-                  activeDot={{ r: 7 }}
-                  name="Conversion Rate (%)"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </Grid>
-      </Grid>
-
-      {/* Visitor Activity Chart */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12}>
-          <ChartCard
-            title="Visitor Activity"
-            subtitle={`${formatTimeRange(timeRange)} - Daily visitors and page views`}
-            action={
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: '#6366f1', borderRadius: '2px' }} />
-                  <Typography variant="caption" color="text.secondary">Visitors</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: '#8b5cf6', borderRadius: '2px' }} />
-                  <Typography variant="caption" color="text.secondary">Page Views</Typography>
-                </Box>
-              </Stack>
-            }
-          >
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={analyticsData?.visitorData || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis 
-                  dataKey="name" 
-                  stroke={theme.palette.text.secondary} 
-                  fontSize={12}
-                  tick={{ fill: theme.palette.text.secondary }}
-                />
-                <YAxis 
-                  stroke={theme.palette.text.secondary} 
-                  fontSize={12}
-                  tick={{ fill: theme.palette.text.secondary }}
-                />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '8px',
-                    color: theme.palette.text.primary,
-                  }} 
-                />
-                <Bar 
-                  dataKey="visitors" 
-                  fill="#6366f1" 
-                  radius={[8, 8, 0, 0]}
-                  name="Visitors"
-                />
-                <Bar 
-                  dataKey="pageViews" 
-                  fill="#8b5cf6" 
-                  radius={[8, 8, 0, 0]}
-                  name="Page Views"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </Grid>
-      </Grid>
-
       {/* Active Users by First User Source/Medium */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} lg={8}>
@@ -755,46 +813,18 @@ export default function AnalyticsActivity() {
           </ChartCard>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
+        <Grid item xs={12}>
           <ChartCard
-            title="First User Source/Medium Distribution"
-            subtitle="Active users share by first user source/medium"
+            title="Sessions by Platform"
+            subtitle={`${formatTimeRange(timeRange)} - Platform distribution and overlap`}
           >
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie
-                  data={analyticsData?.activeUsersByFirstUserSourceMedium || []}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => {
-                    const data = entry as { firstUserSourceMedium?: string; percent?: number };
-                    return `${data.firstUserSourceMedium || 'Unknown'}: ${((data.percent || 0) * 100).toFixed(0)}%`;
-                  }}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="activeUsers"
-                  nameKey="firstUserSourceMedium"
-                >
-                  {(analyticsData?.activeUsersByFirstUserSourceMedium || []).map((entry, index) => (
-                    <Cell key={`cell-first-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '8px',
-                    color: theme.palette.text.primary,
-                  }}
-                  formatter={(value: number, name: string) => [
-                    value.toLocaleString(),
-                    name === 'activeUsers' ? 'Active Users' : name
-                  ]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <Box sx={{ width: '100%', height: 600, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <VennDiagram 
+                data={analyticsData?.userAcquisitionByPlatform || []}
+                theme={theme}
+                isDark={isDark}
+              />
+            </Box>
           </ChartCard>
         </Grid>
       </Grid>

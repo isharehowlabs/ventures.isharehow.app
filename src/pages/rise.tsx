@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
 import {
   Box,
   Container,
@@ -73,9 +74,29 @@ export default function RiseDashboard() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { isAuthenticated, user } = useAuth();
   const isAdmin = !!user?.isAdmin || !!user?.isEmployee;
+  const router = useRouter();
+  
+  // Tab configuration map
+  const tabMap: Record<string, number> = {
+    overview: 0,
+    journey: 1,
+    map: 2,
+    journal: 3,
+    wellness: 4,
+    festivals: 5,
+  };
   
   // Tab state
   const [currentTab, setCurrentTab] = useState(0);
+  
+  // Initialize tab from URL
+  useEffect(() => {
+    const tabParam = router.query.tab as string;
+    if (tabParam && tabMap[tabParam] !== undefined) {
+      setCurrentTab(tabMap[tabParam]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.tab]);
   
   // Aura/Stats state
   const [stats, setStats] = useState<Record<string, number>>({
@@ -206,6 +227,13 @@ export default function RiseDashboard() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
+    
+    // Update URL with tab parameter
+    const tabNames = Object.keys(tabMap);
+    const tabName = tabNames.find(key => tabMap[key] === newValue);
+    if (tabName) {
+      router.push(`/rise?tab=${tabName}`, undefined, { shallow: true });
+    }
   };
 
   const overallLevel = Math.floor(Object.values(stats).reduce((sum, val) => sum + val, 0) / Object.keys(stats).length);
