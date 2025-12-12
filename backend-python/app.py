@@ -13429,11 +13429,31 @@ def get_analytics_data():
                     }), 200
             
             # Normalize property ID (handle both G-XXXXXXXXXX and numeric IDs)
+            # The Google Analytics Data API requires numeric Property IDs, not Measurement IDs (G-XXXXXXXXXX)
+            # G-XXXXXXXXXX is a Measurement ID used for tracking, not for the Reporting API
             if property_id.startswith('G-'):
-                property_id_clean = property_id
+                # Return helpful error explaining the difference
+                return jsonify({
+                    'error': 'Property ID format error: G-XXXXXXXXXX is a Measurement ID, not a Property ID',
+                    'message': f'The value "{property_id}" is a Measurement ID (G-XXXXXXXXXX format), but the Google Analytics Data API requires a numeric Property ID. Please use the numeric Property ID instead.',
+                    'details': 'To find your numeric Property ID: 1) Go to Google Analytics (analytics.google.com), 2) Click Admin (gear icon), 3) Select your GA4 property, 4) Click Property Settings, 5) Find the numeric Property ID (e.g., 123456789). Use this numeric ID instead of the G-XXXXXXXXXX Measurement ID.',
+                    'helpUrl': 'https://developers.google.com/analytics/devguides/reporting/data/v1/property-id',
+                    'isMockData': True,
+                    'totalRevenue': 0,
+                    'totalUsers': 0,
+                    'pageViews': 0,
+                    'conversionRate': 0,
+                    'revenueTrend': 0,
+                    'usersTrend': 0,
+                    'pageViewsTrend': 0,
+                    'conversionTrend': 0,
+                    'revenueData': [],
+                    'visitorData': [],
+                    'conversionData': [],
+                }), 200
             elif property_id.startswith('UA-'):
                 return jsonify({
-                    'error': 'Universal Analytics (UA) properties are no longer supported. Please use a GA4 property (G-XXXXXXXXXX format).',
+                    'error': 'Universal Analytics (UA) properties are no longer supported. Please use a GA4 property with numeric Property ID.',
                     'isMockData': True,
                 }), 400
             else:
