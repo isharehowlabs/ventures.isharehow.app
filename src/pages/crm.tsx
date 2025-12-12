@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import {
   Box,
@@ -186,6 +186,7 @@ export default function CRMDashboard() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'prospect' | 'inactive'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'client' | 'prospect' | 'lead'>('all');
   const [timePeriodFilter, setTimePeriodFilter] = useState<'week' | 'month' | 'year'>('month');
+  const timePeriodFilterRef = useRef<'week' | 'month' | 'year'>('month');
 
   // Pagination
   const [page, setPage] = useState(0);
@@ -201,11 +202,16 @@ export default function CRMDashboard() {
 
   const backendUrl = getBackendUrl();
 
+  // Update ref when timePeriodFilter changes
+  useEffect(() => {
+    timePeriodFilterRef.current = timePeriodFilter;
+  }, [timePeriodFilter]);
+
   const fetchShopifyAnalytics = useCallback(async (timePeriod?: 'week' | 'month' | 'year') => {
     setShopifyAnalyticsLoading(true);
     try {
-      // Use provided timePeriod parameter, or fall back to state value
-      const period = timePeriod || timePeriodFilter;
+      // Use provided timePeriod parameter, or fall back to ref value (always current)
+      const period = timePeriod || timePeriodFilterRef.current;
       const response = await fetch(`${backendUrl}/api/shopify/analytics?days=${period === 'week' ? 7 : period === 'month' ? 30 : 365}`, {
         credentials: 'include',
       });
@@ -221,7 +227,7 @@ export default function CRMDashboard() {
     } finally {
       setShopifyAnalyticsLoading(false);
     }
-  }, [backendUrl, timePeriodFilter]);
+  }, [backendUrl]);
 
   const fetchTasks = async () => {
     try {
