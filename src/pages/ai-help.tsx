@@ -256,7 +256,7 @@ export default function AIHelpPage() {
                   <Button
                     variant="outlined"
                     size="large"
-                    onClick={() => router.push('/demo')}
+                    onClick={()=>{window.open("https://shop.isharehow.app/products/custom-webapp-built-by-ishare?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web","_blank")}}
                     sx={{ px: 4, py: 1.5 }}
                   >
                     Book a Demo

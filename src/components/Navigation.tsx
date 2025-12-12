@@ -29,6 +29,7 @@ import {
   Business as BusinessIcon,
   PeopleAlt as CrmIcon,
   Apps as AppsIcon,
+  AutoAwesome as AutoAwesomeIcon,
   ExpandLess,
   ExpandMore,
 } from '@mui/icons-material';
@@ -37,7 +38,7 @@ import { useState, useEffect } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { SHELL_COLORS } from '../isharehowTheme';
 
-type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine' | 'dashboard' | 'fractional-digital-agency';
+type NavKey = 'home' | 'content' | 'products' | 'rise' | 'live' | 'lookupcafe' | 'profile' | 'billing' | 'settings' | 'web3' | 'demo' | 'creative' | 'blog' | 'learning-hub' | 'about' | 'enterprise' | 'crm' | 'website-apps' | 'growth-machine' | 'dashboard' | 'fractional-digital-agency' | 'ai-help';
 
 interface NavigationItem {
   key: NavKey;
@@ -176,6 +177,7 @@ export default function Navigation({ active, isAuthenticated = false, collapsed 
   // Sales pages sub-items for Home
   const salesPages = [
     { key: 'products' as NavKey, label: 'Products', href: '/products', icon: <ShoppingBagIcon /> },
+    { key: 'ai-help' as NavKey, label: 'AI Help', href: '/ai-help', icon: <AutoAwesomeIcon /> },
     { key: 'fractional-digital-agency' as NavKey, label: 'Fractional Digital Agency', href: '/fractional-digital-agency', icon: <CreativeIcon /> },
     { key: 'website-apps' as NavKey, label: 'Website Apps', href: '/website-apps', icon: <AppsIcon /> },
     { key: 'growth-machine' as NavKey, label: 'Growth Machine', href: '/growth-machine', icon: <RiseIcon /> },
