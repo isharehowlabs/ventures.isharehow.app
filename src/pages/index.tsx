@@ -908,6 +908,216 @@ const HomePage = () => {
             </Container>
           </Box>
 
+          {/* Solution Path Selection */}
+          <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.default' }}>
+            <Container maxWidth="lg">
+              <Box sx={{ textAlign: 'center', mb: 6 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                    fontSize: { xs: '2rem', md: '2.5rem' },
+                  }}
+                >
+                  Which Solution Path Fits Your Needs?
+                </Typography>
+                <Typography
+                  variant="h6"
+                  color="text.secondary"
+                  sx={{ maxWidth: 700, mx: 'auto', mb: 4 }}
+                >
+                  Choose the path that aligns with your business goals and scale
+                </Typography>
+              </Box>
+
+              <Grid container spacing={4}>
+                {/* Enterprise Solutions */}
+                <Grid item xs={12} md={6}>
+                  <Card
+                    elevation={6}
+                    sx={{
+                      height: '100%',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: 12,
+                      },
+                    }}
+                    onClick={() => router.push('/enterprise')}
+                  >
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        height: { xs: 250, md: 300 },
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop"
+                        alt="Enterprise Solutions"
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                          },
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)',
+                        }}
+                      />
+                      <Chip
+                        label="Enterprise"
+                        sx={{
+                          position: 'absolute',
+                          top: 16,
+                          right: 16,
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          py: 2.5,
+                        }}
+                      />
+                    </Box>
+                    <CardContent sx={{ p: 4 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
+                        Enterprise Solutions
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
+                        For large organizations requiring dedicated teams, custom integrations, and enterprise-level support. 
+                        Scale your operations with comprehensive solutions tailored to your unique needs.
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+                        <Chip label="Dedicated Teams" size="small" />
+                        <Chip label="Custom Integrations" size="small" />
+                        <Chip label="24/7 Support" size="small" />
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        size="large"
+                        fullWidth
+                        endIcon={<ArrowForwardIcon />}
+                        sx={{
+                          py: 1.5,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Explore Enterprise Solutions
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Fractional Freelance Solutions */}
+                <Grid item xs={12} md={6}>
+                  <Card
+                    elevation={6}
+                    sx={{
+                      height: '100%',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: 12,
+                      },
+                    }}
+                    onClick={() => router.push('/fractional-digital-agency')}
+                  >
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        height: { xs: 250, md: 300 },
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop"
+                        alt="Fractional Freelance Solutions"
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                          },
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)',
+                        }}
+                      />
+                      <Chip
+                        label="Fractional"
+                        sx={{
+                          position: 'absolute',
+                          top: 16,
+                          right: 16,
+                          bgcolor: 'secondary.main',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          py: 2.5,
+                        }}
+                      />
+                    </Box>
+                    <CardContent sx={{ p: 4 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
+                        Fractional Freelance Solutions
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
+                        Project-based creative services perfect for solopreneurs and small businesses. 
+                        Get high-quality design, development, and growth services without long-term commitments.
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+                        <Chip label="Project-Based" size="small" />
+                        <Chip label="Flexible Pricing" size="small" />
+                        <Chip label="Quick Turnaround" size="small" />
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        size="large"
+                        fullWidth
+                        endIcon={<ArrowForwardIcon />}
+                        sx={{
+                          py: 1.5,
+                          fontWeight: 700,
+                        }}
+                      >
+                        View Fractional Services
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Container>
+          </Box>
+
           {/* Scroll to Top Button */}
           <Zoom in={showScrollTop}>
             <Fab
