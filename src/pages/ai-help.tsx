@@ -51,7 +51,7 @@ export default function AIHelpPage() {
   const [email, setEmail] = useState('');
 
   const handleGetStarted = () => {
-    router.push('/demo');
+    window.open("https://shop.isharehow.app/products/flash-sale-10x-your-seo-prospecting?variant=52358826590392","_blank")
   };
 
   const handleSubscribe = (e: React.FormEvent) => {
@@ -97,7 +97,7 @@ export default function AIHelpPage() {
     <>
       <Head>
         <title>AI Help & SEO Booster | iShareHow Ventures</title>
-        <meta name="description" content="Boost your online presence with AI-powered assistance and advanced SEO optimization tools. Get started for free today." />
+        <meta name="description" content="Boost your online presence with AI-powered assistance and advanced SEO optimization tools. Get started today." />
       </Head>
 
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -148,7 +148,7 @@ export default function AIHelpPage() {
                   Blog
                 </Link>
                 <Button variant="outlined" onClick={handleGetStarted} sx={{ mr: 1 }}>
-                  Try Free
+                  Try Ai Creator Pro
                 </Button>
                 <Button variant="contained" onClick={handleGetStarted}>
                   Get Started
@@ -193,7 +193,7 @@ export default function AIHelpPage() {
             </List>
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Button variant="outlined" fullWidth onClick={handleGetStarted}>
-                Try Free
+                Try Ai Creator Pro
               </Button>
               <Button variant="contained" fullWidth onClick={handleGetStarted}>
                 Get Started
@@ -251,15 +251,15 @@ export default function AIHelpPage() {
                     endIcon={<ArrowForwardIcon />}
                     sx={{ px: 4, py: 1.5 }}
                   >
-                    Get Started - It's Free Now
+                    Ai Creator Pro - Click to Buy
                   </Button>
                   <Button
                     variant="outlined"
                     size="large"
-                    onClick={()=>{window.open("https://shop.isharehow.app/products/custom-webapp-built-by-ishare?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web","_blank")}}
+                    onClick={()=>{window.open("https://shop.isharehow.app/products/flash-sale-10x-your-seo-prospecting?variant=52358826590392","_blank")}}
                     sx={{ px: 4, py: 1.5 }}
                   >
-                    Book a Demo
+                    Buy Ai Creator Pro
                   </Button>
                 </Stack>
               </Grid>
@@ -433,7 +433,7 @@ export default function AIHelpPage() {
                 },
               }}
             >
-              Get Started - It's Free Now
+              Ai Creator Pro - Click to Buy
             </Button>
           </Container>
         </Box>
@@ -564,8 +564,8 @@ export default function AIHelpPage() {
                   <Link href="/products" sx={{ textDecoration: 'none', color: 'text.secondary', fontSize: '0.875rem' }}>
                     Products
                   </Link>
-                  <Link href="/demo" sx={{ textDecoration: 'none', color: 'text.secondary', fontSize: '0.875rem' }}>
-                    Demo
+                  <Link href="https://shop.isharehow.app/products/flash-sale-10x-your-seo-prospecting?variant=52358826590392" sx={{ textDecoration: 'none', color: 'text.secondary', fontSize: '0.875rem' }}>
+                    Ai Creator Pro
                   </Link>
                 </Stack>
               </Grid>
