@@ -6987,8 +6987,38 @@ def get_clients():
         employee_id = request.args.get('employee_id', None)
         search = request.args.get('search', '')
         
-        # Build query
-        query = Client.query
+        # Check if budget and deadline columns exist before using ORM
+        # This prevents errors if migration hasn't run yet
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        has_budget_column = False
+        has_deadline_column = False
+        try:
+            if 'clients' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('clients')]
+                has_budget_column = 'budget' in columns
+                has_deadline_column = 'deadline' in columns
+        except Exception:
+            pass
+        
+        # Build query - use load_only to exclude columns that don't exist yet
+        if has_budget_column and has_deadline_column:
+            # All columns exist, use normal query
+            query = Client.query
+        else:
+            # Some columns missing, use load_only to exclude them
+            from sqlalchemy.orm import load_only
+            columns_to_load = [
+                Client.id, Client.name, Client.email, Client.company, Client.phone,
+                Client.status, Client.tier, Client.notes, Client.tags,
+                Client.marketing_budget, Client.google_analytics_property_key,
+                Client.user_id, Client.created_at, Client.updated_at
+            ]
+            if has_budget_column:
+                columns_to_load.append(Client.budget)
+            if has_deadline_column:
+                columns_to_load.append(Client.deadline)
+            query = db.session.query(Client).options(load_only(*columns_to_load))
         
         if status != 'all':
             query = query.filter(Client.status == status)
@@ -8460,8 +8490,24 @@ def run_database_upgrade():
         
         with app.app_context():
             from flask_migrate import upgrade
-            upgrade()
-            print("✓ Database upgrade completed successfully")
+            try:
+                # Try to upgrade to head - this will handle multiple heads by upgrading to all
+                upgrade()
+                print("✓ Database upgrade completed successfully")
+            except Exception as upgrade_error:
+                error_str = str(upgrade_error).lower()
+                if 'multiple head' in error_str or 'heads' in error_str:
+                    print("⚠ Multiple migration heads detected, upgrading to all heads...")
+                    try:
+                        # Upgrade to all heads explicitly
+                        upgrade(revision='heads')
+                        print("✓ Database upgrade to all heads completed successfully")
+                    except Exception as heads_error:
+                        print(f"⚠ Error upgrading to heads: {heads_error}")
+                        print("⚠ Continuing with application startup - migrations may need manual resolution")
+                else:
+                    print(f"⚠ Migration error: {upgrade_error}")
+                    print("⚠ Continuing with application startup - migrations may need manual resolution")
             
             # After migration, ensure all required columns exist
             # This is a safety check in case migrations didn't run properly
@@ -9964,6 +10010,21 @@ if DB_AVAILABLE:
         user = db.relationship('User', backref='client_account')
         
         def to_dict(self):
+            # Safely access budget and deadline - they may not exist if migration hasn't run
+            budget_value = 0
+            deadline_value = None
+            try:
+                if hasattr(self, 'budget') and self.budget is not None:
+                    budget_value = float(self.budget)
+            except (AttributeError, ValueError):
+                pass
+            
+            try:
+                if hasattr(self, 'deadline') and self.deadline is not None:
+                    deadline_value = self.deadline.isoformat()
+            except (AttributeError, ValueError):
+                pass
+            
             return {
                 'id': self.id,
                 'name': self.name,
@@ -9976,8 +10037,8 @@ if DB_AVAILABLE:
                 'tags': json.loads(self.tags) if self.tags else [],
                 'marketingBudget': self.marketing_budget,
                 'googleAnalyticsPropertyKey': self.google_analytics_property_key,
-                'budget': float(self.budget) if self.budget else 0,
-                'deadline': self.deadline.isoformat() if self.deadline else None,
+                'budget': budget_value,
+                'deadline': deadline_value,
                 'userId': self.user_id,
                 'hasAccount': self.user_id is not None,
                 'createdAt': self.created_at.isoformat() if self.created_at else None,

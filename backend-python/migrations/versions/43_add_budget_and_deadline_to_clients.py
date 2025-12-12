@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = '43_add_budget_deadline'
-down_revision = '41_add_ga_property_key'
+down_revision = 'd2939bbcf89d'  # Points to merge head to fix multiple heads issue
 branch_labels = None
 depends_on = None
 
