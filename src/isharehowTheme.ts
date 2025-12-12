@@ -171,13 +171,13 @@ const getTheme = (mode: 'light' | 'dark') => {
     MuiModal: {
       styleOverrides: {
         root: {
-          zIndex: 1300,
+          zIndex: 1400,
         },
         backdrop: {
           backgroundColor: mode === 'light' 
             ? 'rgba(0, 0, 0, 0.5)' 
             : 'rgba(0, 0, 0, 0.7)',
-          zIndex: 1300,
+          zIndex: 1400,
         },
       },
     },
@@ -187,19 +187,19 @@ const getTheme = (mode: 'light' | 'dark') => {
           backgroundColor: mode === 'light' 
             ? 'rgba(0, 0, 0, 0.5)' 
             : 'rgba(0, 0, 0, 0.7)',
-          zIndex: 1300,
+          zIndex: 1400,
         },
       },
     },
     MuiDialog: {
       styleOverrides: {
         root: {
-          zIndex: 1300,
+          zIndex: 1400,
           '& .MuiBackdrop-root': {
             backgroundColor: mode === 'light' 
               ? 'rgba(0, 0, 0, 0.5)' 
               : 'rgba(0, 0, 0, 0.7)',
-            zIndex: 1300,
+            zIndex: 1400,
           },
         },
         container: {
@@ -216,7 +216,7 @@ const getTheme = (mode: 'light' | 'dark') => {
           backgroundImage: 'none',
           opacity: 1,
           position: 'relative',
-          zIndex: 1301,
+          zIndex: 1401,
           margin: '32px',
           maxHeight: 'calc(100% - 64px)',
           display: 'flex',
