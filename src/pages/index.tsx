@@ -51,7 +51,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import AppShell from '../components/AppShell';
 import BeforeAfterMockup from '../components/landing/BeforeAfterMockup';
-import { useStickyState } from '../hooks/useStickyState';
 import styles from '../styles/landing/LandingPage.module.css';
 
 // Pricing tiers and comparison features moved to enterprise.tsx
@@ -379,18 +378,18 @@ const HomePage = () => {
           </Box>
 
           {/* Stats Bar - Social Proof */}
-          <Fade in timeout={1000}>
+          <Fade in={true} timeout={1000}>
             <Box className={styles.statsBar}>
               <Container maxWidth="lg">
                 <Grid container spacing={4}>
                   {[
-                    { number: '100+', label: 'Organizations', icon: <TrendingUpIcon /> },
+                    { number: '50+', label: 'Organizations', icon: <TrendingUpIcon /> },
                     { number: '30%', label: 'Efficiency Gain', icon: <SpeedIcon /> },
                     { number: '24/7', label: 'Support', icon: <SecurityIcon /> },
                     { number: '98%', label: 'Satisfaction', icon: <StarIcon /> },
                   ].map((stat, index) => (
                     <Grid item xs={6} sm={3} key={index}>
-                      <Grow in timeout={800 + index * 200}>
+                      <Grow in={true} timeout={800 + index * 200}>
                         <Box className={styles.statCard}>
                           <Avatar
                             sx={{

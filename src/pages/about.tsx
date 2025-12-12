@@ -47,8 +47,8 @@ interface TeamMember {
 
 const teamMembers: TeamMember[] = [
   {
-    name: 'Jamel EliYah',
-    role: 'Founder & CEO',
+    name: 'Jamel EL EliYah',
+    role: 'Founder & Director',
     bio: 'Visionary leader with 16+ years in offensive security and digital transformation. Passionate about empowering businesses through innovative technology solutions.',
     linkedin: 'https://linkedin.com',
     twitter: 'https://twitter.com',
@@ -89,9 +89,9 @@ const values = [
 ];
 
 const stats = [
-  { label: 'Clients Served', value: '100+', icon: <PeopleIcon /> },
+  { label: 'Clients Served', value: '50+', icon: <PeopleIcon /> },
   { label: 'Projects Completed', value: '500+', icon: <RocketIcon /> },
-  { label: 'Team Members', value: '25+', icon: <PeopleIcon /> },
+  { label: 'Team Members', value: '50+', icon: <PeopleIcon /> },
   { label: 'Years Experience', value: '16+', icon: <TrendingUpIcon /> },
 ];
 
