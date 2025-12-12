@@ -44,6 +44,9 @@ import { useSettings } from '../hooks/useSettings';
 import { getBackendUrl } from '../utils/backendUrl';
 import AdminClientAssignmentDialog from '../components/dashboard/creative/AdminClientAssignmentDialog';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
+
+const JourneyBuilderAdmin = dynamic(() => import('../components/rise/JourneyBuilderAdmin'), { ssr: false });
 
 
 function SettingsPage() {
@@ -646,6 +649,15 @@ function SettingsPage() {
         {/* Admin Tab */}
         {activeTab === 1 && isAdmin && (
           <Box>
+            {/* Journey Builder Admin */}
+            <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Journey Builder
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <JourneyBuilderAdmin />
+            </Paper>
+
             {/* Notification System */}
             <Paper elevation={3} sx={{ p: 4, mb: 3, border: '2px solid gold' }}>
               <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>

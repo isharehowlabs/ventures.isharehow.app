@@ -265,17 +265,6 @@ const RiseJourney: React.FC = () => {
   // Main journey view with cards
   return (
     <Box sx={{ p: 3, minHeight: '100vh' }}>
-      {/* Non-destructive: Add Journey map viewer above the cards */}
-      <Box sx={{ maxWidth: '1200px', mx: 'auto', mb: 3 }}>
-        {/* Lazy import to avoid bundle bloat */}
-        {typeof window !== 'undefined' && (
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          (() => {
-            const JourneyGraphViewer = require('./JourneyGraphViewer').default;
-            return <JourneyGraphViewer />;
-          })()
-        )}
-      </Box>
       {/* Header & Trial Status */}
       <Box sx={{ 
         display: 'flex', 

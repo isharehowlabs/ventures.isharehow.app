@@ -21,6 +21,7 @@ import {
   FitnessCenter as WellnessIcon,
   Spa as SpiritualIcon,
   SelfImprovement as JourneyIcon,
+  Map as MapIcon,
 } from '@mui/icons-material';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -65,7 +66,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
   );
 }
 
-const JourneyBuilderAdmin = dynamic(() => import('../components/rise/JourneyBuilderAdmin'), { ssr: false });
+const JourneyGraphViewer = dynamic(() => import('../components/rise/JourneyGraphViewer'), { ssr: false });
 
 export default function RiseDashboard() {
   const theme = useTheme();
@@ -260,10 +261,10 @@ export default function RiseDashboard() {
           >
             <Tab icon={<DashboardIcon />} label="Overview" />
             <Tab icon={<JourneyIcon />} label="Rise Journey" />
+            <Tab icon={<MapIcon />} label="Journey Map" />
             <Tab icon={<JournalIcon />} label="Mental Spiritual Journal" />
             <Tab icon={<WellnessIcon />} label="Wellness" />
             <Tab icon={<SpiritualIcon />} label="Festivals" />
-            {isAdmin && <Tab icon={<JourneyIcon />} label="Builder" />}
           </Tabs>
         </Paper>
 
@@ -405,18 +406,23 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 2: Rise Journey - Moved from position 6 */}
+        {/* Tab 2: Rise Journey */}
         <TabPanel value={currentTab} index={1}>
           <RiseJourney />
         </TabPanel>
 
-        {/* Tab 3: Mental Spiritual Journal */}
+        {/* Tab 3: Journey Map */}
         <TabPanel value={currentTab} index={2}>
+          <JourneyGraphViewer />
+        </TabPanel>
+
+        {/* Tab 4: Mental Spiritual Journal */}
+        <TabPanel value={currentTab} index={3}>
           <MentalSpiritualJournal />
         </TabPanel>
 
-        {/* Tab 4: Wellness & Cycling */}
-        <TabPanel value={currentTab} index={3}>
+        {/* Tab 5: Wellness & Cycling */}
+        <TabPanel value={currentTab} index={4}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <IntervalsSettings />
@@ -427,17 +433,10 @@ export default function RiseDashboard() {
           </Grid>
         </TabPanel>
 
-        {/* Tab 5: Spiritual Festivals */}
-        <TabPanel value={currentTab} index={4}>
+        {/* Tab 6: Spiritual Festivals */}
+        <TabPanel value={currentTab} index={5}>
           <SpiritualFestivals />
         </TabPanel>
-
-        {/* Tab 6 (Admin only): Journey Builder */}
-        {isAdmin && (
-          <TabPanel value={currentTab} index={5}>
-            <JourneyBuilderAdmin />
-          </TabPanel>
-        )}
 
 
         {/* Goal Dialog */}
