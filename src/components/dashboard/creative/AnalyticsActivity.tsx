@@ -40,6 +40,7 @@ import {
   Assessment,
   Timeline,
   BarChart as BarChartIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import { 
   AreaChart, 
@@ -471,6 +472,7 @@ export default function AnalyticsActivity() {
 
   const formatTimeRange = (range: string) => {
     const ranges: Record<string, string> = {
+      'today': 'Today',
       '24h': 'Last 24 Hours',
       '7d': 'Last 7 Days',
       '30d': 'Last 30 Days',
@@ -541,26 +543,11 @@ export default function AnalyticsActivity() {
                 onChange={(e) => setTimeRange(e.target.value)}
                 label="Time Range"
               >
+                <MenuItem value="today">Today</MenuItem>
                 <MenuItem value="24h">Last 24 Hours</MenuItem>
                 <MenuItem value="7d">Last 7 Days</MenuItem>
                 <MenuItem value="30d">Last 30 Days</MenuItem>
                 <MenuItem value="90d">Last 90 Days</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>Client</InputLabel>
-              <Select
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                label="Client"
-                disabled={loadingClients}
-              >
-                <MenuItem value="all">All Clients</MenuItem>
-                {clients.map((client) => (
-                  <MenuItem key={client.id} value={client.id}>
-                    {client.name}
-                  </MenuItem>
-                ))}
               </Select>
             </FormControl>
             <Tooltip title="Refresh data">
@@ -592,6 +579,18 @@ export default function AnalyticsActivity() {
               sx={{ borderColor: 'divider' }}
             >
               Export
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleRefresh}
+              disabled={loading || !gaPropertyId}
+              sx={{ 
+                bgcolor: 'primary.main',
+                '&:hover': { bgcolor: 'primary.dark' }
+              }}
+            >
+              Save
             </Button>
           </Stack>
         </Box>
@@ -813,12 +812,12 @@ export default function AnalyticsActivity() {
           </ChartCard>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid item xs={12} lg={4}>
           <ChartCard
             title="Sessions by Platform"
             subtitle={`${formatTimeRange(timeRange)} - Platform distribution and overlap`}
           >
-            <Box sx={{ width: '100%', height: 600, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box sx={{ width: '100%', height: 400, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <VennDiagram 
                 data={analyticsData?.userAcquisitionByPlatform || []}
                 theme={theme}
