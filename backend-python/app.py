@@ -6022,19 +6022,34 @@ def delete_task(task_id):
             
             # Check for foreign key constraint violations
             if 'foreign key' in error_str or 'constraint' in error_str or 'violates foreign key' in error_str:
-                # Try to reload the task and clear foreign key references
+                # Try to clear foreign key references using raw SQL and retry deletion
                 try:
-                    # Reload task from database
-                    task = Task.query.get(task_id)
-                    if not task:
+                    from sqlalchemy import text
+                    
+                    # Check if task still exists
+                    result = db.session.execute(
+                        text('SELECT id FROM task WHERE id = :task_id'),
+                        {'task_id': task_id}
+                    )
+                    if not result.fetchone():
                         return jsonify({'error': 'Task not found'}), 404
                     
-                    # Clear foreign key references
-                    if hasattr(task, 'support_request_id') and task.support_request_id:
-                        task.support_request_id = None
+                    # Try to clear support_request_id if column exists
+                    try:
+                        db.session.execute(
+                            text('UPDATE task SET support_request_id = NULL WHERE id = :task_id'),
+                            {'task_id': task_id}
+                        )
+                        db.session.flush()
+                    except Exception:
+                        # Column might not exist, continue
+                        pass
                     
-                    # Try deletion again
-                    db.session.delete(task)
+                    # Try deletion again with raw SQL
+                    db.session.execute(
+                        text('DELETE FROM task WHERE id = :task_id'),
+                        {'task_id': task_id}
+                    )
                     db.session.commit()
                 except Exception as retry_err:
                     db.session.rollback()
