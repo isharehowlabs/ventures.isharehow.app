@@ -1038,10 +1038,25 @@ def shopify_graphql(query, variables=None):
                 # Ensure SHOPIFY_STORE_URL includes the GraphQL endpoint
                 graphql_url = SHOPIFY_STORE_URL
                 if not graphql_url.endswith('/graphql.json'):
-                        # Check if /admin/api/ is already in the URL to avoid duplication
+                        # Check if /admin/api/ is already in the URL
                         if '/admin/api/' in graphql_url:
-                                # URL already contains /admin/api/, just append /graphql.json
-                                graphql_url = f"{graphql_url.rstrip('/')}/graphql.json"
+                                # Check if API version is already present after /admin/api/
+                                import re
+                                # Pattern to match /admin/api/{version}/ or /admin/api/ (no version)
+                                api_pattern = r'/admin/api/([^/]+)?/?'
+                                match = re.search(api_pattern, graphql_url)
+                                if match and match.group(1):
+                                        # Version is present, just append /graphql.json
+                                        graphql_url = f"{graphql_url.rstrip('/')}/graphql.json"
+                                else:
+                                        # No version present, insert version before /graphql.json
+                                        # Remove trailing slashes and /admin/api/ if it ends with that
+                                        graphql_url = graphql_url.rstrip('/')
+                                        if graphql_url.endswith('/admin/api'):
+                                                graphql_url = f"{graphql_url}/{SHOPIFY_API_VERSION}/graphql.json"
+                                        else:
+                                                # Replace /admin/api/ with /admin/api/{version}/
+                                                graphql_url = re.sub(r'/admin/api/?$', f'/admin/api/{SHOPIFY_API_VERSION}/graphql.json', graphql_url)
                         elif 'myshopify.com' in graphql_url:
                                 # Clean domain and add full path
                                 graphql_url = f"https://{graphql_url.replace('https://', '').replace('http://', '')}/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
