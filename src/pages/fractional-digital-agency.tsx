@@ -310,6 +310,62 @@ const FractionalDigitalAgencyPage = () => {
                 >
                   Positioned as a <strong>one-stop solution for solopreneurs, small businesses, or enterprises needing tailored support</strong>.
                 </Typography>
+                <Box sx={{ maxWidth: 1100, mx: 'auto', mt: 2 }}>
+                  <Grid container spacing={3} alignItems="center">
+                    <Grid item xs={12} md={7}>
+                      <Box component="img" src="/images/hero-office.jpg" alt="Modern creative team at work" sx={{ width: '100%', height: { xs: 220, md: 420 }, objectFit: 'cover', borderRadius: 2, boxShadow: 6 }} />
+                    </Grid>
+                    <Grid item xs={12} md={5}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Box component="img" src="/images/creative-team.jpg" alt="Creative team" sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 2, boxShadow: 4 }} />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box component="img" src="/images/ui-wireframe.jpg" alt="UI wireframes" sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 2, boxShadow: 4 }} />
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                </Box>
+                <Box sx={{ mt: 4 }}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} alignItems="center" justifyContent="center" sx={{ opacity: 0.8 }}>
+      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.default' }}>
+        <Container>
+          <Grid container spacing={6} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Typography variant="h4" component="h3" sx={{ fontWeight: 700, mb: 2 }}>
+                Results you can see
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                Real transformations from recent engagements. Swipe-worthy before/after outcomes backed by data.
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <Chip label="CRO" />
+                <Chip label="Brand Refresh" />
+                <Chip label="UX Upgrade" />
+              </Stack>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Box component="img" src="/images/before.jpg" alt="Before" sx={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 2, boxShadow: 3 }} />
+                </Grid>
+                <Grid item xs={6}>
+                  <Box component="img" src="/images/after.jpg" alt="After" sx={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 2, boxShadow: 6 }} />
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+                    <Typography variant="overline" color="text.secondary">Trusted by</Typography>
+                    <Typography variant="body2">Startups</Typography>
+                    <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+                    <Typography variant="body2">Agencies</Typography>
+                    <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+                    <Typography variant="body2">SMBs</Typography>
+                  </Stack>
+                </Box>
 
                 <Grid container spacing={3} sx={{ mt: 4, maxWidth: 900, mx: 'auto' }}>
                   <Grid item xs={12} md={4}>
@@ -654,4 +710,3 @@ const FractionalDigitalAgencyPage = () => {
 };
 
 export default FractionalDigitalAgencyPage;
-
