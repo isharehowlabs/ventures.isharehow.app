@@ -296,19 +296,26 @@ function BillingPage() {
                         Manage Your Subscription
                       </Typography>
                       {shopifyStoreUrl ? (
-                        <Box sx={{ width: '100%', height: '800px', borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                          <iframe
-                            src={`${shopifyStoreUrl}/account`}
-                            width="100%"
-                            height="100%"
-                            frameBorder="0"
-                            style={{
-                              border: 'none',
-                              borderRadius: '8px',
+                        <Box sx={{ textAlign: 'center', py: 6 }}>
+                          <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 2 }}>
+                            Manage Your Subscription
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+                            Click the button below to access your Shopify customer account portal where you can manage your subscription, payment methods, and billing history.
+                          </Typography>
+                          <Button
+                            variant="contained"
+                            size="large"
+                            onClick={() => {
+                              window.open(`${shopifyStoreUrl}/account`, '_blank', 'noopener,noreferrer');
                             }}
-                            title="Shopify Customer Portal"
-                            allow="payment"
-                          />
+                            sx={{ minWidth: 200 }}
+                          >
+                            Open Shopify Account Portal
+                          </Button>
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>
+                            The portal will open in a new tab for security reasons.
+                          </Typography>
                         </Box>
                       ) : (
                         <Alert severity="info">
