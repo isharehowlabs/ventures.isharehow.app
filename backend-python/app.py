@@ -9953,9 +9953,26 @@ if DB_AVAILABLE:
         
         @property
         def client_name(self):
-            """Get client name from Client relationship"""
-            if self.client:
-                return self.client.name
+            """Get client name from Client relationship - handles missing columns gracefully"""
+            if not self.client_id:
+                return None
+            try:
+                # Try using raw SQL first to avoid column errors
+                from sqlalchemy import text
+                result = db.session.execute(
+                    text("SELECT name FROM clients WHERE id = :client_id"),
+                    {'client_id': self.client_id}
+                ).fetchone()
+                if result:
+                    return result[0]
+            except Exception:
+                pass
+            # Fallback to relationship (may fail if columns missing)
+            try:
+                if self.client:
+                    return self.client.name
+            except Exception:
+                pass
             return None
         
         def to_dict(self):
@@ -9980,15 +9997,25 @@ if DB_AVAILABLE:
                 db.session.rollback()  # Rollback failed transaction
                 pass  # Ignore if tasks table doesn't exist or column doesn't exist
             
-            # Get client name safely
-            client_name_value = self.client_name
-            if not client_name_value and self.client_id:
+            # Get client name safely - handle missing columns gracefully
+            client_name_value = None
+            if self.client_id:
                 try:
-                    client = Client.query.get(self.client_id)
-                    if client:
-                        client_name_value = client.name
+                    # Try to get client name using raw SQL to avoid column errors
+                    from sqlalchemy import text
+                    result = db.session.execute(
+                        text("SELECT name FROM clients WHERE id = :client_id"),
+                        {'client_id': self.client_id}
+                    ).fetchone()
+                    if result:
+                        client_name_value = result[0]
                 except Exception:
-                    pass
+                    # If that fails, try using the relationship (may fail if columns missing)
+                    try:
+                        if self.client:
+                            client_name_value = self.client.name
+                    except Exception:
+                        pass
             
             return {
                 'id': self.id,
