@@ -1018,8 +1018,17 @@ def shopify_graphql(query, variables=None):
                 'Content-Type': 'application/json',
         }
         try:
+                # Ensure SHOPIFY_STORE_URL includes the GraphQL endpoint
+                graphql_url = SHOPIFY_STORE_URL
+                if not graphql_url.endswith('/graphql.json'):
+                        # If it's just the store domain, add the GraphQL path
+                        if 'myshopify.com' in graphql_url:
+                                graphql_url = f"https://{graphql_url.replace('https://', '').replace('http://', '')}/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+                        else:
+                                graphql_url = f"{graphql_url.rstrip('/')}/admin/api/{SHOPIFY_API_VERSION}/graphql.json"
+                
                 resp = requests.post(
-                        SHOPIFY_STORE_URL,
+                        graphql_url,
                         headers=headers,
                         json={'query': query, 'variables': variables or {}}
                 )
@@ -1243,6 +1252,34 @@ CUSTOMERS_QUERY = '''
     }
 '''
 
+# Shopify Analytics Query for Orders and Revenue
+ORDERS_ANALYTICS_QUERY = '''
+    query getOrdersAnalytics($first: Int!, $after: String, $query: String) {
+        orders(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
+            edges {
+                node {
+                    id
+                    name
+                    createdAt
+                    totalPriceSet {
+                        shopMoney {
+                            amount
+                            currencyCode
+                        }
+                    }
+                    financialStatus
+                    fulfillmentStatus
+                    customer {
+                        id
+                        email
+                    }
+                }
+            }
+            pageInfo { hasNextPage endCursor }
+        }
+    }
+'''
+
 @app.route('/api/shopify/customers', methods=['GET'])
 @jwt_required(optional=True)
 def api_shopify_customers():
@@ -1296,6 +1333,118 @@ def api_shopify_customers():
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Failed to fetch customers', 'message': str(e), 'customers': []}), 200
+
+@app.route('/api/shopify/analytics', methods=['GET'])
+@jwt_required(optional=True)
+def api_shopify_analytics():
+    """Fetch Shopify analytics data (orders, revenue) for CRM dashboard"""
+    try:
+        # Check if Shopify is configured
+        if not SHOPIFY_STORE_URL or not SHOPIFY_ACCESS_TOKEN:
+            return jsonify({
+                'error': 'Shopify not configured',
+                'message': 'SHOPIFY_STORE_URL and SHOPIFY_ACCESS_TOKEN must be set',
+                'analytics': {
+                    'totalRevenue': 0,
+                    'totalOrders': 0,
+                    'averageOrderValue': 0,
+                    'ordersByDay': [],
+                    'revenueByDay': []
+                }
+            }), 200
+        
+        # Get time period filter (default: last 30 days)
+        days = int(request.args.get('days', 30))
+        created_at_filter = f"created_at:>={datetime.utcnow() - timedelta(days=days)}"
+        
+        first = 250  # Shopify allows up to 250 per page
+        variables = {'first': first, 'after': None, 'query': created_at_filter}
+        
+        all_orders = []
+        has_next_page = True
+        cursor = None
+        
+        # Paginate through all orders
+        while has_next_page:
+            if cursor:
+                variables['after'] = cursor
+            else:
+                variables.pop('after', None)
+            
+            data, error = shopify_graphql(ORDERS_ANALYTICS_QUERY, variables)
+            if error:
+                break
+            
+            if not data or 'orders' not in data or 'edges' not in data['orders']:
+                break
+            
+            for edge in data['orders']['edges']:
+                node = edge['node']
+                total_amount = float(node.get('totalPriceSet', {}).get('shopMoney', {}).get('amount', 0)) if node.get('totalPriceSet') else 0
+                all_orders.append({
+                    'id': node['id'],
+                    'name': node.get('name', ''),
+                    'createdAt': node.get('createdAt'),
+                    'totalPrice': total_amount,
+                    'currencyCode': node.get('totalPriceSet', {}).get('shopMoney', {}).get('currencyCode', 'USD'),
+                    'financialStatus': node.get('financialStatus'),
+                    'fulfillmentStatus': node.get('fulfillmentStatus'),
+                    'customerId': node.get('customer', {}).get('id') if node.get('customer') else None,
+                    'customerEmail': node.get('customer', {}).get('email') if node.get('customer') else None,
+                })
+            
+            page_info = data['orders']['pageInfo']
+            has_next_page = page_info.get('hasNextPage', False)
+            cursor = page_info.get('endCursor')
+        
+        # Calculate analytics
+        total_revenue = sum(order['totalPrice'] for order in all_orders)
+        total_orders = len(all_orders)
+        average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+        
+        # Group orders by day
+        orders_by_day = {}
+        revenue_by_day = {}
+        
+        for order in all_orders:
+            if order['createdAt']:
+                try:
+                    order_date = datetime.fromisoformat(order['createdAt'].replace('Z', '+00:00'))
+                    day_key = order_date.strftime('%Y-%m-%d')
+                    orders_by_day[day_key] = orders_by_day.get(day_key, 0) + 1
+                    revenue_by_day[day_key] = revenue_by_day.get(day_key, 0) + order['totalPrice']
+                except:
+                    pass
+        
+        # Convert to arrays for charting
+        orders_by_day_array = [{'date': k, 'count': v} for k, v in sorted(orders_by_day.items())]
+        revenue_by_day_array = [{'date': k, 'revenue': v} for k, v in sorted(revenue_by_day.items())]
+        
+        return jsonify({
+            'analytics': {
+                'totalRevenue': total_revenue,
+                'totalOrders': total_orders,
+                'averageOrderValue': average_order_value,
+                'ordersByDay': orders_by_day_array,
+                'revenueByDay': revenue_by_day_array,
+                'orders': all_orders[:100]  # Return first 100 orders for display
+            }
+        })
+    except Exception as e:
+        print(f"Error fetching Shopify analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to fetch analytics',
+            'message': str(e),
+            'analytics': {
+                'totalRevenue': 0,
+                'totalOrders': 0,
+                'averageOrderValue': 0,
+                'ordersByDay': [],
+                'revenueByDay': []
+            }
+        }), 200
 
 # --- MCPServer Singleton (in-memory, like JS) ---
 class MCPServer:

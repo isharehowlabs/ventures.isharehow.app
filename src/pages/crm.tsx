@@ -176,6 +176,8 @@ export default function CRMDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [shopifyCustomers, setShopifyCustomers] = useState<ShopifyCustomer[]>([]);
+  const [shopifyAnalytics, setShopifyAnalytics] = useState<any>(null);
+  const [shopifyAnalyticsLoading, setShopifyAnalyticsLoading] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
 
   // Filter states
@@ -202,6 +204,12 @@ export default function CRMDashboard() {
   useEffect(() => {
     fetchAllData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 2 && !shopifyAnalyticsLoading) {
+      fetchShopifyAnalytics();
+    }
+  }, [activeTab, timePeriodFilter]);
 
   useEffect(() => {
     if (success || error) {
@@ -234,6 +242,7 @@ export default function CRMDashboard() {
         fetchUsers(),
         fetchClients(),
         fetchShopifyCustomers(),
+        fetchShopifyAnalytics(),
         fetchTasks(),
       ]);
     } finally {
@@ -284,6 +293,26 @@ export default function CRMDashboard() {
     } catch (err) {
       console.error('Error fetching Shopify customers:', err);
       setShopifyCustomers([]);
+    }
+  };
+
+  const fetchShopifyAnalytics = async () => {
+    setShopifyAnalyticsLoading(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/shopify/analytics?days=${timePeriodFilter === 'week' ? 7 : timePeriodFilter === 'month' ? 30 : 365}`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setShopifyAnalytics(data.analytics || null);
+      } else {
+        setShopifyAnalytics(null);
+      }
+    } catch (err) {
+      console.error('Error fetching Shopify analytics:', err);
+      setShopifyAnalytics(null);
+    } finally {
+      setShopifyAnalyticsLoading(false);
     }
   };
 
@@ -403,8 +432,8 @@ export default function CRMDashboard() {
           (typeFilter === 'lead' && (client.status === 'prospect' || client.status === 'pending'));
         return matchesSearch && matchesStatus && matchesType;
       });
-    } else {
-      // Shopify tab
+    } else if (activeTab === 2) {
+      // Shopify & Analytics tab - filter customers
       return shopifyCustomers.filter(customer => {
         const matchesSearch = 
           customer.email?.toLowerCase().includes(searchLower) ||
@@ -412,6 +441,8 @@ export default function CRMDashboard() {
           customer.lastName?.toLowerCase().includes(searchLower);
         return matchesSearch;
       });
+    } else {
+      return [];
     }
   };
 
@@ -662,15 +693,9 @@ export default function CRMDashboard() {
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                   />
                   <Tab
-                    icon={<ShoppingCartIcon />}
-                    iconPosition="start"
-                    label="Shopify Data"
-                    sx={{ textTransform: 'none', fontWeight: 600 }}
-                  />
-                  <Tab
                     icon={<BarChartIcon />}
                     iconPosition="start"
-                    label="Analytics"
+                    label="Shopify & Analytics"
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                   />
                   <Tab
@@ -975,199 +1000,99 @@ export default function CRMDashboard() {
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={2}>
-                  {/* Shopify Data Tab */}
-                  {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                      <CircularProgress />
-                    </Box>
-                  ) : shopifyCustomers.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 6 }}>
-                      <ShoppingCartIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No Shopify Data
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Shopify integration is not configured or no customers found.
-                      </Typography>
-                      <Button
-                        variant="outlined"
-                        startIcon={<RefreshIcon />}
-                        onClick={fetchShopifyCustomers}
-                        sx={{ textTransform: 'none' }}
-                      >
-                        Refresh
-                      </Button>
-                    </Box>
-                  ) : (
-                    <TableContainer>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell padding="checkbox">
-                              <Checkbox />
-                            </TableCell>
-                            <TableCell>Customer</TableCell>
-                            <TableCell>Email</TableCell>
-                            <TableCell>Phone</TableCell>
-                            <TableCell>Total Spent</TableCell>
-                            <TableCell>Orders</TableCell>
-                            <TableCell>Date</TableCell>
-                            <TableCell align="right">Actions</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {paginatedData.map((item) => {
-                            const customer = item as ShopifyCustomer;
-                            return (
-                              <TableRow key={customer.id} hover>
-                                <TableCell padding="checkbox">
-                                  <Checkbox />
-                                </TableCell>
-                                <TableCell>
-                                  <Box>
-                                    <Typography variant="body2" fontWeight={500}>
-                                      {customer.firstName} {customer.lastName}
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">{customer.email}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">{customer.phone || 'N/A'}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight={600}>
-                                    ${customer.totalSpent.toFixed(2)}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Chip label={customer.ordersCount} size="small" />
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">
-                                    {customer.createdAt
-                                      ? new Date(customer.createdAt).toLocaleDateString()
-                                      : 'N/A'}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  <IconButton size="small">
-                                    <MoreVertIcon />
-                                  </IconButton>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                      <TablePagination
-                        rowsPerPageOptions={[5, 10, 25]}
-                        component="div"
-                        count={filteredData.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={(e, newPage) => setPage(newPage)}
-                        onRowsPerPageChange={(e) => {
-                          setRowsPerPage(parseInt(e.target.value, 10));
-                          setPage(0);
-                        }}
-                      />
-                    </TableContainer>
-                  )}
-                </TabPanel>
-
-                <TabPanel value={activeTab} index={3}>
-                  {/* Analytics Tab */}
+                  {/* Shopify & Analytics Tab - Merged */}
                   <Box>
-                    {/* Top Row - KPI Cards */}
+                    {/* Top Row - KPI Cards with Shopify Data */}
                     <Grid container spacing={3} sx={{ mb: 3 }}>
                       <Grid item xs={12} sm={6} md={3}>
                         <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
                           <CardContent>
-                            <Typography variant="body2" color="text.secondary" gutterBottom>
-                              Leads Converted
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                              <Avatar sx={{ bgcolor: 'warning.main', width: 40, height: 40 }}>
+                                <ShoppingCartIcon />
+                              </Avatar>
+                              <Typography variant="body2" color="text.secondary">
+                                Shopify Revenue
+                              </Typography>
+                            </Stack>
+                            <Typography variant="h4" fontWeight={700}>
+                              ${shopifyAnalytics?.totalRevenue?.toFixed(2) || '0.00'}
                             </Typography>
-                            <Typography variant="h3" fontWeight={700} sx={{ color: 'primary.main', mb: 1 }}>
-                              {leadsConvertedPercentage}%
+                            {shopifyAnalyticsLoading && <LinearProgress sx={{ mt: 1 }} />}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
+                          <CardContent>
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                              <Avatar sx={{ bgcolor: 'success.main', width: 40, height: 40 }}>
+                                <ShoppingCartIcon />
+                              </Avatar>
+                              <Typography variant="body2" color="text.secondary">
+                                Shopify Orders
+                              </Typography>
+                            </Stack>
+                            <Typography variant="h4" fontWeight={700}>
+                              {shopifyAnalytics?.totalOrders || 0}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {leadsConvertedCount} out of {totalLeadsCount}
+                            {shopifyAnalyticsLoading && <LinearProgress sx={{ mt: 1 }} />}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
+                          <CardContent>
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                              <Avatar sx={{ bgcolor: 'info.main', width: 40, height: 40 }}>
+                                <TrendingUpIcon />
+                              </Avatar>
+                              <Typography variant="body2" color="text.secondary">
+                                Avg Order Value
+                              </Typography>
+                            </Stack>
+                            <Typography variant="h4" fontWeight={700}>
+                              ${shopifyAnalytics?.averageOrderValue?.toFixed(2) || '0.00'}
                             </Typography>
-                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                              <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
+                            {shopifyAnalyticsLoading && <LinearProgress sx={{ mt: 1 }} />}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
+                          <CardContent>
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                              <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
                                 <PeopleIcon />
                               </Avatar>
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
-                          <CardContent>
-                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                              <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-                                <WalletIcon />
-                              </Avatar>
                               <Typography variant="body2" color="text.secondary">
-                                Invoice Payments
+                                Shopify Customers
                               </Typography>
                             </Stack>
                             <Typography variant="h4" fontWeight={700}>
-                              {invoicePayments}
-                            </Typography>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
-                          <CardContent>
-                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                              <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-                                <CloudIcon />
-                              </Avatar>
-                              <Typography variant="body2" color="text.secondary">
-                                Project In Progress
-                              </Typography>
-                            </Stack>
-                            <Typography variant="h4" fontWeight={700}>
-                              {projectsInProgress}
-                            </Typography>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
-                          <CardContent>
-                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                              <Avatar sx={{ bgcolor: 'grey.700', width: 40, height: 40 }}>
-                                <AssignmentIcon />
-                              </Avatar>
-                              <Typography variant="body2" color="text.secondary">
-                                Task Not Finished
-                              </Typography>
-                            </Stack>
-                            <Typography variant="h4" fontWeight={700}>
-                              {tasksNotFinished}
+                              {totalShopifyCustomers}
                             </Typography>
                           </CardContent>
                         </Card>
                       </Grid>
                     </Grid>
 
-                    {/* Middle Row - Charts */}
+                    {/* Middle Row - Combined Charts */}
                     <Grid container spacing={3} sx={{ mb: 3 }}>
                       <Grid item xs={12} md={8}>
                         <Card elevation={2} sx={{ borderRadius: 2 }}>
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                               <Typography variant="h6" fontWeight={600}>
-                                Leads VS Customers
+                                Revenue & Orders Over Time
                               </Typography>
                               <FormControl size="small" sx={{ minWidth: 120 }}>
                                 <Select 
                                   value={timePeriodFilter} 
-                                  onChange={(e) => setTimePeriodFilter(e.target.value as 'week' | 'month' | 'year')}
+                                  onChange={(e) => {
+                                    setTimePeriodFilter(e.target.value as 'week' | 'month' | 'year');
+                                    fetchShopifyAnalytics();
+                                  }}
                                   sx={{ textTransform: 'none' }}
                                 >
                                   <MenuItem value="week">Week</MenuItem>
@@ -1177,25 +1102,32 @@ export default function CRMDashboard() {
                               </FormControl>
                             </Box>
                             <ResponsiveContainer width="100%" height={300}>
-                              <LineChart data={leadsVsCustomersData}>
+                              <LineChart data={shopifyAnalytics?.revenueByDay?.map((item: any) => ({
+                                date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                                revenue: item.revenue,
+                                orders: shopifyAnalytics?.ordersByDay?.find((o: any) => o.date === item.date)?.count || 0
+                              })) || []}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="day" />
-                                <YAxis />
+                                <XAxis dataKey="date" />
+                                <YAxis yAxisId="left" />
+                                <YAxis yAxisId="right" orientation="right" />
                                 <Tooltip />
                                 <Legend />
                                 <Line 
+                                  yAxisId="left"
                                   type="monotone" 
-                                  dataKey="leads" 
+                                  dataKey="revenue" 
                                   stroke="#9c27b0" 
                                   strokeWidth={2}
-                                  name="Leads"
+                                  name="Revenue ($)"
                                 />
                                 <Line 
+                                  yAxisId="right"
                                   type="monotone" 
-                                  dataKey="customers" 
+                                  dataKey="orders" 
                                   stroke="#ffc107" 
                                   strokeWidth={2}
-                                  name="Customers"
+                                  name="Orders"
                                 />
                               </LineChart>
                             </ResponsiveContainer>
@@ -1206,7 +1138,7 @@ export default function CRMDashboard() {
                         <Card elevation={2} sx={{ borderRadius: 2 }}>
                           <CardContent>
                             <Typography variant="h6" fontWeight={600} gutterBottom>
-                              Project Status
+                              CRM Project Status
                             </Typography>
                             <ResponsiveContainer width="100%" height={300}>
                               <PieChart>
@@ -1236,7 +1168,85 @@ export default function CRMDashboard() {
                       </Grid>
                     </Grid>
 
-                    {/* Bottom Row - Lead Categories */}
+                    {/* Shopify Customers Table */}
+                    <Card elevation={2} sx={{ borderRadius: 2, mb: 3 }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Typography variant="h6" fontWeight={600}>
+                            Shopify Customers
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<RefreshIcon />}
+                            onClick={() => {
+                              fetchShopifyCustomers();
+                              fetchShopifyAnalytics();
+                            }}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Refresh
+                          </Button>
+                        </Box>
+                        {loading ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
+                          </Box>
+                        ) : shopifyCustomers.length === 0 ? (
+                          <Box sx={{ textAlign: 'center', py: 4 }}>
+                            <ShoppingCartIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+                            <Typography variant="body1" color="text.secondary">
+                              No Shopify customers found
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TableContainer>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Customer</TableCell>
+                                  <TableCell>Email</TableCell>
+                                  <TableCell>Total Spent</TableCell>
+                                  <TableCell>Orders</TableCell>
+                                  <TableCell>Created</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {shopifyCustomers.slice(0, 10).map((customer) => (
+                                  <TableRow key={customer.id} hover>
+                                    <TableCell>
+                                      <Typography variant="body2" fontWeight={500}>
+                                        {customer.firstName} {customer.lastName}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="body2">{customer.email}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="body2" fontWeight={600}>
+                                        ${customer.totalSpent.toFixed(2)}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip label={customer.ordersCount} size="small" />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="body2">
+                                        {customer.createdAt
+                                          ? new Date(customer.createdAt).toLocaleDateString()
+                                          : 'N/A'}
+                                      </Typography>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Bottom Row - CRM Lead Categories */}
                     <Grid container spacing={3}>
                       <Grid item xs={12} sm={6} md={3}>
                         <Card elevation={2} sx={{ borderRadius: 2 }}>
@@ -1280,7 +1290,7 @@ export default function CRMDashboard() {
                         <Card elevation={2} sx={{ borderRadius: 2 }}>
                           <CardContent>
                             <Stack direction="row" spacing={2} alignItems="center">
-                              <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                              <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}>
                                 <CheckCircleIcon />
                               </Avatar>
                               <Box>
@@ -1319,12 +1329,12 @@ export default function CRMDashboard() {
                 </TabPanel>
 
                 {/* Ventures Tab */}
-                <TabPanel value={activeTab} index={4}>
+                <TabPanel value={activeTab} index={3}>
                   <VenturesPanel />
                 </TabPanel>
 
                 {/* To-Do & Tasks Tab */}
-                <TabPanel value={activeTab} index={5}>
+                <TabPanel value={activeTab} index={4}>
                   <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
                     <CardContent sx={{ p: 3 }}>
                       <Box sx={{ mb: 3 }}>
