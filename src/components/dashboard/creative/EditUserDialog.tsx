@@ -7,7 +7,7 @@ import {
   FormControlLabel, Switch, Radio, RadioGroup, Avatar,
   IconButton, CircularProgress, Paper, Stack, Chip,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Alert, Autocomplete,
+  Alert, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import {
   CameraAlt as CameraIcon,
@@ -50,7 +50,14 @@ interface EditUserDialogProps {
   availableClients: Client[];
 }
 
-const SYSTEMS = ['CRM', 'Analytics', 'Email Marketing', 'Project Management', 'Support Desk', 'Billing'];
+type UserType = 'subscriber' | 'client' | 'employee' | 'admin';
+
+const USER_TYPES: { value: UserType; label: string }[] = [
+  { value: 'subscriber', label: 'Subscriber' },
+  { value: 'client', label: 'Client' },
+  { value: 'employee', label: 'Employee' },
+  { value: 'admin', label: 'Admin' },
+];
 
 export default function EditUserDialog({ 
   open, 
@@ -78,7 +85,7 @@ export default function EditUserDialog({
     isEmployee: false,
     isAdmin: false,
     isClient: false,
-    systemsConnected: [] as string[],
+    userType: 'subscriber' as UserType,
   });
 
   // Tab data state
@@ -90,6 +97,16 @@ export default function EditUserDialog({
 
   useEffect(() => {
     if (user && open) {
+      // Determine user type from database flags
+      let userType: UserType = 'subscriber';
+      if (user.is_admin) {
+        userType = 'admin';
+      } else if (user.is_employee) {
+        userType = 'employee';
+      } else if (user.is_client) {
+        userType = 'client';
+      }
+      
       setFormData({
         firstName: user.first_name || '',
         lastName: user.last_name || '',
@@ -103,7 +120,7 @@ export default function EditUserDialog({
         isEmployee: user.is_employee || false,
         isAdmin: user.is_admin || false,
         isClient: user.is_client || false,
-        systemsConnected: [],
+        userType: userType,
       });
       setCurrentTab(0);
       fetchUserData(user.id);
@@ -141,6 +158,11 @@ export default function EditUserDialog({
   const handleUpdate = async () => {
     if (!user) return;
     
+    // Update flags based on selected user type
+    const isAdmin = formData.userType === 'admin';
+    const isEmployee = formData.userType === 'employee' || formData.userType === 'admin';
+    const isClient = formData.userType === 'client';
+    
     setLoading(true);
     try {
       const response = await fetch(`${backendUrl}/api/admin/users/${user.id}`, {
@@ -157,9 +179,9 @@ export default function EditUserDialog({
           address: formData.address,
           joining_date: formData.joiningDate,
           status: formData.status,
-          is_admin: formData.isAdmin,
-          is_employee: formData.isEmployee,
-          is_client: formData.isClient,
+          is_admin: isAdmin,
+          is_employee: isEmployee,
+          is_client: isClient,
         }),
       });
 
@@ -175,6 +197,10 @@ export default function EditUserDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUserTypeChange = (newUserType: UserType) => {
+    setFormData({ ...formData, userType: newUserType });
   };
 
   const handleUnassignClient = async (clientId: string) => {
@@ -332,37 +358,28 @@ export default function EditUserDialog({
             </Grid>
 
             <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>
-              Permissions
+              User Type
             </Typography>
-            <Stack spacing={2}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isAdmin}
-                    onChange={(e) => setFormData({ ...formData, isAdmin: e.target.checked })}
-                  />
-                }
-                label="Admin Access - Full system control and user management"
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isEmployee}
-                    onChange={(e) => setFormData({ ...formData, isEmployee: e.target.checked })}
-                  />
-                }
-                label="Employee Status - Can be assigned clients and tasks"
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isClient}
-                    onChange={(e) => setFormData({ ...formData, isClient: e.target.checked })}
-                  />
-                }
-                label="Client Status - External client with limited access"
-              />
-            </Stack>
+            <FormControl fullWidth>
+              <InputLabel>Select User Type</InputLabel>
+              <Select
+                value={formData.userType}
+                label="Select User Type"
+                onChange={(e) => handleUserTypeChange(e.target.value as UserType)}
+              >
+                {USER_TYPES.map((type) => (
+                  <MenuItem key={type.value} value={type.value}>
+                    {type.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              {formData.userType === 'admin' && 'Full system control and user management'}
+              {formData.userType === 'employee' && 'Can be assigned clients and tasks'}
+              {formData.userType === 'client' && 'External client with limited access'}
+              {formData.userType === 'subscriber' && 'Basic subscriber access'}
+            </Typography>
 
             <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>
               Account Status
@@ -378,20 +395,6 @@ export default function EditUserDialog({
               <FormControlLabel value="blocked" control={<Radio />} label="Blocked" />
             </RadioGroup>
 
-            {formData.isClient && (
-              <>
-                <Typography variant="subtitle2" fontWeight={600} mt={3} mb={2}>
-                  Systems Connected
-                </Typography>
-                <Autocomplete
-                  multiple
-                  options={SYSTEMS}
-                  value={formData.systemsConnected}
-                  onChange={(e, newValue) => setFormData({ ...formData, systemsConnected: newValue })}
-                  renderInput={(params) => <TextField {...params} label="Select Systems" />}
-                />
-              </>
-            )}
           </Box>
         )}
 
