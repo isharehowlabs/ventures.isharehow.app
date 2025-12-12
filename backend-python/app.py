@@ -6865,6 +6865,24 @@ def get_clients():
     try:
         # No authentication required - anyone can view clients
         
+        # Check if clients table exists first
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        table_exists = False
+        try:
+            tables = inspector.get_table_names()
+            table_exists = 'clients' in tables
+        except Exception:
+            db.session.rollback()
+            pass
+        
+        # If table doesn't exist, return empty array instead of error
+        if not table_exists:
+            return jsonify({
+                'clients': [],
+                'message': 'Clients table not yet initialized. No clients available.'
+            }), 200
+        
         # Get query parameters
         status = request.args.get('status', 'all')
         employee_id = request.args.get('employee_id', None)
@@ -6906,6 +6924,15 @@ def get_clients():
         print(f"Error fetching clients: {e}")
         import traceback
         traceback.print_exc()
+        
+        error_msg = str(e).lower()
+        
+        # If table doesn't exist, return empty array instead of error
+        if 'clients' in error_msg or 'does not exist' in error_msg or 'relation' in error_msg or 'table' in error_msg:
+            return jsonify({
+                'clients': [],
+                'message': 'Clients table not yet initialized. No clients available.'
+            }), 200
         
         # Check if it's a database connection error
         error_info = get_database_error_message(e)
@@ -7720,14 +7747,30 @@ def get_support_requests():
         return jsonify({'error': 'Database not available'}), 503
     
     try:
+        # Check if support_requests table exists first
+        from sqlalchemy import inspect, text
+        inspector = inspect(db.engine)
+        table_exists = False
+        try:
+            tables = inspector.get_table_names()
+            table_exists = 'support_requests' in tables
+        except Exception:
+            db.session.rollback()
+            pass
+        
+        # If table doesn't exist, return empty array instead of error
+        if not table_exists:
+            return jsonify({
+                'requests': [],
+                'message': 'Support requests table not yet initialized. No requests available.'
+            }), 200
+        
         # Get query parameters
         status = request.args.get('status', 'all')
         client_id = request.args.get('client_id', None)
         priority = request.args.get('priority', None)
         
         # Check if client_id column exists before using ORM
-        from sqlalchemy import inspect, text
-        inspector = inspect(db.engine)
         has_client_id_column = False
         try:
             columns = [col['name'] for col in inspector.get_columns('support_requests')]
@@ -7814,12 +7857,14 @@ def get_support_requests():
         print(f"Error fetching support requests: {e}")
         import traceback
         traceback.print_exc()
-        error_msg = str(e)
-        if 'support_requests' in error_msg.lower() or 'does not exist' in error_msg.lower():
+        error_msg = str(e).lower()
+        
+        # If table doesn't exist, return empty array instead of error
+        if 'support_requests' in error_msg or 'does not exist' in error_msg or 'relation' in error_msg or 'table' in error_msg:
             return jsonify({
-                'error': 'Support requests table not found. Please run database migrations.',
-                'details': 'The support_requests table needs to be created. Run: flask db upgrade'
-            }), 500
+                'requests': [],
+                'message': 'Support requests table not yet initialized. No requests available.'
+            }), 200
         
         # Check if it's a database connection error
         error_info = get_database_error_message(e)
