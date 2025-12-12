@@ -27,7 +27,6 @@ import {
 
 // Component imports - keeping all existing functionality
 import AddClientDialog from './creative/AddClientDialog';
-import AnalyticsActivity from './creative/AnalyticsActivity';
 import SupportRequests from './creative/SupportRequests';
 import AiAgentPanel from './AiAgentPanel';
 import DesignFigmaPanel from './creative/DesignFigmaPanel';
@@ -71,15 +70,13 @@ export default function CreativeDashboardPanel() {
   
   // Tab configuration
   const tabMap: Record<string, number> = {
-    analytics: 0,
-    support: 1,
-    browser: 2,
-    design: 3,
-    ai: 4,
+    support: 0,
+    browser: 1,
+    design: 2,
+    ai: 3,
   };
 
   const tabs = [
-    { key: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
     { key: 'support', label: 'Support', icon: <SupportIcon /> },
     { key: 'browser', label: 'Browser', icon: <BrowserIcon /> },
     { key: 'design', label: 'Design & Figma', icon: <DesignIcon /> },
@@ -170,22 +167,18 @@ export default function CreativeDashboardPanel() {
 
         {/* Tab Panels */}
         <TabPanel value={activeTab} index={0}>
-          <AnalyticsActivity />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={1}>
           <SupportRequests />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={2}>
+        <TabPanel value={activeTab} index={1}>
           <BrowserSessionTab />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={3}>
+        <TabPanel value={activeTab} index={2}>
           <DesignFigmaPanel />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={3}>
           <AiAgentPanel />
         </TabPanel>
       </Container>
@@ -197,7 +190,7 @@ export default function CreativeDashboardPanel() {
       />
 
       {/* Floating AI Chat - Available in Browser tab */}
-      {activeTab === 2 && <FloatingAIChat />}
+      {activeTab === 1 && <FloatingAIChat />}
     </Box>
   );
 }

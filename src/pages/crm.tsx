@@ -92,6 +92,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getBackendUrl } from '../utils/backendUrl';
 import EditUserDialog from '../components/dashboard/creative/EditUserDialog';
 import AddClientDialog from '../components/dashboard/creative/AddClientDialog';
+import AnalyticsActivity from '../components/dashboard/creative/AnalyticsActivity';
 import VenturesPanel from '../components/dashboard/VenturesPanel';
 import TasksPanel from '../components/dashboard/shared/TasksPanel';
 
@@ -441,6 +442,9 @@ export default function CRMDashboard() {
           customer.lastName?.toLowerCase().includes(searchLower);
         return matchesSearch;
       });
+    } else if (activeTab === 3) {
+      // Our CRM GA tab - no filtering needed, handled by AnalyticsActivity component
+      return [];
     } else {
       return [];
     }
@@ -693,9 +697,15 @@ export default function CRMDashboard() {
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                   />
                   <Tab
-                    icon={<BarChartIcon />}
+                    icon={<ShoppingCartIcon />}
                     iconPosition="start"
                     label="Shopify & Analytics"
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  />
+                  <Tab
+                    icon={<BarChartIcon />}
+                    iconPosition="start"
+                    label="Our CRM GA"
                     sx={{ textTransform: 'none', fontWeight: 600 }}
                   />
                   <Tab
@@ -1328,13 +1338,18 @@ export default function CRMDashboard() {
                   </Box>
                 </TabPanel>
 
-                {/* Ventures Tab */}
+                {/* Our CRM GA Tab */}
                 <TabPanel value={activeTab} index={3}>
+                  <AnalyticsActivity />
+                </TabPanel>
+
+                {/* Ventures Tab */}
+                <TabPanel value={activeTab} index={4}>
                   <VenturesPanel />
                 </TabPanel>
 
                 {/* To-Do & Tasks Tab */}
-                <TabPanel value={activeTab} index={4}>
+                <TabPanel value={activeTab} index={5}>
                   <Card sx={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', mb: 3 }}>
                     <CardContent sx={{ p: 3 }}>
                       <Box sx={{ mb: 3 }}>

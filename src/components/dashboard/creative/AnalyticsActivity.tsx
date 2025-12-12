@@ -246,10 +246,10 @@ export default function AnalyticsActivity() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Typography variant="h4" fontWeight={700} gutterBottom>
-              Analytics Dashboard
+              Our CRM GA
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Track performance metrics and insights
+              Track performance metrics and insights for your CRM clients
               {lastSync && (
                 <Chip 
                   label={`Last updated ${lastSync.toLocaleTimeString()}`}
