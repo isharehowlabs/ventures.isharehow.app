@@ -13367,7 +13367,8 @@ def get_analytics_data():
         
         # Try to use Google Analytics Data API
         try:
-            from google.analytics.data import BetaAnalyticsDataClient
+            from google.analytics.data_v1beta import BetaAnalyticsDataClient
+            from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Dimension, Metric
             from google.oauth2 import service_account
             import os
             
@@ -13440,29 +13441,31 @@ def get_analytics_data():
                 property_id_clean = f"properties/{property_id}"
             
             # Fetch current period data
-            current_response = client.run_report(
+            current_request = RunReportRequest(
                 property=property_id_clean,
-                date_ranges=[{"start_date": start_date_str, "end_date": end_date_str}],
+                date_ranges=[DateRange(start_date=start_date_str, end_date=end_date_str)],
                 metrics=[
-                    {"name": "activeUsers"},
-                    {"name": "screenPageViews"},
-                    {"name": "conversions"},
-                    {"name": "totalRevenue"},
+                    Metric(name="activeUsers"),
+                    Metric(name="screenPageViews"),
+                    Metric(name="conversions"),
+                    Metric(name="totalRevenue"),
                 ],
-                dimensions=[{"name": "date"}],
+                dimensions=[Dimension(name="date")],
             )
+            current_response = client.run_report(request=current_request)
             
             # Fetch previous period data for comparison
-            previous_response = client.run_report(
+            previous_request = RunReportRequest(
                 property=property_id_clean,
-                date_ranges=[{"start_date": previous_start_str, "end_date": previous_end_str}],
+                date_ranges=[DateRange(start_date=previous_start_str, end_date=previous_end_str)],
                 metrics=[
-                    {"name": "activeUsers"},
-                    {"name": "screenPageViews"},
-                    {"name": "conversions"},
-                    {"name": "totalRevenue"},
+                    Metric(name="activeUsers"),
+                    Metric(name="screenPageViews"),
+                    Metric(name="conversions"),
+                    Metric(name="totalRevenue"),
                 ],
             )
+            previous_response = client.run_report(request=previous_request)
             
             # Process current period data
             current_total_users = 0
