@@ -9,7 +9,10 @@ export interface Task {
   description: string;
   hyperlinks: string[];
   status: 'pending' | 'in-progress' | 'completed';
-  supportRequestId?: string; // Link to support request
+  category?: 'work' | 'creative' | 'wellness' | 'rise'; // Task category
+  supportRequestId?: string; // Link to support request (deprecated, use linkedEntityType/id)
+  linkedEntityType?: 'venture' | 'client' | 'employee' | 'rise_journey' | 'rise_journal' | 'support_request'; // Polymorphic entity type
+  linkedEntityId?: string; // Polymorphic entity ID
   createdBy?: string; // User ID who created the task
   createdByName?: string; // Display name of creator
   assignedTo?: string; // User ID assigned to the task
@@ -144,7 +147,7 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
     }
   };
 
-  const updateTask = async (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'hyperlinks' | 'status' | 'supportRequestId' | 'assignedTo' | 'assignedToName'>>) => {
+  const updateTask = async (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'hyperlinks' | 'status' | 'category' | 'supportRequestId' | 'linkedEntityType' | 'linkedEntityId' | 'assignedTo' | 'assignedToName' | 'notes'>>) => {
     try {
       setIsLoading(true);
       setError(null);

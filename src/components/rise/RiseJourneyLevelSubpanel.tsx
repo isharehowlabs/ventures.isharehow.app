@@ -172,15 +172,26 @@ const RiseJourneyLevelSubpanel: React.FC<RiseJourneyLevelSubpanelProps> = ({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          text,
-          category: 'Rise Journey',
-          levelId: level.id,
+          title: text.trim(),
+          category: 'rise',
+          description: `Task for ${level.title}`,
+          linkedEntityType: 'rise_journey',
+          linkedEntityId: level.id,
         }),
       });
 
       if (response.ok) {
-        const newTask = await response.json();
-        setTasks([...tasks, newTask]);
+        const data = await response.json();
+        const newTask = data.task || data;
+        // Update local tasks state to match the API response format
+        setTasks([...tasks, { 
+          id: newTask.id, 
+          text: newTask.title, 
+          completed: newTask.status === 'completed' 
+        }]);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to create task' }));
+        console.error('Failed to add task:', errorData);
       }
     } catch (err) {
       console.error('Failed to add task:', err);

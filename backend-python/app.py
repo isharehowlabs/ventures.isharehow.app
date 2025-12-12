@@ -573,7 +573,12 @@ if DB_AVAILABLE:
         description = db.Column(db.Text)
         hyperlinks = db.Column(db.Text)  # JSON string of array
         status = db.Column(db.String(20), default='pending')
-        support_request_id = db.Column(db.String(36), db.ForeignKey('support_requests.id'), nullable=True, index=True)  # Link to support request
+        category = db.Column(db.String(50), nullable=True, default='work')  # work, creative, wellness, rise
+        support_request_id = db.Column(db.String(36), db.ForeignKey('support_requests.id'), nullable=True, index=True)  # Link to support request (deprecated, use linked_entity_type/id)
+        
+        # Polymorphic linking fields - allows tasks to link to any entity type
+        linked_entity_type = db.Column(db.String(50), nullable=True, index=True)  # venture, client, employee, rise_journey, rise_journal, support_request
+        linked_entity_id = db.Column(db.String(100), nullable=True, index=True)  # ID of the linked entity
         
         # User assignment fields
         created_by = db.Column(db.String(100), nullable=True)  # User ID who created the task
@@ -585,13 +590,25 @@ if DB_AVAILABLE:
         updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
         def to_dict(self):
+            # Determine linked entity info - support backward compatibility
+            linked_entity_type = self.linked_entity_type
+            linked_entity_id = self.linked_entity_id
+            
+            # If new polymorphic fields are not set but support_request_id is, use that for backward compatibility
+            if not linked_entity_type and not linked_entity_id and self.support_request_id:
+                linked_entity_type = 'support_request'
+                linked_entity_id = self.support_request_id
+            
             return {
                 'id': self.id,
                 'title': self.title,
                 'description': self.description,
                 'hyperlinks': json.loads(self.hyperlinks) if self.hyperlinks else [],
                 'status': self.status,
-                'supportRequestId': self.support_request_id,
+                'category': self.category or 'work',
+                'supportRequestId': self.support_request_id,  # Keep for backward compatibility
+                'linkedEntityType': linked_entity_type,
+                'linkedEntityId': linked_entity_id,
                 'createdBy': self.created_by,
                 'createdByName': self.created_by_name,
                 'assignedTo': self.assigned_to,
@@ -5397,23 +5414,48 @@ def get_tasks():
         return jsonify({'tasks': [], 'error': 'Database not configured'}), 503
     
     try:
-        # Get optional client_id filter from query parameters
+        # Get optional filters from query parameters
         client_id = request.args.get('client_id')
+        linked_entity_type = request.args.get('linkedEntityType') or request.args.get('linked_entity_type')
+        linked_entity_id = request.args.get('linkedEntityId') or request.args.get('linked_entity_id')
         
         # Build query
         query = Task.query
         
-        # Filter by client_id if provided (through support requests)
-        if client_id:
+        # Filter by polymorphic entity linking (new method)
+        if linked_entity_type and linked_entity_id:
+            query = query.filter(
+                Task.linked_entity_type == linked_entity_type,
+                Task.linked_entity_id == linked_entity_id
+            )
+        # Filter by client_id if provided (through support requests - backward compatibility)
+        elif client_id:
             try:
-                # Join with support_requests to filter by client_id
-                query = query.join(SupportRequest, Task.support_request_id == SupportRequest.id).filter(
-                    SupportRequest.client_id == client_id
+                # Try new polymorphic method first
+                query = query.filter(
+                    Task.linked_entity_type == 'client',
+                    Task.linked_entity_id == client_id
                 )
-            except Exception as join_error:
-                # If join fails (e.g., column doesn't exist), fall back to all tasks
-                print(f"Warning: Could not filter by client_id: {join_error}")
-                query = Task.query
+                # Also check old method through support requests
+                try:
+                    old_query = Task.query.join(SupportRequest, Task.support_request_id == SupportRequest.id).filter(
+                        SupportRequest.client_id == client_id
+                    )
+                    # Combine both queries using union
+                    from sqlalchemy import or_
+                    query = query.union(old_query)
+                except Exception:
+                    pass  # If join fails, just use the new method
+            except Exception as filter_error:
+                # If new method fails, try old method
+                try:
+                    query = query.join(SupportRequest, Task.support_request_id == SupportRequest.id).filter(
+                        SupportRequest.client_id == client_id
+                    )
+                except Exception as join_error:
+                    # If join fails (e.g., column doesn't exist), fall back to all tasks
+                    print(f"Warning: Could not filter by client_id: {join_error}")
+                    query = Task.query
         
         # Get all tasks, ordered by most recent first
         tasks = query.order_by(Task.created_at.desc()).all()
@@ -5470,14 +5512,45 @@ def create_task():
         if not data.get('title') or not data['title'].strip():
             return jsonify({'error': 'Validation error', 'message': 'Title is required'}), 400
         
+        # Create task - handle both 'title' and 'text' for backward compatibility
+        task_title = data.get('title') or data.get('text', '').strip()
+        if not task_title:
+            return jsonify({'error': 'Validation error', 'message': 'Title is required'}), 400
+        
+        # Validate category if provided
+        category = data.get('category', 'work')
+        valid_categories = ['work', 'creative', 'wellness', 'rise']
+        if category not in valid_categories:
+            category = 'work'  # Default to 'work' if invalid
+        
+        # Handle entity linking - support both new polymorphic fields and backward compatibility
+        linked_entity_type = data.get('linkedEntityType') or data.get('linked_entity_type')
+        linked_entity_id = data.get('linkedEntityId') or data.get('linked_entity_id')
+        support_request_id = data.get('supportRequestId') or data.get('support_request_id')
+        
+        # If new polymorphic fields are provided, use them
+        # Otherwise, if support_request_id is provided, set entity type to 'support_request' for backward compatibility
+        if not linked_entity_type and not linked_entity_id and support_request_id:
+            linked_entity_type = 'support_request'
+            linked_entity_id = support_request_id
+        
+        # Validate entity type if provided
+        valid_entity_types = ['venture', 'client', 'employee', 'rise_journey', 'rise_journal', 'support_request']
+        if linked_entity_type and linked_entity_type not in valid_entity_types:
+            linked_entity_type = None
+            linked_entity_id = None
+        
         # Create task
         task = Task(
             id=str(uuid.uuid4()),
-            title=data['title'].strip(),
+            title=task_title,
             description=data.get('description', '') or '',
             hyperlinks=json.dumps(data.get('hyperlinks', [])),
             status=data.get('status', 'pending'),
-            support_request_id=data.get('supportRequestId') or data.get('support_request_id'),  # Link to support request if provided
+            category=category,
+            support_request_id=support_request_id,  # Keep for backward compatibility
+            linked_entity_type=linked_entity_type,
+            linked_entity_id=linked_entity_id,
             # User assignment fields
             created_by=data.get('createdBy'),
             created_by_name=data.get('createdByName'),
@@ -5559,6 +5632,13 @@ def update_task(task_id):
         task.hyperlinks = json.dumps(data.get('hyperlinks', json.loads(task.hyperlinks) if task.hyperlinks else []))
         task.status = data.get('status', task.status)
         
+        # Update category if provided
+        if 'category' in data:
+            category = data.get('category', 'work')
+            valid_categories = ['work', 'creative', 'wellness', 'rise']
+            if category in valid_categories:
+                task.category = category
+        
         # Update user assignment fields if provided
         if 'assignedTo' in data:
             task.assigned_to = data.get('assignedTo') or None
@@ -5567,9 +5647,28 @@ def update_task(task_id):
         if 'notes' in data:
             task.notes = data.get('notes') or ''
         
-        # Update support request link if provided
+        # Update entity linking - support both new polymorphic fields and backward compatibility
+        if 'linkedEntityType' in data or 'linked_entity_type' in data:
+            linked_entity_type = data.get('linkedEntityType') or data.get('linked_entity_type')
+            linked_entity_id = data.get('linkedEntityId') or data.get('linked_entity_id')
+            
+            # Validate entity type
+            valid_entity_types = ['venture', 'client', 'employee', 'rise_journey', 'rise_journal', 'support_request']
+            if linked_entity_type and linked_entity_type in valid_entity_types:
+                task.linked_entity_type = linked_entity_type
+                task.linked_entity_id = linked_entity_id
+            elif linked_entity_type is None:  # Allow clearing the link
+                task.linked_entity_type = None
+                task.linked_entity_id = None
+        
+        # Update support request link if provided (backward compatibility)
         if 'supportRequestId' in data or 'support_request_id' in data:
-            task.support_request_id = data.get('supportRequestId') or data.get('support_request_id') or None
+            support_request_id = data.get('supportRequestId') or data.get('support_request_id') or None
+            task.support_request_id = support_request_id
+            # Also update polymorphic fields for backward compatibility
+            if support_request_id and not task.linked_entity_type:
+                task.linked_entity_type = 'support_request'
+                task.linked_entity_id = support_request_id
         db.session.commit()
         user_info = get_user_info()
         task_data = task.to_dict()

@@ -406,7 +406,11 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
           taskNotes.trim()
         );
         if (taskSupportRequestId && newTask?.id) {
-          await updateTask(newTask.id, { supportRequestId: taskSupportRequestId });
+          await updateTask(newTask.id, { 
+            supportRequestId: taskSupportRequestId,
+            linkedEntityType: 'support_request',
+            linkedEntityId: taskSupportRequestId
+          });
         }
       } else if (currentTaskId) {
         await updateTask(currentTaskId, {
@@ -415,6 +419,8 @@ export default function TasksPanel({ height = 500 }: TasksPanelProps) {
           hyperlinks: hyperlinksArray,
           status: taskStatus,
           supportRequestId: taskSupportRequestId || undefined,
+          linkedEntityType: taskSupportRequestId ? 'support_request' : undefined,
+          linkedEntityId: taskSupportRequestId || undefined,
           assignedTo: selectedAssignee?.id || undefined,
           assignedToName: selectedAssignee?.name || undefined,
         });

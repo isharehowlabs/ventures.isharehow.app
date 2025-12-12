@@ -97,15 +97,31 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
   const backendUrl = getBackendUrl();
 
   const fetchClientTasks = useCallback(async () => {
-    if (!venture?.clientId) return;
+    if (!venture?.clientId && !venture?.id) return;
     
     setTasksLoading(true);
     try {
-      // Convert clientId to string (it may be number or string)
-      const clientIdStr = String(venture.clientId);
-      const response = await fetch(`${backendUrl}/api/tasks?client_id=${clientIdStr}`, {
-        credentials: 'include',
-      });
+      // Fetch tasks linked to the venture
+      const ventureId = venture?.id ? String(venture.id) : null;
+      const clientIdStr = venture?.clientId ? String(venture.clientId) : null;
+      
+      // Try fetching by venture first (new polymorphic method)
+      let response;
+      if (ventureId) {
+        response = await fetch(`${backendUrl}/api/tasks?linkedEntityType=venture&linkedEntityId=${ventureId}`, {
+          credentials: 'include',
+        });
+      } else if (clientIdStr) {
+        // Fallback to client_id (backward compatibility)
+        response = await fetch(`${backendUrl}/api/tasks?client_id=${clientIdStr}`, {
+          credentials: 'include',
+        });
+      } else {
+        setClientTasks([]);
+        setTasksLoading(false);
+        return;
+      }
+      
       if (response.ok) {
         const data = await response.json();
         setClientTasks(data.tasks || []);
@@ -118,7 +134,7 @@ const VentureDetailsDialog: React.FC<VentureDetailsDialogProps> = ({ open, ventu
     } finally {
       setTasksLoading(false);
     }
-  }, [venture?.clientId, backendUrl]);
+  }, [venture?.clientId, venture?.id, backendUrl]);
 
   const fetchClientEmployees = useCallback(async () => {
     if (!venture?.clientId) return;
