@@ -328,8 +328,7 @@ export default function EnterprisePage() {
                 objectFit: 'cover',
               }}
             >
-              {/* You can replace this with your actual video URL */}
-              <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
+              <source src="https://assets.maccarianagency.com/videos/video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </Box>
 
