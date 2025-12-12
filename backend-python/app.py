@@ -5568,11 +5568,14 @@ def create_task():
         has_category_column = False
         has_linked_entity_columns = False
         try:
-            if 'tasks' in inspector.get_table_names():
-                columns = [col['name'] for col in inspector.get_columns('tasks')]
+            # Table name is 'task' not 'tasks'
+            table_name = 'task'
+            if table_name in [t.lower() for t in inspector.get_table_names()] or table_name in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns(table_name)]
                 has_category_column = 'category' in columns
                 has_linked_entity_columns = 'linked_entity_type' in columns and 'linked_entity_id' in columns
-        except Exception:
+        except Exception as inspect_error:
+            print(f"Warning: Could not inspect table columns: {inspect_error}")
             pass
         
         # Create task - use raw SQL if columns don't exist to avoid ORM trying to insert missing columns
@@ -5580,7 +5583,7 @@ def create_task():
         created_at = datetime.utcnow()
         updated_at = datetime.utcnow()
         
-        if not has_category_column and not has_linked_entity_columns:
+        if not has_category_column or not has_linked_entity_columns:
             # All new columns missing - use raw SQL to insert only existing columns
             from sqlalchemy import text
             try:
@@ -5690,6 +5693,53 @@ def create_task():
                 db.session.add(task)
                 db.session.commit()
                 print(f"✓ Task created successfully: {task.id}")
+            except Exception as orm_error:
+                db.session.rollback()
+                raise orm_error
+        
+        # Return the created task and emit socket events
+        try:
+            # Ensure task has to_dict method
+            if hasattr(task, 'to_dict'):
+                task_data = task.to_dict()
+            else:
+                # Fallback if to_dict doesn't exist
+                task_data = {
+                    'id': getattr(task, 'id', task_id),
+                    'title': getattr(task, 'title', task_title),
+                    'description': getattr(task, 'description', ''),
+                    'hyperlinks': json.loads(getattr(task, 'hyperlinks', '[]')),
+                    'status': getattr(task, 'status', 'pending'),
+                    'category': getattr(task, 'category', 'work'),
+                    'linkedEntityType': getattr(task, 'linked_entity_type', None),
+                    'linkedEntityId': getattr(task, 'linked_entity_id', None),
+                    'supportRequestId': getattr(task, 'support_request_id', None),
+                    'createdBy': getattr(task, 'created_by', None),
+                    'createdByName': getattr(task, 'created_by_name', None),
+                    'assignedTo': getattr(task, 'assigned_to', None),
+                    'assignedToName': getattr(task, 'assigned_to_name', None),
+                    'notes': getattr(task, 'notes', '') or '',
+                    'createdAt': getattr(task, 'created_at', datetime.utcnow()).isoformat() if hasattr(task, 'created_at') and task.created_at else None,
+                    'updatedAt': getattr(task, 'updated_at', datetime.utcnow()).isoformat() if hasattr(task, 'updated_at') and task.updated_at else None
+                }
+            
+            # Emit socket events
+            user_info = get_user_info()
+            task_data['userId'] = user_info['id'] if user_info else 'anonymous'
+            task_data['userRole'] = user_info['role'] if user_info else 'mentee'
+            socketio.emit('task_created', task_data)
+            
+            # Notify assigned user if task is assigned
+            if task_data.get('assignedTo'):
+                socketio.emit('task_assigned', {
+                    'task': task_data,
+                    'assignedTo': task_data['assignedTo'],
+                    'assignedToName': task_data.get('assignedToName'),
+                    'createdBy': task_data.get('createdBy'),
+                    'createdByName': task_data.get('createdByName')
+                })
+            
+            return jsonify({'task': task_data}), 201
         except Exception as db_error:
             if db and hasattr(db, 'session'):
                 try:
@@ -5715,23 +5765,6 @@ def create_task():
                 'error': 'Database error',
                 'message': f'Failed to create task: {str(db_error)[:200]}'
             }), 500
-        
-        user_info = get_user_info()
-        task_data = task.to_dict()
-        task_data['userId'] = user_info['id'] if user_info else 'anonymous'
-        task_data['userRole'] = user_info['role'] if user_info else 'mentee'
-        socketio.emit('task_created', task_data)
-        
-        # Notify assigned user if task is assigned
-        if task_data.get('assignedTo'):
-            socketio.emit('task_assigned', {
-                'task': task_data,
-                'assignedTo': task_data['assignedTo'],
-                'assignedToName': task_data.get('assignedToName'),
-                'createdBy': task_data.get('createdBy'),
-                'createdByName': task_data.get('createdByName')
-            })
-        return jsonify({'task': task.to_dict()}), 201
     except KeyError as e:
         db.session.rollback()  # Rollback failed transaction
         print(f"Missing required field: {e}")
