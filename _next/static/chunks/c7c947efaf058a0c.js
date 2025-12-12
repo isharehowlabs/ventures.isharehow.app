@@ -1,0 +1,23 @@
+__turbopack_load_page_chunks__("/crm", [
+  "static/chunks/d9286e62cf833862.js",
+  "static/chunks/791d1b9268648893.js",
+  "static/chunks/b48ab2325861cd0a.js",
+  "static/chunks/9f0853082a293ccf.js",
+  "static/chunks/500474a7811f5f89.js",
+  "static/chunks/fba1e80b77d18068.js",
+  "static/chunks/e6651c1db9368c6d.js",
+  "static/chunks/1a5fab5cd2e28c76.js",
+  "static/chunks/c93b98f0e1cb2d5a.js",
+  "static/chunks/7ed9a050ebec497f.js",
+  "static/chunks/3987049e7cd36427.js",
+  "static/chunks/6af49bb0194a5ab9.js",
+  "static/chunks/2bef5327a8c9f198.js",
+  "static/chunks/6915d9465695e23d.js",
+  "static/chunks/15ccab58a7aa3756.js",
+  "static/chunks/74b7d85100fbc8d6.js",
+  "static/chunks/396b6bb3353b5d30.js",
+  "static/chunks/71ce1ad4f98d5596.js",
+  "static/chunks/55db2730b9138f95.js",
+  "static/chunks/1043ba9623dffd9a.js",
+  "static/chunks/turbopack-a90189733af3e8b8.js"
+])
