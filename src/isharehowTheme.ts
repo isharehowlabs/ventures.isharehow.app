@@ -168,6 +168,102 @@ const getTheme = (mode: 'light' | 'dark') => {
         },
       },
     },
+    MuiModal: {
+      styleOverrides: {
+        root: {
+          zIndex: 1300,
+        },
+        backdrop: {
+          backgroundColor: mode === 'light' 
+            ? 'rgba(0, 0, 0, 0.5)' 
+            : 'rgba(0, 0, 0, 0.7)',
+          zIndex: 1300,
+        },
+      },
+    },
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'light' 
+            ? 'rgba(0, 0, 0, 0.5)' 
+            : 'rgba(0, 0, 0, 0.7)',
+          zIndex: 1300,
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        root: {
+          zIndex: 1300,
+          '& .MuiBackdrop-root': {
+            backgroundColor: mode === 'light' 
+              ? 'rgba(0, 0, 0, 0.5)' 
+              : 'rgba(0, 0, 0, 0.7)',
+            zIndex: 1300,
+          },
+        },
+        container: {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        paper: {
+          backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
+          backgroundImage: 'none',
+          opacity: 1,
+          position: 'relative',
+          zIndex: 1301,
+          margin: '32px',
+          maxHeight: 'calc(100% - 64px)',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+        paperScrollPaper: {
+          maxHeight: 'calc(100% - 64px)',
+        },
+        paperWidthXs: {
+          maxWidth: '444px',
+        },
+        paperWidthSm: {
+          maxWidth: '600px',
+        },
+        paperWidthMd: {
+          maxWidth: '900px',
+        },
+        paperWidthLg: {
+          maxWidth: '1200px',
+        },
+        paperWidthXl: {
+          maxWidth: '1536px',
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
+          borderBottom: `1px solid ${mode === 'light' ? '#e2e8f0' : '#334155'}`,
+          padding: '16px 24px',
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
+          padding: '20px 24px',
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
+          borderTop: `1px solid ${mode === 'light' ? '#e2e8f0' : '#334155'}`,
+          padding: '8px 24px',
+        },
+      },
+    },
   },
 });
 
