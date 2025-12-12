@@ -282,6 +282,7 @@ export default function AIHelpPage() {
                       opacity: 0.1,
                       position: 'absolute',
                       transform: 'rotate(-5deg)',
+                      pointerEvents: 'none',
                     }}
                   />
                   <Box
@@ -293,6 +294,7 @@ export default function AIHelpPage() {
                       opacity: 0.1,
                       position: 'absolute',
                       transform: 'rotate(5deg)',
+                      pointerEvents: 'none',
                     }}
                   />
                   <AutoAwesomeIcon
@@ -471,6 +473,7 @@ export default function AIHelpPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    pointerEvents: 'none',
                   }}
                 >
                   <AnalyticsIcon sx={{ fontSize: 200, color: 'primary.main', opacity: 0.3 }} />

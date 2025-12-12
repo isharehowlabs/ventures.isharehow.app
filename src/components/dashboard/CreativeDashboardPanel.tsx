@@ -45,16 +45,20 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
+  const isVisible = value === index;
+
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <div
       role="tabpanel"
-      hidden={value !== index}
       id={`creative-tabpanel-${index}`}
       aria-labelledby={`creative-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      <Box sx={{ py: 3 }}>{children}</Box>
     </div>
   );
 }
