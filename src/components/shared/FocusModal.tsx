@@ -67,7 +67,7 @@ export default function FocusModal({
           bottom: 16,
           right: 16,
           p: 2,
-          zIndex: 9999,
+          zIndex: 1400,
           minWidth: 200,
         }}
         elevation={8}
