@@ -5965,6 +5965,7 @@ def update_task(task_id):
 
 # @require_session  # Tasks work without authentication
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
+@jwt_required(optional=True)
 def delete_task(task_id):
     if not db:
         return jsonify({
@@ -5972,17 +5973,93 @@ def delete_task(task_id):
             'message': 'Database is not configured. Please check your database configuration.'
         }), 503
     try:
-        task = Task.query.get_or_404(task_id)
-        db.session.delete(task)
-        db.session.commit()
-        user_info = get_user_info()
-        socketio.emit('task_deleted', {'id': task_id, 'userId': user_info['id'] if user_info else 'anonymous'})
+        # Check if task exists first (don't use get_or_404 to avoid 404 exception)
+        task = Task.query.get(task_id)
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # Get user info safely before deletion
+        user_info = None
+        try:
+            user_info = get_user_info()
+        except Exception as user_err:
+            # If get_user_info fails, continue with anonymous user
+            print(f"Warning: Could not get user info for task deletion: {user_err}")
+        
+        # Try to delete the task
+        # Handle potential foreign key constraint issues
+        try:
+            # First, try to clear any foreign key references that might cause issues
+            if hasattr(task, 'support_request_id') and task.support_request_id:
+                # Clear the foreign key reference before deletion
+                task.support_request_id = None
+                db.session.flush()  # Flush changes without committing
+            
+            db.session.delete(task)
+            db.session.commit()
+        except Exception as db_err:
+            db.session.rollback()
+            error_str = str(db_err).lower()
+            
+            # Check for foreign key constraint violations
+            if 'foreign key' in error_str or 'constraint' in error_str or 'violates foreign key' in error_str:
+                # Try to reload the task and clear foreign key references
+                try:
+                    # Reload task from database
+                    task = Task.query.get(task_id)
+                    if not task:
+                        return jsonify({'error': 'Task not found'}), 404
+                    
+                    # Clear foreign key references
+                    if hasattr(task, 'support_request_id') and task.support_request_id:
+                        task.support_request_id = None
+                    
+                    # Try deletion again
+                    db.session.delete(task)
+                    db.session.commit()
+                except Exception as retry_err:
+                    db.session.rollback()
+                    error_str_retry = str(retry_err).lower()
+                    print(f"Error deleting task after foreign key handling: {retry_err}")
+                    
+                    # If it's still a constraint error, provide a more helpful error message
+                    if 'foreign key' in error_str_retry or 'constraint' in error_str_retry:
+                        return jsonify({
+                            'error': 'Failed to delete task',
+                            'message': 'Task cannot be deleted due to database foreign key constraints. Please remove related records first.',
+                            'details': str(retry_err)
+                        }), 500
+                    else:
+                        return jsonify({
+                            'error': 'Failed to delete task',
+                            'message': 'Task has dependencies that prevent deletion',
+                            'details': str(retry_err)
+                        }), 500
+            else:
+                # Re-raise if it's not a foreign key issue
+                raise db_err
+        
+        # Emit socket event after successful deletion
+        try:
+            socketio.emit('task_deleted', {'id': task_id, 'userId': user_info['id'] if user_info else 'anonymous'})
+        except Exception as socket_err:
+            # Don't fail the deletion if socket emit fails
+            print(f"Warning: Could not emit task_deleted event: {socket_err}")
+        
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()  # Rollback failed transaction
         print(f"Error deleting task: {e}")
         import traceback
         traceback.print_exc()
+        
+        # Return more specific error messages
+        error_str = str(e).lower()
+        if 'not found' in error_str or 'does not exist' in error_str:
+            return jsonify({'error': 'Task not found', 'message': str(e)}), 404
+        elif 'permission' in error_str or 'unauthorized' in error_str:
+            return jsonify({'error': 'Permission denied', 'message': str(e)}), 403
+        
         return jsonify({'error': 'Failed to delete task', 'message': str(e)}), 500
 
 @app.route('/api/admin/tasks/link-to-user', methods=['POST'])
