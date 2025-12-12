@@ -287,12 +287,7 @@ export default function EnterprisePage() {
   };
 
   const handleSelectTier = (tierId: string) => {
-    // Link to Shopify product for Essential Core
-    if (tierId === 'essential') {
-      window.open('https://shop.isharehow.app/products/custom-webapp-built-by-ishare?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web', '_blank', 'noopener,noreferrer');
-    } else {
-      router.push(`/demo?tier=${tierId}&annual=${isAnnual}`);
-    }
+    router.push(`/demo?tier=${tierId}&annual=${isAnnual}`);
   };
 
   return (

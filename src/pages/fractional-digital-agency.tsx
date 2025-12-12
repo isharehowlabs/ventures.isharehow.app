@@ -161,7 +161,7 @@ const FractionalDigitalAgencyPage = () => {
     {
       name: 'Essential Core',
       subtitle: 'Landing Page or Brand Sprint',
-      price: '$950 - $1,500',
+      price: '$950 - $2,500',
       priceNote: 'or custom quote',
       description: 'A complete creative sprint for your business. We will design and develop a high-converting landing page or a brand identity kit.',
       features: [
@@ -442,8 +442,13 @@ const FractionalDigitalAgencyPage = () => {
                           fullWidth
                           sx={{ mt: 3 }}
                           onClick={() => {
-                            setFormData(prev => ({ ...prev, package: pkg.name }));
-                            document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' });
+                            if (pkg.name === 'Essential Core') {
+                              // Link to Shopify product for Essential Core
+                              window.open('https://shop.isharehow.app/products/custom-webapp-built-by-ishare?utm_source=copyToPasteBoard&utm_medium=product-links&utm_content=web', '_blank', 'noopener,noreferrer');
+                            } else {
+                              setFormData(prev => ({ ...prev, package: pkg.name }));
+                              document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' });
+                            }
                           }}
                         >
                           Get Started
