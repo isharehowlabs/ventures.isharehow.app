@@ -5973,11 +5973,6 @@ def delete_task(task_id):
             'message': 'Database is not configured. Please check your database configuration.'
         }), 503
     try:
-        # Check if task exists first (don't use get_or_404 to avoid 404 exception)
-        task = Task.query.get(task_id)
-        if not task:
-            return jsonify({'error': 'Task not found'}), 404
-        
         # Get user info safely before deletion
         user_info = None
         try:
@@ -5986,16 +5981,40 @@ def delete_task(task_id):
             # If get_user_info fails, continue with anonymous user
             print(f"Warning: Could not get user info for task deletion: {user_err}")
         
-        # Try to delete the task
-        # Handle potential foreign key constraint issues
+        # Check if task exists and delete using raw SQL to avoid column mismatch issues
+        # This handles cases where the model has columns that don't exist in the database yet
         try:
-            # First, try to clear any foreign key references that might cause issues
-            if hasattr(task, 'support_request_id') and task.support_request_id:
-                # Clear the foreign key reference before deletion
-                task.support_request_id = None
-                db.session.flush()  # Flush changes without committing
+            from sqlalchemy import text
             
-            db.session.delete(task)
+            # First, check if task exists
+            result = db.session.execute(
+                text('SELECT id FROM task WHERE id = :task_id'),
+                {'task_id': task_id}
+            )
+            task_exists = result.fetchone()
+            
+            if not task_exists:
+                return jsonify({'error': 'Task not found'}), 404
+            
+            # Try to clear foreign key references first (if support_request_id column exists)
+            try:
+                db.session.execute(
+                    text('UPDATE task SET support_request_id = NULL WHERE id = :task_id AND support_request_id IS NOT NULL'),
+                    {'task_id': task_id}
+                )
+                db.session.flush()
+            except Exception as fk_err:
+                # Column might not exist, ignore and continue
+                error_str = str(fk_err).lower()
+                if 'column' not in error_str or 'does not exist' not in error_str:
+                    # Re-raise if it's not a missing column error
+                    raise
+            
+            # Delete the task
+            db.session.execute(
+                text('DELETE FROM task WHERE id = :task_id'),
+                {'task_id': task_id}
+            )
             db.session.commit()
         except Exception as db_err:
             db.session.rollback()

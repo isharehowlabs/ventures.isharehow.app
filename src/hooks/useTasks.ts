@@ -223,6 +223,13 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
         throw new Error('Authentication required');
       }
 
+      // 404 means task doesn't exist - treat as success (already deleted)
+      if (response.status === 404) {
+        // Task already doesn't exist, which is what we want - consider it a success
+        // Don't revert optimistic update since task is already gone
+        return;
+      }
+
       if (!response.ok) {
         let errorMessage = `Failed to delete task: Server returned ${response.status} ${response.statusText}`;
         try {
@@ -251,10 +258,13 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
       // Success - task already removed optimistically, socket will confirm
       // Real-time update will be handled by socket
     } catch (err: any) {
-      console.error('Error deleting task:', err);
+      // Don't log 404 as an error - task already doesn't exist
+      if (err?.status !== 404) {
+        console.error('Error deleting task:', err);
+      }
       
-      // Revert optimistic update on error
-      if (deletedTask) {
+      // Revert optimistic update on error (but not for 404 - task already gone)
+      if (err?.status !== 404 && deletedTask) {
         setTasks(prev => {
           const exists = prev.some(t => t.id === deletedTask!.id);
           if (!exists) {
@@ -267,6 +277,12 @@ export function useTasks(onTaskAssigned?: (task: Task, assignedToUserId: string)
       if (err?.status === 401 || err?.message?.includes('Authentication required')) {
         setAuthRequired(true);
       }
+      
+      // Don't set error or throw for 404 - task already deleted
+      if (err?.status === 404) {
+        return; // Silently succeed
+      }
+      
       const errorMessage = err?.message || 'Failed to delete task. Please try again.';
       setError(errorMessage);
       throw new Error(errorMessage);
