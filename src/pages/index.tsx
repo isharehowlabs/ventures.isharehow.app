@@ -539,7 +539,7 @@ const HomePage = () => {
 
           {/* Creative Services Section */}
           <Box id="creative" sx={{ py: 10, mb: 8, bgcolor: 'background.default' }}>
-            <Container maxWidth="lg">
+            <Container maxWidth="lg" sx={{ color: 'text.primary' }}>
               <Box className={styles.sectionHeader}>
                 <Typography variant="h2" className={styles.sectionTitle}>
                   Creative-as-a-Service

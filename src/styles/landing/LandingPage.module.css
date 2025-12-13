@@ -328,9 +328,14 @@
   box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Grid and Stack - page level */
-:global(.MuiGrid-root.MuiGrid-item),
-:global(.MuiStack-root) {
+/* Ensure Container text elements use proper theme colors (excluding gradient titles) */
+:global(.MuiContainer-root.MuiContainer-maxWidthLg) :global(.MuiTypography-root):not(.sectionTitle) {
+  color: inherit !important;
+}
+
+/* Grid and Stack within featureCards only */
+.featureCard :global(.MuiGrid-root.MuiGrid-item),
+.featureCard :global(.MuiStack-root) {
   color: rgba(25, 118, 210, 1) !important;
 }
 
