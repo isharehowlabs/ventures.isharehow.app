@@ -12,6 +12,7 @@ function LearningDashboard() {
     <>
       <Head>
         <title>Learning Dashboard - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/learning-hub" />
         <meta
           name="description"
           content="Access courses, classes, PDF resources, and learning materials to enhance your skills."

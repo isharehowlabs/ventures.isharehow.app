@@ -73,6 +73,7 @@ export default function BookDemoPage() {
     <>
       <Head>
         <title>Book a Demo - iShareHow Ventures</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/demo" />
         <meta
           name="description"
           content="Schedule a demo to see how iShareHow Ventures can transform your business. Explore our dashboards and AI-powered tools."

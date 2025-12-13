@@ -14,6 +14,7 @@ const CreativeServicesRedirect = () => {
     <>
       <Head>
         <title>Redirecting to Fractional Digital Agency...</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/fractional-digital-agency" />
         <meta httpEquiv="refresh" content="0;url=/fractional-digital-agency" />
       </Head>
       <div style={{ 

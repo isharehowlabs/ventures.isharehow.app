@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import {
   Box,
   Container,
@@ -239,9 +240,18 @@ export default function RiseDashboard() {
   const overallLevel = Math.floor(Object.values(stats).reduce((sum, val) => sum + val, 0) / Object.keys(stats).length);
 
   return (
-    <ProtectedRoute>
-    <AppShell active="rise">
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
+    <>
+      <Head>
+        <title>RISE Dashboard - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/rise" />
+        <meta
+          name="description"
+          content="RISE Dashboard for wellness, spiritual growth, and personal development tracking."
+        />
+      </Head>
+      <ProtectedRoute>
+      <AppShell active="rise">
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h3" fontWeight="bold" gutterBottom>
@@ -490,7 +500,8 @@ export default function RiseDashboard() {
           </Alert>
         </Snackbar>
       </Container>
-    </AppShell>
-    </ProtectedRoute>
+      </AppShell>
+      </ProtectedRoute>
+    </>
   );
 }

@@ -294,6 +294,7 @@ export default function EnterprisePage() {
     <>
       <Head>
         <title>Enterprise Solutions - iShareHow Labs | Custom Enterprise Services</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/enterprise" />
         <meta
           name="description"
           content="Enterprise-grade solutions for large organizations. Dedicated teams, custom integrations, advanced security, and 24/7 support. Transform your business with iShareHow Labs."

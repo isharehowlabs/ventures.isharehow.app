@@ -2,6 +2,7 @@
 // Redirect from /content to /portfolio
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 
 function ContentRedirect() {
   const router = useRouter();
@@ -10,7 +11,25 @@ function ContentRedirect() {
     router.replace('/portfolio');
   }, [router]);
   
-  return null;
+  return (
+    <>
+      <Head>
+        <title>Redirecting to Portfolio...</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/portfolio" />
+        <meta httpEquiv="refresh" content="0;url=/portfolio" />
+      </Head>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <p>Redirecting to Portfolio...</p>
+      </div>
+    </>
+  );
 }
 
 export default ContentRedirect;

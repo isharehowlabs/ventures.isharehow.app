@@ -97,6 +97,7 @@ export default function AIHelpPage() {
     <>
       <Head>
         <title>AI Help & SEO Booster | iShareHow Ventures</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/ai-help" />
         <meta name="description" content="Boost your online presence with AI-powered assistance and advanced SEO optimization tools. Get started today." />
       </Head>
 

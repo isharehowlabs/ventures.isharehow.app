@@ -7,6 +7,8 @@ function LiveStreamPage() {
   return (
     <>
       <Head>
+        <title>Live Stream - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/live" />
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0501888641420535"

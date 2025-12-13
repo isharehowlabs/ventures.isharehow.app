@@ -589,6 +589,7 @@ export default function CRMDashboard() {
     <>
       <Head>
         <title>CRM Dashboard - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/crm" />
         <meta name="description" content="Manage users, clients, prospects, and Shopify data" />
       </Head>
       <ProtectedRoute>

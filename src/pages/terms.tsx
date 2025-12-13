@@ -14,6 +14,7 @@ export default function TermsPage() {
     <>
       <Head>
         <title>Terms & Conditions - iShareHow Ventures</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/terms" />
         <meta
           name="description"
           content="Terms and Conditions for iShareHow Ventures services and platform."

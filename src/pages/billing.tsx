@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import {
   Box,
   Container,
@@ -256,8 +257,17 @@ function BillingPage() {
   };
 
   return (
-    <ProtectedRoute>
-      <AppShell active="billing">
+    <>
+      <Head>
+        <title>Billing & Subscription - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/billing" />
+        <meta
+          name="description"
+          content="Manage your billing, subscription, and payment methods."
+        />
+      </Head>
+      <ProtectedRoute>
+        <AppShell active="billing">
         <Box sx={{ flexGrow: 1, p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
           <Container maxWidth="lg">
             <Typography variant="h4" fontWeight={700} gutterBottom>
@@ -517,7 +527,8 @@ function BillingPage() {
           </Container>
         </Box>
       </AppShell>
-    </ProtectedRoute>
+      </ProtectedRoute>
+    </>
   );
 }
 

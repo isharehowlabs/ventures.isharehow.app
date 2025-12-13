@@ -360,6 +360,7 @@ export default function Blog(props: InferGetStaticPropsType<typeof getStaticProp
     <>
       <Head>
         <title>Blog - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/blog" />
         <meta
           name="description"
           content="Follow the iShareHow blog to learn about new product features, latest advancements in digital transformation, and community initiatives."

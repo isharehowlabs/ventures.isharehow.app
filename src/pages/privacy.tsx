@@ -14,6 +14,7 @@ export default function PrivacyPage() {
     <>
       <Head>
         <title>Privacy Policy - iShareHow Ventures</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/privacy" />
         <meta
           name="description"
           content="Privacy Policy for iShareHow Ventures - How we collect, use, and protect your personal information."

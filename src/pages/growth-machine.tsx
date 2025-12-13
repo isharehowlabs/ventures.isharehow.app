@@ -79,6 +79,7 @@ export default function GrowthMachinePage() {
     <>
       <Head>
         <title>iShareHow CoOperation: Own Your Consciousness, Shape Your Rise | iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/growth-machine" />
         <meta
           name="description"
           content="Join the iShareHow CoOperation and be part of a movement dedicated to living, creating, and thinking with profound awareness. Transform from consumer to creator, from follower to sovereign."

@@ -2,6 +2,7 @@
 
 import { Box, Typography, Paper, Avatar, Stack, Divider, Chip, Button, Alert, TextField, IconButton, Link, Grid, Card, CardContent, Container, Tabs, Tab } from '@mui/material';
 import { Person, Email, AccountCircle, Logout, Settings, Edit, Check, Close, Refresh, OpenInNew, ContentCopy, CheckCircle, VpnKey, Payment, Security } from '@mui/icons-material';
+import Head from 'next/head';
 import AppShell from '../components/AppShell';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
@@ -352,13 +353,23 @@ function ProfilePage() {
 
   if (!authUser) {
     return (
-      <AppShell active="profile">
-        <Container maxWidth="lg">
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Alert severity="info">Please log in to view your profile.</Alert>
-          </Box>
-        </Container>
-      </AppShell>
+      <>
+        <Head>
+          <title>Profile - iShareHow Labs</title>
+          <link rel="canonical" href="https://ventures.isharehow.app/profile" />
+          <meta
+            name="description"
+            content="Manage your profile, account settings, and preferences."
+          />
+        </Head>
+        <AppShell active="profile">
+          <Container maxWidth="lg">
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Alert severity="info">Please log in to view your profile.</Alert>
+            </Box>
+          </Container>
+        </AppShell>
+      </>
     );
   }
 
@@ -418,8 +429,17 @@ function ProfilePage() {
   };
 
   return (
-    <ProtectedRoute>
-      <AppShell active="profile">
+    <>
+      <Head>
+        <title>Profile - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/profile" />
+        <meta
+          name="description"
+          content="Manage your profile, account settings, and preferences."
+        />
+      </Head>
+      <ProtectedRoute>
+        <AppShell active="profile">
         <Box sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
           <Container maxWidth="lg" sx={{ py: 4 }}>
             {error && authUser && (
@@ -963,7 +983,8 @@ function ProfilePage() {
           </Container>
         </Box>
       </AppShell>
-    </ProtectedRoute>
+      </ProtectedRoute>
+    </>
   );
 }
 

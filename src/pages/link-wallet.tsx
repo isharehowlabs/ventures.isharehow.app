@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { Box, Container, Typography, Paper, Alert, Button, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { useWalletConnect } from '../hooks/useWalletConnect';
@@ -64,7 +65,16 @@ export default function LinkWalletPage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
+    <>
+      <Head>
+        <title>Link Wallet - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/link-wallet" />
+        <meta
+          name="description"
+          content="Link your cryptocurrency wallet to your account."
+        />
+      </Head>
+      <Container maxWidth="sm" sx={{ py: 8 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h4" gutterBottom align="center">
           Link Your Wallet
@@ -222,6 +232,7 @@ export default function LinkWalletPage() {
           </Typography>
         </Paper>
       )}
-    </Container>
+      </Container>
+    </>
   );
 }

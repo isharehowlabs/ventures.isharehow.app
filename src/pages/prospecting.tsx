@@ -81,6 +81,7 @@ export default function ProspectingPage() {
     <>
       <Head>
         <title>🔥 48-Hour Flash: 10X Your SEO Leads for Just $97 (Save $400!) | iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/prospecting" />
         <meta
           name="description"
           content="Struggling with ghosted SEO prospects? Join our live 10X SEO Prospecting Workshop—proven scripts, templates, and AI tools to land 5x more clients. Flash sale ends in 48 hours. Limited to 50 spots."

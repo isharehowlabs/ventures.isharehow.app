@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import {
   Box,
   Typography,
@@ -501,7 +502,16 @@ function SettingsPage() {
   };
 
   return (
-    <AppShell active="settings">
+    <>
+      <Head>
+        <title>Settings - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/settings" />
+        <meta
+          name="description"
+          content="Manage your account settings and preferences."
+        />
+      </Head>
+      <AppShell active="settings">
       <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
           <SettingsIcon sx={{ fontSize: 40, color: 'primary.main' }} />
@@ -871,7 +881,8 @@ function SettingsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </AppShell>
+      </AppShell>
+    </>
   );
 }
 

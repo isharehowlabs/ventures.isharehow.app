@@ -178,6 +178,7 @@ const FractionalDigitalAgencyPage = () => {
     <>
       <Head>
         <title>Fractional Digital Agency – Modern, AI‑Powered Creative</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/fractional-digital-agency" />
         <meta name="description" content="Project-based creative, UI/UX, and growth. Fast iterations, real results, no long-term contracts." />
       </Head>
 

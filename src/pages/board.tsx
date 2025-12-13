@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import {
   Box,
   Container,
@@ -46,18 +47,37 @@ export default function BoardPage() {
   // Show board if we have a boardId
   if ((showBoard || urlBoardId) && activeBoardId) {
     return (
-      <BoardShell
-        boardId={activeBoardId}
-        userId={user?.id || 'anonymous'}
-        userName={user?.name || 'Anonymous User'}
-        onClose={handleCloseBoard}
-      />
+      <>
+        <Head>
+          <title>Collaboration Board - iShareHow Labs</title>
+          <link rel="canonical" href="https://ventures.isharehow.app/board" />
+          <meta
+            name="description"
+            content="Collaborate in real-time on shared boards."
+          />
+        </Head>
+        <BoardShell
+          boardId={activeBoardId}
+          userId={user?.id || 'anonymous'}
+          userName={user?.name || 'Anonymous User'}
+          onClose={handleCloseBoard}
+        />
+      </>
     );
   }
 
   // Show board selection UI
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
+    <>
+      <Head>
+        <title>Collaboration Board - iShareHow Labs</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/board" />
+        <meta
+          name="description"
+          content="Collaborate in real-time on shared boards."
+        />
+      </Head>
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
       <Paper sx={{ p: 4 }}>
         <Typography variant="h4" gutterBottom>
           Collaboration Board
@@ -114,5 +134,6 @@ export default function BoardPage() {
         )}
       </Paper>
     </Container>
+    </>
   );
 }

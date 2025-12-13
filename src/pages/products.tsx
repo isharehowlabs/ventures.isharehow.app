@@ -250,6 +250,7 @@ const ProductsPage = () => {
     <>
       <Head>
         <title>Products | IShareHow Ventures</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/products" />
         <meta
           name="description"
           content="Browse the latest products available through the IShareHow Ventures store."

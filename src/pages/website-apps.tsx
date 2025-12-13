@@ -133,6 +133,7 @@ export default function WebsiteAppsPage() {
     <>
       <Head>
         <title>Website Apps - Professional Website Applications | iShareHow Ventures</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/website-apps" />
         <meta
           name="description"
           content="Get a professional, fully customizable website application for $699. AI-powered setup and deployment. Perfect for businesses ready to launch online."

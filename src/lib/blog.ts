@@ -37,67 +37,66 @@ function truncate(text: string, maxLength: number): string {
  */
 function cleanMalformedHtml(content: string): string {
   if (!content) return content;
-  
   let cleaned = content;
-  
-  // Fix malformed anchor tags where HTML is inside href attribute
-  // Pattern: <a href="<div>...<iframe...">...</a>
-  // Use [\s\S] instead of . with s flag for ES2017 compatibility
-  cleaned = cleaned.replace(
-    /<a[^>]*href=["']<div[^>]*>[\s\S]*?<\/div>["'][^>]*>[\s\S]*?<\/a>/gi,
-    (match) => {
-      // Extract YouTube video ID from nested iframe if present
-      const videoIdMatch = match.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
-      if (videoIdMatch) {
+
+  // Robust fix for malformed <a> with HTML inside href (e.g., href="<div>...<iframe...>")
+  const anchorPattern = /<a\s+[^>]*?href\s*=\s*["'](<[\s\S]*?)["'][^>]*?>([\s\S]*?)<\/a>/gi;
+  cleaned = cleaned.replace(anchorPattern, (match, hrefContent, tagContent) => {
+    if (hrefContent && /</.test(hrefContent)) {
+      const videoIdMatch =
+        match.match(/youtube\.com\/(?:embed\/|watch\?v=)([a-zA-Z0-9_-]{11})/i) ||
+        match.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/i);
+      if (videoIdMatch && videoIdMatch[1]) {
         const videoId = videoIdMatch[1];
         return `
-          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
-            <iframe 
-              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-              src="https://www.youtube.com/embed/${videoId}" 
-              frameborder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowfullscreen
-              loading="lazy"
-            ></iframe>
-          </div>
-        `.trim();
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
+  <iframe
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+    src="https://www.youtube.com/embed/${videoId}"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+    loading="lazy"
+  ></iframe>
+</div>`;
       }
-      // If no video ID found, just remove the malformed anchor tag
+      if (tagContent && tagContent.trim()) {
+        return /<\w+[^>]*>/.test(tagContent.trim()) ? tagContent.trim() : `<p>${tagContent.trim()}</p>`;
+      }
       return '';
     }
-  );
-  
-  // Fix malformed iframe tags where HTML is inside src attribute
-  // Pattern: <iframe src="<div>...<iframe...">...</iframe>
-  // Use [\s\S] instead of . with s flag for ES2017 compatibility
-  cleaned = cleaned.replace(
-    /<iframe[^>]*src=["']<div[^>]*>[\s\S]*?<\/div>["'][^>]*>[\s\S]*?<\/iframe>/gi,
-    (match) => {
-      // Extract YouTube video ID from nested iframe if present
-      const videoIdMatch = match.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
-      if (videoIdMatch) {
+    return match;
+  });
+
+  // Fix malformed iframe with HTML inside src
+  const iframePattern = /<iframe[^>]*?src\s*=\s*["'](<[\s\S]*?)["'][^>]*?>[\s\S]*?<\/iframe>/gi;
+  cleaned = cleaned.replace(iframePattern, (match, srcContent) => {
+    if (srcContent && /</.test(srcContent)) {
+      const videoIdMatch =
+        match.match(/youtube\.com\/(?:embed\/|watch\?v=)([a-zA-Z0-9_-]{11})/i) ||
+        match.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/i);
+      if (videoIdMatch && videoIdMatch[1]) {
         const videoId = videoIdMatch[1];
         return `
-          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
-            <iframe 
-              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-              src="https://www.youtube.com/embed/${videoId}" 
-              frameborder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowfullscreen
-              loading="lazy"
-            ></iframe>
-          </div>
-        `.trim();
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0;">
+  <iframe
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+    src="https://www.youtube.com/embed/${videoId}"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+    loading="lazy"
+  ></iframe>
+</div>`;
       }
-      // If no video ID found, just remove the malformed iframe
       return '';
     }
-  );
-  
+    return match;
+  });
+
   return cleaned;
 }
+
 
 /**
  * Converts YouTube URLs in blog content to embedded video players

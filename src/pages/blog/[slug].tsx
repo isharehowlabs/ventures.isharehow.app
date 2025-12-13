@@ -125,6 +125,7 @@ export default function BlogPostPage({ post: staticPost }: BlogPostPageProps) {
     <>
       <Head>
         <title>{post.title} - iShareHow Labs Blog</title>
+        <link rel="canonical" href={`https://ventures.isharehow.app/blog/${post.slug}`} />
         <meta name="description" content={post.description} />
         {post.image && <meta property="og:image" content={post.image} />}
       </Head>

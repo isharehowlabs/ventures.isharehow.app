@@ -103,6 +103,7 @@ export default function AboutPage() {
     <>
       <Head>
         <title>About Us - iShareHow Labs | Our Story, Team & Mission</title>
+        <link rel="canonical" href="https://ventures.isharehow.app/about" />
         <meta
           name="description"
           content="Learn about iShareHow Labs - our mission, team, values, and commitment to transforming businesses through innovative technology and creative solutions."
