@@ -188,6 +188,7 @@ const getTheme = (mode: 'light' | 'dark') => {
             ? 'rgba(0, 0, 0, 0.5)' 
             : 'rgba(0, 0, 0, 0.7)',
           zIndex: 1400,
+          pointerEvents: 'auto',
         },
       },
     },
@@ -200,6 +201,8 @@ const getTheme = (mode: 'light' | 'dark') => {
               ? 'rgba(0, 0, 0, 0.5)' 
               : 'rgba(0, 0, 0, 0.7)',
             zIndex: 1400,
+            pointerEvents: 'auto',
+            cursor: 'pointer',
           },
         },
         container: {

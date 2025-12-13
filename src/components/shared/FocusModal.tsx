@@ -78,7 +78,15 @@ export default function FocusModal({
             <IconButton size="small" onClick={() => setIsMinimized(false)}>
               <EyeIcon />
             </IconButton>
-            <IconButton size="small" onClick={onClose}>
+            <IconButton size="small" onClick={(e) => {
+              // #region agent log
+              fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FocusModal.tsx:81',message:'Close button clicked in minimized view',data:{eventType:e.type,currentTarget:e.currentTarget?.tagName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
+              // #region agent log
+              fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FocusModal.tsx:84',message:'calling onClose',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
+              onClose();
+            }}>
               <CloseIcon />
             </IconButton>
           </Box>
@@ -94,6 +102,15 @@ export default function FocusModal({
     <Dialog
       open={open}
       fullScreen
+      onClose={(event, reason) => {
+        // #region agent log
+        fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FocusModal.tsx:105',message:'Dialog onClose triggered',data:{reason,eventType:event && 'type' in event ? (event as any).type : 'unknown',eventTarget:event && 'target' in event ? (event as any).target?.tagName : 'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        // #region agent log
+        fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FocusModal.tsx:109',message:'Calling onClose unconditionally',data:{reason},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        onClose();
+      }}
       PaperProps={{
         sx: {
           bgcolor: 'background.default',
@@ -134,7 +151,15 @@ export default function FocusModal({
           >
             Minimize
           </Button>
-          <Button variant="contained" color="error" onClick={onClose}>
+          <Button variant="contained" color="error" onClick={(e) => {
+            // #region agent log
+            fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FocusModal.tsx:137',message:'End Focus Session button clicked',data:{eventType:e.type,currentTarget:e.currentTarget?.tagName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+            // #region agent log
+            fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FocusModal.tsx:140',message:'calling onClose',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+            onClose();
+          }}>
             End Focus Session
           </Button>
         </Box>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -81,13 +81,43 @@ const AddVentureDialog: React.FC<AddVentureDialogProps> = ({ open, onClose, onSa
     setTagInput('');
   };
 
+  // #region agent log
+  useEffect(() => {
+    if (open) {
+      const handleGlobalClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        const dialogBackdrop = target.closest('[class*="MuiBackdrop"]') || target.closest('[class*="MuiDialog"]');
+        if (dialogBackdrop && target === dialogBackdrop) {
+          fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AddVentureDialog.tsx:30',message:'Backdrop click detected',data:{tagName:target.tagName,className:target.className,computedStyle:window.getComputedStyle(target).pointerEvents},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+        }
+        if (target.closest('button') || target.closest('[role="button"]')) {
+          fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AddVentureDialog.tsx:35',message:'Global button click detected',data:{tagName:target.tagName,buttonText:target.textContent?.slice(0,20),computedStyle:window.getComputedStyle(target).pointerEvents},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+        }
+      };
+      document.addEventListener('click', handleGlobalClick, true);
+      return () => document.removeEventListener('click', handleGlobalClick, true);
+    }
+  }, [open]);
+  // #endregion
+
   const handleClose = () => {
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AddVentureDialog.tsx:86',message:'handleClose called',data:{open},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     handleReset();
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AddVentureDialog.tsx:89',message:'calling onClose prop',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={(event, reason) => {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AddVentureDialog.tsx:115',message:'Dialog onClose triggered',data:{reason,eventType:event && 'type' in event ? (event as any).type : 'unknown',eventTarget:event && 'target' in event ? (event as any).target?.tagName : 'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      handleClose();
+    }} maxWidth="md" fullWidth>
       <DialogTitle>Add New Venture</DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -207,7 +237,12 @@ const AddVentureDialog: React.FC<AddVentureDialogProps> = ({ open, onClose, onSa
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
+        <Button onClick={(e) => {
+          // #region agent log
+          fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AddVentureDialog.tsx:210',message:'Cancel button clicked',data:{eventType:e.type,currentTarget:e.currentTarget?.tagName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          handleClose();
+        }}>Cancel</Button>
         <Button onClick={handleSubmit} variant="contained">
           Create Venture
         </Button>
