@@ -1,0 +1,20 @@
+__turbopack_load_page_chunks__("/billing", [
+  "static/chunks/1adba8124e9846d1.js",
+  "static/chunks/3d7cb287a3a609c8.js",
+  "static/chunks/9ac709c9b4537902.js",
+  "static/chunks/a7f4cc8a5bc7eb19.js",
+  "static/chunks/04ac7902aee247dc.js",
+  "static/chunks/481333a86accddfa.js",
+  "static/chunks/39b1538c8b3d213a.js",
+  "static/chunks/4e1b8adfda6018c8.js",
+  "static/chunks/f5bed63f7b72802e.js",
+  "static/chunks/169e116c1c67c04c.js",
+  "static/chunks/7d62ddcea305d0f0.js",
+  "static/chunks/b8fa84a7625ce887.js",
+  "static/chunks/2c70bf79675605b6.js",
+  "static/chunks/b170108a2918d8ca.js",
+  "static/chunks/cdd5ef6eb6837e96.js",
+  "static/chunks/5e799ef9e2ba9ef0.js",
+  "static/chunks/85f5d8eaa4c59fef.js",
+  "static/chunks/turbopack-a598a42d4a659a20.js"
+])

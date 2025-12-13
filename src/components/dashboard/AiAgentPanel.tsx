@@ -21,6 +21,7 @@ import {
   Edit as EditIcon,
   PlayArrow as PlayIcon,
   Schedule as ScheduleIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import { useSettings } from '../../hooks/useSettings';
 import TasksPanel from './shared/TasksPanel';
@@ -46,11 +47,87 @@ export default function AiAgentPanel() {
   const [success, setSuccess] = useState<string | null>(null);
   const [revidApiKey, setRevidApiKey] = useState<string>('');
 
-  // Load API key from settings
+  // Cookie utility functions
+  const setCookie = (name: string, value: string, days: number = 365) => {
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:setCookie',message:'Setting cookie',data:{cookieName:name,valueLength:value?.length||0,days},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    if (typeof document === 'undefined') return;
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    const cookieString = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+    document.cookie = cookieString;
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:setCookie',message:'Cookie set',data:{cookieName:name,allCookies:document.cookie.substring(0,200),cookieString:cookieString.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+  };
+
+  const getCookie = (name: string): string | null => {
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:getCookie',message:'Reading cookie',data:{cookieName:name,allCookies:typeof document!=='undefined'?document.cookie.substring(0,200):'no-document'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    if (typeof document === 'undefined') return null;
+    const nameEQ = name + '=';
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) === 0) {
+        const value = decodeURIComponent(c.substring(nameEQ.length, c.length));
+        // #region agent log
+        fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:getCookie',message:'Cookie found',data:{cookieName:name,valueLength:value?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        return value;
+      }
+    }
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:getCookie',message:'Cookie not found',data:{cookieName:name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    return null;
+  };
+
+  // Load API key from cookie on mount, fallback to settings
   useEffect(() => {
-    const apiKey = settings.apiKeys?.revidApiKey || '';
-    setRevidApiKey(apiKey);
-  }, [settings.apiKeys]);
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:useEffect-mount',message:'Component mounted, loading API key',data:{settingsApiKeyLength:settings.apiKeys?.revidApiKey?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    const cookieKey = getCookie('revid_api_key');
+    if (cookieKey) {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:useEffect-mount',message:'Cookie key found, setting state',data:{cookieKeyLength:cookieKey.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      setRevidApiKey(cookieKey);
+      // Also update settings to keep them in sync
+      updateApiKeys({ revidApiKey: cookieKey });
+    } else {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:useEffect-mount',message:'No cookie found, using settings fallback',data:{settingsApiKeyLength:settings.apiKeys?.revidApiKey?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      // Fallback to settings if no cookie found
+      const apiKey = settings.apiKeys?.revidApiKey || '';
+      setRevidApiKey(apiKey);
+    }
+  }, []); // Only run on mount
+
+  // Handle save button click
+  const handleSaveApiKey = () => {
+    // #region agent log
+    fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:handleSaveApiKey',message:'Save button clicked',data:{apiKeyLength:revidApiKey?.length||0,isEmpty:!revidApiKey.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    if (revidApiKey.trim()) {
+      // Save to cookie
+      setCookie('revid_api_key', revidApiKey, 365);
+      // Also update settings for compatibility
+      updateApiKeys({ revidApiKey: revidApiKey });
+      // #region agent log
+      fetch('http://localhost:7242/ingest/e16e948f-78c5-4368-bec3-74cffd33f8bf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiAgentPanel.tsx:handleSaveApiKey',message:'API key saved to cookie and settings',data:{apiKeyLength:revidApiKey.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      setSuccess('API key saved successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } else {
+      setError('Please enter an API key before saving.');
+    }
+  };
 
   // Load content items from localStorage
   useEffect(() => {
@@ -205,21 +282,40 @@ export default function AiAgentPanel() {
 
             {/* Revid.ai API Key Input */}
             <Box sx={{ mb: 3 }}>
-              <TextField
-                fullWidth
-                label="Revid.ai API Key"
-                type="password"
-                value={revidApiKey}
-                onChange={(e) => {
-                  const newKey = e.target.value;
-                  setRevidApiKey(newKey);
-                  // Save to settings immediately
-                  updateApiKeys({ revidApiKey: newKey });
-                }}
-                placeholder="Enter your Revid.ai API key"
-                helperText="Required for AI Agent panel to generate and auto-post videos"
-                size="small"
-              />
+              <Stack direction="row" spacing={2} alignItems="flex-start">
+                <TextField
+                  fullWidth
+                  label="Revid.ai API Key"
+                  type="password"
+                  value={revidApiKey}
+                  onChange={(e) => {
+                    const newKey = e.target.value;
+                    setRevidApiKey(newKey);
+                    // Clear any previous errors when user starts typing
+                    if (error && error.includes('API key')) {
+                      setError(null);
+                    }
+                  }}
+                  placeholder="Enter your Revid.ai API key"
+                  helperText="Required for AI Agent panel to generate and auto-post videos"
+                  size="small"
+                  onKeyDown={(e) => {
+                    // Allow saving with Ctrl/Cmd + Enter
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                      handleSaveApiKey();
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<SaveIcon />}
+                  onClick={handleSaveApiKey}
+                  sx={{ mt: 0.5, minWidth: 120 }}
+                  size="small"
+                >
+                  Save
+                </Button>
+              </Stack>
             </Box>
 
             {success && (
