@@ -435,7 +435,18 @@ const HomePage = () => {
                   <Grid item xs={12} sm={6} md={3} key={index}>
                     <Grow in timeout={600 + index * 150}>
                       <Card className={styles.featureCard}>
-                        <CardContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+                        <CardContent sx={{ 
+                          p: 0, 
+                          height: '100%', 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          position: 'relative', 
+                          overflow: 'hidden',
+                          color: 'rgba(25, 118, 210, 1)',
+                          backgroundColor: 'unset',
+                          background: 'unset',
+                          boxShadow: '0px 2px 1px -1px rgba(0, 0, 0, 0.2)',
+                        }}>
                           {/* Visual Background Pattern */}
                           <Box
                             sx={{
@@ -453,7 +464,23 @@ const HomePage = () => {
                               zIndex: 0,
                             }}
                           />
-                          <Box sx={{ p: 4, position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <Box sx={{ 
+                            p: 4, 
+                            position: 'relative', 
+                            zIndex: 1, 
+                            height: '100%', 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            color: 'var(--text-primary)',
+                            backgroundColor: 'rgba(25, 118, 210, 1)',
+                            background: 'unset',
+                            borderColor: 'rgba(0, 0, 0, 1)',
+                            boxShadow: '0px 4px 12px 0px rgba(0, 0, 0, 0.15)',
+                            paddingLeft: '9px',
+                            paddingRight: '9px',
+                            backgroundClip: 'unset',
+                            WebkitBackgroundClip: 'unset',
+                          }}>
                             <Avatar 
                               className={styles.featureIcon}
                               sx={{
@@ -463,10 +490,21 @@ const HomePage = () => {
                             >
                               {feature.icon}
                             </Avatar>
-                            <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mt: 2 }}>
+                            <Typography variant="h6" fontWeight={700} gutterBottom sx={{ 
+                              mt: 2,
+                              color: 'rgba(245, 245, 245, 1)',
+                              backgroundColor: 'unset',
+                              background: 'unset',
+                            }}>
                               {feature.title}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
+                            <Typography variant="body2" sx={{ 
+                              flexGrow: 1, 
+                              mb: 2,
+                              color: 'rgba(245, 245, 245, 1)',
+                              backgroundColor: 'unset',
+                              background: 'unset',
+                            }}>
                               {feature.description}
                             </Typography>
                           </Box>
@@ -529,8 +567,16 @@ const HomePage = () => {
                 {creativeServices.map((service, index) => (
                   <Grid item xs={12} md={6} key={index}>
                     <Slide direction="up" in timeout={600 + index * 150}>
-                      <Card className={styles.featureCard}>
-                        <CardContent sx={{ p: 0, position: 'relative', overflow: 'hidden' }}>
+                      <Card className={styles.featureCard} sx={{ backgroundColor: 'rgba(230, 240, 255, 1)' }}>
+                        <CardContent sx={{ 
+                          p: 0, 
+                          position: 'relative', 
+                          overflow: 'hidden',
+                          color: 'rgba(25, 118, 210, 1)',
+                          backgroundColor: 'unset',
+                          background: 'unset',
+                          boxShadow: '0px 2px 1px -1px rgba(0, 0, 0, 0.2)',
+                        }}>
                           {/* Visual Background */}
                           <Box
                             sx={{
@@ -548,8 +594,21 @@ const HomePage = () => {
                               zIndex: 0,
                             }}
                           />
-                          <Box sx={{ p: 4, position: 'relative', zIndex: 1 }}>
-                            <Stack direction="row" spacing={3}>
+                          <Box sx={{ 
+                            p: 4, 
+                            position: 'relative', 
+                            zIndex: 1,
+                            color: 'var(--text-primary)',
+                            backgroundColor: 'rgba(25, 118, 210, 1)',
+                            background: 'unset',
+                            borderColor: 'rgba(0, 0, 0, 1)',
+                            boxShadow: '0px 4px 12px 0px rgba(0, 0, 0, 0.15)',
+                            paddingLeft: '9px',
+                            paddingRight: '9px',
+                            backgroundClip: 'unset',
+                            WebkitBackgroundClip: 'unset',
+                          }}>
+                            <Stack direction="row" spacing={3} sx={{ color: 'rgba(25, 118, 210, 1)' }}>
                               <Avatar
                                 className={styles.featureIcon}
                                 sx={{
@@ -563,7 +622,10 @@ const HomePage = () => {
                               </Avatar>
                               <Box sx={{ flexGrow: 1 }}>
                                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                                  <Typography variant="h6" fontWeight={700}>
+                                  <Typography variant="h6" fontWeight={700} sx={{
+                                    backgroundColor: 'unset',
+                                    background: 'unset',
+                                  }}>
                                     {service.title}
                                   </Typography>
                                   <Chip
@@ -573,7 +635,13 @@ const HomePage = () => {
                                     sx={{ display: index === 0 ? 'flex' : 'none' }}
                                   />
                                 </Stack>
-                                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 2 }}>
+                                <Typography variant="body2" sx={{ 
+                                  lineHeight: 1.7, 
+                                  mb: 2,
+                                  color: 'rgba(245, 245, 245, 1)',
+                                  backgroundColor: 'unset',
+                                  background: 'unset',
+                                }}>
                                   {service.description}
                                 </Typography>
                                 <Button
@@ -581,7 +649,9 @@ const HomePage = () => {
                                   size="small"
                                   endIcon={<LaunchIcon />}
                                   sx={{
-                                    color: 'primary.main',
+                                    color: 'rgba(245, 245, 245, 1)',
+                                    backgroundColor: 'unset',
+                                    background: 'unset',
                                     '&:hover': {
                                       bgcolor: 'primary.main',
                                       color: 'white',

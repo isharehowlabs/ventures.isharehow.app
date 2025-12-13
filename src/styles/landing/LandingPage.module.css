@@ -221,19 +221,28 @@
 .featureCard {
   height: 100%;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 16px !important;
+  border-radius: 0px !important;
   overflow: hidden;
   position: relative;
+  background-color: rgba(255, 255, 255, 1) !important;
+  background: unset !important;
+  border: none !important;
+  border-width: 0px !important;
+  border-style: none !important;
+  border-color: rgba(0, 0, 0, 0) !important;
+  border-image: none !important;
+  color: rgba(25, 118, 210, 1) !important;
+  box-shadow: 0px 2px 1px -1px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14) !important;
 }
 
 :global([data-theme="light"]) .featureCard {
-  background: #ffffff !important;
-  border: 1px solid #e9ecef !important;
+  background: unset !important;
+  border: none !important;
 }
 
 :global([data-theme="dark"]) .featureCard {
-  background: #1e293b !important;
-  border: 1px solid #334155 !important;
+  background: unset !important;
+  border: none !important;
 }
 
 .featureCard::before {
@@ -246,6 +255,8 @@
   background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
   transform: scaleX(0);
   transition: transform 0.3s ease;
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
 }
 
 .featureCard:hover::before {
@@ -255,6 +266,77 @@
 .featureCard:hover {
   transform: translateY(-8px);
   box-shadow: 0 20px 40px rgba(30, 58, 138, 0.15) !important;
+}
+
+/* CardContent within featureCard */
+.featureCard :global(.MuiCardContent-root) {
+  color: rgba(25, 118, 210, 1) !important;
+  background-color: unset !important;
+  background: unset !important;
+  box-shadow: 0px 2px 1px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Typography within featureCard */
+.featureCard :global(.MuiTypography-h6.MuiTypography-gutterBottom) {
+  color: rgba(245, 245, 245, 1) !important;
+}
+
+.featureCard :global(.MuiTypography-h6) {
+  background-color: unset !important;
+  background: unset !important;
+}
+
+.featureCard :global(.MuiTypography-body2) {
+  color: rgba(245, 245, 245, 1) !important;
+  background-color: unset !important;
+  background: unset !important;
+}
+
+/* Button within featureCard */
+.featureCard :global(.MuiButtonBase-root.MuiButton-root) {
+  color: rgba(245, 245, 245, 1) !important;
+  background-color: unset !important;
+  background: unset !important;
+}
+
+/* Box within featureCard */
+.featureCard :global(.MuiBox-root) {
+  color: var(--text-primary) !important;
+  background-color: rgba(25, 118, 210, 1) !important;
+  background: unset !important;
+  border-color: rgba(0, 0, 0, 1) !important;
+  box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15) !important;
+  padding-left: 9px !important;
+  padding-right: 9px !important;
+  background-clip: unset !important;
+  -webkit-background-clip: unset !important;
+}
+
+/* List within featureCard */
+.featureCard :global(.MuiList-root.MuiList-padding) {
+  background-color: rgba(21, 27, 46, 1) !important;
+}
+
+/* Grid and Stack within featureCard */
+.featureCard :global(.MuiGrid-root.MuiGrid-item),
+.featureCard :global(.MuiStack-root) {
+  color: rgba(25, 118, 210, 1) !important;
+}
+
+/* Container - page level */
+:global(.MuiContainer-root.MuiContainer-maxWidthLg) {
+  box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Grid and Stack - page level */
+:global(.MuiGrid-root.MuiGrid-item),
+:global(.MuiStack-root) {
+  color: rgba(25, 118, 210, 1) !important;
+}
+
+/* List - page level */
+:global(.MuiList-root.MuiList-padding) {
+  background-color: rgba(21, 27, 46, 1) !important;
 }
 
 .featureIcon {
